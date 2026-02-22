@@ -1,17 +1,17 @@
-//
-//  financeplanApp.swift
-//  financeplan
-//
-//  Created by Fernando Correia on 12.02.26.
-//
-
+import EntityStore
+import Factory
+import Sentry
 import SwiftUI
 
-@main
 struct financeplanApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
+    @InjectedObservable(\Container.appEnvironment) var environmentManager
+
     var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
+      WindowGroup {
+        ContentView()
+          .id(environmentManager.current)
+      }
     }
 }

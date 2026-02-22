@@ -1,0 +1,26 @@
+{
+  "" : {
+    "const-values" : "/Users/fernando_idwell/Library/Developer/Xcode/DerivedData/financeplan-hdtrlwieigccumdszgmzfoiqxpvh/SourcePackages/checkouts/FinanceShared/build/StockPlanShared.build/Release-iphoneos/StockPlanShared.build/Objects-normal/arm64/StockPlanShared-primary.swiftconstvalues",
+    "dependencies" : "/Users/fernando_idwell/Library/Developer/Xcode/DerivedData/financeplan-hdtrlwieigccumdszgmzfoiqxpvh/SourcePackages/checkouts/FinanceShared/build/StockPlanShared.build/Release-iphoneos/StockPlanShared.build/Objects-normal/arm64/StockPlanShared-primary.d",
+    "diagnostics" : "/Users/fernando_idwell/Library/Developer/Xcode/DerivedData/financeplan-hdtrlwieigccumdszgmzfoiqxpvh/SourcePackages/checkouts/FinanceShared/build/StockPlanShared.build/Release-iphoneos/StockPlanShared.build/Objects-normal/arm64/StockPlanShared-primary.dia",
+    "emit-module-dependencies" : "/Users/fernando_idwell/Library/Developer/Xcode/DerivedData/financeplan-hdtrlwieigccumdszgmzfoiqxpvh/SourcePackages/checkouts/FinanceShared/build/StockPlanShared.build/Release-iphoneos/StockPlanShared.build/Objects-normal/arm64/StockPlanShared-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/fernando_idwell/Library/Developer/Xcode/DerivedData/financeplan-hdtrlwieigccumdszgmzfoiqxpvh/SourcePackages/checkouts/FinanceShared/build/StockPlanShared.build/Release-iphoneos/StockPlanShared.build/Objects-normal/arm64/StockPlanShared-primary-emit-module.dia",
+    "pch" : "/Users/fernando_idwell/Library/Developer/Xcode/DerivedData/financeplan-hdtrlwieigccumdszgmzfoiqxpvh/SourcePackages/checkouts/FinanceShared/build/StockPlanShared.build/Release-iphoneos/StockPlanShared.build/Objects-normal/arm64/StockPlanShared-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/fernando_idwell/Library/Developer/Xcode/DerivedData/financeplan-hdtrlwieigccumdszgmzfoiqxpvh/SourcePackages/checkouts/FinanceShared/build/StockPlanShared.build/Release-iphoneos/StockPlanShared.build/Objects-normal/arm64/StockPlanShared-primary.swiftdeps"
+  },
+  "/Users/fernando_idwell/Library/Developer/Xcode/DerivedData/financeplan-hdtrlwieigccumdszgmzfoiqxpvh/SourcePackages/checkouts/FinanceShared/Sources/StockPlanShared/Auth/AuthDTOs.swift" : {
+    "index-unit-output-path" : "/StockPlanShared.build/Release-iphoneos/StockPlanShared.build/Objects-normal/arm64/AuthDTOs.o",
+    "llvm-bc" : "/Users/fernando_idwell/Library/Developer/Xcode/DerivedData/financeplan-hdtrlwieigccumdszgmzfoiqxpvh/SourcePackages/checkouts/FinanceShared/build/StockPlanShared.build/Release-iphoneos/StockPlanShared.build/Objects-normal/arm64/AuthDTOs.bc",
+    "object" : "/Users/fernando_idwell/Library/Developer/Xcode/DerivedData/financeplan-hdtrlwieigccumdszgmzfoiqxpvh/SourcePackages/checkouts/FinanceShared/build/StockPlanShared.build/Release-iphoneos/StockPlanShared.build/Objects-normal/arm64/AuthDTOs.o"
+  },
+  "/Users/fernando_idwell/Library/Developer/Xcode/DerivedData/financeplan-hdtrlwieigccumdszgmzfoiqxpvh/SourcePackages/checkouts/FinanceShared/Sources/StockPlanShared/Portfolio/PortfolioDTOs.swift" : {
+    "index-unit-output-path" : "/StockPlanShared.build/Release-iphoneos/StockPlanShared.build/Objects-normal/arm64/PortfolioDTOs.o",
+    "llvm-bc" : "/Users/fernando_idwell/Library/Developer/Xcode/DerivedData/financeplan-hdtrlwieigccumdszgmzfoiqxpvh/SourcePackages/checkouts/FinanceShared/build/StockPlanShared.build/Release-iphoneos/StockPlanShared.build/Objects-normal/arm64/PortfolioDTOs.bc",
+    "object" : "/Users/fernando_idwell/Library/Developer/Xcode/DerivedData/financeplan-hdtrlwieigccumdszgmzfoiqxpvh/SourcePackages/checkouts/FinanceShared/build/StockPlanShared.build/Release-iphoneos/StockPlanShared.build/Objects-normal/arm64/PortfolioDTOs.o"
+  },
+  "/Users/fernando_idwell/Library/Developer/Xcode/DerivedData/financeplan-hdtrlwieigccumdszgmzfoiqxpvh/SourcePackages/checkouts/FinanceShared/Sources/StockPlanShared/Stocks/StockDTOs.swift" : {
+    "index-unit-output-path" : "/StockPlanShared.build/Release-iphoneos/StockPlanShared.build/Objects-normal/arm64/StockDTOs.o",
+    "llvm-bc" : "/Users/fernando_idwell/Library/Developer/Xcode/DerivedData/financeplan-hdtrlwieigccumdszgmzfoiqxpvh/SourcePackages/checkouts/FinanceShared/build/StockPlanShared.build/Release-iphoneos/StockPlanShared.build/Objects-normal/arm64/StockDTOs.bc",
+    "object" : "/Users/fernando_idwell/Library/Developer/Xcode/DerivedData/financeplan-hdtrlwieigccumdszgmzfoiqxpvh/SourcePackages/checkouts/FinanceShared/build/StockPlanShared.build/Release-iphoneos/StockPlanShared.build/Objects-normal/arm64/StockDTOs.o"
+  }
+}

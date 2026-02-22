@@ -1,0 +1,141 @@
+{
+  "" : {
+    "const-values" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/financeplan-primary.swiftconstvalues",
+    "dependencies" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/financeplan-primary.d",
+    "diagnostics" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/financeplan-primary.dia",
+    "emit-module-dependencies" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/financeplan-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/financeplan-primary-emit-module.dia",
+    "pch" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/financeplan-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/financeplan-primary.swiftdeps"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/GeneratedAssetSymbols.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Auth/AuthAPIExample.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/AuthAPIExample.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/AuthAPIExample.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/AuthAPIExample.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/ContentView.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/ContentView.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Typography/Avenir/AvenirFontScheme.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/AvenirFontScheme.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/AvenirFontScheme.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/AvenirFontScheme.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Typography/Font+Typography.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Font+Typography.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Font+Typography.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Font+Typography.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Typography/FontScheme.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/FontScheme.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/FontScheme.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/FontScheme.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Typography/Typography.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Typography.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Typography.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Typography.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Typography/TypographyFontWeight.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/TypographyFontWeight.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/TypographyFontWeight.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/TypographyFontWeight.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Typography/TypographyStyle.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/TypographyStyle.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/TypographyStyle.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/TypographyStyle.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Typography/View+Typography.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/View+Typography.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/View+Typography.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/View+Typography.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Utilities/ChannelSlug.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/ChannelSlug.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/ChannelSlug.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/ChannelSlug.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Utilities/Debouncer/Debounced.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Debounced.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Debounced.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Debounced.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Utilities/Debouncer/Debouncer.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Debouncer.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Debouncer.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Debouncer.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Utilities/FrameReader/CGRectValuePreferenceKey.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/CGRectValuePreferenceKey.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/CGRectValuePreferenceKey.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/CGRectValuePreferenceKey.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Utilities/FrameReader/Color+FrameReader.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Color+FrameReader.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Color+FrameReader.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Color+FrameReader.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Utilities/FrameReader/FrameReader.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/FrameReader.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/FrameReader.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/FrameReader.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Utilities/FrameReader/FrameSizeInfo.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/FrameSizeInfo.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/FrameSizeInfo.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/FrameSizeInfo.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Utilities/FrameReader/View+FrameReader.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/View+FrameReader.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/View+FrameReader.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/View+FrameReader.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Utilities/Icon.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Icon.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Icon.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Icon.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Utilities/ImagePicker.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/ImagePicker.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/ImagePicker.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/ImagePicker.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Utilities/ImageType.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/ImageType.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/ImageType.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/ImageType.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Utilities/MessageFormatting.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/MessageFormatting.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/MessageFormatting.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/MessageFormatting.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Utilities/SafariView.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/SafariView.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/SafariView.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/SafariView.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Utilities/URLDetector.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/URLDetector.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/URLDetector.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/URLDetector.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/Utilities/Utility.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Utility.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Utility.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/Utility.o"
+  },
+  "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/financeplan/financeplanApp.swift" : {
+    "index-unit-output-path" : "/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/financeplanApp.o",
+    "llvm-bc" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/financeplanApp.bc",
+    "object" : "/Users/fernando_idwell/Projects/StockProject/StockPlanIOSApp/financeplan/build/financeplan.build/Release-iphoneos/financeplan.build/Objects-normal/arm64/financeplanApp.o"
+  }
+}

@@ -1,0 +1,6 @@
+Target dependency graph (3 targets)
+Target 'financeplan' in project 'financeplan'
+➜ Explicit dependency on target 'StockPlanShared' in project 'StockPlanShared'
+Target 'StockPlanShared' in project 'StockPlanShared'
+➜ Explicit dependency on target 'StockPlanShared' in project 'StockPlanShared'
+Target 'StockPlanShared' in project 'StockPlanShared' (no dependencies)

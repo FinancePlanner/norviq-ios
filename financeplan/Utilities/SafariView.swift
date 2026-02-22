@@ -1,11 +1,17 @@
+import OSLog
 import SafariServices
 import SwiftUI
+
+private let safariLogger = Logger(
+  subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
+  category: "SafariView"
+)
 
 struct SafariView: UIViewControllerRepresentable {
   let url: URL
 
   func makeUIViewController(context: Context) -> UIViewController {
-    log.ui("Preparing Safari presentation for URL: \(url.absoluteString)", level: .info)
+    safariLogger.info("Preparing Safari presentation for URL: \(url.absoluteString, privacy: .public)")
 
     guard isWebURL(url) else {
       let controller = UIAlertController(title: "Invalid Link", message: "This isn’t a valid web URL: \n\n\(url.absoluteString)", preferredStyle: .alert)
@@ -22,7 +28,7 @@ struct SafariView: UIViewControllerRepresentable {
     safariVC.preferredControlTintColor = UIColor.systemBlue
     safariVC.delegate = context.coordinator
 
-    log.ui("SFSafariViewController created successfully", level: .debug)
+    safariLogger.debug("SFSafariViewController created successfully")
     return safariVC
   }
 
@@ -36,18 +42,18 @@ struct SafariView: UIViewControllerRepresentable {
 
   class Coordinator: NSObject, SFSafariViewControllerDelegate {
     func safariViewControllerDidFinish(_ controller: SFSafariViewController) {
-      log.userAction("Safari view controller finished browsing", level: .info)
+      safariLogger.info("Safari view controller finished browsing")
     }
 
     func safariViewController(_ controller: SFSafariViewController, didCompleteInitialLoad didLoadSuccessfully: Bool) {
-      log.ui("Safari initial load completed: success=\(didLoadSuccessfully)", level: .info)
+      safariLogger.info("Safari initial load completed: success=\(didLoadSuccessfully, privacy: .public)")
       if !didLoadSuccessfully {
-        log.ui("Safari failed to load the page", level: .warning)
+        safariLogger.notice("Safari failed to load the page")
       }
     }
 
     func safariViewController(_ controller: SFSafariViewController, initialLoadDidRedirectTo URL: URL) {
-      log.ui("Safari redirected to: \(URL.absoluteString)", level: .info)
+      safariLogger.info("Safari redirected to: \(URL.absoluteString, privacy: .public)")
     }
   }
 

@@ -6,6 +6,21 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		60543D5B2F48C8B400B67ADA /* AnyAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 60543D5A2F48C8B400B67ADA /* AnyAPI */; };
+		60543D5D2F48C8B400B67ADA /* Factory in Frameworks */ = {isa = PBXBuildFile; productRef = 60543D5C2F48C8B400B67ADA /* Factory */; };
+		60543D5F2F48C8B400B67ADA /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 60543D5E2F48C8B400B67ADA /* Kingfisher */; };
+		60543DEA2F48D35700B67ADA /* EntityStore in Frameworks */ = {isa = PBXBuildFile; productRef = 60543DE92F48D35700B67ADA /* EntityStore */; };
+		60543E112F48D90000B67ADA /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 60543E012F48D90000B67ADA /* Alamofire */; };
+		60543E122F48D90000B67ADA /* BetterCodable in Frameworks */ = {isa = PBXBuildFile; productRef = 60543E022F48D90000B67ADA /* BetterCodable */; };
+		60543E132F48D90000B67ADA /* Drops in Frameworks */ = {isa = PBXBuildFile; productRef = 60543E032F48D90000B67ADA /* Drops */; };
+		60543E152F48D90000B67ADA /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 60543E052F48D90000B67ADA /* Lottie */; };
+		60543E162F48D90000B67ADA /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 60543E062F48D90000B67ADA /* MarkdownUI */; };
+		60543E172F48D90000B67ADA /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 60543E072F48D90000B67ADA /* Sentry */; };
+		60543E182F48D90000B67ADA /* SwiftyCrop in Frameworks */ = {isa = PBXBuildFile; productRef = 60543E082F48D90000B67ADA /* SwiftyCrop */; };
+		70B001A13C5E11AA00F01001 /* StockPlanShared in Frameworks */ = {isa = PBXBuildFile; productRef = 70B001A23C5E11AA00F01001 /* StockPlanShared */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		60AFA8062F3E406A00FA3135 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +67,18 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				60543E112F48D90000B67ADA /* Alamofire in Frameworks */,
+				60543D5B2F48C8B400B67ADA /* AnyAPI in Frameworks */,
+				60543E122F48D90000B67ADA /* BetterCodable in Frameworks */,
+				60543E132F48D90000B67ADA /* Drops in Frameworks */,
+				60543D5D2F48C8B400B67ADA /* Factory in Frameworks */,
+				60543D5F2F48C8B400B67ADA /* Kingfisher in Frameworks */,
+				60543E152F48D90000B67ADA /* Lottie in Frameworks */,
+				60543E162F48D90000B67ADA /* MarkdownUI in Frameworks */,
+				60543E172F48D90000B67ADA /* Sentry in Frameworks */,
+				60543E182F48D90000B67ADA /* SwiftyCrop in Frameworks */,
+				60543DEA2F48D35700B67ADA /* EntityStore in Frameworks */,
+				70B001A13C5E11AA00F01001 /* StockPlanShared in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +139,18 @@
 			);
 			name = financeplan;
 			packageProductDependencies = (
+				60543E012F48D90000B67ADA /* Alamofire */,
+				60543D5A2F48C8B400B67ADA /* AnyAPI */,
+				60543E022F48D90000B67ADA /* BetterCodable */,
+				60543E032F48D90000B67ADA /* Drops */,
+				60543DE92F48D35700B67ADA /* EntityStore */,
+				60543D5C2F48C8B400B67ADA /* Factory */,
+				60543D5E2F48C8B400B67ADA /* Kingfisher */,
+				60543E052F48D90000B67ADA /* Lottie */,
+				60543E062F48D90000B67ADA /* MarkdownUI */,
+				60543E072F48D90000B67ADA /* Sentry */,
+				60543E082F48D90000B67ADA /* SwiftyCrop */,
+				70B001A23C5E11AA00F01001 /* StockPlanShared */,
 			);
 			productName = financeplan;
 			productReference = 60AFA7F82F3E406900FA3135 /* financeplan.app */;
@@ -195,6 +234,20 @@
 			);
 			mainGroup = 60AFA7EF2F3E406900FA3135;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				60543E212F48D90000B67ADA /* XCRemoteSwiftPackageReference "Alamofire" */,
+				60543E222F48D90000B67ADA /* XCRemoteSwiftPackageReference "BetterCodable" */,
+				60543E232F48D90000B67ADA /* XCRemoteSwiftPackageReference "Drops" */,
+				60543D602F48C8B400B67ADA /* XCRemoteSwiftPackageReference "Factory" */,
+				60543D612F48C8B400B67ADA /* XCRemoteSwiftPackageReference "Kingfisher" */,
+				60543E252F48D90000B67ADA /* XCRemoteSwiftPackageReference "lottie-ios" */,
+				60543E262F48D90000B67ADA /* XCRemoteSwiftPackageReference "MarkdownUI" */,
+				60543E272F48D90000B67ADA /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				60543E282F48D90000B67ADA /* XCRemoteSwiftPackageReference "SwiftyCrop" */,
+				70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "FinanceShared" */,
+				60543D592F48C8B400B67ADA /* XCRemoteSwiftPackageReference "AnyAPI" */,
+				60543DE82F48D35700B67ADA /* XCRemoteSwiftPackageReference "EntityStore" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 60AFA7F92F3E406900FA3135 /* Products */;
 			projectDirPath = "";
@@ -395,11 +448,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_ENTITLEMENTS = financeplan/FinPlanner.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 84X9WYBF36;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -427,11 +484,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = financeplan/FinPlanner.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 84X9WYBF36;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -458,6 +517,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 84X9WYBF36;
@@ -501,6 +562,8 @@
 		60AFA8202F3E406A00FA3135 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 84X9WYBF36;
@@ -578,6 +641,168 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		60543D592F48C8B400B67ADA /* XCRemoteSwiftPackageReference "AnyAPI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/jpmcglone/AnyAPI";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.0;
+			};
+		};
+		60543D602F48C8B400B67ADA /* XCRemoteSwiftPackageReference "Factory" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/hmlongco/Factory";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.3;
+			};
+		};
+		60543D612F48C8B400B67ADA /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/onevcat/Kingfisher.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
+		60543DE82F48D35700B67ADA /* XCRemoteSwiftPackageReference "EntityStore" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/jpmcglone/EntityStore";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.18;
+			};
+		};
+		60543E212F48D90000B67ADA /* XCRemoteSwiftPackageReference "Alamofire" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Alamofire/Alamofire.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.11.1;
+			};
+		};
+		60543E222F48D90000B67ADA /* XCRemoteSwiftPackageReference "BetterCodable" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/marksands/BetterCodable";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.4.0;
+			};
+		};
+		60543E232F48D90000B67ADA /* XCRemoteSwiftPackageReference "Drops" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/omaralbeik/Drops.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.7.0;
+			};
+		};
+		60543E252F48D90000B67ADA /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.5.2;
+			};
+		};
+		60543E262F48D90000B67ADA /* XCRemoteSwiftPackageReference "MarkdownUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/MarkdownUI";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+		60543E272F48D90000B67ADA /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
+		60543E282F48D90000B67ADA /* XCRemoteSwiftPackageReference "SwiftyCrop" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/benedom/SwiftyCrop";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+		70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "FinanceShared" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/FinancePlanner/FinanceShared.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		60543D5A2F48C8B400B67ADA /* AnyAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 60543D592F48C8B400B67ADA /* XCRemoteSwiftPackageReference "AnyAPI" */;
+			productName = AnyAPI;
+		};
+		60543D5C2F48C8B400B67ADA /* Factory */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 60543D602F48C8B400B67ADA /* XCRemoteSwiftPackageReference "Factory" */;
+			productName = Factory;
+		};
+		60543D5E2F48C8B400B67ADA /* Kingfisher */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 60543D612F48C8B400B67ADA /* XCRemoteSwiftPackageReference "Kingfisher" */;
+			productName = Kingfisher;
+		};
+		60543DE92F48D35700B67ADA /* EntityStore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 60543DE82F48D35700B67ADA /* XCRemoteSwiftPackageReference "EntityStore" */;
+			productName = EntityStore;
+		};
+		60543E012F48D90000B67ADA /* Alamofire */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 60543E212F48D90000B67ADA /* XCRemoteSwiftPackageReference "Alamofire" */;
+			productName = Alamofire;
+		};
+		60543E022F48D90000B67ADA /* BetterCodable */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 60543E222F48D90000B67ADA /* XCRemoteSwiftPackageReference "BetterCodable" */;
+			productName = BetterCodable;
+		};
+		60543E032F48D90000B67ADA /* Drops */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 60543E232F48D90000B67ADA /* XCRemoteSwiftPackageReference "Drops" */;
+			productName = Drops;
+		};
+		60543E052F48D90000B67ADA /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 60543E252F48D90000B67ADA /* XCRemoteSwiftPackageReference "lottie-ios" */;
+			productName = Lottie;
+		};
+		60543E062F48D90000B67ADA /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 60543E262F48D90000B67ADA /* XCRemoteSwiftPackageReference "MarkdownUI" */;
+			productName = MarkdownUI;
+		};
+		60543E072F48D90000B67ADA /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 60543E272F48D90000B67ADA /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
+		};
+		60543E082F48D90000B67ADA /* SwiftyCrop */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 60543E282F48D90000B67ADA /* XCRemoteSwiftPackageReference "SwiftyCrop" */;
+			productName = SwiftyCrop;
+		};
+		70B001A23C5E11AA00F01001 /* StockPlanShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "FinanceShared" */;
+			productName = StockPlanShared;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 60AFA7F02F3E406900FA3135 /* Project object */;
 }

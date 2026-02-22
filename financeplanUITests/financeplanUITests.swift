@@ -38,4 +38,16 @@ final class financeplanUITests: XCTestCase {
             XCUIApplication().launch()
         }
     }
+
+    @MainActor
+    func testAuthScreenAppearsAfterSplash() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        let signInButton = app.buttons["Sign in"]
+        let signUpButton = app.buttons["Sign up"]
+
+        let authScreenAppeared = signInButton.waitForExistence(timeout: 6) || signUpButton.waitForExistence(timeout: 6)
+        XCTAssertTrue(authScreenAppeared, "Expected auth screen to appear after splash.")
+    }
 }
