@@ -12,6 +12,7 @@ final class LoginViewModel: ObservableObject {
     case lastName
   }
 
+
   @Published var username = ""
   @Published var password = ""
   @Published var email = ""
@@ -26,6 +27,7 @@ final class LoginViewModel: ObservableObject {
 
   @Published var isSignup: Bool
   @Published var error: String?
+  @Published var infoMessage: String?
   @Published var fieldErrors: [Field: String] = [:]
   @Published var hasAttemptedSubmission = false
   @Published var signupFieldsOpacity: Double
@@ -52,6 +54,7 @@ final class LoginViewModel: ObservableObject {
 
   func clearError() {
     error = nil
+    infoMessage = nil
   }
 
   func clearFieldError(_ field: Field) {
@@ -77,6 +80,7 @@ final class LoginViewModel: ObservableObject {
     signupFieldsOpacity = 1
     sessionStore.loginIsSignup = true
     error = nil
+    infoMessage = nil
   }
 
   func hideSignup() {
@@ -84,9 +88,14 @@ final class LoginViewModel: ObservableObject {
     signupFieldsOpacity = 0
     sessionStore.loginIsSignup = false
     error = nil
+    infoMessage = nil
   }
 
   func submit() async {
+    guard !isSubmitting else {
+      return
+    }
+
     if isSignup {
       await signup()
     } else {
@@ -109,6 +118,7 @@ final class LoginViewModel: ObservableObject {
     }
 
     error = nil
+    infoMessage = nil
     isSubmitting = true
     defer { isSubmitting = false }
 
@@ -132,11 +142,12 @@ final class LoginViewModel: ObservableObject {
     }
 
     error = nil
+    infoMessage = nil
     isSubmitting = true
     defer { isSubmitting = false }
 
     do {
-      let auth = try await authService.signup(
+      try await authService.signup(
         username: username.trimmingCharacters(in: .whitespacesAndNewlines),
         email: email.trimmingCharacters(in: .whitespacesAndNewlines),
         password: password,
@@ -144,7 +155,12 @@ final class LoginViewModel: ObservableObject {
         lastName: lastName.trimmingCharacters(in: .whitespacesAndNewlines),
         dateOfBirth: dateOfBirth
       )
-      persistAuth(auth)
+
+      let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+      username = trimmedEmail
+      password = ""
+      hideSignup()
+      infoMessage = "Account created. Please sign in."
       error = nil
     } catch {
       self.error = errorMessage(from: error, fallback: "Could not sign up. Please try again.")
@@ -154,6 +170,7 @@ final class LoginViewModel: ObservableObject {
   private func persistAuth(_ auth: AuthResponse) {
     sessionStore.authToken = auth.token
     sessionStore.refreshToken = auth.refreshToken
+    sessionStore.currentUserID = auth.userId.uuidString
     onAuthenticated()
   }
 

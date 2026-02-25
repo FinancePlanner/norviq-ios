@@ -17,14 +17,20 @@ final class LoginViewModelTests: XCTestCase {
     var lastSignupLastName: String?
     var lastSignupDateOfBirth: Date?
     var lastForgotPasswordEmail: String?
+    var logoutCalls = 0
+    var lastLogoutRefreshToken: String?
+    var loginDelayNanoseconds: UInt64 = 0
 
     var loginResult: Result<AuthResponse, Error> = .failure(MockError.notConfigured)
-    var signupResult: Result<AuthResponse, Error> = .failure(MockError.notConfigured)
+    var signupResult: Result<Void, Error> = .failure(MockError.notConfigured)
     var forgotPasswordResult: Result<AuthForgotPasswordResponse, Error> = .failure(MockError.notConfigured)
 
     func login(email: String, password _: String) async throws -> AuthResponse {
       loginCalls += 1
       lastLoginEmail = email
+      if loginDelayNanoseconds > 0 {
+        try await Task.sleep(nanoseconds: loginDelayNanoseconds)
+      }
       return try loginResult.get()
     }
 
@@ -35,14 +41,14 @@ final class LoginViewModelTests: XCTestCase {
       firstName: String,
       lastName: String,
       dateOfBirth: Date
-    ) async throws -> AuthResponse {
+    ) async throws {
       signupCalls += 1
       lastSignupUsername = username
       lastSignupEmail = email
       lastSignupFirstName = firstName
       lastSignupLastName = lastName
       lastSignupDateOfBirth = dateOfBirth
-      return try signupResult.get()
+      _ = try signupResult.get()
     }
 
     func forgotPassword(email: String) async throws -> AuthForgotPasswordResponse {
@@ -50,12 +56,27 @@ final class LoginViewModelTests: XCTestCase {
       lastForgotPasswordEmail = email
       return try forgotPasswordResult.get()
     }
+
+    func logout(refreshToken: String) async {
+      logoutCalls += 1
+      lastLogoutRefreshToken = refreshToken
+    }
   }
 
   private final class AuthSessionStoreMock: AuthSessionStoring {
     var authToken = ""
     var refreshToken = ""
     var loginIsSignup = true
+    var currentUserID = ""
+    private var importedUserIDs: Set<String> = []
+
+    func hasCompletedInitialStockImport(for userID: String) -> Bool {
+      importedUserIDs.contains(userID)
+    }
+
+    func markInitialStockImportCompleted(for userID: String) {
+      importedUserIDs.insert(userID)
+    }
   }
 
   private enum MockError: Error {
@@ -132,7 +153,40 @@ final class LoginViewModelTests: XCTestCase {
     XCTAssertEqual(service.lastLoginEmail, "user@example.com")
     XCTAssertEqual(store.authToken, expected.token)
     XCTAssertEqual(store.refreshToken, expected.refreshToken)
+    XCTAssertEqual(store.currentUserID, expected.userId.uuidString)
     XCTAssertNil(viewModel.error)
+  }
+
+  func testSubmitLogin_WhenAlreadySubmitting_IgnoresSecondRequest() async {
+    let service = AuthServiceMock()
+    let store = AuthSessionStoreMock()
+    store.loginIsSignup = false
+    let viewModel = LoginViewModel(authService: service, sessionStore: store)
+    service.loginDelayNanoseconds = 300_000_000
+    service.loginResult = .success(
+      AuthResponse(
+        token: "token",
+        userId: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+        expiresIn: 3600,
+        refreshToken: "refresh",
+        refreshExpiresIn: 86_400,
+        username: "valid_user",
+        email: "user@example.com",
+        firstName: "Jane",
+        lastName: "Doe",
+        dateOfBirth: Date(timeIntervalSince1970: 946684800)
+      )
+    )
+
+    viewModel.username = "user@example.com"
+    viewModel.password = "Password123"
+
+    async let first: Void = viewModel.submit()
+    await Task.yield()
+    async let second: Void = viewModel.submit()
+    _ = await (first, second)
+
+    XCTAssertEqual(service.loginCalls, 1)
   }
 
   func testSubmitSignup_WithInvalidEmail_SetsValidationErrorAndSkipsRequest() async {
@@ -150,6 +204,31 @@ final class LoginViewModelTests: XCTestCase {
 
     XCTAssertEqual(service.signupCalls, 0)
     XCTAssertEqual(viewModel.fieldErrors[.email], "Please enter a valid email address")
+  }
+
+  func testSubmitSignup_WhenServiceSucceeds_ShowsLoginAndDoesNotPersistTokens() async {
+    let service = AuthServiceMock()
+    let store = AuthSessionStoreMock()
+    let viewModel = LoginViewModel(authService: service, sessionStore: store)
+    service.signupResult = .success(())
+
+    viewModel.isSignup = true
+    viewModel.username = "valid_user"
+    viewModel.email = "user@example.com"
+    viewModel.firstName = "Jane"
+    viewModel.lastName = "Doe"
+    viewModel.password = "Password123"
+    viewModel.dateOfBirth = Date(timeIntervalSince1970: 946684800)
+
+    await viewModel.submit()
+
+    XCTAssertEqual(service.signupCalls, 1)
+    XCTAssertFalse(viewModel.isSignup)
+    XCTAssertEqual(viewModel.username, "user@example.com")
+    XCTAssertEqual(viewModel.password, "")
+    XCTAssertEqual(viewModel.infoMessage, "Account created. Please sign in.")
+    XCTAssertEqual(store.authToken, "")
+    XCTAssertEqual(store.refreshToken, "")
   }
 
   func testRequestForgotPassword_ForwardsToServiceAndReturnsMessage() async throws {

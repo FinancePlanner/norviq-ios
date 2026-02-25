@@ -38,12 +38,29 @@ struct LoginScreen: View {
       .overlay(alignment: .center) {
         forgotPasswordOverlay
       }
+      .overlay(alignment: .top) {
+        successToastOverlay
+      }
       .sheet(isPresented: termsSheetIsPresented) {
         termsSheetContent
       }
       .sheet(isPresented: privacySheetIsPresented) {
         privacySheetContent
       }
+    .task(id: viewModel.infoMessage) {
+      guard let currentMessage = viewModel.infoMessage else {
+        return
+      }
+
+      try? await Task.sleep(nanoseconds: 3_000_000_000)
+      guard viewModel.infoMessage == currentMessage else {
+        return
+      }
+
+      withAnimation(.easeInOut(duration: 0.2)) {
+        viewModel.infoMessage = nil
+      }
+    }
     .confirmationDialog(
       "Switch from \(environment.current.title) to",
       isPresented: $isEnvironmentPresented,
@@ -149,13 +166,25 @@ struct LoginScreen: View {
     }
   }
 
+  @ViewBuilder
+  private var successToastOverlay: some View {
+    if let info = viewModel.infoMessage {
+      ToastBanner(
+        message: info,
+        style: .success
+      )
+      .padding(.horizontal, 16)
+      .padding(.top, 12)
+      .transition(.move(edge: .top).combined(with: .opacity))
+    }
+  }
+
   var content: some View {
     VStack(spacing: 10) {
       Spacer(minLength: 0)
 
-      PulsingLogo()
-        .padding(.bottom, 8)
-
+//      PulsingLogo()
+//        .padding(.bottom, 8)
       VStack(spacing: 8) {
         usernameTextField
 

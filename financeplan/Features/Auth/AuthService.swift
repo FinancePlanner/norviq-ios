@@ -10,14 +10,19 @@ protocol AuthServicing {
     firstName: String,
     lastName: String,
     dateOfBirth: Date
-  ) async throws -> AuthResponse
+  ) async throws
   func forgotPassword(email: String) async throws -> AuthForgotPasswordResponse
+  func logout(refreshToken: String) async
 }
 
 protocol AuthSessionStoring: AnyObject {
   var authToken: String { get set }
   var refreshToken: String { get set }
   var loginIsSignup: Bool { get set }
+  var currentUserID: String { get set }
+
+  func hasCompletedInitialStockImport(for userID: String) -> Bool
+  func markInitialStockImportCompleted(for userID: String)
 }
 
 final class AuthService: AuthServicing {
@@ -43,7 +48,7 @@ final class AuthService: AuthServicing {
     firstName: String,
     lastName: String,
     dateOfBirth: Date
-  ) async throws -> AuthResponse {
+  ) async throws {
     try await client().register(
       AuthRegisterRequest(
         username: username,
@@ -60,6 +65,13 @@ final class AuthService: AuthServicing {
     try await client().forgotPassword(AuthForgotPasswordRequest(email: email))
   }
 
+  func logout(refreshToken: String) async {
+    guard !refreshToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+      return
+    }
+    try? await client().logout(AuthRefreshRequest(refreshToken: refreshToken))
+  }
+
   private func client() -> AuthHTTPClient {
     AuthHTTPClient(baseURL: environmentManager.current.apiBaseUrl, session: session)
   }
@@ -70,6 +82,8 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring {
     static let authToken = "auth_token"
     static let refreshToken = "refresh_token"
     static let loginIsSignup = "login_isSignup"
+    static let currentUserID = "current_user_id"
+    static let initialStockImportUserIDs = "initial_stock_import_user_ids"
   }
 
   private let defaults: UserDefaults
@@ -96,5 +110,30 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring {
       return defaults.bool(forKey: Keys.loginIsSignup)
     }
     set { defaults.set(newValue, forKey: Keys.loginIsSignup) }
+  }
+
+  var currentUserID: String {
+    get { defaults.string(forKey: Keys.currentUserID) ?? "" }
+    set { defaults.set(newValue, forKey: Keys.currentUserID) }
+  }
+
+  func hasCompletedInitialStockImport(for userID: String) -> Bool {
+    guard !userID.isEmpty else {
+      return false
+    }
+    return initialStockImportUserIDs.contains(userID)
+  }
+
+  func markInitialStockImportCompleted(for userID: String) {
+    guard !userID.isEmpty else {
+      return
+    }
+    var allUserIDs = initialStockImportUserIDs
+    allUserIDs.insert(userID)
+    defaults.set(Array(allUserIDs), forKey: Keys.initialStockImportUserIDs)
+  }
+
+  private var initialStockImportUserIDs: Set<String> {
+    Set(defaults.stringArray(forKey: Keys.initialStockImportUserIDs) ?? [])
   }
 }

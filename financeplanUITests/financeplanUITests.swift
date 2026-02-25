@@ -5,49 +5,90 @@
 //  Created by Fernando Correia on 12.02.26.
 //
 
+import Foundation
 import XCTest
 
 final class financeplanUITests: XCTestCase {
+  override func setUpWithError() throws {
+    continueAfterFailure = false
+  }
 
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+  @MainActor
+  func testFirstLoginAuthenticatedUser_IsBlockedByMandatoryImportScreen() throws {
+    let app = makeAuthenticatedFirstLoginApp(userID: "ui-test-\(UUID().uuidString)")
+    app.launch()
 
-        // In UI tests it is usually best to stop immediately when a failure occurs.
-        continueAfterFailure = false
+    let importTitle = app.staticTexts["Import Your Stocks"]
+    XCTAssertTrue(
+      importTitle.waitForExistence(timeout: 15),
+      "Expected the mandatory import screen to appear for first login."
+    )
 
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
+    let continueButton = app.buttons["Select a Method"]
+    XCTAssertTrue(continueButton.waitForExistence(timeout: 8))
+    XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled until an import method is selected.")
+    XCTAssertFalse(app.tabBars.buttons["Home"].exists, "Home flow should not be reachable before import selection.")
+  }
+
+  @MainActor
+  func testSelectingImportMethod_TransitionsToHome() throws {
+    let app = makeAuthenticatedFirstLoginApp(userID: "ui-test-\(UUID().uuidString)")
+    app.launch()
+
+    completeImportViaCSV(in: app)
+
+    XCTAssertTrue(app.tabBars.buttons["Home"].waitForExistence(timeout: 15))
+    XCTAssertTrue(app.staticTexts["Portfolio Value"].waitForExistence(timeout: 15))
+    XCTAssertFalse(app.staticTexts["Import Your Stocks"].exists)
+  }
+
+  @MainActor
+  func testCompletedImport_IsRememberedForSameUser() throws {
+    let userID = "ui-test-\(UUID().uuidString)"
+    let firstLaunchApp = makeAuthenticatedFirstLoginApp(userID: userID)
+    firstLaunchApp.launch()
+
+    completeImportViaCSV(in: firstLaunchApp)
+    XCTAssertTrue(firstLaunchApp.tabBars.buttons["Home"].waitForExistence(timeout: 15))
+    firstLaunchApp.terminate()
+
+    let secondLaunchApp = makeAuthenticatedFirstLoginApp(userID: userID, resetSession: false)
+    secondLaunchApp.launch()
+
+    XCTAssertTrue(secondLaunchApp.tabBars.buttons["Home"].waitForExistence(timeout: 15))
+    XCTAssertTrue(secondLaunchApp.staticTexts["Portfolio Value"].waitForExistence(timeout: 15))
+    XCTAssertFalse(
+      secondLaunchApp.staticTexts["Import Your Stocks"].exists,
+      "The same user should skip the initial import gate after completing it once."
+    )
+  }
+
+  @MainActor
+  private func completeImportViaCSV(in app: XCUIApplication) {
+    XCTAssertTrue(app.staticTexts["Import Your Stocks"].waitForExistence(timeout: 15))
+    let csvMethodButton = app.buttons.containing(.staticText, identifier: "Import CSV").firstMatch
+    XCTAssertTrue(csvMethodButton.waitForExistence(timeout: 8))
+    csvMethodButton.tap()
+
+    let continueButton = app.buttons["Continue with Import CSV"]
+    XCTAssertTrue(continueButton.waitForExistence(timeout: 8))
+    XCTAssertTrue(continueButton.isEnabled)
+    continueButton.tap()
+  }
+
+  private func makeAuthenticatedFirstLoginApp(userID: String, resetSession: Bool = true) -> XCUIApplication {
+    let app = XCUIApplication()
+    var launchArguments = [
+      "-ui_test_skip_splash",
+      "-ui_test_auth_token",
+      "ui-test-token",
+      "-ui_test_user_id",
+      userID,
+    ]
+    if resetSession {
+      launchArguments.append("-ui_test_reset_session")
     }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
-
-    @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
-        let app = XCUIApplication()
-        app.launch()
-
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-    }
-
-    @MainActor
-    func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
-        measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
-        }
-    }
-
-    @MainActor
-    func testAuthScreenAppearsAfterSplash() throws {
-        let app = XCUIApplication()
-        app.launch()
-
-        let signInButton = app.buttons["Sign in"]
-        let signUpButton = app.buttons["Sign up"]
-
-        let authScreenAppeared = signInButton.waitForExistence(timeout: 6) || signUpButton.waitForExistence(timeout: 6)
-        XCTAssertTrue(authScreenAppeared, "Expected auth screen to appear after splash.")
-    }
+    app.launchArguments += launchArguments
+    return app
+  }
 }

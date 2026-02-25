@@ -92,7 +92,69 @@ final class AuthHTTPClientTests: XCTestCase {
     }
   }
 
-  func testForgotPassword_WhenServerReturnsNonJSONError_ThrowsStatusError() async throws {
+  func testRegister_WhenServerReturnsReasonField_ThrowsAPIErrorReason() async throws {
+    let session = SessionMock()
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/auth/register")
+
+      let data = #"{"error":true,"reason":"Username already registered"}"#.data(using: .utf8) ?? Data()
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 409, httpVersion: nil, headerFields: nil)
+      )
+      return (data, response)
+    }
+
+    let client = AuthHTTPClient(baseURL: baseURL, session: session)
+
+    do {
+      try await client.register(
+        AuthRegisterRequest(
+          username: "dupe_user",
+          password: "Password123",
+          email: "dupe@example.com",
+          firstName: "Dupe",
+          lastName: "User",
+          dateOfBirth: Date(timeIntervalSince1970: 946684800)
+        )
+      )
+      XCTFail("Expected API error")
+    } catch let error as AuthHTTPClient.Error {
+      XCTAssertEqual(error, .api("Username already registered"))
+    } catch {
+      XCTFail("Unexpected error: \(error)")
+    }
+  }
+
+  func testRegister_WhenServerReturnsSuccessWithoutAuthPayload_DoesNotThrow() async throws {
+    let session = SessionMock()
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/auth/register")
+      let data = #"{"ok":true}"#.data(using: .utf8) ?? Data()
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 201, httpVersion: nil, headerFields: nil)
+      )
+      return (data, response)
+    }
+
+    let client = AuthHTTPClient(baseURL: baseURL, session: session)
+
+    try await client.register(
+      AuthRegisterRequest(
+        username: "new_user",
+        password: "Password123",
+        email: "new@example.com",
+        firstName: "New",
+        lastName: "User",
+        dateOfBirth: Date(timeIntervalSince1970: 946684800)
+      )
+    )
+  }
+
+  func testForgotPassword_WhenServerReturnsNonJSONError_ThrowsAPIErrorWithRawMessage() async throws {
     let session = SessionMock()
     let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
 
@@ -109,9 +171,9 @@ final class AuthHTTPClientTests: XCTestCase {
 
     do {
       _ = try await client.forgotPassword(AuthForgotPasswordRequest(email: "user@example.com"))
-      XCTFail("Expected invalid status error")
+      XCTFail("Expected API error")
     } catch let error as AuthHTTPClient.Error {
-      XCTAssertEqual(error, .invalidStatus(500))
+      XCTAssertEqual(error, .api("Internal Error"))
     } catch {
       XCTFail("Unexpected error: \(error)")
     }
@@ -138,5 +200,39 @@ final class AuthHTTPClientTests: XCTestCase {
 
     XCTAssertEqual(response.message, "If the account exists, a reset code has been sent.")
     XCTAssertNil(response.resetCode)
+  }
+
+  func testLogout_WhenV2Returns404_FallsBackToAuthLogout() async throws {
+    let session = SessionMock()
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
+    var requestedURLs: [String] = []
+
+    session.handler = { request in
+      let url = try XCTUnwrap(request.url).absoluteString
+      requestedURLs.append(url)
+
+      if url == "https://api.example.com/v2/logout" {
+        let response = try XCTUnwrap(
+          HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 404, httpVersion: nil, headerFields: nil)
+        )
+        return (Data(), response)
+      }
+
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (Data(), response)
+    }
+
+    let client = AuthHTTPClient(baseURL: baseURL, session: session)
+    try await client.logout(AuthRefreshRequest(refreshToken: "refresh-123"))
+
+    XCTAssertEqual(
+      requestedURLs,
+      [
+        "https://api.example.com/v2/logout",
+        "https://api.example.com/auth/logout",
+      ]
+    )
   }
 }
