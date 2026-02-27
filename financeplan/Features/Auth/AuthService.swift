@@ -20,6 +20,7 @@ protocol AuthSessionStoring: AnyObject {
   var refreshToken: String { get set }
   var loginIsSignup: Bool { get set }
   var currentUserID: String { get set }
+  var currentUsername: String { get set }
 
   func hasCompletedInitialStockImport(for userID: String) -> Bool
   func markInitialStockImportCompleted(for userID: String)
@@ -83,6 +84,7 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring {
     static let refreshToken = "refresh_token"
     static let loginIsSignup = "login_isSignup"
     static let currentUserID = "current_user_id"
+    static let currentUsername = "current_username"
     static let initialStockImportUserIDs = "initial_stock_import_user_ids"
   }
 
@@ -115,6 +117,11 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring {
   var currentUserID: String {
     get { defaults.string(forKey: Keys.currentUserID) ?? "" }
     set { defaults.set(newValue, forKey: Keys.currentUserID) }
+  }
+
+  var currentUsername: String {
+    get { defaults.string(forKey: Keys.currentUsername) ?? "" }
+    set { defaults.set(newValue, forKey: Keys.currentUsername) }
   }
 
   func hasCompletedInitialStockImport(for userID: String) -> Bool {

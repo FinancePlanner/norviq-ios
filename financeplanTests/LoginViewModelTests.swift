@@ -68,6 +68,7 @@ final class LoginViewModelTests: XCTestCase {
     var refreshToken = ""
     var loginIsSignup = true
     var currentUserID = ""
+    var currentUsername = ""
     private var importedUserIDs: Set<String> = []
 
     func hasCompletedInitialStockImport(for userID: String) -> Bool {
@@ -154,6 +155,7 @@ final class LoginViewModelTests: XCTestCase {
     XCTAssertEqual(store.authToken, expected.token)
     XCTAssertEqual(store.refreshToken, expected.refreshToken)
     XCTAssertEqual(store.currentUserID, expected.userId.uuidString)
+    XCTAssertEqual(store.currentUsername, expected.username)
     XCTAssertNil(viewModel.error)
   }
 

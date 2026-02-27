@@ -11,10 +11,13 @@ struct SafariView: UIViewControllerRepresentable {
   let url: URL
 
   func makeUIViewController(context: Context) -> UIViewController {
-    safariLogger.info("Preparing Safari presentation for URL: \(url.absoluteString, privacy: .public)")
+    safariLogger.info(
+      "Preparing Safari presentation for URL: \(url.absoluteString, privacy: .public)")
 
     guard isWebURL(url) else {
-      let controller = UIAlertController(title: "Invalid Link", message: "This isn’t a valid web URL: \n\n\(url.absoluteString)", preferredStyle: .alert)
+      let controller = UIAlertController(
+        title: "Invalid Link", message: "This isn’t a valid web URL: \n\n\(url.absoluteString)",
+        preferredStyle: .alert)
       controller.addAction(UIAlertAction(title: "OK", style: .default))
       return controller
     }
@@ -24,8 +27,6 @@ struct SafariView: UIViewControllerRepresentable {
     config.barCollapsingEnabled = true
 
     let safariVC = SFSafariViewController(url: url, configuration: config)
-    safariVC.preferredBarTintColor = UIColor.systemBackground
-    safariVC.preferredControlTintColor = UIColor.systemBlue
     safariVC.delegate = context.coordinator
 
     safariLogger.debug("SFSafariViewController created successfully")
@@ -45,14 +46,19 @@ struct SafariView: UIViewControllerRepresentable {
       safariLogger.info("Safari view controller finished browsing")
     }
 
-    func safariViewController(_ controller: SFSafariViewController, didCompleteInitialLoad didLoadSuccessfully: Bool) {
-      safariLogger.info("Safari initial load completed: success=\(didLoadSuccessfully, privacy: .public)")
+    func safariViewController(
+      _ controller: SFSafariViewController, didCompleteInitialLoad didLoadSuccessfully: Bool
+    ) {
+      safariLogger.info(
+        "Safari initial load completed: success=\(didLoadSuccessfully, privacy: .public)")
       if !didLoadSuccessfully {
         safariLogger.notice("Safari failed to load the page")
       }
     }
 
-    func safariViewController(_ controller: SFSafariViewController, initialLoadDidRedirectTo URL: URL) {
+    func safariViewController(
+      _ controller: SFSafariViewController, initialLoadDidRedirectTo URL: URL
+    ) {
       safariLogger.info("Safari redirected to: \(URL.absoluteString, privacy: .public)")
     }
   }

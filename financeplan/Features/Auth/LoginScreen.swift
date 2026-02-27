@@ -8,9 +8,24 @@
 import Factory
 import SwiftUI
 
+struct GlassTextFieldStyle: TextFieldStyle {
+  @Environment(\.colorScheme) private var colorScheme
+  func _body(configuration: TextField<Self._Label>) -> some View {
+    configuration
+      .padding(14)
+      .background(Color.white.opacity(colorScheme == .dark ? 0.1 : 0.6))
+      .cornerRadius(12)
+      .overlay(
+        RoundedRectangle(cornerRadius: 12)
+          .stroke(Color.white.opacity(colorScheme == .dark ? 0.15 : 0.4), lineWidth: 1)
+      )
+  }
+}
+
 struct LoginScreen: View {
   @InjectedObject(\Container.windowSize) private var windowSize
   @InjectedObservable(\Container.appEnvironment) private var environment
+  @Environment(\.colorScheme) private var colorScheme
   @StateObject private var viewModel: LoginViewModel
 
   @State private var contentSize = CGSize.zero
@@ -34,7 +49,7 @@ struct LoginScreen: View {
 
   var body: some View {
     mainLayout
-      .background(Color(.systemBackground).ignoresSafeArea())
+      .background(MeshGradientBackground().ignoresSafeArea())
       .overlay(alignment: .center) {
         forgotPasswordOverlay
       }
@@ -47,31 +62,34 @@ struct LoginScreen: View {
       .sheet(isPresented: privacySheetIsPresented) {
         privacySheetContent
       }
-    .task(id: viewModel.infoMessage) {
-      guard let currentMessage = viewModel.infoMessage else {
-        return
-      }
+      .task(id: viewModel.infoMessage) {
+        guard let currentMessage = viewModel.infoMessage else {
+          return
+        }
 
-      try? await Task.sleep(nanoseconds: 3_000_000_000)
-      guard viewModel.infoMessage == currentMessage else {
-        return
-      }
+        try? await Task.sleep(nanoseconds: 3_000_000_000)
+        guard viewModel.infoMessage == currentMessage else {
+          return
+        }
 
-      withAnimation(.easeInOut(duration: 0.2)) {
-        viewModel.infoMessage = nil
+        withAnimation(.easeInOut(duration: 0.2)) {
+          viewModel.infoMessage = nil
+        }
       }
-    }
-    .confirmationDialog(
-      "Switch from \(environment.current.title) to",
-      isPresented: $isEnvironmentPresented,
-      titleVisibility: .visible
-    ) {
-      confirmationDialog
-    }
+      .confirmationDialog(
+        "Switch from \(environment.current.title) to",
+        isPresented: $isEnvironmentPresented,
+        titleVisibility: .visible
+      ) {
+        confirmationDialog
+      }
   }
 
   private var formTextFieldsState: [String] {
-    [viewModel.username, viewModel.password, viewModel.email, viewModel.firstName, viewModel.lastName]
+    [
+      viewModel.username, viewModel.password, viewModel.email, viewModel.firstName,
+      viewModel.lastName,
+    ]
   }
 
   private var mainLayout: some View {
@@ -91,23 +109,26 @@ struct LoginScreen: View {
   }
 
   private var formContent: some View {
-    content
-      .readSize(into: $contentSize)
-      .frame(maxWidth: windowSize.effectiveFormMaxWidth)
-      .onChange(of: formTextFieldsState) { _, _ in
-        viewModel.clearError()
-      }
-      .onChange(of: viewModel.username) { _, newValue in
-        viewModel.sanitizeUsernameInput(newValue)
-        viewModel.clearFieldError(.username)
-      }
-      .onChange(of: viewModel.password) { _, _ in viewModel.clearFieldError(.password) }
-      .onChange(of: viewModel.email) { _, _ in viewModel.clearFieldError(.email) }
-      .onChange(of: viewModel.firstName) { _, _ in viewModel.clearFieldError(.firstName) }
-      .onChange(of: viewModel.lastName) { _, _ in viewModel.clearFieldError(.lastName) }
-      .onAppear {
-        focusedField = .username
-      }
+    GlassCard {
+      content
+    }
+    .readSize(into: $contentSize)
+    .frame(maxWidth: windowSize.effectiveFormMaxWidth)
+    .onChange(of: formTextFieldsState) { _, _ in
+      viewModel.clearError()
+    }
+    .onChange(of: viewModel.username) { _, newValue in
+      viewModel.sanitizeUsernameInput(newValue)
+      viewModel.clearFieldError(.username)
+    }
+    .onChange(of: viewModel.password) { _, _ in viewModel.clearFieldError(.password) }
+    .onChange(of: viewModel.email) { _, _ in viewModel.clearFieldError(.email) }
+    .onChange(of: viewModel.firstName) { _, _ in viewModel.clearFieldError(.firstName) }
+    .onChange(of: viewModel.lastName) { _, _ in viewModel.clearFieldError(.lastName) }
+    .onAppear {
+      focusedField = .username
+    }
+    .padding(.horizontal, 16)
   }
 
   private var legalLinksFooter: some View {
@@ -119,7 +140,7 @@ struct LoginScreen: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 12)
     }
-    .background(Color(.systemBackground))
+    .background(.clear)
     .ignoresSafeArea(.keyboard)
   }
 
@@ -183,8 +204,8 @@ struct LoginScreen: View {
     VStack(spacing: 10) {
       Spacer(minLength: 0)
 
-//      PulsingLogo()
-//        .padding(.bottom, 8)
+      //      PulsingLogo()
+      //        .padding(.bottom, 8)
       VStack(spacing: 8) {
         usernameTextField
 
@@ -211,8 +232,8 @@ struct LoginScreen: View {
 
       if let error = viewModel.error {
         Text(error)
-          .font(.footnote)
-          .foregroundStyle(.red)
+          .typography(.nano)
+          .foregroundStyle(AppTheme.Colors.danger)
       }
 
       VStack(spacing: 4) {
@@ -231,8 +252,8 @@ struct LoginScreen: View {
         viewModel.isForgotPasswordPresented = true
       } label: {
         Text("Forgot password?")
-          .font(.footnote)
-          .foregroundStyle(.blue)
+          .typography(.nano)
+          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
           .frame(maxWidth: .infinity, alignment: .trailing)
           .padding(.bottom, 2)
       }
@@ -247,10 +268,13 @@ struct LoginScreen: View {
         viewModel.showSignup()
       }
     } label: {
-      Text(viewModel.isSignup ? "Already have an account? Log in instead" : "No account? Sign up instead")
-        .font(.footnote)
-        .foregroundStyle(.blue)
-        .padding(.top, 8)
+      Text(
+        viewModel.isSignup
+          ? "Already have an account? Log in instead" : "No account? Sign up instead"
+      )
+      .typography(.nano)
+      .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+      .padding(.top, 8)
     }
   }
 
@@ -260,8 +284,8 @@ struct LoginScreen: View {
         termsURL = URL(string: "https://www.finplannerapp.com/terms")
       } label: {
         Text("Terms of Service")
-          .font(.footnote)
-          .foregroundStyle(.blue)
+          .typography(.nano)
+          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
           .underline()
       }
 
@@ -269,8 +293,8 @@ struct LoginScreen: View {
         privacyURL = URL(string: "https://www.finplannerapp.com/privacy")
       } label: {
         Text("Privacy Policy")
-          .font(.footnote)
-          .foregroundStyle(.blue)
+          .typography(.nano)
+          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
           .underline()
       }
 
@@ -279,8 +303,8 @@ struct LoginScreen: View {
           isEnvironmentPresented = true
         } label: {
           Text("Environment")
-            .font(.footnote)
-            .foregroundStyle(.blue)
+            .typography(.nano)
+            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
             .underline()
         }
       }
@@ -309,7 +333,7 @@ struct LoginScreen: View {
         .focused($focusedField, equals: .firstName)
         .submitLabel(.next)
         .onSubmit { focusedField = .lastName }
-        .textFieldStyle(.roundedBorder)
+        .textFieldStyle(GlassTextFieldStyle())
         .accessibilityLabel("First Name")
     }
   }
@@ -322,7 +346,7 @@ struct LoginScreen: View {
         .focused($focusedField, equals: .lastName)
         .submitLabel(.next)
         .onSubmit { focusedField = nil }
-        .textFieldStyle(.roundedBorder)
+        .textFieldStyle(GlassTextFieldStyle())
         .accessibilityLabel("Last Name")
     }
   }
@@ -359,7 +383,7 @@ struct LoginScreen: View {
             Task { await viewModel.submit() }
           }
         }
-        .textFieldStyle(.roundedBorder)
+        .textFieldStyle(GlassTextFieldStyle())
         .accessibilityLabel(viewModel.isSignup ? "New Password" : "Password")
     }
   }
@@ -374,7 +398,7 @@ struct LoginScreen: View {
         .focused($focusedField, equals: .email)
         .submitLabel(.next)
         .onSubmit { focusedField = .password }
-        .textFieldStyle(.roundedBorder)
+        .textFieldStyle(GlassTextFieldStyle())
         .accessibilityLabel("Email Address")
     }
   }
@@ -389,7 +413,7 @@ struct LoginScreen: View {
         .focused($focusedField, equals: .username)
         .submitLabel(.next)
         .onSubmit { focusedField = viewModel.isSignup ? .email : .password }
-        .textFieldStyle(.roundedBorder)
+        .textFieldStyle(GlassTextFieldStyle())
         .accessibilityLabel(viewModel.isSignup ? "Username" : "Email")
     }
   }
@@ -404,14 +428,11 @@ struct LoginScreen: View {
             .tint(.white)
         }
         Text(viewModel.isSignup ? "Sign up" : "Sign in")
-          .fontWeight(.semibold)
+          .font(.headline)
+          .fontWeight(.bold)
       }
-      .frame(maxWidth: .infinity)
-      .padding(.vertical, 12)
-      .foregroundStyle(.white)
-      .background(viewModel.isSubmitting ? Color.gray : Color.blue)
-      .clipShape(RoundedRectangle(cornerRadius: 10))
     }
+    .buttonStyle(GlowingButtonStyle())
     .disabled(viewModel.isSubmitting)
   }
 
@@ -426,12 +447,12 @@ struct LoginScreen: View {
       if let message = viewModel.fieldErrors[field] {
         HStack(alignment: .top, spacing: 6) {
           Image(systemName: "exclamationmark.circle.fill")
-            .foregroundStyle(.red)
-            .font(.caption)
+            .foregroundStyle(AppTheme.Colors.danger)
+            .typography(.caption)
 
           Text(message)
-            .font(.footnote)
-            .foregroundStyle(.red)
+            .typography(.nano)
+            .foregroundStyle(AppTheme.Colors.danger)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
       }
@@ -440,17 +461,18 @@ struct LoginScreen: View {
 }
 
 private struct PulsingLogo: View {
+  @Environment(\.colorScheme) private var colorScheme
   @State private var pulse = false
 
   var body: some View {
     ZStack {
       Circle()
-        .fill(Color.blue.opacity(0.16))
+        .fill(AppTheme.Colors.tintSoft(for: colorScheme))
         .frame(width: pulse ? 86 : 72, height: pulse ? 86 : 72)
 
       Image(systemName: "chart.line.uptrend.xyaxis")
         .font(.system(size: 26, weight: .bold))
-        .foregroundStyle(.blue)
+        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
     }
     .onAppear {
       withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
@@ -471,7 +493,7 @@ private struct ForgotPasswordView: View {
 
   var body: some View {
     ZStack {
-      Color.black.opacity(0.35)
+      AppTheme.Colors.scrim
         .ignoresSafeArea()
         .onTapGesture {
           isPresented = false
@@ -479,10 +501,10 @@ private struct ForgotPasswordView: View {
 
       VStack(alignment: .leading, spacing: 12) {
         Text("Reset password")
-          .font(.headline)
+          .typography(.label, weight: .semibold)
 
         Text("Enter your account email and we will send reset instructions.")
-          .font(.subheadline)
+          .typography(.small)
           .foregroundStyle(.secondary)
 
         TextField("Email", text: $email)
@@ -493,14 +515,14 @@ private struct ForgotPasswordView: View {
 
         if let message {
           Text(message)
-            .font(.footnote)
-            .foregroundStyle(.green)
+            .typography(.nano)
+            .foregroundStyle(AppTheme.Colors.success)
         }
 
         if let errorMessage {
           Text(errorMessage)
-            .font(.footnote)
-            .foregroundStyle(.red)
+            .typography(.nano)
+            .foregroundStyle(AppTheme.Colors.danger)
         }
 
         HStack {
@@ -519,7 +541,7 @@ private struct ForgotPasswordView: View {
                   .tint(.white)
               }
               Text("Send")
-                .fontWeight(.semibold)
+                .typography(.button, weight: .semibold)
             }
           }
           .buttonStyle(.borderedProminent)
@@ -549,7 +571,8 @@ private struct ForgotPasswordView: View {
       message = try await onSubmit(trimmed)
       errorMessage = nil
     } catch {
-      errorMessage = (error as? LocalizedError)?.errorDescription ?? "Could not send reset instructions."
+      errorMessage =
+        (error as? LocalizedError)?.errorDescription ?? "Could not send reset instructions."
       message = nil
     }
   }

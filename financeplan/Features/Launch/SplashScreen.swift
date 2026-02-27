@@ -4,14 +4,12 @@ struct SplashScreen: View {
   @State private var pulse = false
   @State private var spin = false
   @State private var showText = false
+  @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
     ZStack {
       LinearGradient(
-        colors: [
-          Color(red: 0.06, green: 0.16, blue: 0.34),
-          Color(red: 0.04, green: 0.09, blue: 0.20),
-        ],
+        colors: AppTheme.splashGradient(for: colorScheme),
         startPoint: .topLeading,
         endPoint: .bottomTrailing
       )
@@ -25,29 +23,29 @@ struct SplashScreen: View {
       VStack(spacing: 18) {
         ZStack {
           Circle()
-            .stroke(Color.white.opacity(0.35), lineWidth: 2)
+            .stroke(AppTheme.Colors.splashRing, lineWidth: 2)
             .frame(width: 96, height: 96)
             .rotationEffect(.degrees(spin ? 360 : 0))
 
           Circle()
-            .fill(Color.white.opacity(0.9))
+            .fill(AppTheme.Colors.splashCore)
             .frame(width: 72, height: 72)
             .overlay(
               Text("FP")
-                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .typography(.title, weight: .bold)
                 .foregroundStyle(Color(red: 0.04, green: 0.09, blue: 0.20))
             )
         }
 
         VStack(spacing: 6) {
           Text("FinPlanner")
-            .font(.system(size: 32, weight: .bold, design: .rounded))
+            .typography(.hero, weight: .bold)
             .foregroundStyle(.white)
             .opacity(showText ? 1 : 0)
             .offset(y: showText ? 0 : 8)
 
           Text("Loading your workspace")
-            .font(.system(size: 14, weight: .medium, design: .rounded))
+            .typography(.nano, weight: .medium)
             .foregroundStyle(.white.opacity(0.8))
             .opacity(showText ? 1 : 0)
         }

@@ -39,6 +39,31 @@ public struct TypographyStyle {
 
   // swiftlint:enable switch_case_on_newline
 
+  public var relativeTextStyle: Font.TextStyle {
+    switch type {
+    case .display, .heading:
+      .largeTitle
+    case .hero:
+      .title
+    case .title:
+      .title2
+    case .headline:
+      .title3
+    case .body:
+      .body
+    case .small, .label, .button, .link:
+      .callout
+    case .mini, .nano:
+      .subheadline
+    case .tiny, .caption:
+      .caption
+    case .footnote, .overline:
+      .footnote
+    case .code:
+      .body
+    }
+  }
+
   public var isMonospaced: Bool {
     type == .code
   }
@@ -47,7 +72,11 @@ public struct TypographyStyle {
     if isMonospaced {
       .system(size: size, weight: .regular, design: .monospaced)
     } else {
-      .avenir(size: size, weight: weight, isItalic: isItalic)
+      .custom(
+        AvenirFontScheme(weight, isItalic: isItalic, size: size).fontName,
+        size: size,
+        relativeTo: relativeTextStyle
+      )
     }
   }
 }

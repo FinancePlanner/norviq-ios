@@ -8,28 +8,29 @@ public struct AvenirFontScheme: FontScheme {
   // swiftlint:disable switch_case_on_newline
   public var fontName: String {
     switch (weight, isItalic) {
-    case (.thin, false): "Avenir-Light" // no "UltraLight" in Avenir
-    case (.thin, true): "Avenir-LightOblique"
-    case (.light, false): "Avenir-Book"
-    case (.light, true): "Avenir-BookOblique"
-    case (.regular, false): "Avenir-Roman"
-    case (.regular, true): "Avenir-Oblique"
-    case (.medium, false): "Avenir-Medium"
-    case (.medium, true): "Avenir-MediumOblique"
-    case (.semibold, false): "Avenir-Heavy"
-    case (.semibold, true): "Avenir-HeavyOblique"
-    case (.bold, false): "Avenir-Black"
-    case (.bold, true): "Avenir-BlackOblique"
-    case (.extraBold, false): "Avenir-Black" // no ExtraBold available
-    case (.extraBold, true): "Avenir-BlackOblique"
-    case (.black, false): "Avenir-Black"
-    case (.black, true): "Avenir-BlackOblique"
+    case (.thin, false): "AvenirNext-UltraLight"
+    case (.thin, true): "AvenirNext-UltraLightItalic"
+    case (.light, false): "AvenirNext-Regular"
+    case (.light, true): "AvenirNext-Italic"
+    case (.regular, false): "AvenirNext-Regular"
+    case (.regular, true): "AvenirNext-Italic"
+    case (.medium, false): "AvenirNext-Medium"
+    case (.medium, true): "AvenirNext-MediumItalic"
+    case (.semibold, false): "AvenirNext-DemiBold"
+    case (.semibold, true): "AvenirNext-DemiBoldItalic"
+    case (.bold, false): "AvenirNext-Bold"
+    case (.bold, true): "AvenirNext-BoldItalic"
+    case (.extraBold, false): "AvenirNext-Heavy"
+    case (.extraBold, true): "AvenirNext-HeavyItalic"
+    case (.black, false): "AvenirNext-Heavy"
+    case (.black, true): "AvenirNext-HeavyItalic"
     }
   }
 
   // swiftlint:enable switch_case_on_newline
 
-  public init(_ weight: TypographyFontWeight = .regular, isItalic: Bool = false, size: CGFloat = 15) {
+  public init(_ weight: TypographyFontWeight = .regular, isItalic: Bool = false, size: CGFloat = 15)
+  {
     self.weight = weight
     self.isItalic = isItalic
     self.size = size

@@ -1,118 +1,107 @@
 import AVFoundation
+import PhotosUI
 import SwiftUI
-import UIKit
-import UniformTypeIdentifiers
 
-struct ImagePicker: UIViewControllerRepresentable {
-  class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
-    let parent: ImagePicker
-
-    init(_ parent: ImagePicker) {
-      self.parent = parent
-    }
-
-    func imagePickerController(
-      _: UIImagePickerController,
-      didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
-    ) {
-      if let videoURL = info[.mediaURL] as? URL, parent.allowsVideo {
-        let tempURL = FileManager.default.temporaryDirectory
-          .appendingPathComponent(UUID().uuidString)
-          .appendingPathExtension("mp4")
-        do {
-          try FileManager.default.copyItem(at: videoURL, to: tempURL)
-        } catch {
-          Task { @MainActor in parent.isPresented = false }
-          return
-        }
-        let thumb = Self.generateThumbnail(for: tempURL)
-        Task { @MainActor in
-          parent.onMediaSelected(.video(tempURL, thumbnail: thumb ?? Self.placeholderThumbnail))
-          parent.isPresented = false
-        }
-      } else if let image = info[.originalImage] as? UIImage {
-        Task { @MainActor in
-          parent.onMediaSelected(.image(image))
-          parent.isPresented = false
-        }
-      } else {
-        Task { @MainActor in parent.isPresented = false }
-      }
-    }
-
-    func imagePickerControllerDidCancel(_: UIImagePickerController) {
-      parent.isPresented = false
-    }
-
-    private static func generateThumbnail(for url: URL) -> UIImage? {
-      let asset = AVURLAsset(url: url)
-      let generator = AVAssetImageGenerator(asset: asset)
-      generator.appliesPreferredTrackTransform = true
-      generator.maximumSize = CGSize(width: 320, height: 320)
-      let time = CMTime(seconds: 0, preferredTimescale: 600)
-      guard let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) else { return nil }
-      return UIImage(cgImage: cgImage)
-    }
-
-    private static var placeholderThumbnail: UIImage {
-      let size = CGSize(width: 1, height: 1)
-      return UIGraphicsImageRenderer(size: size).image { _ in }
-    }
-  }
-
-  var sourceType: UIImagePickerController.SourceType = .photoLibrary
-  /// When true and sourceType is .camera, user can capture photo or video.
-  var allowsVideo: Bool = false
-
+struct MediaPicker: View {
   @Binding var isPresented: Bool
+  var allowsVideo: Bool = false
   var onMediaSelected: (SelectedMedia) -> Void
   var onSourceUnavailable: (() -> Void)?
 
-  func makeCoordinator() -> Coordinator {
-    Coordinator(self)
+  @State private var selectedItems: [PhotosPickerItem] = []
+
+  private var filter: PHPickerFilter {
+    if allowsVideo {
+      return .any(of: [.images, .videos])
+    }
+    return .images
   }
 
-  func makeUIViewController(context: Context) -> UIViewController {
-    guard UIImagePickerController.isSourceTypeAvailable(sourceType) else {
-      return UnavailableSourceViewController(sourceType: sourceType) {
-        isPresented = false
-        onSourceUnavailable?()
+  var body: some View {
+    PhotosPicker(
+      selection: $selectedItems,
+      maxSelectionCount: 1,
+      matching: filter
+    ) {
+      EmptyView()
+    }
+    .photosPickerStyle(.inline)
+    .onChange(of: selectedItems) { _, newItems in
+      guard let item = newItems.first else { return }
+      Task {
+        await processSelectedItem(item)
       }
     }
-    let picker = UIImagePickerController()
-    picker.delegate = context.coordinator
-    picker.sourceType = sourceType
-    if sourceType == .camera, allowsVideo {
-      picker.mediaTypes = [UTType.image.identifier, UTType.movie.identifier]
-    }
-    return picker
   }
 
-  func updateUIViewController(_: UIViewController, context _: Context) {}
+  @MainActor
+  private func processSelectedItem(_ item: PhotosPickerItem) async {
+    // Try loading as video first if video is allowed
+    if allowsVideo, let movieURL = try? await item.loadTransferable(type: VideoTransferable.self) {
+      let thumbnail = Self.generateThumbnailData(for: movieURL.url)
+      onMediaSelected(.video(movieURL.url, thumbnail: thumbnail))
+      isPresented = false
+      return
+    }
+
+    // Load as image data
+    if let imageData = try? await item.loadTransferable(type: Data.self) {
+      onMediaSelected(.image(imageData))
+      isPresented = false
+      return
+    }
+
+    // Nothing could be loaded
+    onSourceUnavailable?()
+    isPresented = false
+  }
+
+  private static func generateThumbnailData(for url: URL) -> Data? {
+    let asset = AVURLAsset(url: url)
+    let generator = AVAssetImageGenerator(asset: asset)
+    generator.appliesPreferredTrackTransform = true
+    generator.maximumSize = CGSize(width: 320, height: 320)
+    let time = CMTime(seconds: 0, preferredTimescale: 600)
+    guard let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) else { return nil }
+    // Convert CGImage to PNG data without UIKit
+    let bitmapRep = CGImage.pngData(cgImage)
+    return bitmapRep
+  }
 }
 
-private final class UnavailableSourceViewController: UIViewController {
-  private let sourceType: UIImagePickerController.SourceType
-  private let onDismiss: () -> Void
+// MARK: - Video Transferable
 
-  init(sourceType: UIImagePickerController.SourceType, onDismiss: @escaping () -> Void) {
-    self.sourceType = sourceType
-    self.onDismiss = onDismiss
-    super.init(nibName: nil, bundle: nil)
+private struct VideoTransferable: Transferable {
+  let url: URL
+
+  static var transferRepresentation: some TransferRepresentation {
+    FileRepresentation(contentType: .movie) { video in
+      SentTransferredFile(video.url)
+    } importing: { received in
+      let tempURL = FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString)
+        .appendingPathExtension("mp4")
+      try FileManager.default.copyItem(at: received.file, to: tempURL)
+      return Self(url: tempURL)
+    }
   }
+}
 
-  @available(*, unavailable)
-  required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+// MARK: - CGImage PNG helper
 
-  override func viewDidAppear(_ animated: Bool) {
-    super.viewDidAppear(animated)
-    let message = sourceType == .camera
-      ? "Camera is not available on this device (e.g. Simulator). Use Photo or Video to pick from your library."
-      : "Photo library is not available."
-    let alert = UIAlertController(title: "Not Available", message: message, preferredStyle: .alert)
-    alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
-      self?.onDismiss()
-    })
-    present(alert, animated: true)
+extension CGImage {
+  fileprivate static func pngData(_ image: CGImage) -> Data? {
+    let mutableData = NSMutableData()
+    guard
+      let destination = CGImageDestinationCreateWithData(
+        mutableData, "public.png" as CFString, 1, nil)
+    else {
+      return nil
+    }
+    CGImageDestinationAddImage(destination, image, nil)
+    guard CGImageDestinationFinalize(destination) else {
+      return nil
+    }
+    return mutableData as Data
   }
 }

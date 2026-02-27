@@ -1,6 +1,6 @@
-import UIKit
+import SwiftUI
 
 enum SelectedMedia {
-  case image(UIImage)
-  case video(URL, thumbnail: UIImage)
+  case image(Data)
+  case video(URL, thumbnail: Data?)
 }

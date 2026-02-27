@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 public protocol FontScheme {
   var weight: TypographyFontWeight { get set }
@@ -14,10 +13,6 @@ public protocol FontScheme {
 extension FontScheme {
   public var font: Font {
     Font.custom(fontName, size: size)
-  }
-
-  public var uiFont: UIFont? {
-    UIFont(name: fontName, size: size)
   }
 
   public func italic() -> Self {

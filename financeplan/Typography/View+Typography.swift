@@ -8,7 +8,7 @@ extension View {
         .tracking(1.2)
         .font(style.font)
     } else if style.type == .link {
-      foregroundColor(.blue)
+      foregroundStyle(.tint)
         .underline()
         .font(style.font)
     } else {

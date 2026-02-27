@@ -2,23 +2,28 @@ import Factory
 import SwiftUI
 
 public struct ContentView: View {
+  @EnvironmentObject private var sessionManager: SessionManager
+  @Environment(\.colorScheme) private var colorScheme
   @State private var launchCompleted = false
   @State private var launchStarted = false
   @State private var isAuthenticated: Bool
   @State private var requiresInitialStockImport: Bool
+    @State private var needsInitialImport = true
   private let splashDelayNanoseconds: UInt64
   private let authService: AuthServicing
   private let sessionStore: AuthSessionStoring
 
   public init() {
     let processInfo = ProcessInfo.processInfo
-    splashDelayNanoseconds = processInfo.arguments.contains("-ui_test_skip_splash") ? 0 : 2_000_000_000
+    splashDelayNanoseconds =
+      processInfo.arguments.contains("-ui_test_skip_splash") ? 0 : 2_000_000_000
 
     if processInfo.arguments.contains("-ui_test_reset_session") {
       let defaults = UserDefaults.standard
       defaults.removeObject(forKey: "auth_token")
       defaults.removeObject(forKey: "refresh_token")
       defaults.removeObject(forKey: "current_user_id")
+      defaults.removeObject(forKey: "current_username")
       defaults.removeObject(forKey: "initial_stock_import_user_ids")
       defaults.synchronize()
     }
@@ -34,6 +39,10 @@ public struct ContentView: View {
       store.currentUserID = forcedUserID
     }
 
+    if let forcedUsername = processInfo.argumentValue(for: "-ui_test_username") {
+      store.currentUsername = forcedUsername
+    }
+
     if let importedUserID = processInfo.argumentValue(for: "-ui_test_imported_user_id") {
       store.markInitialStockImportCompleted(for: importedUserID)
     }
@@ -42,15 +51,15 @@ public struct ContentView: View {
     let hasSession = !store.authToken.isEmpty
     _isAuthenticated = State(initialValue: hasSession)
     _requiresInitialStockImport = State(
-      initialValue: hasSession && (
-        store.currentUserID.isEmpty ||
-          !store.hasCompletedInitialStockImport(for: store.currentUserID)
-      )
+      initialValue: hasSession
+        && (store.currentUserID.isEmpty
+          || !store.hasCompletedInitialStockImport(for: store.currentUserID))
     )
   }
 
   public var body: some View {
     ZStack {
+      AppTheme.Colors.topBarBackground(for: colorScheme).ignoresSafeArea()
       WindowSizeSyncView()
 
       if launchCompleted {
@@ -66,22 +75,34 @@ public struct ContentView: View {
                 await authService.logout(refreshToken: sessionStore.refreshToken)
                 sessionStore.authToken = ""
                 sessionStore.refreshToken = ""
+                sessionStore.currentUsername = ""
                 isAuthenticated = false
                 requiresInitialStockImport = false
+                sessionManager.reset()
               }
             )
+            .fullScreenCover(isPresented: $needsInitialImport) {
+                OnboardingImportFlow {
+                    needsInitialImport = false
+                }
+            }
           }
         } else {
           LoginScreen(onAuthenticated: {
             isAuthenticated = true
             let userID = sessionStore.currentUserID
-            requiresInitialStockImport = userID.isEmpty || !sessionStore.hasCompletedInitialStockImport(for: userID)
+            requiresInitialStockImport =
+              userID.isEmpty || !sessionStore.hasCompletedInitialStockImport(for: userID)
+            sessionManager.updateUsername(sessionStore.currentUsername)
           })
         }
       } else {
         SplashScreen()
           .transition(.opacity)
       }
+    }
+    .onAppear {
+      syncSessionUsername()
     }
     .task {
       guard !launchStarted else {
@@ -98,10 +119,18 @@ public struct ContentView: View {
       }
     }
   }
+
+  private func syncSessionUsername() {
+    if isAuthenticated {
+      sessionManager.updateUsername(sessionStore.currentUsername)
+    } else {
+      sessionManager.reset()
+    }
+  }
 }
 
-private extension ProcessInfo {
-  func argumentValue(for name: String) -> String? {
+extension ProcessInfo {
+  fileprivate func argumentValue(for name: String) -> String? {
     guard let index = arguments.firstIndex(of: name) else {
       return nil
     }
