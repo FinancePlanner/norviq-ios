@@ -8,7 +8,6 @@ public struct ContentView: View {
   @State private var launchStarted = false
   @State private var isAuthenticated: Bool
   @State private var requiresInitialStockImport: Bool
-    @State private var needsInitialImport = true
   private let splashDelayNanoseconds: UInt64
   private let authService: AuthServicing
   private let sessionStore: AuthSessionStoring
@@ -65,7 +64,7 @@ public struct ContentView: View {
       if launchCompleted {
         if isAuthenticated {
           if requiresInitialStockImport {
-            InitialStockImportScreen { _ in
+            OnboardingImportFlow {
               sessionStore.markInitialStockImportCompleted(for: sessionStore.currentUserID)
               requiresInitialStockImport = false
             }
@@ -81,11 +80,6 @@ public struct ContentView: View {
                 sessionManager.reset()
               }
             )
-            .fullScreenCover(isPresented: $needsInitialImport) {
-                OnboardingImportFlow {
-                    needsInitialImport = false
-                }
-            }
           }
         } else {
           LoginScreen(onAuthenticated: {

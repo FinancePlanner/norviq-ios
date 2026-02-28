@@ -6,29 +6,32 @@ struct AppTopBar: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            // Logo circle
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.05, green: 0.40, blue: 0.95),
-                            Color(red: 0.30, green: 0.58, blue: 1.00),
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+            HStack(spacing: 8) {
+                // Logo circle
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.05, green: 0.40, blue: 0.95),
+                                Color(red: 0.30, green: 0.58, blue: 1.00),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-                )
-                .frame(width: 32, height: 32)
-                .overlay(
-                    Text("FP")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                )
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Text("FP")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                    )
 
-            // App name
-            Text("FinPlanner")
-                .typography(.label, weight: .bold)
-                .foregroundStyle(AppTheme.Colors.navBarForeground(for: colorScheme))
+                // App name
+                Text("FinPlanner")
+                    .typography(.label, weight: .bold)
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.Colors.navBarForeground(for: colorScheme))
+            }
 
             Spacer()
 
@@ -51,13 +54,26 @@ struct AppTopBar: View {
                     .lineLimit(1)
             }
         }
+        .padding(.leading, 4)
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(AppTheme.Colors.navBarBackground(for: colorScheme))
+        .background(
+            AppTheme.Colors.navBarBackground(for: colorScheme)
+                .opacity(0.95)
+                .blur(radius: 0)
+        )
         .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(AppTheme.Colors.navBarForeground(for: colorScheme).opacity(0.08))
-                .frame(height: 0.5)
+            LinearGradient(
+                colors: [
+                    AppTheme.Colors.navBarForeground(for: colorScheme).opacity(0.10),
+                    .clear
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 1)
         }
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(AppTheme.Colors.navBarBackground(for: colorScheme), for: .navigationBar)
     }
 }

@@ -8,60 +8,42 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct OnboardingImportFlow: View {
-    enum Step: Hashable {
-        case chooseMethod
-        case csv
-        case manual
-        case api
-        case done
-    }
-    
-    @State private var step: Step = .chooseMethod
+    @StateObject private var viewModel = OnboardingImportViewModel()
+    @Namespace private var headerNS
     let onFinished: () -> Void
     
     var body: some View {
         Group {
-            switch step {
+            switch viewModel.step {
             case .chooseMethod:
-                InitialStockImportScreen { method in handleSelection(method) }
+                InitialStockImportScreen(onImportCompleted: { method in viewModel.select(method) }, headerNamespace: headerNS)
             case .csv:
-                CSVImportScreen(
-                    onBack: { step = .chooseMethod },
-                    onDone: { _ in step = .done }
+                CSVImportScreen(headerNamespace: headerNS,
+                    onBack: { viewModel.backToChoose() },
+                    onDone: { _ in viewModel.finish() }
                 )
             case .manual:
-                ManualImportScreen(
-                    onBack: { step = .chooseMethod },
-                    onDone: { _ in step = .done }
+                ManualImportScreen(headerNamespace: headerNS,
+                    onBack: { viewModel.backToChoose() },
+                    onDone: { _ in viewModel.finish() }
                 )
             case .api:
-                APIKeyImportScreen(
-                    onBack: { step = .chooseMethod },
-                    onDone: { step = .done }
+                APIKeyImportScreen(headerNamespace: headerNS,
+                    onBack: { viewModel.backToChoose() },
+                    onDone: { viewModel.finish() }
                 )
             case .done:
                 Color.clear.onAppear(perform: onFinished)
-                }
             }
-            
-        
-    }
-    
-    private func handleSelection(_ method: StockImportMethod) {
-        switch method {
-            case .csv:
-            step = .csv
-        case .manual:
-            step = .manual
-        case .api:
-            step = .api
         }
+        .animation(.spring(response: 0.5, dampingFraction: 0.85), value: viewModel.step)
     }
 }
 
 // API KEY VIEW
 struct APIKeyImportScreen: View {
     @Environment(\.colorScheme) private var colorScheme
+    var headerNamespace: Namespace.ID? = nil
 
     let onBack: () -> Void
     let onDone: () -> Void
@@ -69,9 +51,6 @@ struct APIKeyImportScreen: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
-                Text("Connect API")
-                    .font(.title2).bold()
-
                 Text("You can add API key support here later.")
                     .foregroundStyle(.secondary)
 
@@ -88,6 +67,24 @@ struct APIKeyImportScreen: View {
             .padding(16)
             .navigationTitle("API Import")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(AppTheme.Colors.navBarBackground(for: colorScheme), for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "key.fill")
+                            .imageScale(.medium)
+                            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                            .modifier(MatchedGeometryIfAvailable(id: "onboarding.header.icon", namespace: headerNamespace))
+                        Text("API Import")
+                            .font(.headline)
+                            .modifier(MatchedGeometryIfAvailable(id: "onboarding.header.title", namespace: headerNamespace))
+                    }
+                }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Back") { onBack() }
+                }
+            }
         }
     }
 }
@@ -103,7 +100,8 @@ struct ManualEntry: Identifiable, Equatable {
 
 struct ManualImportScreen: View {
     @Environment(\.colorScheme) private var colorScheme
-    @State private var entries: [ManualEntry] = [ManualEntry()]
+    @StateObject private var viewModel = ManualImportViewModel()
+    var headerNamespace: Namespace.ID? = nil
     
     let onBack: () -> Void
     let onDone: ([ImportedPosition]) -> Void
@@ -112,7 +110,7 @@ struct ManualImportScreen: View {
         NavigationStack {
             VStack(spacing: 12) {
                 List {
-                    ForEach($entries) { $entry in
+                    ForEach($viewModel.entries) { $entry in
                         VStack(alignment: .leading, spacing: 8) {
                             TextField("Symbol (e.g., AAPL)", text: $entry.symbol)
                                 .textInputAutocapitalization(.characters)
@@ -131,7 +129,7 @@ struct ManualImportScreen: View {
                         .padding(.vertical, 4)
                     }
                     .onDelete { indices in
-                        entries.remove(atOffsets: indices)
+                        viewModel.removeRows(at: indices)
                     }
                 }
             }
@@ -139,7 +137,7 @@ struct ManualImportScreen: View {
             
             HStack {
                 Button {
-                    entries.append(ManualEntry())
+                    viewModel.addRow()
                 } label: {
                     Label("Add row", systemImage: "plus.circle.fill")
                 }
@@ -147,26 +145,52 @@ struct ManualImportScreen: View {
                 Spacer()
                 
                 Button("Continue") {
-                                        let positions = entries
-                                            .compactMap { entry -> ImportedPosition? in
-                                                let symbol = entry.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-                                                guard !symbol.isEmpty else { return nil }
-                                                let qty = Double(entry.quantity.replacingOccurrences(of: ",", with: "")) ?? 0
-                                                let price = Double(entry.price.replacingOccurrences(of: ",", with: "")) ?? 0
-                                                guard qty > 0 else { return nil }
-                                                return ImportedPosition(symbol: symbol, quantity: qty, price: price)
-                                            }
-                                        onDone(positions)
-                                    }
-                                    .buttonStyle(.borderedProminent)
-                                    .tint(AppTheme.Colors.tint(for: colorScheme))
-                                    .disabled(entries.allSatisfy { $0.symbol.isEmpty })
+                    onDone(viewModel.buildPositions())
+                }
+                Button("Continue") {
+                  let positions = viewModel.buildPositions()
+                  Task {
+                    do {
+                      // For each position, fire CreateStockEndpoint
+                      for pos in positions {
+                        let endpoint = CreateStockEndpoint(
+                          symbol: pos.symbol,
+                          shares: Int(pos.quantity),   // Or change endpoint to Double if needed
+                          buyPrice: pos.price,
+                          buyDate: dateFormatter.string(from: Date()), // Or collect per-row
+                          notes: "" // Or collect per-row
+                        )
+                        // Execute via your HTTP client (like AuthHTTPClient style)
+                        // let response: StockResponse = try await apiClient.call(endpoint)
+                      }
+                      onDone(positions)
+                    } catch {
+                      // Show error feedback
+                    }
+                  }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppTheme.Colors.tint(for: colorScheme))
+                .disabled(viewModel.entries.allSatisfy { $0.symbol.isEmpty })
             }
         }
         .padding(16)
         .navigationTitle("Manual Import")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(AppTheme.Colors.navBarBackground(for: colorScheme), for: .navigationBar)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: 8) {
+                    Image(systemName: "square.and.pencil")
+                        .imageScale(.medium)
+                        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                        .modifier(MatchedGeometryIfAvailable(id: "onboarding.header.icon", namespace: headerNamespace))
+                    Text("Manual Import")
+                        .font(.headline)
+                        .modifier(MatchedGeometryIfAvailable(id: "onboarding.header.title", namespace: headerNamespace))
+                }
+            }
             ToolbarItem(placement: .topBarLeading) {
                 Button("Back") {
                     onBack()
@@ -188,8 +212,8 @@ struct ImportedPosition: Identifiable, Equatable {
 struct CSVImportScreen: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var isImporterPresented = false
-    @State private var previewRows: [ImportedPosition] = []
-    @State private var errorMessage: String?
+    @StateObject private var viewModel = CSVImportViewModel()
+    var headerNamespace: Namespace.ID? = nil
 
     let onBack: () -> Void
     let onDone: ([ImportedPosition]) -> Void
@@ -197,9 +221,6 @@ struct CSVImportScreen: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
-                Text("Import from CSV")
-                    .font(.title2).bold()
-
                 Button {
                     isImporterPresented = true
                 } label: {
@@ -209,14 +230,14 @@ struct CSVImportScreen: View {
                 .buttonStyle(.borderedProminent)
                 .tint(AppTheme.Colors.tint(for: colorScheme))
 
-                if let errorMessage {
+                if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
                         .foregroundStyle(.red)
                         .font(.footnote)
                 }
 
-                if !previewRows.isEmpty {
-                    List(previewRows) { row in
+                if !viewModel.previewRows.isEmpty {
+                    List(viewModel.previewRows) { row in
                         HStack {
                             Text(row.symbol).bold()
                             Spacer()
@@ -240,9 +261,9 @@ struct CSVImportScreen: View {
                     Button("Back") { onBack() }
                     Spacer()
                     Button("Continue") {
-                        onDone(previewRows)
+                        onDone(viewModel.previewRows)
                     }
-                    .disabled(previewRows.isEmpty)
+                    .disabled(viewModel.previewRows.isEmpty)
                     .buttonStyle(.borderedProminent)
                     .tint(AppTheme.Colors.tint(for: colorScheme))
                 }
@@ -256,40 +277,44 @@ struct CSVImportScreen: View {
                 do {
                     let urls = try result.get()
                     guard let url = urls.first else { return }
-                    let data = try Data(contentsOf: url)
-                    guard let text = String(data: data, encoding: .utf8) else {
-                        throw CocoaError(.fileReadInapplicableStringEncoding)
-                    }
-                    previewRows = parseCSV(text)
-                    errorMessage = nil
+                    viewModel.loadCSV(from: url)
                 } catch {
-                    errorMessage = "Failed to read CSV: \(error.localizedDescription)"
-                    previewRows = []
+                    viewModel.errorMessage = "Failed to read CSV: \(error.localizedDescription)"
+                    viewModel.previewRows = []
                 }
             }
             .navigationTitle("CSV Import")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(AppTheme.Colors.navBarBackground(for: colorScheme), for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "tray.and.arrow.down.fill")
+                            .imageScale(.medium)
+                            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                            .modifier(MatchedGeometryIfAvailable(id: "onboarding.header.icon", namespace: headerNamespace))
+                        Text("CSV Import")
+                            .font(.headline)
+                            .modifier(MatchedGeometryIfAvailable(id: "onboarding.header.title", namespace: headerNamespace))
+                    }
+                }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Back") { onBack() }
+                }
+            }
         }
     }
+}
 
-    private func parseCSV(_ text: String) -> [ImportedPosition] {
-        // Very simple parser: expects header with symbol,quantity,price
-        var rows: [ImportedPosition] = []
-        let lines = text.split(whereSeparator: \.isNewline)
-        guard !lines.isEmpty else { return [] }
-
-        // Skip header if present (contains non-numeric)
-        let startIndex = lines.first?.contains(",") == true ? 1 : 0
-
-        for line in lines.dropFirst(startIndex) {
-            let parts = line.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
-            guard parts.count >= 3 else { continue }
-            let symbol = parts[0].uppercased()
-            let qty = Double(parts[1]) ?? 0
-            let price = Double(parts[2]) ?? 0
-            guard !symbol.isEmpty, qty > 0 else { continue }
-            rows.append(ImportedPosition(symbol: symbol, quantity: qty, price: price))
-        }
-        return rows
+private struct MatchedGeometryIfAvailable: ViewModifier {
+  let id: String
+  let namespace: Namespace.ID?
+  func body(content: Content) -> some View {
+    if let ns = namespace {
+      content.matchedGeometryEffect(id: id, in: ns)
+    } else {
+      content
     }
+  }
 }

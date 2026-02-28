@@ -30,11 +30,22 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
   }
 }
 
+struct PressEffectStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+      .opacity(configuration.isPressed ? 0.9 : 1.0)
+      .animation(.easeInOut(duration: 0.12), value: configuration.isPressed)
+  }
+}
+
 struct InitialStockImportScreen: View {
   let onImportCompleted: (StockImportMethod) -> Void
   @Environment(\.colorScheme) private var colorScheme
+  let headerNamespace: Namespace.ID?
 
   @State private var selectedMethod: StockImportMethod?
+  @State private var tappedMethod: StockImportMethod? = nil
   @State private var isSubmitting = false
   @State private var message: String?
   @State private var animatedIndices: Set<Int> = []
@@ -43,20 +54,24 @@ struct InitialStockImportScreen: View {
     VStack(spacing: 20) {
       Spacer(minLength: 0)
 
-      Image(systemName: "tray.and.arrow.down.fill")
-        .font(.system(size: 40, weight: .bold))
-        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-
-      Text("Import Your Stocks")
-        .typography(.title, weight: .bold)
-
-      Text(
-        "This step is required the first time you sign in. Choose one import method to continue."
+      LinearGradient(
+        colors: AppTheme.heroGradient(for: colorScheme),
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
       )
-      .typography(.nano)
-      .foregroundStyle(.secondary)
-      .multilineTextAlignment(.center)
-      .padding(.horizontal, 8)
+      .frame(height: 80)
+      .mask(
+        RoundedRectangle(cornerRadius: 24, style: .continuous)
+      )
+      .overlay(
+        OnboardingHeader(
+          icon: "tray.and.arrow.down.fill",
+          title: "Import Your Stocks",
+          subtitle: "This step is required the first time you sign in. Choose one import method to continue.",
+          namespace: headerNamespace
+        )
+        .padding(.horizontal, 4)
+      )
 
       methodSelectionList
 
@@ -114,13 +129,26 @@ struct InitialStockImportScreen: View {
     Button {
       selectedMethod = method
       message = nil
+      withAnimation(.spring(response: 0.25, dampingFraction: 0.65)) {
+        tappedMethod = method
+      }
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+          tappedMethod = nil
+        }
+      }
     } label: {
       ImportMethodCard(method: method, isSelected: selectedMethod == method)
     }
-    .buttonStyle(.plain)
+    .buttonStyle(PressEffectStyle())
+    .contentShape(Rectangle())
     .accessibilityIdentifier("stockImportMethod.\(method.rawValue)")
     .opacity(animatedIndices.contains(index) ? 1 : 0)
     .offset(y: animatedIndices.contains(index) ? 0 : 20)
+    .scaleEffect(tappedMethod == method ? 1.03 : 1.0)
+    .opacity(tappedMethod == method ? 1.0 : 0.98)
+    .animation(.easeInOut(duration: 0.12), value: selectedMethod)
+    .animation(.spring(response: 0.25, dampingFraction: 0.8), value: tappedMethod)
   }
 
   private func animateMethodOptions() {
