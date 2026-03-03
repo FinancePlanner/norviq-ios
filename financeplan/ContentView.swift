@@ -95,6 +95,7 @@ public struct ContentView: View {
           .transition(.opacity)
       }
     }
+    .containerShape(.rect(cornerRadius: 34, style: .continuous))
     .onAppear {
       syncSessionUsername()
     }

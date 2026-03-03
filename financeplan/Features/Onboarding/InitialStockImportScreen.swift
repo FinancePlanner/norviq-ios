@@ -63,6 +63,16 @@ struct InitialStockImportScreen: View {
       .mask(
         RoundedRectangle(cornerRadius: 24, style: .continuous)
       )
+      .overlay {
+        ZStack {
+          ForEach(0..<4, id: \.self) { i in
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+              .inset(by: CGFloat(i) * 6)
+              .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
+          }
+        }
+        .allowsHitTesting(false)
+      }
       .overlay(
         OnboardingHeader(
           icon: "tray.and.arrow.down.fill",

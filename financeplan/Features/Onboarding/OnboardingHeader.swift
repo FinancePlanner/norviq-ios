@@ -53,6 +53,16 @@ struct OnboardingHeader: View {
       RoundedRectangle(cornerRadius: 20, style: .continuous)
         .fill(.ultraThinMaterial)
     )
+    .overlay {
+      ZStack {
+        ForEach(0..<4, id: \.self) { i in
+          RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .inset(by: CGFloat(i) * 6)
+            .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
+        }
+      }
+      .allowsHitTesting(false)
+    }
     .overlay(
       RoundedRectangle(cornerRadius: 20, style: .continuous)
         .stroke(

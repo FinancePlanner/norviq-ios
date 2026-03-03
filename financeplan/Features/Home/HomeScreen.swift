@@ -217,92 +217,120 @@ private struct DashboardTab: View {
 private struct PortfolioTab: View {
   @Environment(\.colorScheme) private var colorScheme
   @StateObject private var viewModel = PortfolioViewModel()
+  @State private var isManualImportPresented = false
 
   var body: some View {
-    NavigationStack {
-      Group {
-        if viewModel.isLoading {
-          ProgressView("Loading portfolio...")
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        } else if let error = viewModel.errorMessage {
-          VStack(spacing: 10) {
-            Text(error)
-              .foregroundStyle(AppTheme.Colors.danger)
-              .typography(.small)
-            Button("Retry") { Task { await viewModel.load() } }
-              .buttonStyle(.bordered)
-          }
-          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        } else if viewModel.stocks.isEmpty {
-          Text("No stocks yet.")
-            .foregroundStyle(.secondary)
-            .typography(.small)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        } else {
-          List(viewModel.stocks, id: \.id) { stock in
-            VStack(alignment: .leading, spacing: 6) {
-              HStack {
-                Text(stock.symbol)
-                  .typography(.label, weight: .semibold)
-                Spacer()
-                Text((stock.shares * stock.buyPrice).currency)
-                  .typography(.small, weight: .semibold)
-              }
-
-              HStack(spacing: 10) {
-                Text("Qty \(Int(stock.shares))")
-                Text("Avg \(stock.buyPrice.currency)")
-                Text("Date \(stock.buyDate)")
-              }
-              .typography(.nano)
-              .foregroundStyle(.secondary)
-
-              if let notes = stock.notes, !notes.isEmpty {
-                Text(notes)
-                  .typography(.nano)
-                  .foregroundStyle(.secondary)
-              }
+    ZStack(alignment: .bottomTrailing) {
+      NavigationStack {
+        Group {
+          if viewModel.isLoading {
+            ProgressView("Loading portfolio...")
+              .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+          } else if let error = viewModel.errorMessage {
+            VStack(spacing: 10) {
+              Text(error)
+                .foregroundStyle(AppTheme.Colors.danger)
+                .typography(.small)
+              Button("Retry") { Task { await viewModel.load() } }
+                .buttonStyle(.bordered)
             }
-            .padding(.vertical, 4)
-            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                Button(role: .destructive) {
-                    Task { await viewModel.delete(id: stock.id) }
-                } label: {
-                    Label("Delete", systemImage: "Trash")
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+          } else if viewModel.stocks.isEmpty {
+            Text("No stocks yet.")
+              .foregroundStyle(.secondary)
+              .typography(.small)
+              .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+          } else {
+            List(viewModel.stocks, id: \.id) { stock in
+              VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                  Text(stock.symbol)
+                    .typography(.label, weight: .semibold)
+                  Spacer()
+                  Text((stock.shares * stock.buyPrice).currency)
+                    .typography(.small, weight: .semibold)
                 }
-                
-                Button {
-                    viewModel.beginEdit(stock)
+
+                HStack(spacing: 10) {
+                  Text("Qty \(Int(stock.shares))")
+                  Text("Avg \(stock.buyPrice.currency)")
+                  Text("Date \(stock.buyDate)")
+                }
+                .typography(.nano)
+                .foregroundStyle(.secondary)
+
+                if let notes = stock.notes, !notes.isEmpty {
+                  Text(notes)
+                    .typography(.nano)
+                    .foregroundStyle(.secondary)
+                }
+              }
+              .padding(.vertical, 4)
+              .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                  Task { await viewModel.delete(id: stock.id) }
                 } label: {
-                    Label("Edit", systemImage: "pencil")
+                  Label("Delete", systemImage: "trash")
+                }
+
+                Button {
+                  viewModel.beginEdit(stock)
+                } label: {
+                  Label("Edit", systemImage: "pencil")
                 }
                 .tint(.blue)
+              }
             }
+            .listStyle(.plain)
           }
-          .listStyle(.plain)
         }
-      }
-      .sheet(isPresented: Binding<Bool>(
-        get: { viewModel.editingStock != nil },
-        set: { if !$0 { viewModel.editingStock = nil } }
-      )) {
-        if let stock = viewModel.editingStock {
-          EditStockSheet(
-            stock: stock,
-            isSaving: viewModel.isSaving,
-            onCancel: { viewModel.editingStock = nil },
-            onSave: { updated in
-              Task { await viewModel.saveEdit(updated) }
-            }
-          )
-        } else {
-          EmptyView()
+        .sheet(isPresented: Binding<Bool>(
+          get: { viewModel.editingStock != nil },
+          set: { if !$0 { viewModel.editingStock = nil } }
+        )) {
+          if let stock = viewModel.editingStock {
+            EditStockSheet(
+              stock: stock,
+              isSaving: viewModel.isSaving,
+              onCancel: { viewModel.editingStock = nil },
+              onSave: { updated in
+                Task { await viewModel.saveEdit(updated) }
+              }
+            )
+          } else {
+            EmptyView()
+          }
         }
+        .navigationTitle("Portfolio")
+        .background(AppTheme.Colors.pageBackground(for: colorScheme))
+        .task { await viewModel.load() }
+        .refreshable { await viewModel.load() }
       }
-      .navigationTitle("Portfolio")
-      .background(AppTheme.Colors.pageBackground(for: colorScheme))
-      .task { await viewModel.load() }
-      .refreshable { await viewModel.load() }
+
+      Button {
+        isManualImportPresented = true
+      } label: {
+        Image(systemName: "plus")
+          .font(.system(size: 18, weight: .bold))
+          .foregroundStyle(.white)
+          .frame(width: 32, height: 32)
+          .background(AppTheme.Colors.tint(for: colorScheme))
+          .clipShape(Circle())
+          .shadow(color: .black.opacity(0.25), radius: 10, y: 6)
+      }
+      .accessibilityIdentifier("portfolio.fab")
+      .padding(.trailing, 16)
+      .padding(.bottom, 24)
+    }
+    .sheet(isPresented: $isManualImportPresented) {
+      ManualImportScreen(
+        headerNamespace: nil,
+        onBack: { isManualImportPresented = false },
+        onDone: { _ in
+          isManualImportPresented = false
+          Task { await viewModel.load() }
+        }
+      )
     }
   }
 
@@ -375,6 +403,21 @@ private struct PortfolioSummaryWidget: View {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }
+//    .sheet(isPresented: .constant(true)) {
+//        ConcentricRectangle()
+//            .fill(AppTheme.Colors.tertiaryFill(for: colorScheme))
+//            .frame(height: 120)
+//            .cornerRadius(16)
+//            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+//            .padding(40)
+//            .ignoresSafeArea()
+//            .presentationDetents([.medium])
+//    }
+//    .overlay {
+//      ConcentricRectangles(count: 1, spacing: 6, cornerRadius: 16)
+//        .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
+//        .allowsHitTesting(false)
+//    }
   }
 }
 
@@ -425,6 +468,11 @@ private struct DailyPerformanceWidget: View {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }
+//    .overlay {
+//      ConcentricRectangles(count: 1, spacing: 6, cornerRadius: 16)
+//        .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
+//        .allowsHitTesting(false)
+//    }
   }
 }
 
@@ -457,6 +505,11 @@ private struct TopMoversWidget: View {
               }
               .frame(width: 100, alignment: .leading)
             }
+//            .overlay {
+//              ConcentricRectangles(count: 1, spacing: 6, cornerRadius: 16)
+//                .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
+//                .allowsHitTesting(false)
+//            }
           }
         }
       }
@@ -509,6 +562,11 @@ private struct AllocationWidget: View {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }
+//    .overlay {
+//      ConcentricRectangles(count: 1, spacing: 6, cornerRadius: 16)
+//        .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
+//        .allowsHitTesting(false)
+//    }
   }
 }
 
@@ -557,6 +615,24 @@ private struct AllocationBucket: Identifiable {
 
   var id: String { name }
 }
+
+//private struct ConcentricRectangles: Shape {
+//  var count: Int
+//  var spacing: CGFloat
+//  var cornerRadius: CGFloat
+//
+//  func path(in rect: CGRect) -> Path {
+//    var path = Path()
+//    let maxInsetAllowed = min(rect.width, rect.height) / 2
+//    for i in 0..<count {
+//      let inset = CGFloat(i) * spacing
+//      if inset > maxInsetAllowed { break }
+//      let r = rect.insetBy(dx: inset, dy: inset)
+//      path.addRoundedRect(in: r, cornerSize: .init(width: cornerRadius, height: cornerRadius))
+//    }
+//    return path
+//  }
+//}
 
 extension Double {
   var currency: String {
