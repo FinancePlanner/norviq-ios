@@ -1,9 +1,9 @@
 import Charts
-import SwiftUI
-import Foundation
-import Factory
-import StockPlanShared
 import Combine
+import Factory
+import Foundation
+import StockPlanShared
+import SwiftUI
 
 private enum HomeTab: Hashable {
   case dashboard
@@ -18,61 +18,115 @@ struct HomeScreen: View {
   let onLogout: () async -> Void
   @State private var selectedTab: HomeTab = .dashboard
   @State private var isMoreSheetPresented = false
+  @State private var showUserMenu = false
+  @State private var isHelpPresented = false
 
   var body: some View {
-    TabView(selection: $selectedTab) {
-      NavigationStack {
-        DashboardTab()
-          .navigationBarHidden(true)
-      }
-      .tabItem {
-        Label("Home", systemImage: "house.fill")
-      }
-      .tag(HomeTab.dashboard)
-
-      NavigationStack {
-        PortfolioTab()
-          .navigationBarHidden(true)
-      }
-      .tabItem {
-        Label("Portfolio", systemImage: "briefcase.fill")
-      }
-      .tag(HomeTab.portfolio)
-
-      NavigationStack {
-        WatchlistTab()
-          .navigationBarHidden(true)
-      }
-      .tabItem {
-        Label("Watchlist", systemImage: "star.fill")
-      }
-      .tag(HomeTab.watchlist)
-
-      Color.clear
+    ZStack {
+      TabView(selection: $selectedTab) {
+        NavigationStack {
+          DashboardTab()
+            .navigationBarHidden(true)
+        }
         .tabItem {
-          Label("More", systemImage: "ellipsis")
+          Label("Home", systemImage: "house.fill")
         }
-        .tag(HomeTab.more)
-    }
-    .tint(AppTheme.Colors.tint(for: colorScheme))
-    .toolbarBackground(.visible, for: .tabBar)
-    .toolbarBackground(AppTheme.Colors.tabBarBackground(for: colorScheme), for: .tabBar)
-    .onChange(of: selectedTab) { newValue in
-      if newValue == .more {
-        isMoreSheetPresented = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-          selectedTab = .dashboard
+        .tag(HomeTab.dashboard)
+
+        NavigationStack {
+          PortfolioTab()
+            .navigationBarHidden(true)
         }
+        .tabItem {
+          Label("Portfolio", systemImage: "briefcase.fill")
+        }
+        .tag(HomeTab.portfolio)
+
+        NavigationStack {
+          WatchlistTab()
+            .navigationBarHidden(true)
+        }
+        .tabItem {
+          Label("Watchlist", systemImage: "star.fill")
+        }
+        .tag(HomeTab.watchlist)
+
+        Color.clear
+          .tabItem {
+            Label("More", systemImage: "ellipsis")
+          }
+          .tag(HomeTab.more)
+      }
+      .tint(AppTheme.Colors.tint(for: colorScheme))
+      .toolbarBackground(.visible, for: .tabBar)
+      .toolbarBackground(AppTheme.Colors.tabBarBackground(for: colorScheme), for: .tabBar)
+      .onChange(of: selectedTab) { newValue in
+        if newValue == .more {
+          isMoreSheetPresented = true
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            selectedTab = .dashboard
+          }
+        }
+      }
+      .ignoresSafeArea(.keyboard)
+      .blur(radius: showUserMenu ? 6 : 0)
+      .scaleEffect(showUserMenu ? 0.995 : 1)
+      .animation(.spring(response: 0.28, dampingFraction: 0.9), value: showUserMenu)
+      .allowsHitTesting(!showUserMenu)
+
+      // TODO improve this Dim overlay
+    
+      if showUserMenu {
+        Rectangle()
+          .fill(.black.opacity(colorScheme == .dark ? 0.45 : 0.25))
+          .ignoresSafeArea()
+          .transition(.opacity)
+          .onTapGesture {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+              showUserMenu = false
+            }
+          }
+          .zIndex(0.5)
+      }
+
+      if showUserMenu {
+        UserMenuDrawer(
+          isPresented: $showUserMenu,
+          username: sessionManager.username,
+          onHelp: {
+            isHelpPresented = true
+          }
+        )
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .zIndex(1)
       }
     }
     .safeAreaInset(edge: .top, spacing: 0) {
-      AppTopBar(username: sessionManager.username)
+      AppTopBar(
+        username: sessionManager.username,
+        isUserMenuPresented: showUserMenu,
+        onUserTap: {
+          withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+            showUserMenu = true
+          }
+        }
+      )
     }
-    .ignoresSafeArea(.keyboard)
     .sheet(isPresented: $isMoreSheetPresented) {
       MoreSheet(onLogout: onLogout)
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+    }
+    .sheet(isPresented: $isHelpPresented) {
+      NavigationStack {
+        Text("Help & Support")
+          .navigationTitle("Help")
+          .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+              Button("Done") { isHelpPresented = false }
+            }
+          }
+      }
     }
   }
 }
@@ -221,91 +275,91 @@ private struct PortfolioTab: View {
 
   var body: some View {
     ZStack(alignment: .bottomTrailing) {
-      NavigationStack {
-        Group {
-          if viewModel.isLoading {
-            ProgressView("Loading portfolio...")
-              .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-          } else if let error = viewModel.errorMessage {
-            VStack(spacing: 10) {
-              Text(error)
-                .foregroundStyle(AppTheme.Colors.danger)
-                .typography(.small)
-              Button("Retry") { Task { await viewModel.load() } }
-                .buttonStyle(.bordered)
-            }
+      Group {
+        if viewModel.isLoading {
+          ProgressView("Loading portfolio...")
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-          } else if viewModel.stocks.isEmpty {
-            Text("No stocks yet.")
-              .foregroundStyle(.secondary)
+        } else if let error = viewModel.errorMessage {
+          VStack(spacing: 10) {
+            Text(error)
+              .foregroundStyle(AppTheme.Colors.danger)
               .typography(.small)
-              .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-          } else {
-            List(viewModel.stocks, id: \.id) { stock in
-              VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                  Text(stock.symbol)
-                    .typography(.label, weight: .semibold)
-                  Spacer()
-                  Text((stock.shares * stock.buyPrice).currency)
-                    .typography(.small, weight: .semibold)
-                }
-
-                HStack(spacing: 10) {
-                  Text("Qty \(Int(stock.shares))")
-                  Text("Avg \(stock.buyPrice.currency)")
-                  Text("Date \(stock.buyDate)")
-                }
-                .typography(.nano)
-                .foregroundStyle(.secondary)
-
-                if let notes = stock.notes, !notes.isEmpty {
-                  Text(notes)
-                    .typography(.nano)
-                    .foregroundStyle(.secondary)
-                }
+            Button("Retry") { Task { await viewModel.load() } }
+              .buttonStyle(.bordered)
+          }
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        } else if viewModel.stocks.isEmpty {
+          Text("No stocks yet.")
+            .foregroundStyle(.secondary)
+            .typography(.small)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        } else {
+          List(viewModel.stocks, id: \.id) { stock in
+            VStack(alignment: .leading, spacing: 6) {
+              HStack {
+                Text(stock.symbol)
+                  .typography(.label, weight: .semibold)
+                Spacer()
+                Text((stock.shares * stock.buyPrice).currency)
+                  .typography(.small, weight: .semibold)
               }
-              .padding(.vertical, 4)
-              .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                Button(role: .destructive) {
-                  Task { await viewModel.delete(id: stock.id) }
-                } label: {
-                  Label("Delete", systemImage: "trash")
-                }
 
-                Button {
-                  viewModel.beginEdit(stock)
-                } label: {
-                  Label("Edit", systemImage: "pencil")
-                }
-                .tint(.blue)
+              HStack(spacing: 10) {
+                Text("Qty \(Int(stock.shares))")
+                Text("Avg \(stock.buyPrice.currency)")
+                Text("Date \(stock.buyDate)")
+              }
+              .typography(.nano)
+              .foregroundStyle(.secondary)
+
+              if let notes = stock.notes, !notes.isEmpty {
+                Text(notes)
+                  .typography(.nano)
+                  .foregroundStyle(.secondary)
               }
             }
-            .listStyle(.plain)
+            .padding(.vertical, 4)
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+              Button(role: .destructive) {
+                Task { await viewModel.delete(id: stock.id) }
+              } label: {
+                Label("Delete", systemImage: "trash")
+              }
+
+              Button {
+                viewModel.beginEdit(stock)
+              } label: {
+                Label("Edit", systemImage: "pencil")
+              }
+              .tint(.blue)
+            }
           }
+          .listStyle(.plain)
+          .scrollContentBackground(.hidden)
         }
-        .sheet(isPresented: Binding<Bool>(
+      }
+      .sheet(
+        isPresented: Binding<Bool>(
           get: { viewModel.editingStock != nil },
           set: { if !$0 { viewModel.editingStock = nil } }
-        )) {
-          if let stock = viewModel.editingStock {
-            EditStockSheet(
-              stock: stock,
-              isSaving: viewModel.isSaving,
-              onCancel: { viewModel.editingStock = nil },
-              onSave: { updated in
-                Task { await viewModel.saveEdit(updated) }
-              }
-            )
-          } else {
-            EmptyView()
-          }
+        )
+      ) {
+        if let stock = viewModel.editingStock {
+          EditStockSheet(
+            stock: stock,
+            isSaving: viewModel.isSaving,
+            onCancel: { viewModel.editingStock = nil },
+            onSave: { updated in
+              Task { await viewModel.saveEdit(updated) }
+            }
+          )
+        } else {
+          EmptyView()
         }
-        .navigationTitle("Portfolio")
-        .background(AppTheme.Colors.pageBackground(for: colorScheme))
-        .task { await viewModel.load() }
-        .refreshable { await viewModel.load() }
       }
+      .background(AppTheme.Colors.pageBackground(for: colorScheme))
+      .task { await viewModel.load() }
+      .refreshable { await viewModel.load() }
 
       Button {
         isManualImportPresented = true
@@ -384,40 +438,40 @@ private struct PortfolioSummaryWidget: View {
   var body: some View {
     GlassCard {
       VStack(alignment: .leading, spacing: 10) {
-      Text("Portfolio Value")
-        .typography(.nano)
-        .foregroundStyle(.secondary)
-
-      Text("$124,830.42")
-        .typography(.hero, weight: .bold)
-
-      HStack(spacing: 8) {
-        Label("+$2,814.11", systemImage: "arrow.up.right")
-          .typography(.small, weight: .semibold)
-          .foregroundStyle(AppTheme.Colors.success)
-
-        Text("(+2.31%) today")
-          .typography(.small)
+        Text("Portfolio Value")
+          .typography(.nano)
           .foregroundStyle(.secondary)
-      }
+
+        Text("$124,830.42")
+          .typography(.hero, weight: .bold)
+
+        HStack(spacing: 8) {
+          Label("+$2,814.11", systemImage: "arrow.up.right")
+            .typography(.small, weight: .semibold)
+            .foregroundStyle(AppTheme.Colors.success)
+
+          Text("(+2.31%) today")
+            .typography(.small)
+            .foregroundStyle(.secondary)
+        }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }
-//    .sheet(isPresented: .constant(true)) {
-//        ConcentricRectangle()
-//            .fill(AppTheme.Colors.tertiaryFill(for: colorScheme))
-//            .frame(height: 120)
-//            .cornerRadius(16)
-//            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-//            .padding(40)
-//            .ignoresSafeArea()
-//            .presentationDetents([.medium])
-//    }
-//    .overlay {
-//      ConcentricRectangles(count: 1, spacing: 6, cornerRadius: 16)
-//        .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
-//        .allowsHitTesting(false)
-//    }
+    //    .sheet(isPresented: .constant(true)) {
+    //        ConcentricRectangle()
+    //            .fill(AppTheme.Colors.tertiaryFill(for: colorScheme))
+    //            .frame(height: 120)
+    //            .cornerRadius(16)
+    //            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+    //            .padding(40)
+    //            .ignoresSafeArea()
+    //            .presentationDetents([.medium])
+    //    }
+    //    .overlay {
+    //      ConcentricRectangles(count: 1, spacing: 6, cornerRadius: 16)
+    //        .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
+    //        .allowsHitTesting(false)
+    //    }
   }
 }
 
@@ -439,7 +493,7 @@ private struct DailyPerformanceWidget: View {
             )
             .interpolationMethod(.catmullRom)
             .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-            
+
             AreaMark(
               x: .value("Time", index),
               y: .value("Value", value)
@@ -449,7 +503,7 @@ private struct DailyPerformanceWidget: View {
               LinearGradient(
                 colors: [
                   AppTheme.Colors.tint(for: colorScheme).opacity(0.3),
-                  .clear
+                  .clear,
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -468,11 +522,11 @@ private struct DailyPerformanceWidget: View {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }
-//    .overlay {
-//      ConcentricRectangles(count: 1, spacing: 6, cornerRadius: 16)
-//        .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
-//        .allowsHitTesting(false)
-//    }
+    //    .overlay {
+    //      ConcentricRectangles(count: 1, spacing: 6, cornerRadius: 16)
+    //        .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
+    //        .allowsHitTesting(false)
+    //    }
   }
 }
 
@@ -505,11 +559,11 @@ private struct TopMoversWidget: View {
               }
               .frame(width: 100, alignment: .leading)
             }
-//            .overlay {
-//              ConcentricRectangles(count: 1, spacing: 6, cornerRadius: 16)
-//                .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
-//                .allowsHitTesting(false)
-//            }
+            //            .overlay {
+            //              ConcentricRectangles(count: 1, spacing: 6, cornerRadius: 16)
+            //                .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
+            //                .allowsHitTesting(false)
+            //            }
           }
         }
       }
@@ -562,11 +616,11 @@ private struct AllocationWidget: View {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }
-//    .overlay {
-//      ConcentricRectangles(count: 1, spacing: 6, cornerRadius: 16)
-//        .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
-//        .allowsHitTesting(false)
-//    }
+    //    .overlay {
+    //      ConcentricRectangles(count: 1, spacing: 6, cornerRadius: 16)
+    //        .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
+    //        .allowsHitTesting(false)
+    //    }
   }
 }
 
@@ -653,7 +707,7 @@ private final class PortfolioViewModel: ObservableObject {
   // edit
   @Published var editingStock: StockResponse? = nil
   @Published var isSaving = false
-  
+
   func load() async {
     guard !isLoading else { return }
     isLoading = true
@@ -667,12 +721,12 @@ private final class PortfolioViewModel: ObservableObject {
       errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load portfolio."
     }
   }
-  
+
   func delete(id: String) async {
     let old = stocks
-    
+
     stocks.removeAll(where: { $0.id == id })
-    
+
     do {
       let service = Container.shared.stockService()
       try await service.delete(id: id)
@@ -681,21 +735,21 @@ private final class PortfolioViewModel: ObservableObject {
       errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to delete stock."
     }
   }
-  
+
   func beginEdit(_ stock: StockResponse) {
     editingStock = stock
   }
-  
+
   func saveEdit(_ updated: StockResponse) async {
     guard !isSaving else { return }
     isSaving = true
     defer { isSaving = false }
-    
+
     do {
       let service = Container.shared.stockService()
       let saved = try await service.updateStock(updated)
-      
-      if let idx = stocks.firstIndex(where: { $0.id == saved.id}) {
+
+      if let idx = stocks.firstIndex(where: { $0.id == saved.id }) {
         stocks[idx] = saved
       } else {
         stocks.insert(saved, at: 0)
@@ -719,7 +773,10 @@ private struct EditStockSheet: View {
   @State private var buyPrice: Double
   @State private var notes: String
 
-  init(stock: StockResponse, isSaving: Bool, onCancel: @escaping () -> Void, onSave: @escaping (StockResponse) -> Void) {
+  init(
+    stock: StockResponse, isSaving: Bool, onCancel: @escaping () -> Void,
+    onSave: @escaping (StockResponse) -> Void
+  ) {
     self.stock = stock
     self.isSaving = isSaving
     self.onCancel = onCancel
