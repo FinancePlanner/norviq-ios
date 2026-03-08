@@ -168,15 +168,7 @@ final class LoginViewModel: ObservableObject {
   }
 
   private func persistAuth(_ auth: AuthResponse) {
-    sessionStore.authToken = auth.token
-    sessionStore.refreshToken = auth.refreshToken
-    sessionStore.currentUserID = auth.userId.uuidString
-    let resolvedDisplayName = auth.username.trimmingCharacters(in: .whitespacesAndNewlines)
-    if !resolvedDisplayName.isEmpty {
-      sessionStore.currentUsername = resolvedDisplayName
-    } else {
-      sessionStore.currentUsername = auth.firstName.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
+    sessionStore.store(authResponse: auth)
     onAuthenticated()
   }
 

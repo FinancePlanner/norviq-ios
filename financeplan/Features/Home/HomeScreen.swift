@@ -138,60 +138,7 @@ struct HomeScreen: View {
   }
 }
 
-// MARK: - More Sheet
 
-private struct UserProfileView: View {
-  @EnvironmentObject private var sessionManager: SessionManager
-  @Environment(\.dismiss) private var dismiss
-  @Environment(\.colorScheme) private var colorScheme
-
-  var body: some View {
-    NavigationStack {
-      List {
-        Section("Profile") {
-          HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-              .fill(AppTheme.Colors.tint(for: colorScheme).opacity(0.18))
-              .frame(width: 42, height: 42)
-              .overlay(
-                Text(initials)
-                  .font(.system(size: 14, weight: .bold, design: .rounded))
-                  .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-              )
-
-            VStack(alignment: .leading, spacing: 2) {
-              Text(displayName)
-                .typography(.label, weight: .semibold)
-              Text("FinPlanner user")
-                .typography(.nano)
-                .foregroundStyle(.secondary)
-            }
-          }
-        }
-      }
-      .navigationTitle("Profile")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .topBarTrailing) {
-          Button("Done") { dismiss() }
-        }
-      }
-    }
-  }
-
-  private var displayName: String {
-    let trimmed = sessionManager.username.trimmingCharacters(in: .whitespacesAndNewlines)
-    return trimmed.isEmpty ? "Investor" : trimmed
-  }
-
-  private var initials: String {
-    let parts = displayName.split(separator: " ")
-    if parts.count >= 2 {
-      return String(parts.prefix(2).compactMap(\.first)).uppercased()
-    }
-    return String(displayName.prefix(1)).uppercased()
-  }
-}
 
 private struct MoreSheet: View {
   let onLogout: () async -> Void

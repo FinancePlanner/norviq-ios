@@ -1,17 +1,27 @@
+//
+//  UserProfileHTTPClient.swift
+//  financeplan
+//
+//  Created by Fernando Correia on 07.03.26.
+//
+
 import AnyAPI
 import Foundation
-import StockPlanShared
 import OSLog
+import StockPlanShared
 
-private let stockHTTPLogger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "StockHTTPClient")
+private let userProfileHTTPLogger = Logger(
+  subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
+  category: "UserProfileHTTPClient"
+)
 
-protocol StockURLSessionProtocol {
+protocol UserProfileURLSessionProtocol {
   func data(for request: URLRequest) async throws -> (Data, URLResponse)
 }
 
-extension URLSession: StockURLSessionProtocol {}
+extension URLSession: UserProfileURLSessionProtocol {}
 
-struct StockHTTPClient {
+struct UserProfileHTTPClient {
   enum Error: LocalizedError, Equatable {
     case invalidResponse
     case invalidStatus(Int)
@@ -38,15 +48,36 @@ struct StockHTTPClient {
       return false
     }
   }
-  
+
   let baseURL: URL
-  let session: StockURLSessionProtocol
+  let session: UserProfileURLSessionProtocol
   let authTokenProvider: () -> String?
 
-  init(baseURL: URL, session: StockURLSessionProtocol = URLSession.shared, authTokenProvider: @escaping () -> String? = { nil }) {
+  init(
+    baseURL: URL,
+    session: UserProfileURLSessionProtocol = URLSession.shared,
+    authTokenProvider: @escaping () -> String? = { nil }
+  ) {
     self.baseURL = baseURL
     self.session = session
     self.authTokenProvider = authTokenProvider
+  }
+
+  func fetchProfile(_ request: GetUserProfileRequest) async throws -> GetUserProfileResponse {
+    _ = request
+    let endpoint = GetUserProfileEndpoint()
+    return try await call(endpoint)
+  }
+
+  func updateProfile(_ request: UpdateUserProfileRequest) async throws -> UpdateUserProfileResponse {
+    let endpoint = UpdateUserProfileEndpoint(request: request)
+    return try await call(endpoint)
+  }
+
+  func deleteProfile(_ request: DeleteUserProfileRequest) async throws -> DeleteUserProfileResponse {
+    _ = request
+    let endpoint = DeleteUserProfileEndpoint()
+    return try await call(endpoint)
   }
 
   func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
@@ -78,7 +109,9 @@ struct StockHTTPClient {
       throw Error.invalidResponse
     }
 
-    stockHTTPLogger.debug("Stock response [\(endpoint.path, privacy: .public)] status=\(httpResponse.statusCode, privacy: .public)")
+    userProfileHTTPLogger.debug(
+      "UserProfile response [\(endpoint.path, privacy: .public)] status=\(httpResponse.statusCode, privacy: .public)"
+    )
 
     guard (200 ..< 300).contains(httpResponse.statusCode) else {
       let message = errorMessage(from: data)
@@ -97,7 +130,8 @@ struct StockHTTPClient {
   }
 
   private func errorMessage(from data: Data) -> String? {
-    if let stockError = try? JSONDecoder().decode(StockPlanShared.APIErrorResponse.self, from: data), !stockError.error.isEmpty {
+    if let stockError = try? JSONDecoder().decode(StockPlanShared.APIErrorResponse.self, from: data),
+       !stockError.error.isEmpty {
       return stockError.error
     }
 
@@ -125,7 +159,8 @@ struct StockHTTPClient {
       }
     }
 
-    if let body = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), !body.isEmpty {
+    if let body = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+       !body.isEmpty {
       return body
     }
 
@@ -134,7 +169,7 @@ struct StockHTTPClient {
 
   private func makeURLRequest<E: Endpoint>(for endpoint: E) throws -> URLRequest {
     let normalizedPath = endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-    var url = baseURL.appendingPathComponent(normalizedPath)
+    let url = baseURL.appendingPathComponent(normalizedPath)
 
     let parameters = try endpoint.asParameters()
 
@@ -153,7 +188,9 @@ struct StockHTTPClient {
     if endpoint.method == .get, !parameters.isEmpty {
       var comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
       comps?.queryItems = parameters.map { URLQueryItem(name: $0.key, value: String(describing: $0.value)) }
-      if let final = comps?.url { request.url = final }
+      if let final = comps?.url {
+        request.url = final
+      }
     } else if !parameters.isEmpty {
       request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
     }

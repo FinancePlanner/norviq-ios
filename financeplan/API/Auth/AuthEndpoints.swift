@@ -71,7 +71,7 @@ struct LoginEndpoint: Endpoint {
   let password: String
 
   var method: HTTPMethod { .post }
-  var path: String { "/auth/login" }
+  var path: String { "/v1/auth/login" }
   var decoder: JSONDecoder { AuthDecoding.decoder() }
 
   func asParameters() throws -> Parameters {
@@ -93,7 +93,7 @@ struct SignupEndpoint: Endpoint {
   let dateOfBirth: Date
 
   var method: HTTPMethod { .post }
-  var path: String { "/auth/register" }
+  var path: String { "/v1/auth/register" }
   var decoder: JSONDecoder { AuthDecoding.decoder() }
 
   func asParameters() throws -> Parameters {
@@ -121,7 +121,7 @@ struct ForgotPasswordEndpoint: Endpoint {
   let email: String
 
   var method: HTTPMethod { .post }
-  var path: String { "/auth/forgot-password" }
+  var path: String { "/v1/auth/forgot-password" }
   var decoder: JSONDecoder { AuthDecoding.decoder() }
 
   func asParameters() throws -> Parameters {
@@ -139,6 +139,22 @@ struct LogoutEndpoint: Endpoint {
 
   var method: HTTPMethod { .post }
   var path: String { endpointPath }
+
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [:]
+    params["refreshToken"] = refreshToken
+    return params
+  }
+}
+
+struct RefreshEndpoint: Endpoint {
+  typealias Response = AuthResponse
+
+  let refreshToken: String
+
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/auth/refresh" }
+  var decoder: JSONDecoder { AuthDecoding.decoder() }
 
   func asParameters() throws -> Parameters {
     var params: Parameters = [:]

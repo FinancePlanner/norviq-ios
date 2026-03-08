@@ -30,7 +30,11 @@ final class UIComponentsTests: XCTestCase {
     }
 
     func testAppTopBar_canBeCompiled() {
-        let topBar = AppTopBar(username: "testuser")
+        let topBar = AppTopBar(
+            username: "testuser",
+            isUserMenuPresented: false,
+            onUserTap: {}
+        )
 
         let hostingController = UIHostingController(rootView: topBar)
         XCTAssertNotNil(hostingController.view)

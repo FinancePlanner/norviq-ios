@@ -82,7 +82,7 @@ struct CreateStockEndpoint: Endpoint {
   let notes: String?
 
   var method: HTTPMethod { .post }
-  var path: String { "/stocks" }
+  var path: String { "/v1/stocks" }
   var decoder: JSONDecoder { StockDecoding.decoder() }
 
   func asParameters() throws -> Parameters {
@@ -113,7 +113,7 @@ struct BulkCreateStocksEndpoint: Endpoint {
   let stocks: [StockRequest]
 
   var method: HTTPMethod { .post }
-  var path: String { "/stocks/bulk" }
+  var path: String { "/v1/stocks/bulk" }
   var decoder: JSONDecoder { StockDecoding.decoder() }
 
   func asParameters() throws -> Parameters {
@@ -130,7 +130,7 @@ struct GetStocksEndpoint: Endpoint {
   typealias Response = [StockResponse]
 
   var method: HTTPMethod { .get }
-  var path: String { "/stocks" }
+  var path: String { "/v1/stocks" }
   var decoder: JSONDecoder { StockDecoding.decoder() }
 
   func asParameters() throws -> Parameters { [:] }
@@ -142,7 +142,7 @@ struct UpdateStockEndpoint: Endpoint {
   let payload: StockRequest
 
   var method: HTTPMethod { .put }
-  var path: String { "/stocks/\(stockId)" }
+  var path: String { "/v1/stocks/\(stockId)" }
   var decoder: JSONDecoder { StockDecoding.decoder() }
 
   func asParameters() throws -> Parameters {
@@ -158,9 +158,8 @@ struct DeleteStockEndpoint: Endpoint {
   let stockId: String
 
   var method: HTTPMethod { .delete }
-  var path: String { "/stocks/\(stockId)" }
+  var path: String { "/v1/stocks/\(stockId)" }
   var decoder: JSONDecoder { StockDecoding.decoder() }
 
   func asParameters() throws -> Parameters { [:] }
 }
-

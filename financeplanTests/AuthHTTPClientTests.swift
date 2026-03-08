@@ -202,6 +202,44 @@ final class AuthHTTPClientTests: XCTestCase {
     XCTAssertNil(response.resetCode)
   }
 
+  func testRefresh_SendsCorrectRequestAndDecodesResponse() async throws {
+    let session = SessionMock()
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
+    let expected = AuthResponse(
+      token: "new-token-123",
+      userId: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+      expiresIn: 3600,
+      refreshToken: "new-refresh-123",
+      refreshExpiresIn: 86_400,
+      username: "valid_user",
+      email: "user@example.com",
+      firstName: "Jane",
+      lastName: "Doe",
+      dateOfBirth: Date(timeIntervalSince1970: 946684800)
+    )
+
+    session.handler = { request in
+      XCTAssertEqual(request.httpMethod, "POST")
+      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/auth/refresh")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+
+      let body = try XCTUnwrap(request.httpBody)
+      let decoded = try JSONDecoder().decode(AuthRefreshRequest.self, from: body)
+      XCTAssertEqual(decoded.refreshToken, "refresh-123")
+
+      let data = try JSONEncoder().encode(expected)
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (data, response)
+    }
+
+    let client = AuthHTTPClient(baseURL: baseURL, session: session)
+    let response = try await client.refresh(AuthRefreshRequest(refreshToken: "refresh-123"))
+
+    XCTAssertEqual(response, expected)
+  }
+
   func testLogout_WhenV2Returns404_FallsBackToAuthLogout() async throws {
     let session = SessionMock()
     let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))

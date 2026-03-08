@@ -14,71 +14,108 @@ protocol StockServicing {
 final class StockService: StockServicing {
   private let environmentManager: AppEnvironmentManager
   private let session: StockURLSessionProtocol
-  private let sessionStore: AuthSessionStoring
+  private let authSessionManager: AuthSessionManaging
 
   init(
     environmentManager: AppEnvironmentManager,
     session: StockURLSessionProtocol = URLSession.shared,
-    sessionStore: AuthSessionStoring
+    authSessionManager: AuthSessionManaging
   ) {
     self.environmentManager = environmentManager
     self.session = session
-    self.sessionStore = sessionStore
+    self.authSessionManager = authSessionManager
   }
 
   @discardableResult
   func create(stock: StockRequest) async throws -> StockResponse {
-    let client = makeClient()
-    let endpoint = CreateStockEndpoint(
-      symbol: stock.symbol,
-      shares: stock.shares,
-      buyPrice: stock.buyPrice,
-      buyDate: stock.buyDate,
-      notes: stock.notes
-    )
-    return try await client.call(endpoint)
+    try await performAuthenticated { client in
+      let endpoint = CreateStockEndpoint(
+        symbol: stock.symbol,
+        shares: stock.shares,
+        buyPrice: stock.buyPrice,
+        buyDate: stock.buyDate,
+        notes: stock.notes
+      )
+      return try await client.call(endpoint)
+    }
   }
 
   @discardableResult
   func bulkCreate(stocks: [StockRequest]) async throws -> BulkCreateStocksResponse {
-    let client = makeClient()
-    let endpoint = BulkCreateStocksEndpoint(stocks: stocks)
-    return try await client.call(endpoint)
+    try await performAuthenticated { client in
+      let endpoint = BulkCreateStocksEndpoint(stocks: stocks)
+      return try await client.call(endpoint)
+    }
   }
   
   func fetchPortfolio() async throws -> [StockResponse] {
-    let client = makeClient()
-    let endpoint = GetStocksEndpoint()
-    return try await client.call(endpoint)
+    try await performAuthenticated { client in
+      let endpoint = GetStocksEndpoint()
+      return try await client.call(endpoint)
+    }
   }
 
   func updateStock(_ stock: StockResponse) async throws -> StockResponse {
-    let client = makeClient()
-    // Build a StockRequest payload from StockResponse (assuming same fields)
-    let request = StockRequest(
-      symbol: stock.symbol,
-      shares: stock.shares,
-      buyPrice: stock.buyPrice,
-      buyDate: stock.buyDate,
-      notes: stock.notes ?? ""
-    )
-    let endpoint = UpdateStockEndpoint(stockId: stock.id, payload: request)
-    return try await client.call(endpoint)
+    try await performAuthenticated { client in
+      let request = StockRequest(
+        symbol: stock.symbol,
+        shares: stock.shares,
+        buyPrice: stock.buyPrice,
+        buyDate: stock.buyDate,
+        notes: stock.notes ?? ""
+      )
+      let endpoint = UpdateStockEndpoint(stockId: stock.id, payload: request)
+      return try await client.call(endpoint)
+    }
   }
 
   func delete(id: String) async throws {
-    let client = makeClient()
-    let endpoint = DeleteStockEndpoint(stockId: id)
-    try await client.callWithoutResponse(endpoint)
+    try await performAuthenticated { client in
+      let endpoint = DeleteStockEndpoint(stockId: id)
+      try await client.callWithoutResponse(endpoint)
+    }
   }
 
-  private func makeClient() -> StockHTTPClient {
-    StockHTTPClient(
+  private func makeClient(forceRefresh: Bool = false) async throws -> StockHTTPClient {
+    let token = try await resolvedAccessToken(forceRefresh: forceRefresh)
+    return StockHTTPClient(
       baseURL: environmentManager.current.apiBaseUrl,
       session: session,
-      authTokenProvider: { [weak sessionStore] in
-        sessionStore?.authToken
-      }
+      authTokenProvider: { token }
     )
+  }
+  
+  private func performAuthenticated<T>(
+    _ operation: (StockHTTPClient) async throws -> T
+  ) async throws -> T {
+    do {
+      let client = try await makeClient()
+      return try await operation(client)
+    } catch let error as StockHTTPClient.Error where error.isUnauthorized {
+      let refreshedClient = try await makeClient(forceRefresh: true)
+
+      do {
+        return try await operation(refreshedClient)
+      } catch let retryError as StockHTTPClient.Error where retryError.isUnauthorized {
+        await authSessionManager.invalidateSession()
+        throw retryError
+      }
+    }
+  }
+
+  private func resolvedAccessToken(forceRefresh: Bool = false) async throws -> String {
+    if forceRefresh {
+      guard let token = try await authSessionManager.refreshAccessToken(),
+            !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        throw AuthSessionError.notAuthenticated
+      }
+      return token
+    } else {
+      guard let token = try await authSessionManager.validAccessToken(),
+            !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        throw AuthSessionError.notAuthenticated
+      }
+      return token
+    }
   }
 }

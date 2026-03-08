@@ -9,6 +9,7 @@ final class LoginViewModelTests: XCTestCase {
     var loginCalls = 0
     var signupCalls = 0
     var forgotPasswordCalls = 0
+    var refreshCalls = 0
 
     var lastLoginEmail: String?
     var lastSignupUsername: String?
@@ -17,6 +18,7 @@ final class LoginViewModelTests: XCTestCase {
     var lastSignupLastName: String?
     var lastSignupDateOfBirth: Date?
     var lastForgotPasswordEmail: String?
+    var lastRefreshToken: String?
     var logoutCalls = 0
     var lastLogoutRefreshToken: String?
     var loginDelayNanoseconds: UInt64 = 0
@@ -24,6 +26,7 @@ final class LoginViewModelTests: XCTestCase {
     var loginResult: Result<AuthResponse, Error> = .failure(MockError.notConfigured)
     var signupResult: Result<Void, Error> = .failure(MockError.notConfigured)
     var forgotPasswordResult: Result<AuthForgotPasswordResponse, Error> = .failure(MockError.notConfigured)
+    var refreshResult: Result<AuthResponse, Error> = .failure(MockError.notConfigured)
 
     func login(email: String, password _: String) async throws -> AuthResponse {
       loginCalls += 1
@@ -57,6 +60,12 @@ final class LoginViewModelTests: XCTestCase {
       return try forgotPasswordResult.get()
     }
 
+    func refresh(refreshToken: String) async throws -> AuthResponse {
+      refreshCalls += 1
+      lastRefreshToken = refreshToken
+      return try refreshResult.get()
+    }
+
     func logout(refreshToken: String) async {
       logoutCalls += 1
       lastLogoutRefreshToken = refreshToken
@@ -66,10 +75,30 @@ final class LoginViewModelTests: XCTestCase {
   private final class AuthSessionStoreMock: AuthSessionStoring {
     var authToken = ""
     var refreshToken = ""
+    var authTokenExpiresAt: Date?
+    var refreshTokenExpiresAt: Date?
     var loginIsSignup = true
     var currentUserID = ""
     var currentUsername = ""
     private var importedUserIDs: Set<String> = []
+
+    func store(authResponse: AuthResponse) {
+      authToken = authResponse.token
+      refreshToken = authResponse.refreshToken
+      currentUserID = authResponse.userId.uuidString
+      currentUsername = authResponse.username
+      authTokenExpiresAt = Date().addingTimeInterval(TimeInterval(authResponse.expiresIn))
+      refreshTokenExpiresAt = Date().addingTimeInterval(TimeInterval(authResponse.refreshExpiresIn))
+    }
+
+    func clearSession() {
+      authToken = ""
+      refreshToken = ""
+      authTokenExpiresAt = nil
+      refreshTokenExpiresAt = nil
+      currentUserID = ""
+      currentUsername = ""
+    }
 
     func hasCompletedInitialStockImport(for userID: String) -> Bool {
       importedUserIDs.contains(userID)

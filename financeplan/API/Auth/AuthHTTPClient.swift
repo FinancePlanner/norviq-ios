@@ -68,6 +68,11 @@ struct AuthHTTPClient {
     return try await call(endpoint)
   }
 
+  func refresh(_ request: AuthRefreshRequest) async throws -> AuthResponse {
+    let endpoint = RefreshEndpoint(refreshToken: request.refreshToken)
+    return try await call(endpoint)
+  }
+
   func logout(_ request: AuthRefreshRequest) async throws {
     let primary = LogoutEndpoint(refreshToken: request.refreshToken, endpointPath: "/v2/logout")
     do {
@@ -110,7 +115,7 @@ struct AuthHTTPClient {
       throw Error.invalidResponse
     }
 
-    if endpoint.path == "/auth/login" || endpoint.path == "/auth/register" {
+    if endpoint.path == "/v1/auth/login" || endpoint.path == "/auth/register" {
       authHTTPLogger.debug(
         "Auth response [\(endpoint.path, privacy: .public)] status=\(httpResponse.statusCode, privacy: .public)"
       )
@@ -207,7 +212,7 @@ struct AuthHTTPClient {
   }
 
   private func logRequest(endpointPath: String, method: HTTPMethod, parameters: Parameters) {
-    guard endpointPath == "/auth/login" || endpointPath == "/auth/register" else {
+    guard endpointPath == "/v1/auth/login" || endpointPath == "/auth/register" else {
       return
     }
 

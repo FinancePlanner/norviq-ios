@@ -9,7 +9,7 @@ public struct ContentView: View {
   @State private var isAuthenticated: Bool
   @State private var requiresInitialStockImport: Bool
   private let splashDelayNanoseconds: UInt64
-  private let authService: AuthServicing
+  private let authSessionManager: AuthSessionManaging
   private let sessionStore: AuthSessionStoring
 
   public init() {
@@ -17,21 +17,24 @@ public struct ContentView: View {
     splashDelayNanoseconds =
       processInfo.arguments.contains("-ui_test_skip_splash") ? 0 : 2_000_000_000
 
+    let store = Container.shared.authSessionStore()
+
     if processInfo.arguments.contains("-ui_test_reset_session") {
+      store.clearSession()
       let defaults = UserDefaults.standard
-      defaults.removeObject(forKey: "auth_token")
-      defaults.removeObject(forKey: "refresh_token")
-      defaults.removeObject(forKey: "current_user_id")
-      defaults.removeObject(forKey: "current_username")
       defaults.removeObject(forKey: "initial_stock_import_user_ids")
-      defaults.synchronize()
     }
 
-    authService = Container.shared.authService()
-    let store = Container.shared.authSessionStore()
+    authSessionManager = Container.shared.authSessionManager()
 
     if let forcedAuthToken = processInfo.argumentValue(for: "-ui_test_auth_token") {
       store.authToken = forcedAuthToken
+      store.authTokenExpiresAt = JWTTokenInspector.expirationDate(in: forcedAuthToken) ?? .distantFuture
+    }
+
+    if let forcedRefreshToken = processInfo.argumentValue(for: "-ui_test_refresh_token") {
+      store.refreshToken = forcedRefreshToken
+      store.refreshTokenExpiresAt = .distantFuture
     }
 
     if let forcedUserID = processInfo.argumentValue(for: "-ui_test_user_id") {
@@ -47,13 +50,8 @@ public struct ContentView: View {
     }
 
     sessionStore = store
-    let hasSession = !store.authToken.isEmpty
-    _isAuthenticated = State(initialValue: hasSession)
-    _requiresInitialStockImport = State(
-      initialValue: hasSession
-        && (store.currentUserID.isEmpty
-          || !store.hasCompletedInitialStockImport(for: store.currentUserID))
-    )
+    _isAuthenticated = State(initialValue: false)
+    _requiresInitialStockImport = State(initialValue: false)
   }
 
   public var body: some View {
@@ -71,23 +69,13 @@ public struct ContentView: View {
           } else {
             HomeScreen(
               onLogout: {
-                await authService.logout(refreshToken: sessionStore.refreshToken)
-                sessionStore.authToken = ""
-                sessionStore.refreshToken = ""
-                sessionStore.currentUsername = ""
-                isAuthenticated = false
-                requiresInitialStockImport = false
-                sessionManager.reset()
+                await authSessionManager.logout()
               }
             )
           }
         } else {
           LoginScreen(onAuthenticated: {
-            isAuthenticated = true
-            let userID = sessionStore.currentUserID
-            requiresInitialStockImport =
-              userID.isEmpty || !sessionStore.hasCompletedInitialStockImport(for: userID)
-            sessionManager.updateUsername(sessionStore.currentUsername)
+            applyAuthenticatedState()
           })
         }
       } else {
@@ -95,9 +83,13 @@ public struct ContentView: View {
           .transition(.opacity)
       }
     }
+    .environment(\.dynamicTypeSize, .xSmall)
     .containerShape(.rect(cornerRadius: 34, style: .continuous))
     .onAppear {
       syncSessionUsername()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .authSessionDidInvalidate)) { _ in
+      handleSessionInvalidation()
     }
     .task {
       guard !launchStarted else {
@@ -107,6 +99,12 @@ public struct ContentView: View {
       launchStarted = true
       if splashDelayNanoseconds > 0 {
         try? await Task.sleep(nanoseconds: splashDelayNanoseconds)
+      }
+
+      if await authSessionManager.restoreSessionIfNeeded() {
+        applyAuthenticatedState()
+      } else {
+        handleSessionInvalidation()
       }
 
       withAnimation(.easeInOut(duration: 0.4)) {
@@ -121,6 +119,20 @@ public struct ContentView: View {
     } else {
       sessionManager.reset()
     }
+  }
+
+  private func applyAuthenticatedState() {
+    isAuthenticated = true
+    let userID = sessionStore.currentUserID
+    requiresInitialStockImport =
+      userID.isEmpty || !sessionStore.hasCompletedInitialStockImport(for: userID)
+    sessionManager.updateUsername(sessionStore.currentUsername)
+  }
+
+  private func handleSessionInvalidation() {
+    isAuthenticated = false
+    requiresInitialStockImport = false
+    sessionManager.reset()
   }
 }
 
