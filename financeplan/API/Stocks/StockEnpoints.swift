@@ -72,6 +72,39 @@ private enum StockDecoding {
   }()
 }
 
+private enum StockEncoding {
+  static func parameters<T: Encodable>(for value: T) throws -> Parameters {
+    let data = try JSONEncoder().encode(value)
+    return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+  }
+
+  static func priceRangeParameters(_ range: PriceRange) -> Parameters {
+    [
+      "low": range.low,
+      "high": range.high,
+    ]
+  }
+
+  static func valuationParameters(for request: StockValuationRequest) -> Parameters {
+    var params: Parameters = [
+      "symbol": request.symbol,
+      "bearCase": priceRangeParameters(request.bearCase),
+      "baseCase": priceRangeParameters(request.baseCase),
+      "bullCase": priceRangeParameters(request.bullCase),
+    ]
+
+    if let rationale = request.rationale, !rationale.isEmpty {
+      params["rationale"] = rationale
+    }
+
+    if let targetDate = request.targetDate, !targetDate.isEmpty {
+      params["targetDate"] = targetDate
+    }
+
+    return params
+  }
+}
+
 struct CreateStockEndpoint: Endpoint {
   typealias Response = StockResponse
 
@@ -146,9 +179,7 @@ struct UpdateStockEndpoint: Endpoint {
   var decoder: JSONDecoder { StockDecoding.decoder() }
 
   func asParameters() throws -> Parameters {
-    let data = try JSONEncoder().encode(payload)
-    let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-    return json
+    try StockEncoding.parameters(for: payload)
   }
 }
 
@@ -162,4 +193,82 @@ struct DeleteStockEndpoint: Endpoint {
   var decoder: JSONDecoder { StockDecoding.decoder() }
 
   func asParameters() throws -> Parameters { [:] }
+}
+struct GetStockDetailsEndpoint: Endpoint {
+  typealias Response = StockDetails
+  let stockId: String
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/stocks/\(stockId)" }
+  var decoder: JSONDecoder { StockDecoding.decoder() }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+struct GetStockHistoryEndpoint: Endpoint {
+  typealias Response = [StockHistory]
+  let symbol: String
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/history" }
+  var decoder: JSONDecoder { StockDecoding.decoder() }
+
+  func asParameters() throws -> Parameters {
+    ["symbol": symbol]
+  }
+}
+
+struct GetStockNewsEndpoint: Endpoint {
+  typealias Response = [StockNews]
+  let symbol: String
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/news" }
+  var decoder: JSONDecoder { StockDecoding.decoder() }
+
+  func asParameters() throws -> Parameters {
+    ["symbol": symbol]
+  }
+}
+
+struct GetStockValuationEndpoint: Endpoint {
+  typealias Response = StockValuationRequest
+
+  let symbol: String
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/stocks/symbol/\(symbol)/valuation" }
+  var decoder: JSONDecoder { StockDecoding.decoder() }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+struct CreateStockValuationEndpoint: Endpoint {
+  typealias Response = StockValuationRequest
+
+  let symbol: String
+  let payload: StockValuationRequest
+
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/stocks/symbol/\(symbol)/valuation" }
+  var decoder: JSONDecoder { StockDecoding.decoder() }
+
+  func asParameters() throws -> Parameters {
+    StockEncoding.valuationParameters(for: payload)
+  }
+}
+
+struct UpdateStockValuationEndpoint: Endpoint {
+  typealias Response = StockValuationRequest
+
+  let symbol: String
+  let payload: StockValuationRequest
+
+  var method: HTTPMethod { .put }
+  var path: String { "/v1/stocks/symbol/\(symbol)/valuation" }
+  var decoder: JSONDecoder { StockDecoding.decoder() }
+
+  func asParameters() throws -> Parameters {
+    StockEncoding.valuationParameters(for: payload)
+  }
 }

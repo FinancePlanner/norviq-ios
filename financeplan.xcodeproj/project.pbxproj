@@ -42,6 +42,7 @@
 		60AFA7F82F3E406900FA3135 /* financeplan.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = financeplan.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		60AFA8052F3E406A00FA3135 /* financeplanTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = financeplanTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		60AFA80F2F3E406A00FA3135 /* financeplanUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = financeplanUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		60DA220A2F61DE3500E7773F /* BuildTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildTools.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -102,6 +103,7 @@
 		60AFA7EF2F3E406900FA3135 = {
 			isa = PBXGroup;
 			children = (
+				60DA22082F61DE0D00E7773F /* BuildTools */,
 				60AFA7FA2F3E406900FA3135 /* financeplan */,
 				60AFA8082F3E406A00FA3135 /* financeplanTests */,
 				60AFA8122F3E406A00FA3135 /* financeplanUITests */,
@@ -117,6 +119,14 @@
 				60AFA80F2F3E406A00FA3135 /* financeplanUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		60DA22082F61DE0D00E7773F /* BuildTools */ = {
+			isa = PBXGroup;
+			children = (
+				60DA220A2F61DE3500E7773F /* BuildTools.swift */,
+			);
+			path = BuildTools;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

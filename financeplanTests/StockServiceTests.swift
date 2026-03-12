@@ -50,6 +50,21 @@ final class StockServiceTests: XCTestCase {
     case notConfigured
   }
 
+  private func makeValuationRequest(
+    symbol: String = "AAPL",
+    rationale: String? = "Margin expansion with stable demand.",
+    targetDate: String? = "2026-12-31"
+  ) -> StockValuationRequest {
+    StockValuationRequest(
+      symbol: symbol,
+      bearCase: PriceRange(low: 100, high: 120),
+      baseCase: PriceRange(low: 130, high: 150),
+      bullCase: PriceRange(low: 160, high: 190),
+      rationale: rationale,
+      targetDate: targetDate
+    )
+  }
+
   func testBulkCreate_UsesBearerTokenAndReturnsResponse() async throws {
     let session = SessionMock()
     let authSessionManager = AuthSessionManagerMock()
@@ -262,5 +277,198 @@ final class StockServiceTests: XCTestCase {
     let response = try await service.fetchPortfolio()
 
     XCTAssertEqual(response, expected)
+  }
+
+  func testGetStockValuationEndpoint_UsesSymbolPath() throws {
+    let endpoint = GetStockValuationEndpoint(symbol: "AAPL")
+
+    XCTAssertEqual(endpoint.path, "/v1/stocks/symbol/AAPL/valuation")
+    XCTAssertTrue(try endpoint.asParameters().isEmpty)
+  }
+
+  func testCreateStockValuationEndpoint_EncodesRequestBody() throws {
+    let request = makeValuationRequest()
+    let endpoint = CreateStockValuationEndpoint(symbol: request.symbol, payload: request)
+    let parameters = try endpoint.asParameters()
+
+    XCTAssertEqual(endpoint.path, "/v1/stocks/symbol/AAPL/valuation")
+    XCTAssertEqual(parameters["symbol"] as? String, "AAPL")
+
+    let bearCase = try XCTUnwrap(parameters["bearCase"] as? [String: Any])
+    let baseCase = try XCTUnwrap(parameters["baseCase"] as? [String: Any])
+    let bullCase = try XCTUnwrap(parameters["bullCase"] as? [String: Any])
+
+    XCTAssertEqual((bearCase["low"] as? NSNumber)?.doubleValue, 100)
+    XCTAssertEqual((bearCase["high"] as? NSNumber)?.doubleValue, 120)
+    XCTAssertEqual((baseCase["low"] as? NSNumber)?.doubleValue, 130)
+    XCTAssertEqual((baseCase["high"] as? NSNumber)?.doubleValue, 150)
+    XCTAssertEqual((bullCase["low"] as? NSNumber)?.doubleValue, 160)
+    XCTAssertEqual((bullCase["high"] as? NSNumber)?.doubleValue, 190)
+    XCTAssertEqual(parameters["rationale"] as? String, "Margin expansion with stable demand.")
+    XCTAssertEqual(parameters["targetDate"] as? String, "2026-12-31")
+  }
+
+  func testUpdateStockValuationEndpoint_UsesExplicitSymbolAndEncodesRequestBody() throws {
+    let request = makeValuationRequest(symbol: "MSFT")
+    let endpoint = UpdateStockValuationEndpoint(symbol: "AAPL", payload: request)
+    let parameters = try endpoint.asParameters()
+
+    XCTAssertEqual(endpoint.path, "/v1/stocks/symbol/AAPL/valuation")
+    XCTAssertEqual(parameters["symbol"] as? String, "MSFT")
+  }
+
+  func testCreateStockValuationEndpoint_OmitsNilOptionalFields() throws {
+    let request = makeValuationRequest(rationale: nil, targetDate: nil)
+    let endpoint = CreateStockValuationEndpoint(symbol: request.symbol, payload: request)
+    let parameters = try endpoint.asParameters()
+
+    XCTAssertNil(parameters["rationale"])
+    XCTAssertNil(parameters["targetDate"])
+
+    let bearCase = try XCTUnwrap(parameters["bearCase"] as? [String: Any])
+    XCTAssertEqual((bearCase["low"] as? NSNumber)?.doubleValue, 100)
+    XCTAssertEqual((bearCase["high"] as? NSNumber)?.doubleValue, 120)
+  }
+
+  func testGetValuation_UsesBearerTokenAndReturnsResponse() async throws {
+    let session = SessionMock()
+    let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+    let service = StockService(
+      environmentManager: AppEnvironmentManager(),
+      session: session,
+      authSessionManager: authSessionManager
+    )
+    let expected = makeValuationRequest()
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.path, "/v1/stocks/symbol/AAPL/valuation")
+      XCTAssertEqual(request.httpMethod, "GET")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+
+      let response = try XCTUnwrap(
+        HTTPURLResponse(
+          url: try XCTUnwrap(request.url),
+          statusCode: 200,
+          httpVersion: nil,
+          headerFields: nil
+        )
+      )
+      return (try JSONEncoder().encode(expected), response)
+    }
+
+    let response = try await service.getValuation(symbol: "AAPL")
+
+    XCTAssertEqual(response, expected)
+  }
+
+  func testCreateValuation_UsesBearerTokenEncodesBodyAndFetchesSavedValuation() async throws {
+    let session = SessionMock()
+    let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+    let service = StockService(
+      environmentManager: AppEnvironmentManager(),
+      session: session,
+      authSessionManager: authSessionManager
+    )
+    let expected = makeValuationRequest()
+    var requests = 0
+
+    session.handler = { request in
+      requests += 1
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+
+      if requests == 1 {
+        XCTAssertEqual(request.url?.path, "/v1/stocks/symbol/AAPL/valuation")
+        XCTAssertEqual(request.httpMethod, "POST")
+
+        let body = try XCTUnwrap(request.httpBody)
+        let decoded = try JSONDecoder().decode(StockValuationRequest.self, from: body)
+        XCTAssertEqual(decoded, expected)
+
+        let response = try XCTUnwrap(
+          HTTPURLResponse(
+            url: try XCTUnwrap(request.url),
+            statusCode: 201,
+            httpVersion: nil,
+            headerFields: nil
+          )
+        )
+        return (#"\"Valuation created\""#.data(using: .utf8) ?? Data(), response)
+      }
+
+      XCTAssertEqual(request.url?.path, "/v1/stocks/symbol/AAPL/valuation")
+      XCTAssertEqual(request.httpMethod, "GET")
+
+      let response = try XCTUnwrap(
+        HTTPURLResponse(
+          url: try XCTUnwrap(request.url),
+          statusCode: 200,
+          httpVersion: nil,
+          headerFields: nil
+        )
+      )
+      return (try JSONEncoder().encode(expected), response)
+    }
+
+    let response = try await service.createValuation(request: expected)
+
+    XCTAssertEqual(response, expected)
+    XCTAssertEqual(requests, 2)
+  }
+
+  func testUpdateValuation_UsesBearerTokenEncodesBodyAndFetchesSavedValuation() async throws {
+    let session = SessionMock()
+    let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+    let service = StockService(
+      environmentManager: AppEnvironmentManager(),
+      session: session,
+      authSessionManager: authSessionManager
+    )
+    let expected = makeValuationRequest(symbol: "AAPL")
+    var requests = 0
+
+    session.handler = { request in
+      requests += 1
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+
+      if requests == 1 {
+        XCTAssertEqual(request.url?.path, "/v1/stocks/symbol/AAPL/valuation")
+        XCTAssertEqual(request.httpMethod, "PUT")
+
+        let body = try XCTUnwrap(request.httpBody)
+        let decoded = try JSONDecoder().decode(StockValuationRequest.self, from: body)
+        XCTAssertEqual(decoded, expected)
+
+        let response = try XCTUnwrap(
+          HTTPURLResponse(
+            url: try XCTUnwrap(request.url),
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: nil
+          )
+        )
+        return (#"\"Valuation updated\""#.data(using: .utf8) ?? Data(), response)
+      }
+
+      XCTAssertEqual(request.url?.path, "/v1/stocks/symbol/AAPL/valuation")
+      XCTAssertEqual(request.httpMethod, "GET")
+
+      let response = try XCTUnwrap(
+        HTTPURLResponse(
+          url: try XCTUnwrap(request.url),
+          statusCode: 200,
+          httpVersion: nil,
+          headerFields: nil
+        )
+      )
+      return (try JSONEncoder().encode(expected), response)
+    }
+
+    let response = try await service.updateValuation(symbol: "AAPL", request: expected)
+
+    XCTAssertEqual(response, expected)
+    XCTAssertEqual(requests, 2)
   }
 }

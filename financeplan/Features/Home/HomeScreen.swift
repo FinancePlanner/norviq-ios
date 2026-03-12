@@ -302,30 +302,34 @@ private struct PortfolioTab: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         } else {
           List(viewModel.stocks, id: \.id) { stock in
-            VStack(alignment: .leading, spacing: 6) {
-              HStack {
-                Text(stock.symbol)
-                  .typography(.label, weight: .semibold)
-                Spacer()
-                Text((stock.shares * stock.buyPrice).currency)
-                  .typography(.small, weight: .semibold)
-              }
+            NavigationLink {
+              StockDetailScreen(stockId: stock.id, initialSymbol: stock.symbol)
+            } label: {
+              VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                  Text(stock.symbol)
+                    .typography(.label, weight: .semibold)
+                  Spacer()
+                  Text((stock.shares * stock.buyPrice).currency)
+                    .typography(.small, weight: .semibold)
+                }
 
-              HStack(spacing: 10) {
-                Text("Qty \(Int(stock.shares))")
-                Text("Avg \(stock.buyPrice.currency)")
-                Text("Date \(stock.buyDate)")
-              }
-              .typography(.nano)
-              .foregroundStyle(.secondary)
+                HStack(spacing: 10) {
+                  Text("Qty \(Int(stock.shares))")
+                  Text("Avg \(stock.buyPrice.currency)")
+                  Text("Date \(stock.buyDate)")
+                }
+                .typography(.nano)
+                .foregroundStyle(.secondary)
 
-              if let notes = stock.notes, !notes.isEmpty {
-                Text(notes)
-                  .typography(.nano)
-                  .foregroundStyle(.secondary)
+                if let notes = stock.notes, !notes.isEmpty {
+                  Text(notes)
+                    .typography(.nano)
+                    .foregroundStyle(.secondary)
+                }
               }
+              .padding(.vertical, 4)
             }
-            .padding(.vertical, 4)
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
               Button(role: .destructive) {
                 Task { await viewModel.delete(id: stock.id) }

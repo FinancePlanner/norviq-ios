@@ -7,8 +7,14 @@ protocol StockServicing {
   @discardableResult
   func bulkCreate(stocks: [StockRequest]) async throws -> BulkCreateStocksResponse
   func fetchPortfolio() async throws -> [StockResponse]
+  func fetchStockDetails(stockId: String) async throws -> StockDetails
+  func fetchStockHistory(symbol: String) async throws -> [StockHistory]
+  func fetchStockNews(symbol: String) async throws -> [StockNews]
   func updateStock(_ stock: StockResponse) async throws -> StockResponse
   func delete(id: String) async throws
+  func getValuation(symbol: String) async throws -> StockValuationRequest
+  func createValuation(request: StockValuationRequest) async throws -> StockValuationRequest
+  func updateValuation(symbol: String, request: StockValuationRequest) async throws -> StockValuationRequest
 }
 
 final class StockService: StockServicing {
@@ -55,6 +61,27 @@ final class StockService: StockServicing {
     }
   }
 
+  func fetchStockDetails(stockId: String) async throws -> StockDetails {
+    try await performAuthenticated { client in
+      let endpoint = GetStockDetailsEndpoint(stockId: stockId)
+      return try await client.call(endpoint)
+    }
+  }
+
+  func fetchStockHistory(symbol: String) async throws -> [StockHistory] {
+    try await performAuthenticated { client in
+      let endpoint = GetStockHistoryEndpoint(symbol: symbol)
+      return try await client.call(endpoint)
+    }
+  }
+
+  func fetchStockNews(symbol: String) async throws -> [StockNews] {
+    try await performAuthenticated { client in
+      let endpoint = GetStockNewsEndpoint(symbol: symbol)
+      return try await client.call(endpoint)
+    }
+  }
+
   func updateStock(_ stock: StockResponse) async throws -> StockResponse {
     try await performAuthenticated { client in
       let request = StockRequest(
@@ -73,6 +100,33 @@ final class StockService: StockServicing {
     try await performAuthenticated { client in
       let endpoint = DeleteStockEndpoint(stockId: id)
       try await client.callWithoutResponse(endpoint)
+    }
+  }
+
+  func getValuation(symbol: String) async throws -> StockValuationRequest {
+    try await performAuthenticated { client in
+      let endpoint = GetStockValuationEndpoint(symbol: symbol)
+      return try await client.call(endpoint)
+    }
+  }
+
+  func createValuation(request: StockValuationRequest) async throws -> StockValuationRequest {
+    try await performAuthenticated { client in
+      let endpoint = CreateStockValuationEndpoint(symbol: request.symbol, payload: request)
+      try await client.callWithoutResponse(endpoint)
+
+      let getEndpoint = GetStockValuationEndpoint(symbol: request.symbol)
+      return try await client.call(getEndpoint)
+    }
+  }
+
+  func updateValuation(symbol: String, request: StockValuationRequest) async throws -> StockValuationRequest {
+    try await performAuthenticated { client in
+      let endpoint = UpdateStockValuationEndpoint(symbol: symbol, payload: request)
+      try await client.callWithoutResponse(endpoint)
+
+      let getEndpoint = GetStockValuationEndpoint(symbol: symbol)
+      return try await client.call(getEndpoint)
     }
   }
 
