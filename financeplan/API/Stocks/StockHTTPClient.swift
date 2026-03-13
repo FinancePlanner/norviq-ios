@@ -11,6 +11,10 @@ protocol StockURLSessionProtocol {
 
 extension URLSession: StockURLSessionProtocol {}
 
+protocol StockRequestBodyEndpoint {
+  func bodyData() throws -> Data?
+}
+
 struct StockHTTPClient {
   enum Error: LocalizedError, Equatable {
     case invalidResponse
@@ -71,7 +75,13 @@ struct StockHTTPClient {
   }
 
   private func perform<E: Endpoint>(_ endpoint: E) async throws -> Data {
+    let requestURL = baseURL.appendingPathComponent(
+      endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    ).absoluteString
+    print("Preparing stock request [\(endpoint.method.rawValue)] \(requestURL)")
+
     let request = try makeURLRequest(for: endpoint)
+    logRequest(request, endpoint: endpoint)
     let (data, response) = try await session.data(for: request)
 
     guard let httpResponse = response as? HTTPURLResponse else {
@@ -94,6 +104,13 @@ struct StockHTTPClient {
     }
 
     return data
+  }
+
+  private func logRequest<E: Endpoint>(_ request: URLRequest, endpoint: E) {
+    let method = request.httpMethod ?? endpoint.method.rawValue
+    let urlString = request.url?.absoluteString ?? baseURL.appendingPathComponent(endpoint.path).absoluteString
+    let body = request.httpBody.flatMap { String(data: $0, encoding: .utf8) } ?? "<empty>"
+    print("Stock request [\(method)] \(urlString) body=\(body)")
   }
 
   private func errorMessage(from data: Data) -> String? {
@@ -136,8 +153,6 @@ struct StockHTTPClient {
     let normalizedPath = endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     var url = baseURL.appendingPathComponent(normalizedPath)
 
-    let parameters = try endpoint.asParameters()
-
     var request = URLRequest(url: url)
     request.httpMethod = endpoint.method.rawValue
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -150,12 +165,22 @@ struct StockHTTPClient {
       request.setValue(header.value, forHTTPHeaderField: header.name)
     }
 
-    if endpoint.method == .get, !parameters.isEmpty {
-      var comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
-      comps?.queryItems = parameters.map { URLQueryItem(name: $0.key, value: String(describing: $0.value)) }
-      if let final = comps?.url { request.url = final }
-    } else if !parameters.isEmpty {
-      request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+    if endpoint.method == .get {
+      let parameters = try endpoint.asParameters()
+
+      if !parameters.isEmpty {
+        var comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        comps?.queryItems = parameters.map { URLQueryItem(name: $0.key, value: String(describing: $0.value)) }
+        if let final = comps?.url { request.url = final }
+      }
+    } else if let bodyEndpoint = endpoint as? any StockRequestBodyEndpoint {
+      request.httpBody = try bodyEndpoint.bodyData()
+    } else {
+      let parameters = try endpoint.asParameters()
+
+      if !parameters.isEmpty {
+        request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+      }
     }
 
     return request

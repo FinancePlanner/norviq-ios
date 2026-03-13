@@ -20,9 +20,88 @@ final class StockDetailsViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let service: StockServicing
+    private let createValuationOperation: (
+        _ symbol: String,
+        _ bearLow: Double,
+        _ bearHigh: Double,
+        _ baseLow: Double,
+        _ baseHigh: Double,
+        _ bullLow: Double,
+        _ bullHigh: Double,
+        _ rationale: String?,
+        _ targetDate: String?
+    ) async throws -> StockValuationRequest
+    private let updateValuationOperation: (
+        _ symbol: String,
+        _ bearLow: Double,
+        _ bearHigh: Double,
+        _ baseLow: Double,
+        _ baseHigh: Double,
+        _ bullLow: Double,
+        _ bullHigh: Double,
+        _ rationale: String?,
+        _ targetDate: String?
+    ) async throws -> StockValuationRequest
 
-    init(service: StockServicing = Container.shared.stockService()) {
+    init() {
+        let service = Container.shared.stockService()
         self.service = service
+        self.createValuationOperation = { symbol, bearLow, bearHigh, baseLow, baseHigh, bullLow, bullHigh, rationale, targetDate in
+            try await service.createValuation(
+                symbol: symbol,
+                bearLow: bearLow,
+                bearHigh: bearHigh,
+                baseLow: baseLow,
+                baseHigh: baseHigh,
+                bullLow: bullLow,
+                bullHigh: bullHigh,
+                rationale: rationale,
+                targetDate: targetDate
+            )
+        }
+        self.updateValuationOperation = { symbol, bearLow, bearHigh, baseLow, baseHigh, bullLow, bullHigh, rationale, targetDate in
+            try await service.updateValuation(
+                symbol: symbol,
+                bearLow: bearLow,
+                bearHigh: bearHigh,
+                baseLow: baseLow,
+                baseHigh: baseHigh,
+                bullLow: bullLow,
+                bullHigh: bullHigh,
+                rationale: rationale,
+                targetDate: targetDate
+            )
+        }
+    }
+
+    init(service: StockServicing) {
+        self.service = service
+        self.createValuationOperation = { symbol, bearLow, bearHigh, baseLow, baseHigh, bullLow, bullHigh, rationale, targetDate in
+            try await service.createValuation(
+                symbol: symbol,
+                bearLow: bearLow,
+                bearHigh: bearHigh,
+                baseLow: baseLow,
+                baseHigh: baseHigh,
+                bullLow: bullLow,
+                bullHigh: bullHigh,
+                rationale: rationale,
+                targetDate: targetDate
+            )
+        }
+        self.updateValuationOperation = { symbol, bearLow, bearHigh, baseLow, baseHigh, bullLow, bullHigh, rationale, targetDate in
+            try await service.updateValuation(
+                symbol: symbol,
+                bearLow: bearLow,
+                bearHigh: bearHigh,
+                baseLow: baseLow,
+                baseHigh: baseHigh,
+                bullLow: bullLow,
+                bullHigh: bullHigh,
+                rationale: rationale,
+                targetDate: targetDate
+            )
+        }
     }
 
     func load(stockId: String) async {
@@ -53,8 +132,20 @@ final class StockDetailsViewModel: ObservableObject {
         }
     }
 
-    func saveValuation(_ request: StockValuationRequest) async {
-        guard !isLoading else { return }
+    func saveValuation(
+        bearLow: Double,
+        bearHigh: Double,
+        baseLow: Double,
+        baseHigh: Double,
+        bullLow: Double,
+        bullHigh: Double,
+        rationale: String?,
+        targetDate: String?
+    ) async -> String? {
+        guard !isLoading else { return "A save is already in progress." }
+        guard let symbol = details?.symbol ?? valuation?.symbol else {
+            return "Unable to resolve the stock symbol for this valuation."
+        }
 
         isLoading = true
         errorMessage = nil
@@ -62,12 +153,35 @@ final class StockDetailsViewModel: ObservableObject {
 
         do {
             if valuation != nil {
-                valuation = try await service.updateValuation(symbol: request.symbol, request: request)
+                valuation = try await updateValuationOperation(
+                    symbol,
+                    bearLow,
+                    bearHigh,
+                    baseLow,
+                    baseHigh,
+                    bullLow,
+                    bullHigh,
+                    rationale,
+                    targetDate
+                )
             } else {
-                valuation = try await service.createValuation(request: request)
+                valuation = try await createValuationOperation(
+                    symbol,
+                    bearLow,
+                    bearHigh,
+                    baseLow,
+                    baseHigh,
+                    bullLow,
+                    bullHigh,
+                    rationale,
+                    targetDate
+                )
             }
+            return nil
         } catch {
-            errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            errorMessage = message
+            return message
         }
     }
 

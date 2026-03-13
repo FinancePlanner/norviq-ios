@@ -41,8 +41,17 @@ struct StockDetailScreen: View {
             EditStockValuationView(
                 symbol: viewModel.details?.symbol ?? initialSymbol,
                 existing: viewModel.valuation
-            ) { request in
-                await viewModel.saveValuation(request)
+            ) { bearLow, bearHigh, baseLow, baseHigh, bullLow, bullHigh, rationale, targetDate in
+                await viewModel.saveValuation(
+                    bearLow: bearLow,
+                    bearHigh: bearHigh,
+                    baseLow: baseLow,
+                    baseHigh: baseHigh,
+                    bullLow: bullLow,
+                    bullHigh: bullHigh,
+                    rationale: rationale,
+                    targetDate: targetDate
+                )
             }
         }
         .task {

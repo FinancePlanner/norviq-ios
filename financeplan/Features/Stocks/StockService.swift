@@ -13,8 +13,28 @@ protocol StockServicing {
   func updateStock(_ stock: StockResponse) async throws -> StockResponse
   func delete(id: String) async throws
   func getValuation(symbol: String) async throws -> StockValuationRequest
-  func createValuation(request: StockValuationRequest) async throws -> StockValuationRequest
-  func updateValuation(symbol: String, request: StockValuationRequest) async throws -> StockValuationRequest
+  func createValuation(
+    symbol: String,
+    bearLow: Double,
+    bearHigh: Double,
+    baseLow: Double,
+    baseHigh: Double,
+    bullLow: Double,
+    bullHigh: Double,
+    rationale: String?,
+    targetDate: String?
+  ) async throws -> StockValuationRequest
+  func updateValuation(
+    symbol: String,
+    bearLow: Double,
+    bearHigh: Double,
+    baseLow: Double,
+    baseHigh: Double,
+    bullLow: Double,
+    bullHigh: Double,
+    rationale: String?,
+    targetDate: String?
+  ) async throws -> StockValuationRequest
 }
 
 final class StockService: StockServicing {
@@ -110,16 +130,56 @@ final class StockService: StockServicing {
     }
   }
 
-  func createValuation(request: StockValuationRequest) async throws -> StockValuationRequest {
+  func createValuation(
+    symbol: String,
+    bearLow: Double,
+    bearHigh: Double,
+    baseLow: Double,
+    baseHigh: Double,
+    bullLow: Double,
+    bullHigh: Double,
+    rationale: String?,
+    targetDate: String?
+  ) async throws -> StockValuationRequest {
     try await performAuthenticated { client in
-      let endpoint = CreateStockValuationEndpoint(symbol: request.symbol, payload: request)
+      let endpoint = try CreateStockValuationEndpoint(
+        symbol: symbol,
+        bearLow: bearLow,
+        bearHigh: bearHigh,
+        baseLow: baseLow,
+        baseHigh: baseHigh,
+        bullLow: bullLow,
+        bullHigh: bullHigh,
+        rationale: rationale,
+        targetDate: targetDate
+      )
       return try await client.call(endpoint)
     }
   }
 
-  func updateValuation(symbol: String, request: StockValuationRequest) async throws -> StockValuationRequest {
+  func updateValuation(
+    symbol: String,
+    bearLow: Double,
+    bearHigh: Double,
+    baseLow: Double,
+    baseHigh: Double,
+    bullLow: Double,
+    bullHigh: Double,
+    rationale: String?,
+    targetDate: String?
+  ) async throws -> StockValuationRequest {
     try await performAuthenticated { client in
-      let endpoint = UpdateStockValuationEndpoint(symbol: symbol, payload: request)
+      let endpoint = try UpdateStockValuationEndpoint(
+        symbol: symbol,
+        bearLow: bearLow,
+        bearHigh: bearHigh,
+        baseLow: baseLow,
+        baseHigh: baseHigh,
+        bullLow: bullLow,
+        bullHigh: bullHigh,
+        rationale: rationale,
+        targetDate: targetDate
+      )
       return try await client.call(endpoint)
     }
   }

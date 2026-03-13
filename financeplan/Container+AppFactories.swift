@@ -46,7 +46,7 @@ extension Container {
     }.singleton
   }
   
-  var stockService: Factory<StockServicing> {
+  var stockService: Factory<StockService> {
     self {
       StockService(
         environmentManager: self.appEnvironment(),

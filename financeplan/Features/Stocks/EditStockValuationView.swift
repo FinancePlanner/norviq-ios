@@ -9,11 +9,32 @@ import SwiftUI
 import StockPlanShared
 
 struct EditStockValuationView: View {
+    private enum Field: Hashable {
+        case bearLow
+        case bearHigh
+        case baseLow
+        case baseHigh
+        case bullLow
+        case bullHigh
+        case targetDate
+        case rationale
+    }
+
     let symbol: String
     let existing: StockValuationRequest?
-    let onSave: (StockValuationRequest) async -> Void
+    let onSave: (
+        _ bearLow: Double,
+        _ bearHigh: Double,
+        _ baseLow: Double,
+        _ baseHigh: Double,
+        _ bullLow: Double,
+        _ bullHigh: Double,
+        _ rationale: String?,
+        _ targetDate: String?
+    ) async -> String?
 
     @Environment(\.dismiss) private var dismiss
+    @FocusState private var focusedField: Field?
 
     @State private var bearLow: String
     @State private var bearHigh: String
@@ -24,11 +45,21 @@ struct EditStockValuationView: View {
     @State private var targetDate: String
     @State private var rationale: String
     @State private var isSaving = false
+    @State private var saveErrorMessage: String?
 
     init(
         symbol: String,
         existing: StockValuationRequest? = nil,
-        onSave: @escaping (StockValuationRequest) async -> Void
+        onSave: @escaping (
+            _ bearLow: Double,
+            _ bearHigh: Double,
+            _ baseLow: Double,
+            _ baseHigh: Double,
+            _ bullLow: Double,
+            _ bullHigh: Double,
+            _ rationale: String?,
+            _ targetDate: String?
+        ) async -> String?
     ) {
         self.symbol = symbol
         self.existing = existing
@@ -48,27 +79,45 @@ struct EditStockValuationView: View {
         NavigationStack {
             Form {
                 Section("Bear case") {
-                    priceField("Low price", text: $bearLow)
-                    priceField("High price", text: $bearHigh)
+                    priceField("Low price", text: $bearLow, field: .bearLow)
+                    priceField("High price", text: $bearHigh, field: .bearHigh)
                 }
 
                 Section("Base case") {
-                    priceField("Low price", text: $baseLow)
-                    priceField("High price", text: $baseHigh)
+                    priceField("Low price", text: $baseLow, field: .baseLow)
+                    priceField("High price", text: $baseHigh, field: .baseHigh)
                 }
 
                 Section("Bull case") {
-                    priceField("Low price", text: $bullLow)
-                    priceField("High price", text: $bullHigh)
+                    priceField("Low price", text: $bullLow, field: .bullLow)
+                    priceField("High price", text: $bullHigh, field: .bullHigh)
                 }
 
                 Section("Extra") {
                     TextField("Target date (YYYY-MM-DD)", text: $targetDate)
-                    TextField("Rationale", text: $rationale, axis: .vertical)
-                        .lineLimit(3...6)
+                        .focused($focusedField, equals: .targetDate)
+                        .textInputAutocapitalization(.never)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Rationale")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        TextEditor(text: $rationale)
+                            .frame(minHeight: 96)
+                            .focused($focusedField, equals: .rationale)
+                    }
                 }
             }
             .navigationTitle("Edit valuation")
+            .scrollDismissesKeyboard(.interactively)
+            .alert("Unable to Save Valuation", isPresented: saveErrorIsPresented) {
+                Button("OK", role: .cancel) {
+                    saveErrorMessage = nil
+                }
+            } message: {
+                Text(saveErrorMessage ?? "Something went wrong while saving this valuation.")
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
@@ -78,7 +127,9 @@ struct EditStockValuationView: View {
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(isSaving ? "Saving..." : "Save") {
+                        focusedField = nil
                         Task {
+                            await Task.yield()
                             await save()
                         }
                     }
@@ -88,15 +139,15 @@ struct EditStockValuationView: View {
         }
     }
 
-    private var bearCase: PriceRange? {
+    private var bearCase: (low: Double, high: Double)? {
         priceRange(lowText: bearLow, highText: bearHigh)
     }
 
-    private var baseCase: PriceRange? {
+    private var baseCase: (low: Double, high: Double)? {
         priceRange(lowText: baseLow, highText: baseHigh)
     }
 
-    private var bullCase: PriceRange? {
+    private var bullCase: (low: Double, high: Double)? {
         priceRange(lowText: bullLow, highText: bullHigh)
     }
 
@@ -104,12 +155,13 @@ struct EditStockValuationView: View {
         bearCase != nil && baseCase != nil && bullCase != nil
     }
 
-    private func priceField(_ title: String, text: Binding<String>) -> some View {
+    private func priceField(_ title: String, text: Binding<String>, field: Field) -> some View {
         TextField(title, text: text)
+            .focused($focusedField, equals: field)
             .keyboardType(.decimalPad)
     }
 
-    private func priceRange(lowText: String, highText: String) -> PriceRange? {
+    private func priceRange(lowText: String, highText: String) -> (low: Double, high: Double)? {
         guard
             let low = Double(lowText.trimmingCharacters(in: .whitespacesAndNewlines)),
             let high = Double(highText.trimmingCharacters(in: .whitespacesAndNewlines)),
@@ -118,7 +170,7 @@ struct EditStockValuationView: View {
             return nil
         }
 
-        return PriceRange(low: low, high: high)
+        return (low: low, high: high)
     }
 
     private func save() async {
@@ -133,17 +185,31 @@ struct EditStockValuationView: View {
         isSaving = true
         defer { isSaving = false }
 
-        let request = StockValuationRequest(
-            symbol: symbol,
-            bearCase: bearCase,
-            baseCase: baseCase,
-            bullCase: bullCase,
-            rationale: normalizedOptional(rationale),
-            targetDate: normalizedOptional(targetDate)
-        )
+        if let message = await onSave(
+            bearCase.low,
+            bearCase.high,
+            baseCase.low,
+            baseCase.high,
+            bullCase.low,
+            bullCase.high,
+            normalizedOptional(rationale),
+            normalizedOptional(targetDate)
+        ) {
+            saveErrorMessage = message
+        } else {
+            dismiss()
+        }
+    }
 
-        await onSave(request)
-        dismiss()
+    private var saveErrorIsPresented: Binding<Bool> {
+        Binding(
+            get: { saveErrorMessage != nil },
+            set: { isPresented in
+                if !isPresented {
+                    saveErrorMessage = nil
+                }
+            }
+        )
     }
 
     private func normalizedOptional(_ value: String) -> String? {

@@ -73,6 +73,22 @@ private enum StockDecoding {
 }
 
 private enum StockEncoding {
+  typealias JSONObject = [String: Any]
+
+  private struct StockValuationBody: Encodable {
+    struct PriceRangeBody: Encodable {
+      let low: Double
+      let high: Double
+    }
+
+    let symbol: String
+    let bearCase: PriceRangeBody
+    let baseCase: PriceRangeBody
+    let bullCase: PriceRangeBody
+    let rationale: String?
+    let targetDate: String?
+  }
+
   static func parameters<T: Encodable>(for value: T) throws -> Parameters {
     let data = try JSONEncoder().encode(value)
     return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
@@ -102,6 +118,64 @@ private enum StockEncoding {
     }
 
     return params
+  }
+
+  static func priceRangeJSONObject(low: Double, high: Double) -> JSONObject {
+    [
+      "low": low,
+      "high": high,
+    ]
+  }
+
+  static func valuationJSONObject(
+    symbol: String,
+    bearLow: Double,
+    bearHigh: Double,
+    baseLow: Double,
+    baseHigh: Double,
+    bullLow: Double,
+    bullHigh: Double,
+    rationale: String?,
+    targetDate: String?
+  ) -> JSONObject {
+    var json: JSONObject = [
+      "symbol": symbol,
+      "bearCase": priceRangeJSONObject(low: bearLow, high: bearHigh),
+      "baseCase": priceRangeJSONObject(low: baseLow, high: baseHigh),
+      "bullCase": priceRangeJSONObject(low: bullLow, high: bullHigh),
+    ]
+
+    if let rationale, !rationale.isEmpty {
+      json["rationale"] = rationale
+    }
+
+    if let targetDate, !targetDate.isEmpty {
+      json["targetDate"] = targetDate
+    }
+
+    return json
+  }
+
+  static func valuationBodyData(
+    symbol: String,
+    bearLow: Double,
+    bearHigh: Double,
+    baseLow: Double,
+    baseHigh: Double,
+    bullLow: Double,
+    bullHigh: Double,
+    rationale: String?,
+    targetDate: String?
+  ) throws -> Data {
+    let payload = StockValuationBody(
+      symbol: symbol,
+      bearCase: .init(low: bearLow, high: bearHigh),
+      baseCase: .init(low: baseLow, high: baseHigh),
+      bullCase: .init(low: bullLow, high: bullHigh),
+      rationale: rationale,
+      targetDate: targetDate
+    )
+    return try JSONEncoder().encode(payload)
   }
 }
 
@@ -243,32 +317,88 @@ struct GetStockValuationEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct CreateStockValuationEndpoint: Endpoint {
+struct CreateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
   typealias Response = StockValuationRequest
 
-  let symbol: String
-  let payload: StockValuationRequest
+  let path: String
+  private let body: Data
+
+  init(
+    symbol: String,
+    bearLow: Double,
+    bearHigh: Double,
+    baseLow: Double,
+    baseHigh: Double,
+    bullLow: Double,
+    bullHigh: Double,
+    rationale: String?,
+    targetDate: String?
+  ) throws {
+    path = "/v1/stocks/symbol/\(symbol)/valuation"
+    body = try StockEncoding.valuationBodyData(
+      symbol: symbol,
+      bearLow: bearLow,
+      bearHigh: bearHigh,
+      baseLow: baseLow,
+      baseHigh: baseHigh,
+      bullLow: bullLow,
+      bullHigh: bullHigh,
+      rationale: rationale,
+      targetDate: targetDate
+    )
+  }
 
   var method: HTTPMethod { .post }
-  var path: String { "/v1/stocks/symbol/\(symbol)/valuation" }
   var decoder: JSONDecoder { StockDecoding.decoder() }
 
   func asParameters() throws -> Parameters {
-    StockEncoding.valuationParameters(for: payload)
+    [:]
+  }
+
+  func bodyData() throws -> Data? {
+    body
   }
 }
 
-struct UpdateStockValuationEndpoint: Endpoint {
+struct UpdateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
   typealias Response = StockValuationRequest
 
-  let symbol: String
-  let payload: StockValuationRequest
+  let path: String
+  private let body: Data
+
+  init(
+    symbol: String,
+    bearLow: Double,
+    bearHigh: Double,
+    baseLow: Double,
+    baseHigh: Double,
+    bullLow: Double,
+    bullHigh: Double,
+    rationale: String?,
+    targetDate: String?
+  ) throws {
+    path = "/v1/stocks/symbol/\(symbol)/valuation"
+    body = try StockEncoding.valuationBodyData(
+      symbol: symbol,
+      bearLow: bearLow,
+      bearHigh: bearHigh,
+      baseLow: baseLow,
+      baseHigh: baseHigh,
+      bullLow: bullLow,
+      bullHigh: bullHigh,
+      rationale: rationale,
+      targetDate: targetDate
+    )
+  }
 
   var method: HTTPMethod { .put }
-  var path: String { "/v1/stocks/symbol/\(symbol)/valuation" }
   var decoder: JSONDecoder { StockDecoding.decoder() }
 
   func asParameters() throws -> Parameters {
-    StockEncoding.valuationParameters(for: payload)
+    [:]
+  }
+
+  func bodyData() throws -> Data? {
+    body
   }
 }
