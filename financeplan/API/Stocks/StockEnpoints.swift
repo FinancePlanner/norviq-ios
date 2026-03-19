@@ -158,6 +158,36 @@ private enum StockEncoding {
 
   static func valuationBodyData(
     symbol: String,
+    draft: StockValuationDraft
+  ) throws -> Data {
+    print(
+      """
+      StockEncoding.valuationBodyData(draft:) \
+      symbol=\(symbol) \
+      bearLow=\(draft.bearLow) bearHigh=\(draft.bearHigh) \
+      baseLow=\(draft.baseLow) baseHigh=\(draft.baseHigh) \
+      bullLow=\(draft.bullLow) bullHigh=\(draft.bullHigh) \
+      rationale=\(draft.rationale ?? "<nil>") \
+      targetDate=\(draft.targetDate ?? "<nil>")
+      """
+    )
+    let payload = StockValuationBody(
+      symbol: symbol,
+      bearCase: .init(low: draft.bearLow, high: draft.bearHigh),
+      baseCase: .init(low: draft.baseLow, high: draft.baseHigh),
+      bullCase: .init(low: draft.bullLow, high: draft.bullHigh),
+      rationale: draft.rationale,
+      targetDate: draft.targetDate
+    )
+    let data = try JSONEncoder().encode(payload)
+    if let json = String(data: data, encoding: .utf8) {
+      print("StockEncoding.valuationBodyData(draft:) body=\(json)")
+    }
+    return data
+  }
+
+  static func valuationBodyData(
+    symbol: String,
     bearLow: Double,
     bearHigh: Double,
     baseLow: Double,
@@ -325,6 +355,17 @@ struct CreateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
 
   init(
     symbol: String,
+    draft: StockValuationDraft
+  ) throws {
+    path = "/v1/stocks/symbol/\(symbol)/valuation"
+    body = try StockEncoding.valuationBodyData(
+      symbol: symbol,
+      draft: draft
+    )
+  }
+
+  init(
+    symbol: String,
     bearLow: Double,
     bearHigh: Double,
     baseLow: Double,
@@ -365,6 +406,17 @@ struct UpdateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
 
   let path: String
   private let body: Data
+
+  init(
+    symbol: String,
+    draft: StockValuationDraft
+  ) throws {
+    path = "/v1/stocks/symbol/\(symbol)/valuation"
+    body = try StockEncoding.valuationBodyData(
+      symbol: symbol,
+      draft: draft
+    )
+  }
 
   init(
     symbol: String,

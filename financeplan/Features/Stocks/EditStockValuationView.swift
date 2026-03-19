@@ -22,16 +22,7 @@ struct EditStockValuationView: View {
 
     let symbol: String
     let existing: StockValuationRequest?
-    let onSave: (
-        _ bearLow: Double,
-        _ bearHigh: Double,
-        _ baseLow: Double,
-        _ baseHigh: Double,
-        _ bullLow: Double,
-        _ bullHigh: Double,
-        _ rationale: String?,
-        _ targetDate: String?
-    ) async -> String?
+    let onSave: @MainActor (StockValuationDraft) async -> String?
 
     @Environment(\.dismiss) private var dismiss
     @FocusState private var focusedField: Field?
@@ -50,16 +41,7 @@ struct EditStockValuationView: View {
     init(
         symbol: String,
         existing: StockValuationRequest? = nil,
-        onSave: @escaping (
-            _ bearLow: Double,
-            _ bearHigh: Double,
-            _ baseLow: Double,
-            _ baseHigh: Double,
-            _ bullLow: Double,
-            _ bullHigh: Double,
-            _ rationale: String?,
-            _ targetDate: String?
-        ) async -> String?
+        onSave: @escaping @MainActor (StockValuationDraft) async -> String?
     ) {
         self.symbol = symbol
         self.existing = existing
@@ -128,8 +110,7 @@ struct EditStockValuationView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(isSaving ? "Saving..." : "Save") {
                         focusedField = nil
-                        Task {
-                            await Task.yield()
+                        Task { @MainActor in
                             await save()
                         }
                     }
@@ -173,6 +154,7 @@ struct EditStockValuationView: View {
         return (low: low, high: high)
     }
 
+    @MainActor
     private func save() async {
         guard
             let bearCase,
@@ -185,16 +167,29 @@ struct EditStockValuationView: View {
         isSaving = true
         defer { isSaving = false }
 
-        if let message = await onSave(
-            bearCase.low,
-            bearCase.high,
-            baseCase.low,
-            baseCase.high,
-            bullCase.low,
-            bullCase.high,
-            normalizedOptional(rationale),
-            normalizedOptional(targetDate)
-        ) {
+        let draft = StockValuationDraft(
+            bearLow: bearCase.low,
+            bearHigh: bearCase.high,
+            baseLow: baseCase.low,
+            baseHigh: baseCase.high,
+            bullLow: bullCase.low,
+            bullHigh: bullCase.high,
+            rationale: normalizedOptional(rationale),
+            targetDate: normalizedOptional(targetDate)
+        )
+
+        print(
+            """
+            Valuation draft \
+            bearLow=\(draft.bearLow) bearHigh=\(draft.bearHigh) \
+            baseLow=\(draft.baseLow) baseHigh=\(draft.baseHigh) \
+            bullLow=\(draft.bullLow) bullHigh=\(draft.bullHigh) \
+            rationale=\(draft.rationale ?? "<nil>") \
+            targetDate=\(draft.targetDate ?? "<nil>")
+            """
+        )
+
+        if let message = await onSave(draft) {
             saveErrorMessage = message
         } else {
             dismiss()

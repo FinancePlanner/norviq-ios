@@ -15,6 +15,10 @@ protocol StockServicing {
   func getValuation(symbol: String) async throws -> StockValuationRequest
   func createValuation(
     symbol: String,
+    draft: StockValuationDraft
+  ) async throws -> StockValuationRequest
+  func createValuation(
+    symbol: String,
     bearLow: Double,
     bearHigh: Double,
     baseLow: Double,
@@ -23,6 +27,10 @@ protocol StockServicing {
     bullHigh: Double,
     rationale: String?,
     targetDate: String?
+  ) async throws -> StockValuationRequest
+  func updateValuation(
+    symbol: String,
+    draft: StockValuationDraft
   ) async throws -> StockValuationRequest
   func updateValuation(
     symbol: String,
@@ -132,6 +140,30 @@ final class StockService: StockServicing {
 
   func createValuation(
     symbol: String,
+    draft: StockValuationDraft
+  ) async throws -> StockValuationRequest {
+    print(
+      """
+      StockService.createValuation \
+      symbol=\(symbol) \
+      bearLow=\(draft.bearLow) bearHigh=\(draft.bearHigh) \
+      baseLow=\(draft.baseLow) baseHigh=\(draft.baseHigh) \
+      bullLow=\(draft.bullLow) bullHigh=\(draft.bullHigh) \
+      rationale=\(draft.rationale ?? "<nil>") \
+      targetDate=\(draft.targetDate ?? "<nil>")
+      """
+    )
+    return try await performAuthenticated { client in
+      let endpoint = try CreateStockValuationEndpoint(
+        symbol: symbol,
+        draft: draft
+      )
+      return try await client.call(endpoint)
+    }
+  }
+
+  func createValuation(
+    symbol: String,
     bearLow: Double,
     bearHigh: Double,
     baseLow: Double,
@@ -141,9 +173,9 @@ final class StockService: StockServicing {
     rationale: String?,
     targetDate: String?
   ) async throws -> StockValuationRequest {
-    try await performAuthenticated { client in
-      let endpoint = try CreateStockValuationEndpoint(
-        symbol: symbol,
+    try await createValuation(
+      symbol: symbol,
+      draft: StockValuationDraft(
         bearLow: bearLow,
         bearHigh: bearHigh,
         baseLow: baseLow,
@@ -152,6 +184,29 @@ final class StockService: StockServicing {
         bullHigh: bullHigh,
         rationale: rationale,
         targetDate: targetDate
+      )
+    )
+  }
+
+  func updateValuation(
+    symbol: String,
+    draft: StockValuationDraft
+  ) async throws -> StockValuationRequest {
+    print(
+      """
+      StockService.updateValuation \
+      symbol=\(symbol) \
+      bearLow=\(draft.bearLow) bearHigh=\(draft.bearHigh) \
+      baseLow=\(draft.baseLow) baseHigh=\(draft.baseHigh) \
+      bullLow=\(draft.bullLow) bullHigh=\(draft.bullHigh) \
+      rationale=\(draft.rationale ?? "<nil>") \
+      targetDate=\(draft.targetDate ?? "<nil>")
+      """
+    )
+    return try await performAuthenticated { client in
+      let endpoint = try UpdateStockValuationEndpoint(
+        symbol: symbol,
+        draft: draft
       )
       return try await client.call(endpoint)
     }
@@ -168,9 +223,9 @@ final class StockService: StockServicing {
     rationale: String?,
     targetDate: String?
   ) async throws -> StockValuationRequest {
-    try await performAuthenticated { client in
-      let endpoint = try UpdateStockValuationEndpoint(
-        symbol: symbol,
+    try await updateValuation(
+      symbol: symbol,
+      draft: StockValuationDraft(
         bearLow: bearLow,
         bearHigh: bearHigh,
         baseLow: baseLow,
@@ -180,8 +235,7 @@ final class StockService: StockServicing {
         rationale: rationale,
         targetDate: targetDate
       )
-      return try await client.call(endpoint)
-    }
+    )
   }
 
   private func makeClient(forceRefresh: Bool = false) async throws -> StockHTTPClient {

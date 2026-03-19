@@ -66,6 +66,23 @@ final class StockDetailsViewModelTests: XCTestCase {
 
     func createValuation(
       symbol: String,
+      draft: StockValuationDraft
+    ) async throws -> StockValuationRequest {
+      try await createValuation(
+        symbol: symbol,
+        bearLow: draft.bearLow,
+        bearHigh: draft.bearHigh,
+        baseLow: draft.baseLow,
+        baseHigh: draft.baseHigh,
+        bullLow: draft.bullLow,
+        bullHigh: draft.bullHigh,
+        rationale: draft.rationale,
+        targetDate: draft.targetDate
+      )
+    }
+
+    func createValuation(
+      symbol: String,
       bearLow: Double,
       bearHigh: Double,
       baseLow: Double,
@@ -86,6 +103,23 @@ final class StockDetailsViewModelTests: XCTestCase {
       lastCreateValuationRationale = rationale
       lastCreateValuationTargetDate = targetDate
       return try createValuationResult.get()
+    }
+
+    func updateValuation(
+      symbol: String,
+      draft: StockValuationDraft
+    ) async throws -> StockValuationRequest {
+      try await updateValuation(
+        symbol: symbol,
+        bearLow: draft.bearLow,
+        bearHigh: draft.bearHigh,
+        baseLow: draft.baseLow,
+        baseHigh: draft.baseHigh,
+        bullLow: draft.bullLow,
+        bullHigh: draft.bullHigh,
+        rationale: draft.rationale,
+        targetDate: draft.targetDate
+      )
     }
 
     func updateValuation(

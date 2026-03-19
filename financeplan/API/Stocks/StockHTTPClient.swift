@@ -89,6 +89,7 @@ struct StockHTTPClient {
     }
 
     stockHTTPLogger.debug("Stock response [\(endpoint.path, privacy: .public)] status=\(httpResponse.statusCode, privacy: .public)")
+    logValuationResponseIfNeeded(data, endpointPath: endpoint.path, statusCode: httpResponse.statusCode)
 
     guard (200 ..< 300).contains(httpResponse.statusCode) else {
       let message = errorMessage(from: data)
@@ -183,6 +184,34 @@ struct StockHTTPClient {
       }
     }
 
+    logValuationRequestIfNeeded(request, endpointPath: endpoint.path)
+
     return request
+  }
+
+  private func logValuationRequestIfNeeded(_ request: URLRequest, endpointPath: String) {
+    guard endpointPath.contains("/stocks/symbol/"), endpointPath.contains("/valuation") else {
+      return
+    }
+
+    let body = request.httpBody.flatMap {
+      String(data: $0, encoding: .utf8)
+    } ?? "<empty>"
+
+    stockHTTPLogger.debug(
+      "Stock request [\(endpointPath, privacy: .public)] method=\(request.httpMethod ?? "", privacy: .public) body=\(body, privacy: .public)"
+    )
+  }
+
+  private func logValuationResponseIfNeeded(_ data: Data, endpointPath: String, statusCode: Int) {
+    guard endpointPath.contains("/stocks/symbol/"), endpointPath.contains("/valuation") else {
+      return
+    }
+
+    let body = String(data: data, encoding: .utf8) ?? "<non-utf8>"
+
+    stockHTTPLogger.debug(
+      "Stock response [\(endpointPath, privacy: .public)] status=\(statusCode, privacy: .public) body=\(body, privacy: .public)"
+    )
   }
 }

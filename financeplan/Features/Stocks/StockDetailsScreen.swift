@@ -41,17 +41,18 @@ struct StockDetailScreen: View {
             EditStockValuationView(
                 symbol: viewModel.details?.symbol ?? initialSymbol,
                 existing: viewModel.valuation
-            ) { bearLow, bearHigh, baseLow, baseHigh, bullLow, bullHigh, rationale, targetDate in
-                await viewModel.saveValuation(
-                    bearLow: bearLow,
-                    bearHigh: bearHigh,
-                    baseLow: baseLow,
-                    baseHigh: baseHigh,
-                    bullLow: bullLow,
-                    bullHigh: bullHigh,
-                    rationale: rationale,
-                    targetDate: targetDate
+            ) { draft in
+                print(
+                    """
+                    StockDetailScreen.onSave \
+                    bearLow=\(draft.bearLow) bearHigh=\(draft.bearHigh) \
+                    baseLow=\(draft.baseLow) baseHigh=\(draft.baseHigh) \
+                    bullLow=\(draft.bullLow) bullHigh=\(draft.bullHigh) \
+                    rationale=\(draft.rationale ?? "<nil>") \
+                    targetDate=\(draft.targetDate ?? "<nil>")
+                    """
                 )
+                return await viewModel.saveValuation(draft)
             }
         }
         .task {

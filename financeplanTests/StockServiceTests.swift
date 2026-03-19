@@ -469,6 +469,49 @@ final class StockServiceTests: XCTestCase {
     XCTAssertEqual(response, expected)
   }
 
+  func testGetValuation_DecodesLiteralResponseJSONForRationaleAndTargetDate() async throws {
+    let session = SessionMock()
+    let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+    let service = StockService(
+      environmentManager: AppEnvironmentManager(),
+      session: session,
+      authSessionManager: authSessionManager
+    )
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.path, "/v1/stocks/symbol/AAPL/valuation")
+      XCTAssertEqual(request.httpMethod, "GET")
+
+      let response = try XCTUnwrap(
+        HTTPURLResponse(
+          url: try XCTUnwrap(request.url),
+          statusCode: 200,
+          httpVersion: nil,
+          headerFields: nil
+        )
+      )
+
+      let payload = #"""
+      {
+        "symbol": "AAPL",
+        "bear_case": { "low": 100, "high": 120 },
+        "base_case": { "low": 130, "high": 150 },
+        "bull_case": { "low": 160, "high": 190 },
+        "rationale": "Margin expansion with stable demand.",
+        "target_date": "2026-12-31"
+      }
+      """#.data(using: .utf8) ?? Data()
+
+      return (payload, response)
+    }
+
+    let response = try await service.getValuation(symbol: "AAPL")
+
+    XCTAssertEqual(response.rationale, "Margin expansion with stable demand.")
+    XCTAssertEqual(response.targetDate, "2026-12-31")
+  }
+
   func testCreateValuation_UsesBearerTokenAndDecodesResponseBody() async throws {
     let session = SessionMock()
     let authSessionManager = AuthSessionManagerMock()
