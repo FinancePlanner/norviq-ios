@@ -1,254 +1,210 @@
 import Charts
 import Combine
-import Factory
 import Foundation
-import StockPlanShared
 import SwiftUI
 
 private enum HomeTab: Hashable {
   case dashboard
   case portfolio
-  case watchlist
-  case more
+  case expenses
+  case reports
+  case settings
 }
 
+private enum PortfolioSegment: String, CaseIterable, Identifiable {
+  case holdings
+  case watchlist
+
+  var id: String { rawValue }
+
+  var title: String {
+    switch self {
+    case .holdings:
+      "Holdings"
+    case .watchlist:
+      "Watchlist"
+    }
+  }
+}
+
+@MainActor
 struct HomeScreen: View {
-  @EnvironmentObject private var sessionManager: SessionManager
-  @Environment(\.colorScheme) private var colorScheme
   let onLogout: () async -> Void
+
+  @Environment(\.colorScheme) private var colorScheme
   @State private var selectedTab: HomeTab = .dashboard
-  @State private var isMoreSheetPresented = false
-  @State private var showUserMenu = false
-  @State private var isHelpPresented = false
-  @State private var isProfilePresented = false
+  @StateObject private var budgetPlannerViewModel = BudgetPlannerViewModel()
 
   var body: some View {
-    ZStack {
-      TabView(selection: $selectedTab) {
-        NavigationStack {
-          DashboardTab()
-            .compactRootNavigationChrome(
-              title: "FinPlanner",
-              isUserMenuPresented: showUserMenu,
-              onUserTap: {
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
-                  showUserMenu = true
-                }
-              }
-            )
-        }
+    TabView(selection: $selectedTab) {
+      DashboardRoot(selectedTab: $selectedTab)
         .tabItem {
-          Label("Home", systemImage: "house.fill")
+          Label("Home", systemImage: "house")
         }
         .tag(HomeTab.dashboard)
 
-        NavigationStack {
-          PortfolioTab()
-            .compactRootNavigationChrome(
-              title: "Portfolio",
-              isUserMenuPresented: showUserMenu,
-              onUserTap: {
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
-                  showUserMenu = true
-                }
-              }
-            )
-        }
+      PortfolioRoot()
         .tabItem {
-          Label("Portfolio", systemImage: "briefcase.fill")
+          Label("Portfolio", systemImage: "chart.line.uptrend.xyaxis")
         }
         .tag(HomeTab.portfolio)
 
-        NavigationStack {
-          WatchlistTab()
-            .compactRootNavigationChrome(
-              title: "Watchlist",
-              isUserMenuPresented: showUserMenu,
-              onUserTap: {
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
-                  showUserMenu = true
-                }
-              }
-            )
-        }
+      ExpensesPlannerScreen(viewModel: budgetPlannerViewModel)
         .tabItem {
-          Label("Watchlist", systemImage: "star.fill")
+          Label("Expenses", systemImage: "creditcard")
         }
-        .tag(HomeTab.watchlist)
+        .tag(HomeTab.expenses)
 
-        Color.clear
-          .tabItem {
-            Label("More", systemImage: "ellipsis")
-          }
-          .tag(HomeTab.more)
-      }
-      .tint(AppTheme.Colors.tint(for: colorScheme))
-      .toolbarBackground(.visible, for: .tabBar)
-      .toolbarBackground(AppTheme.Colors.tabBarBackground(for: colorScheme), for: .tabBar)
-      .onChange(of: selectedTab) { newValue in
-        if newValue == .more {
-          isMoreSheetPresented = true
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            selectedTab = .dashboard
-          }
+      ExpensesComparisonScreen(viewModel: budgetPlannerViewModel)
+        .tabItem {
+          Label("Reports", systemImage: "chart.bar.xaxis")
         }
-      }
-      .ignoresSafeArea(.keyboard)
-      .blur(radius: showUserMenu ? 6 : 0)
-      .scaleEffect(showUserMenu ? 0.995 : 1)
-      .animation(.spring(response: 0.28, dampingFraction: 0.9), value: showUserMenu)
-      .allowsHitTesting(!showUserMenu)
+        .tag(HomeTab.reports)
 
-      // TODO improve this Dim overlay
-    
-      if showUserMenu {
-        Rectangle()
-          .fill(.black.opacity(colorScheme == .dark ? 0.45 : 0.25))
-          .ignoresSafeArea()
-          .transition(.opacity)
-          .onTapGesture {
-            withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
-              showUserMenu = false
-            }
-          }
-          .zIndex(0.5)
-      }
-
-      if showUserMenu {
-        UserMenuDrawer(
-          isPresented: $showUserMenu,
-          username: sessionManager.username,
-          onProfile: {
-            isProfilePresented = true
-          },
-          onHelp: {
-            isHelpPresented = true
-          }
-        )
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-        .zIndex(1)
-      }
-    }
-    .sheet(isPresented: $isMoreSheetPresented) {
-      MoreSheet(onLogout: onLogout)
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
-    }
-    .sheet(isPresented: $isHelpPresented) {
       NavigationStack {
-        Text("Help & Support")
-          .navigationTitle("Help")
-          .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-              Button("Done") { isHelpPresented = false }
-            }
-          }
+        SettingsDetailView(onLogout: onLogout)
       }
+      .tabItem {
+        Label("Settings", systemImage: "gearshape")
+      }
+      .tag(HomeTab.settings)
     }
-    .sheet(isPresented: $isProfilePresented) {
-      UserProfileView()
-    }
+    .tint(AppTheme.Colors.tint(for: colorScheme))
+    .toolbarBackground(.visible, for: .tabBar)
+    .toolbarBackground(AppTheme.Colors.tabBarBackground(for: colorScheme), for: .tabBar)
+    .animation(.snappy(duration: 0.28), value: selectedTab)
   }
 }
 
-private struct CompactRootNavigationChrome: ViewModifier {
-  let title: String
-  let isUserMenuPresented: Bool
-  let onUserTap: () -> Void
-
+@MainActor
+private struct DashboardRoot: View {
+  @Binding var selectedTab: HomeTab
   @Environment(\.colorScheme) private var colorScheme
+  @StateObject private var searchViewModel = AssetSearchViewModel()
+  @State private var isProfilePresented = false
 
-  func body(content: Content) -> some View {
-    content
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .topBarLeading) {
-          Text(title)
-            .typography(.label, weight: .bold)
-            .foregroundStyle(AppTheme.Colors.navBarForeground(for: colorScheme))
-            .lineLimit(1)
-        }
-
-        ToolbarItem(placement: .topBarTrailing) {
-          AppTopBarProfileButton(
-            isUserMenuPresented: isUserMenuPresented,
-            onTap: onUserTap
-          )
-        }
-      }
-      .toolbarBackground(.visible, for: .navigationBar)
-      .toolbarBackground(AppTheme.Colors.navBarBackground(for: colorScheme), for: .navigationBar)
-    }
-}
-
-private extension View {
-  func compactRootNavigationChrome(
-    title: String,
-    isUserMenuPresented: Bool,
-    onUserTap: @escaping () -> Void
-  ) -> some View {
-    modifier(
-      CompactRootNavigationChrome(
-        title: title,
-        isUserMenuPresented: isUserMenuPresented,
-        onUserTap: onUserTap
-      )
-    )
-  }
-}
-
-
-
-private struct MoreSheet: View {
-  let onLogout: () async -> Void
-  @Environment(\.colorScheme) private var colorScheme
-  @Environment(\.dismiss) private var dismiss
+  private let trendPoints = PortfolioTrendPoint.mock
+  private let spendingPoints = SpendingPoint.mock
+  private let insightCards = InsightCard.mock
 
   var body: some View {
     NavigationStack {
-      List {
-        Section {
-          NavigationLink {
-            SettingsDetailView(onLogout: onLogout)
-          } label: {
-            Label("Settings", systemImage: "gearshape.fill")
-          }
-        }
+      ScrollView {
+        VStack(spacing: 20) {
+          DashboardHeroCard(
+            onPortfolioTap: { selectedTab = .portfolio },
+            onExpensesTap: { selectedTab = .expenses },
+            onReportsTap: { selectedTab = .reports }
+          )
 
-        Section {
-          NavigationLink {
-            Text("Help & Support")
-              .navigationTitle("Help")
-          } label: {
-            Label("Help & Support", systemImage: "questionmark.circle")
+          if !searchViewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            AssetSearchCard(viewModel: searchViewModel)
+              .transition(.opacity.combined(with: .move(edge: .top)))
           }
 
-          NavigationLink {
-            Text("About FinPlanner")
-              .navigationTitle("About")
-          } label: {
-            Label("About", systemImage: "info.circle")
-          }
+          TrendOverviewCard(
+            title: "Portfolio outlook",
+            subtitle: "Planned value over the last 7 checkpoints",
+            points: trendPoints,
+            accent: AppTheme.Colors.tint(for: colorScheme)
+          )
+
+          SpendingSnapshotCard(points: spendingPoints)
+
+          InsightsGrid(cards: insightCards)
+
+          FocusListCard()
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 20)
       }
-      .navigationTitle("More")
+      .background(MeshGradientBackground())
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
-          Button("Done") {
-            dismiss()
+          Button {
+            isProfilePresented = true
+          } label: {
+            Image(systemName: "person.crop.circle")
+              .font(.title3.weight(.semibold))
+              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
           }
-          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+          .accessibilityLabel("Open profile")
         }
+      }
+      .searchable(
+        text: $searchViewModel.query,
+        placement: .navigationBarDrawer(displayMode: .always),
+        prompt: "Search stocks or ETFs"
+      )
+      .onChange(of: searchViewModel.query) { _ in
+        searchViewModel.queryChanged()
+      }
+      .onSubmit(of: .search) {
+        Task { await searchViewModel.searchNow() }
+      }
+      .sheet(isPresented: $isProfilePresented) {
+        UserProfileView()
       }
     }
   }
 }
 
-// MARK: - Settings Detail View
+private struct PortfolioRoot: View {
+  @Environment(\.colorScheme) private var colorScheme
+  @State private var selectedSegment: PortfolioSegment = .holdings
+  @State private var isProfilePresented = false
+
+  var body: some View {
+    NavigationStack {
+      VStack(spacing: 12) {
+        Picker("Portfolio section", selection: $selectedSegment) {
+          ForEach(PortfolioSegment.allCases) { segment in
+            Text(segment.title).tag(segment)
+          }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+
+        Group {
+          switch selectedSegment {
+          case .holdings:
+            PortfolioScreen()
+              .transition(.opacity.combined(with: .move(edge: .leading)))
+          case .watchlist:
+            WatchlistTab()
+              .transition(.opacity.combined(with: .move(edge: .trailing)))
+          }
+        }
+        .animation(.snappy(duration: 0.24), value: selectedSegment)
+      }
+      .background(AppTheme.Colors.pageBackground(for: colorScheme))
+      .navigationTitle("Portfolio")
+      .navigationBarTitleDisplayMode(.large)
+      .toolbar {
+        ToolbarItem(placement: .topBarTrailing) {
+          Button {
+            isProfilePresented = true
+          } label: {
+            Image(systemName: "person.crop.circle")
+              .font(.title3.weight(.semibold))
+              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+          }
+        }
+      }
+      .sheet(isPresented: $isProfilePresented) {
+        UserProfileView()
+      }
+    }
+  }
+}
+
+// MARK: - Settings
 
 private struct SettingsDetailView: View {
   let onLogout: () async -> Void
+
   @Environment(\.colorScheme) private var colorScheme
   @State private var isLoggingOut = false
   @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system
@@ -256,10 +212,15 @@ private struct SettingsDetailView: View {
 
   var body: some View {
     List {
-      Section("Account") {
-        Text("Signed in to FinPlanner")
-          .typography(.small)
-          .foregroundStyle(.secondary)
+      Section("Profile") {
+        NavigationLink {
+          UserProfileView()
+        } label: {
+          Label("Profile", systemImage: "person.crop.circle")
+        }
+
+        Label("Face ID ready", systemImage: "faceid")
+          .foregroundStyle(.primary)
       }
 
       Section("Appearance") {
@@ -276,8 +237,19 @@ private struct SettingsDetailView: View {
           .foregroundStyle(.secondary)
       }
 
+      Section("Privacy") {
+        LabeledContent("Data handling", value: "Local-first planning UI")
+        LabeledContent("Sensitive actions", value: "Biometric-friendly")
+        LabeledContent("Motion", value: "Reduced when accessibility requests it")
+      }
+
+      Section("Support") {
+        Label("Help & Support", systemImage: "questionmark.circle")
+        Label("About FinPlanner", systemImage: "info.circle")
+      }
+
       Section {
-        Button {
+        Button(role: .destructive) {
           Task {
             guard !isLoggingOut else { return }
             isLoggingOut = true
@@ -288,19 +260,20 @@ private struct SettingsDetailView: View {
           HStack(spacing: 8) {
             if isLoggingOut {
               ProgressView()
-                .tint(.white)
             }
             Text("Log out")
               .typography(.button, weight: .semibold)
           }
-          .frame(maxWidth: .infinity)
+          .frame(maxWidth: .infinity, alignment: .center)
           .foregroundStyle(AppTheme.Colors.danger)
         }
         .disabled(isLoggingOut)
       }
     }
+    .scrollContentBackground(.hidden)
+    .background(AppTheme.Colors.pageBackground(for: colorScheme))
     .navigationTitle("Settings")
-    .navigationBarTitleDisplayMode(.inline)
+    .navigationBarTitleDisplayMode(.large)
   }
 
   private var appAppearanceBinding: Binding<AppAppearance> {
@@ -315,585 +288,348 @@ private struct SettingsDetailView: View {
   }
 }
 
-// MARK: - Tab Content Views
+// MARK: - Dashboard cards
 
-private struct DashboardTab: View {
+private struct DashboardHeroCard: View {
+  let onPortfolioTap: () -> Void
+  let onExpensesTap: () -> Void
+  let onReportsTap: () -> Void
+
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
-    ScrollView {
-      VStack(spacing: 14) {
-        PortfolioSummaryWidget()
-        DailyPerformanceWidget()
-        TopMoversWidget()
-        AllocationWidget()
-      }
-      .padding(16)
-    }
-    .background(MeshGradientBackground().ignoresSafeArea())
-  }
-}
+    GlassCard(cornerRadius: 28) {
+      VStack(alignment: .leading, spacing: 18) {
+        Text("Financial snapshot")
+          .typography(.small, weight: .semibold)
+          .foregroundStyle(.secondary)
 
-private struct PortfolioTab: View {
-  @Environment(\.colorScheme) private var colorScheme
-  @StateObject private var viewModel = PortfolioViewModel()
-  @State private var isManualImportPresented = false
+        VStack(alignment: .leading, spacing: 8) {
+          Text("$124,830.42")
+            .typography(.display, weight: .bold)
+            .minimumScaleFactor(0.7)
+            .lineLimit(1)
 
-  var body: some View {
-    ZStack(alignment: .bottomTrailing) {
-      Group {
-        if viewModel.isLoading {
-          ProgressView("Loading portfolio...")
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        } else if let error = viewModel.errorMessage {
-          VStack(spacing: 10) {
-            Text(error)
-              .foregroundStyle(AppTheme.Colors.danger)
+          HStack(spacing: 10) {
+            Label("+2.31%", systemImage: "arrow.up.right")
+              .typography(.small, weight: .semibold)
+              .foregroundStyle(AppTheme.Colors.success)
+
+            Text("Monthly budget is 15% under plan")
               .typography(.small)
-            Button("Retry") { Task { await viewModel.load() } }
-              .buttonStyle(.bordered)
+              .foregroundStyle(.secondary)
           }
-          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        } else if viewModel.stocks.isEmpty {
-          Text("No stocks yet.")
-            .foregroundStyle(.secondary)
-            .typography(.small)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        } else {
-          List(viewModel.stocks, id: \.id) { stock in
-            NavigationLink {
-              StockDetailScreen(stockId: stock.id, initialSymbol: stock.symbol)
-            } label: {
-              VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                  Text(stock.symbol)
-                    .typography(.label, weight: .semibold)
-                  Spacer()
-                  Text((stock.shares * stock.buyPrice).currency)
-                    .typography(.small, weight: .semibold)
-                }
-
-                HStack(spacing: 10) {
-                  Text("Qty \(Int(stock.shares))")
-                  Text("Avg \(stock.buyPrice.currency)")
-                  Text("Date \(stock.buyDate)")
-                }
-                .typography(.nano)
-                .foregroundStyle(.secondary)
-
-                if let notes = stock.notes, !notes.isEmpty {
-                  Text(notes)
-                    .typography(.nano)
-                    .foregroundStyle(.secondary)
-                }
-              }
-              .padding(.vertical, 4)
-            }
-            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-              Button(role: .destructive) {
-                Task { await viewModel.delete(id: stock.id) }
-              } label: {
-                Label("Delete", systemImage: "trash")
-              }
-
-              Button {
-                viewModel.beginEdit(stock)
-              } label: {
-                Label("Edit", systemImage: "pencil")
-              }
-              .tint(.blue)
-            }
-          }
-          .listStyle(.plain)
-          .scrollContentBackground(.hidden)
         }
-      }
-      .sheet(
-        isPresented: Binding<Bool>(
-          get: { viewModel.editingStock != nil },
-          set: { if !$0 { viewModel.editingStock = nil } }
-        )
-      ) {
-        if let stock = viewModel.editingStock {
-          EditStockSheet(
-            stock: stock,
-            isSaving: viewModel.isSaving,
-            onCancel: { viewModel.editingStock = nil },
-            onSave: { updated in
-              Task { await viewModel.saveEdit(updated) }
-            }
+
+        HStack(spacing: 10) {
+          DashboardActionButton(
+            title: "Portfolio",
+            symbol: "chart.line.uptrend.xyaxis",
+            tint: AppTheme.Colors.tint(for: colorScheme),
+            action: onPortfolioTap
           )
-        } else {
-          EmptyView()
+          DashboardActionButton(
+            title: "Expenses",
+            symbol: "creditcard",
+            tint: AppTheme.Colors.secondaryTint(for: colorScheme),
+            action: onExpensesTap
+          )
+          DashboardActionButton(
+            title: "Reports",
+            symbol: "chart.bar.xaxis",
+            tint: .indigo,
+            action: onReportsTap
+          )
         }
       }
-      .background(AppTheme.Colors.pageBackground(for: colorScheme))
-      .task { await viewModel.load() }
-      .refreshable { await viewModel.load() }
-
-      Button {
-        isManualImportPresented = true
-      } label: {
-        Image(systemName: "plus")
-          .font(.system(size: 18, weight: .bold))
-          .foregroundStyle(.white)
-          .frame(width: 32, height: 32)
-          .background(AppTheme.Colors.tint(for: colorScheme))
-          .clipShape(Circle())
-          .shadow(color: .black.opacity(0.25), radius: 10, y: 6)
-      }
-      .accessibilityIdentifier("portfolio.fab")
-      .padding(.trailing, 16)
-      .padding(.bottom, 24)
-    }
-    .sheet(isPresented: $isManualImportPresented) {
-      ManualImportScreen(
-        headerNamespace: nil,
-        onBack: { isManualImportPresented = false },
-        onDone: { _ in
-          isManualImportPresented = false
-          Task { await viewModel.load() }
-        }
-      )
+      .frame(maxWidth: .infinity, alignment: .leading)
     }
   }
-
-  private static let dateOnlyFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.calendar = Calendar(identifier: .iso8601)
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = .init(secondsFromGMT: 0)
-    formatter.dateFormat = "yyyy-MM-dd"
-    return formatter
-  }()
 }
 
-private struct WatchlistTab: View {
-  @Environment(\.colorScheme) private var colorScheme
+private struct TrendOverviewCard: View {
+  let title: String
+  let subtitle: String
+  let points: [PortfolioTrendPoint]
+  let accent: Color
 
-  private let watchlist: [WatchlistItem] = [
-    .init(symbol: "TSLA", price: 241.80, changePercent: 1.92),
-    .init(symbol: "META", price: 502.40, changePercent: -0.64),
-    .init(symbol: "AMD", price: 176.25, changePercent: 2.15),
-    .init(symbol: "GOOGL", price: 186.91, changePercent: 0.43),
+  var body: some View {
+    GlassCard {
+      VStack(alignment: .leading, spacing: 16) {
+        Text(title)
+          .typography(.small, weight: .semibold)
+        Text(subtitle)
+          .typography(.nano)
+          .foregroundStyle(.secondary)
+
+        Chart(points) { point in
+          LineMark(
+            x: .value("Date", point.label),
+            y: .value("Value", point.value)
+          )
+          .interpolationMethod(.catmullRom)
+          .foregroundStyle(accent)
+          .lineStyle(.init(lineWidth: 3))
+
+          AreaMark(
+            x: .value("Date", point.label),
+            y: .value("Value", point.value)
+          )
+          .interpolationMethod(.catmullRom)
+          .foregroundStyle(
+            LinearGradient(
+              colors: [accent.opacity(0.24), .clear],
+              startPoint: .top,
+              endPoint: .bottom
+            )
+          )
+        }
+        .frame(height: 190)
+        .chartYAxis {
+          AxisMarks(position: .leading)
+        }
+      }
+    }
+  }
+}
+
+private struct SpendingSnapshotCard: View {
+  let points: [SpendingPoint]
+
+  var body: some View {
+    GlassCard {
+      VStack(alignment: .leading, spacing: 16) {
+        Text("Spending trend")
+          .typography(.small, weight: .semibold)
+
+        Chart(points) { point in
+          BarMark(
+            x: .value("Month", point.label),
+            y: .value("Amount", point.value)
+          )
+          .foregroundStyle(
+            point.value <= 900 ? AppTheme.Colors.success : AppTheme.Colors.warning
+          )
+          .cornerRadius(8)
+        }
+        .frame(height: 180)
+        .chartYAxis {
+          AxisMarks(position: .leading)
+        }
+
+        Text("Glanceable month-by-month comparison keeps expense review readable at a glance.")
+          .typography(.nano)
+          .foregroundStyle(.secondary)
+      }
+    }
+  }
+}
+
+private struct InsightsGrid: View {
+  let cards: [InsightCard]
+
+  private let columns = [
+    GridItem(.flexible(), spacing: 12),
+    GridItem(.flexible(), spacing: 12),
   ]
 
   var body: some View {
-    List(watchlist) { item in
-      HStack {
-        Text(item.symbol)
-          .typography(.label, weight: .semibold)
-        Spacer()
-        VStack(alignment: .trailing, spacing: 2) {
-          Text(item.price.currency)
-            .typography(.small, weight: .semibold)
-          Text(item.changePercentString)
-            .typography(.nano, weight: .semibold)
-            .foregroundStyle(
-              item.changePercent >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger)
+    LazyVGrid(columns: columns, spacing: 12) {
+      ForEach(cards) { card in
+        GlassCard(cornerRadius: 22) {
+          VStack(alignment: .leading, spacing: 12) {
+            Image(systemName: card.symbol)
+              .font(.title3)
+              .foregroundStyle(card.tint)
+
+            Text(card.title)
+              .typography(.small, weight: .semibold)
+
+            Text(card.value)
+              .typography(.headline, weight: .bold)
+
+            Text(card.detail)
+              .typography(.nano)
+              .foregroundStyle(.secondary)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
         }
       }
-      .padding(.vertical, 2)
     }
-    .scrollContentBackground(.hidden)
-    .background(AppTheme.Colors.pageBackground(for: colorScheme))
   }
 }
 
-// MARK: - Dashboard Widgets
+private struct FocusListCard: View {
+  private let items = [
+    "Review watchlist names before next earnings window.",
+    "Keep discretionary spend below 12% of take-home this month.",
+    "Prioritize high-conviction holdings over fragmented small positions.",
+  ]
 
-private struct PortfolioSummaryWidget: View {
+  var body: some View {
+    GlassCard {
+      VStack(alignment: .leading, spacing: 14) {
+        Text("Focus this week")
+          .typography(.small, weight: .semibold)
+
+        ForEach(items, id: \.self) { item in
+          HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+              .foregroundStyle(AppTheme.Colors.success)
+            Text(item)
+              .typography(.small)
+              .frame(maxWidth: .infinity, alignment: .leading)
+          }
+        }
+      }
+    }
+  }
+}
+
+private struct AssetSearchCard: View {
+  @ObservedObject var viewModel: AssetSearchViewModel
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
     GlassCard {
-      VStack(alignment: .leading, spacing: 10) {
-        Text("Portfolio Value")
-          .typography(.nano)
-          .foregroundStyle(.secondary)
+      VStack(alignment: .leading, spacing: 12) {
+        Text("Search results")
+          .typography(.small, weight: .semibold)
 
-        Text("$124,830.42")
-          .typography(.hero, weight: .bold)
-
-        HStack(spacing: 8) {
-          Label("+$2,814.11", systemImage: "arrow.up.right")
-            .typography(.small, weight: .semibold)
-            .foregroundStyle(AppTheme.Colors.success)
-
-          Text("(+2.31%) today")
+        if viewModel.isLoading {
+          ProgressView("Searching...")
+        } else if let errorMessage = viewModel.errorMessage {
+          Text(errorMessage)
+            .typography(.small)
+            .foregroundStyle(AppTheme.Colors.danger)
+        } else if viewModel.results.isEmpty {
+          Text("No connected asset search results yet.")
             .typography(.small)
             .foregroundStyle(.secondary)
-        }
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    //    .sheet(isPresented: .constant(true)) {
-    //        ConcentricRectangle()
-    //            .fill(AppTheme.Colors.tertiaryFill(for: colorScheme))
-    //            .frame(height: 120)
-    //            .cornerRadius(16)
-    //            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-    //            .padding(40)
-    //            .ignoresSafeArea()
-    //            .presentationDetents([.medium])
-    //    }
-    //    .overlay {
-    //      ConcentricRectangles(count: 1, spacing: 6, cornerRadius: 16)
-    //        .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
-    //        .allowsHitTesting(false)
-    //    }
-  }
-}
-
-private struct DailyPerformanceWidget: View {
-  @Environment(\.colorScheme) private var colorScheme
-  private let points: [Double] = [112, 118, 121, 119, 124, 127, 125, 129, 132]
-
-  var body: some View {
-    GlassCard {
-      VStack(alignment: .leading, spacing: 10) {
-        Text("Daily Performance")
-          .typography(.label, weight: .semibold)
-
-        Chart {
-          ForEach(Array(points.enumerated()), id: \.offset) { index, value in
-            LineMark(
-              x: .value("Time", index),
-              y: .value("Value", value)
-            )
-            .interpolationMethod(.catmullRom)
-            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-
-            AreaMark(
-              x: .value("Time", index),
-              y: .value("Value", value)
-            )
-            .interpolationMethod(.catmullRom)
-            .foregroundStyle(
-              LinearGradient(
-                colors: [
-                  AppTheme.Colors.tint(for: colorScheme).opacity(0.3),
-                  .clear,
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-              )
-            )
-          }
-        }
-        .chartYScale(domain: .automatic(includesZero: false))
-        .chartXAxis(.hidden)
-        .chartYAxis(.hidden)
-        .frame(height: 120)
-
-        Text("Intraday trend (mock)")
-          .typography(.nano)
-          .foregroundStyle(.secondary)
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    //    .overlay {
-    //      ConcentricRectangles(count: 1, spacing: 6, cornerRadius: 16)
-    //        .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
-    //        .allowsHitTesting(false)
-    //    }
-  }
-}
-
-private struct TopMoversWidget: View {
-  @Environment(\.colorScheme) private var colorScheme
-
-  private let movers: [Mover] = [
-    .init(symbol: "NVDA", changePercent: 4.12),
-    .init(symbol: "TSLA", changePercent: 2.84),
-    .init(symbol: "META", changePercent: -1.21),
-    .init(symbol: "AMD", changePercent: 3.17),
-  ]
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 10) {
-      Text("Top Movers")
-        .typography(.label, weight: .semibold)
-
-      ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: 12) {
-          ForEach(movers) { mover in
-            GlassCard(cornerRadius: 16) {
-              VStack(alignment: .leading, spacing: 6) {
-                Text(mover.symbol)
-                  .typography(.small, weight: .bold)
-                Text(mover.changeString)
+        } else {
+          ForEach(viewModel.results) { result in
+            VStack(alignment: .leading, spacing: 4) {
+              HStack {
+                Text(result.symbol)
                   .typography(.label, weight: .semibold)
-                  .foregroundStyle(
-                    mover.changePercent >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger)
+                Spacer()
+                if let exchange = result.exchange {
+                  Text(exchange)
+                    .typography(.caption)
+                    .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                }
               }
-              .frame(width: 100, alignment: .leading)
-            }
-            //            .overlay {
-            //              ConcentricRectangles(count: 1, spacing: 6, cornerRadius: 16)
-            //                .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
-            //                .allowsHitTesting(false)
-            //            }
-          }
-        }
-      }
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-  }
-}
 
-private struct AllocationWidget: View {
-  @Environment(\.colorScheme) private var colorScheme
-
-  private var buckets: [AllocationBucket] {
-    [
-      .init(name: "Tech", percent: 52, color: AppTheme.Colors.tint(for: colorScheme)),
-      .init(name: "Index ETFs", percent: 23, color: .indigo),
-      .init(name: "Finance", percent: 15, color: .teal),
-      .init(name: "Cash", percent: 10, color: .orange),
-    ]
-  }
-
-  var body: some View {
-    GlassCard {
-      VStack(alignment: .leading, spacing: 10) {
-        Text("Allocation")
-          .typography(.label, weight: .semibold)
-
-        ForEach(buckets) { bucket in
-          VStack(alignment: .leading, spacing: 4) {
-            HStack {
-              Text(bucket.name)
-                .typography(.nano, weight: .semibold)
-              Spacer()
-              Text("\(bucket.percent)%")
-                .typography(.nano)
+              Text(result.name)
+                .typography(.small)
                 .foregroundStyle(.secondary)
             }
 
-            GeometryReader { proxy in
-              RoundedRectangle(cornerRadius: 4)
-                .fill(AppTheme.Colors.tertiaryFill(for: colorScheme))
-                .overlay(alignment: .leading) {
-                  RoundedRectangle(cornerRadius: 4)
-                    .fill(bucket.color)
-                    .frame(width: proxy.size.width * CGFloat(bucket.percent) / 100)
-                }
+            if result.id != viewModel.results.last?.id {
+              Divider()
             }
-            .frame(height: 8)
           }
         }
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
     }
-    //    .overlay {
-    //      ConcentricRectangles(count: 1, spacing: 6, cornerRadius: 16)
-    //        .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
-    //        .allowsHitTesting(false)
-    //    }
   }
 }
 
-private struct PortfolioPosition: Identifiable {
+// MARK: - Shared small views
+
+private struct DashboardActionButton: View {
+  let title: String
   let symbol: String
-  let quantity: Double
-  let averageCost: Double
-  let marketPrice: Double
-
-  var id: String { symbol }
-  var marketValue: Double { quantity * marketPrice }
-  var unrealizedPnL: Double { (marketPrice - averageCost) * quantity }
-  var unrealizedPnLString: String {
-    let sign = unrealizedPnL >= 0 ? "+" : "-"
-    return "\(sign)\(abs(unrealizedPnL).currency)"
-  }
-}
-
-private struct WatchlistItem: Identifiable {
-  let symbol: String
-  let price: Double
-  let changePercent: Double
-
-  var id: String { symbol }
-  var changePercentString: String {
-    let sign = changePercent >= 0 ? "+" : "-"
-    return "\(sign)\(String(format: "%.2f%%", abs(changePercent)))"
-  }
-}
-
-private struct Mover: Identifiable {
-  let symbol: String
-  let changePercent: Double
-
-  var id: String { symbol }
-  var changeString: String {
-    let sign = changePercent >= 0 ? "+" : "-"
-    return "\(sign)\(String(format: "%.2f%%", abs(changePercent)))"
-  }
-}
-
-private struct AllocationBucket: Identifiable {
-  let name: String
-  let percent: Int
-  let color: Color
-
-  var id: String { name }
-}
-
-//private struct ConcentricRectangles: Shape {
-//  var count: Int
-//  var spacing: CGFloat
-//  var cornerRadius: CGFloat
-//
-//  func path(in rect: CGRect) -> Path {
-//    var path = Path()
-//    let maxInsetAllowed = min(rect.width, rect.height) / 2
-//    for i in 0..<count {
-//      let inset = CGFloat(i) * spacing
-//      if inset > maxInsetAllowed { break }
-//      let r = rect.insetBy(dx: inset, dy: inset)
-//      path.addRoundedRect(in: r, cornerSize: .init(width: cornerRadius, height: cornerRadius))
-//    }
-//    return path
-//  }
-//}
-
-extension Double {
-  var currency: String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .currency
-    formatter.maximumFractionDigits = 2
-    formatter.minimumFractionDigits = 2
-    return formatter.string(from: NSNumber(value: self)) ?? "$0.00"
-  }
-}
-
-@MainActor
-private final class PortfolioViewModel: ObservableObject {
-  @Published var stocks: [StockResponse] = []
-  @Published var isLoading = false
-  @Published var errorMessage: String?
-
-  // edit
-  @Published var editingStock: StockResponse? = nil
-  @Published var isSaving = false
-
-  func load() async {
-    guard !isLoading else { return }
-    isLoading = true
-    errorMessage = nil
-    defer { isLoading = false }
-
-    do {
-      let service = Container.shared.stockService()
-      stocks = try await service.fetchPortfolio()
-    } catch {
-      errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load portfolio."
-    }
-  }
-
-  func delete(id: String) async {
-    let old = stocks
-
-    stocks.removeAll(where: { $0.id == id })
-
-    do {
-      let service = Container.shared.stockService()
-      try await service.delete(id: id)
-    } catch {
-      stocks = old
-      errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to delete stock."
-    }
-  }
-
-  func beginEdit(_ stock: StockResponse) {
-    editingStock = stock
-  }
-
-  func saveEdit(_ updated: StockResponse) async {
-    guard !isSaving else { return }
-    isSaving = true
-    defer { isSaving = false }
-
-    do {
-      let service = Container.shared.stockService()
-      let saved = try await service.updateStock(updated)
-
-      if let idx = stocks.firstIndex(where: { $0.id == saved.id }) {
-        stocks[idx] = saved
-      } else {
-        stocks.insert(saved, at: 0)
-      }
-      editingStock = nil
-    } catch {
-      errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to update stock."
-    }
-  }
-}
-
-// Removed the Binding extension helper for String? as it is no longer used.
-
-private struct EditStockSheet: View {
-  let stock: StockResponse
-  let isSaving: Bool
-  let onCancel: () -> Void
-  let onSave: (StockResponse) -> Void
-
-  @State private var shares: Double
-  @State private var buyPrice: Double
-  @State private var notes: String
-
-  init(
-    stock: StockResponse, isSaving: Bool, onCancel: @escaping () -> Void,
-    onSave: @escaping (StockResponse) -> Void
-  ) {
-    self.stock = stock
-    self.isSaving = isSaving
-    self.onCancel = onCancel
-    self.onSave = onSave
-    _shares = State(initialValue: stock.shares)
-    _buyPrice = State(initialValue: stock.buyPrice)
-    _notes = State(initialValue: stock.notes ?? "")
-  }
+  let tint: Color
+  let action: () -> Void
 
   var body: some View {
-    NavigationStack {
-      Form {
-        // Symbol is displayed but not editable here to keep API unchanged
-        HStack {
-          Text("Symbol")
-          Spacer()
-          Text(stock.symbol)
-            .foregroundStyle(.secondary)
-        }
-        TextField("Shares", value: $shares, format: .number)
-        TextField("Buy price", value: $buyPrice, format: .number)
-        TextField("Notes", text: $notes)
+    Button(action: action) {
+      VStack(spacing: 8) {
+        Image(systemName: symbol)
+          .font(.headline.weight(.semibold))
+        Text(title)
+          .typography(.nano, weight: .semibold)
       }
-      .navigationTitle("Edit Stock")
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel", action: onCancel)
-        }
-        ToolbarItem(placement: .confirmationAction) {
-          Button(isSaving ? "Saving..." : "Save") {
-            // Build a new StockResponse with edited fields, preserving immutable properties
-            var updated = stock
-            // If StockResponse is a struct with let properties, rebuild via a memberwise init
-            // Attempt to use a convenience pattern: create a new instance preserving id/symbol/buyDate
-            updated = StockResponse(
-              id: stock.id,
-              symbol: stock.symbol,
-              shares: shares,
-              buyPrice: buyPrice,
-              buyDate: stock.buyDate,
-              notes: notes.isEmpty ? nil : notes
-            )
-            onSave(updated)
-          }
-          .disabled(isSaving)
-        }
-      }
+      .foregroundStyle(tint)
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, 12)
+      .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
+    .buttonStyle(.plain)
   }
+}
+
+// MARK: - Models
+
+private struct PortfolioTrendPoint: Identifiable {
+  let label: String
+  let value: Double
+
+  var id: String { label }
+
+  static let mock: [PortfolioTrendPoint] = [
+    .init(label: "Mon", value: 112_300),
+    .init(label: "Tue", value: 113_840),
+    .init(label: "Wed", value: 113_120),
+    .init(label: "Thu", value: 114_680),
+    .init(label: "Fri", value: 116_020),
+    .init(label: "Sat", value: 118_920),
+    .init(label: "Sun", value: 124_830),
+  ]
+}
+
+private struct SpendingPoint: Identifiable {
+  let label: String
+  let value: Double
+
+  var id: String { label }
+
+  static let mock: [SpendingPoint] = [
+    .init(label: "Jan", value: 980),
+    .init(label: "Feb", value: 860),
+    .init(label: "Mar", value: 780),
+    .init(label: "Apr", value: 910),
+  ]
+}
+
+private struct InsightCard: Identifiable {
+  let title: String
+  let value: String
+  let detail: String
+  let symbol: String
+  let tint: Color
+
+  var id: String { title }
+
+  static let mock: [InsightCard] = [
+    .init(
+      title: "Savings rate",
+      value: "28%",
+      detail: "Holding steady over the last quarter.",
+      symbol: "arrow.down.circle",
+      tint: AppTheme.Colors.success
+    ),
+    .init(
+      title: "Budget streak",
+      value: "4 months",
+      detail: "Staying under your spending plan.",
+      symbol: "flame",
+      tint: .orange
+    ),
+    .init(
+      title: "Watchlist",
+      value: "12 names",
+      detail: "Review candidates before earnings.",
+      symbol: "star",
+      tint: .indigo
+    ),
+    .init(
+      title: "Cash buffer",
+      value: "$9.4K",
+      detail: "Enough for short-term volatility.",
+      symbol: "shield",
+      tint: AppTheme.Colors.tint(for: .light)
+    ),
+  ]
 }

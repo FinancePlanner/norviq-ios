@@ -60,6 +60,25 @@ final class StockDetailsViewModelTests: XCTestCase {
 
     func delete(id _: String) async throws {}
 
+    func fetchWatchlist() async throws -> [WatchlistItemResponse] {
+      throw MockError.notConfigured
+    }
+
+    func createWatchlistItem(_ request: WatchlistItemRequest) async throws -> WatchlistItemResponse {
+      throw MockError.notConfigured
+    }
+
+    func updateWatchlistItem(
+      id _: String,
+      request _: WatchlistItemUpdateRequest
+    ) async throws -> WatchlistItemResponse {
+      throw MockError.notConfigured
+    }
+
+    func deleteWatchlistItem(id _: String) async throws {
+      throw MockError.notConfigured
+    }
+
     func getValuation(symbol _: String) async throws -> StockValuationRequest {
       throw MockError.notConfigured
     }

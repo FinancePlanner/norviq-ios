@@ -83,7 +83,7 @@ public struct ContentView: View {
           .transition(.opacity)
       }
     }
-    .environment(\.dynamicTypeSize, .xSmall)
+//    .environment(\.dynamicTypeSize, .xSmall)
     .containerShape(.rect(cornerRadius: 34, style: .continuous))
     .onAppear {
       syncSessionUsername()

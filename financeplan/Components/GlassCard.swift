@@ -15,16 +15,16 @@ public struct GlassCard<Content: View>: View {
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(.ultraThinMaterial)
+                    .fill(AppTheme.Colors.cardBackground(for: colorScheme))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(colorScheme == .dark ? 0.2 : 0.6),
+                                Color.white.opacity(colorScheme == .dark ? 0.10 : 0.65),
                                 Color.clear,
-                                Color.white.opacity(colorScheme == .dark ? 0.05 : 0.2),
+                                Color.black.opacity(colorScheme == .dark ? 0.08 : 0.04),
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -32,6 +32,11 @@ public struct GlassCard<Content: View>: View {
                         lineWidth: 1
                     )
             )
-            .shadow(color: Color.black.opacity(0.15), radius: 20, x: 0, y: 10)
+            .shadow(
+                color: Color.black.opacity(colorScheme == .dark ? 0.22 : 0.08),
+                radius: colorScheme == .dark ? 18 : 12,
+                x: 0,
+                y: 8
+            )
     }
 }

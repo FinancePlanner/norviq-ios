@@ -70,13 +70,36 @@ public struct TypographyStyle {
 
   public var font: Font {
     if isMonospaced {
-      .system(size: size, weight: .regular, design: .monospaced)
+      return Font.system(size: size, weight: .regular, design: .monospaced)
     } else {
-      .custom(
-        AvenirFontScheme(weight, isItalic: isItalic, size: size).fontName,
-        size: size,
-        relativeTo: relativeTextStyle
-      )
+      var font = Font.system(size: size, weight: weight.swiftUIFontWeight, design: .default)
+      if isItalic {
+        font = font.italic()
+      }
+      return font
+    }
+  }
+}
+
+private extension TypographyFontWeight {
+  var swiftUIFontWeight: Font.Weight {
+    switch self {
+    case .thin:
+      .thin
+    case .light:
+      .light
+    case .regular:
+      .regular
+    case .medium:
+      .medium
+    case .semibold:
+      .semibold
+    case .bold:
+      .bold
+    case .extraBold:
+      .heavy
+    case .black:
+      .black
     }
   }
 }

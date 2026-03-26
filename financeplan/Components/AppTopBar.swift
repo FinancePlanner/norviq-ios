@@ -1,110 +1,117 @@
 import SwiftUI
 
-/*
- Legacy full-width home header preserved for reference.
+struct AppTopBar: View {
+  let title: String
+  let searchText: Binding<String>?
+  let searchPlaceholder: String
+  let onSearchSubmit: (() -> Void)?
+  let leadingAccessory: AnyView?
+  let trailingAccessory: AnyView?
 
- struct AppTopBar: View {
-   let username: String
-   let isUserMenuPresented: Bool
-   let onUserTap: () -> Void
-   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.colorScheme) private var colorScheme
 
-   private func statChip(value: String, color: Color) -> some View {
-     Text(value)
-       .font(.system(size: 10, weight: .semibold, design: .rounded))
-       .foregroundStyle(color)
-       .padding(.horizontal, 6)
-       .padding(.vertical, 3)
-       .background(
-         Capsule()
-           .fill(color.opacity(0.1))
-       )
-   }
+  init(
+    title: String,
+    searchText: Binding<String>? = nil,
+    searchPlaceholder: String = "Search assets",
+    onSearchSubmit: (() -> Void)? = nil,
+    leadingAccessory: AnyView? = nil,
+    trailingAccessory: AnyView? = nil
+  ) {
+    self.title = title
+    self.searchText = searchText
+    self.searchPlaceholder = searchPlaceholder
+    self.onSearchSubmit = onSearchSubmit
+    self.leadingAccessory = leadingAccessory
+    self.trailingAccessory = trailingAccessory
+  }
 
-   var body: some View {
-     HStack(spacing: 10) {
-       HStack(spacing: 8) {
-         Circle()
-           .fill(
-             LinearGradient(
-               colors: [
-                 Color(red: 0.05, green: 0.40, blue: 0.95),
-                 Color(red: 0.30, green: 0.58, blue: 1.00),
-               ],
-               startPoint: .topLeading,
-               endPoint: .bottomTrailing
-             )
-           )
-           .frame(width: 30, height: 30)
-           .overlay(
-             Text("FP")
-               .font(.system(size: 12, weight: .bold, design: .rounded))
-               .foregroundStyle(.white)
-           )
+  var body: some View {
+    HStack(spacing: 12) {
+      if let leadingAccessory {
+        accessorySlot(leadingAccessory)
+      }
 
-         VStack(alignment: .leading, spacing: 1) {
-           Text("FinPlanner")
-             .typography(.label, weight: .bold)
-             .foregroundStyle(AppTheme.Colors.navBarForeground(for: colorScheme))
-             .lineLimit(1)
+      Text(title)
+        .font(.headline.bold())
+        .foregroundStyle(AppTheme.Colors.navBarForeground(for: colorScheme))
+        .lineLimit(1)
+        .minimumScaleFactor(0.85)
+        .fixedSize(horizontal: true, vertical: false)
 
-           statChip(value: "+2.31%", color: AppTheme.Colors.success)
-         }
-       }
+      if let searchText {
+        AppTopBarSearchField(
+          text: searchText,
+          placeholder: searchPlaceholder,
+          onSubmit: { onSearchSubmit?() }
+        )
+        .frame(maxWidth: .infinity)
+        .layoutPriority(1)
+      } else {
+        Spacer(minLength: 0)
+      }
 
-       Spacer()
+      if let trailingAccessory {
+        accessorySlot(trailingAccessory)
+      }
+    }
+    .padding(.horizontal, 16)
+    .padding(.top, 8)
+    .padding(.bottom, 12)
+    .background {
+      Rectangle()
+        .fill(AppTheme.Colors.navBarBackground(for: colorScheme).opacity(0.88))
+        .background(.ultraThinMaterial)
+        .ignoresSafeArea(edges: .top)
+    }
+    .overlay(alignment: .bottom) {
+      Divider()
+        .opacity(0.12)
+    }
+  }
 
-       Button(action: onUserTap) {
-         HStack(spacing: 8) {
-           Text(username)
-             .typography(.nano, weight: .semibold)
-             .foregroundStyle(AppTheme.Colors.navBarForeground(for: colorScheme).opacity(0.75))
-             .lineLimit(1)
+  @ViewBuilder
+  private func accessorySlot(_ accessory: AnyView) -> some View {
+    accessory
+      .frame(width: 40, height: 40)
+  }
+}
 
-           RoundedRectangle(cornerRadius: 10, style: .continuous)
-             .fill(AppTheme.Colors.tint(for: colorScheme).opacity(0.18))
-             .frame(width: 30, height: 30)
-             .overlay(
-               Image(systemName: "person.fill")
-                 .font(.system(size: 12, weight: .semibold))
-                 .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-             )
-             .overlay {
-               RoundedRectangle(cornerRadius: 10, style: .continuous)
-                 .strokeBorder(AppTheme.Colors.navBarForeground(for: colorScheme).opacity(0.08), lineWidth: 1)
-             }
-         }
-       }
-       .buttonStyle(.plain)
-       .padding(.leading, 6)
-       .padding(.horizontal, 10)
-       .padding(.vertical, 6)
-       .background(
-         RoundedRectangle(cornerRadius: 14, style: .continuous)
-           .fill(
-             isUserMenuPresented
-             ? AppTheme.Colors.tint(for: colorScheme).opacity(colorScheme == .dark ? 0.22 : 0.14)
-             : .clear
-           )
-       )
-     }
-     .padding(.horizontal, 14)
-     .padding(.vertical, 4)
-     .background {
-       ZStack {
-         Rectangle().fill(.ultraThinMaterial)
-         AppTheme.Colors.navBarBackground(for: colorScheme).opacity(0.75)
-       }
-       .ignoresSafeArea(edges: .top)
-     }
-     .overlay(alignment: .bottom) {
-       Divider()
-         .opacity(colorScheme == .dark ? 0.35 : 0.25)
-     }
-     .shadow(color: .black.opacity(colorScheme == .dark ? 0.25 : 0.08), radius: 10, y: 6)
-   }
- }
- */
+private struct AppTopBarSearchField: View {
+  @Binding var text: String
+  let placeholder: String
+  let onSubmit: () -> Void
+
+  @Environment(\.colorScheme) private var colorScheme
+
+  var body: some View {
+    HStack(spacing: 10) {
+      Image(systemName: "magnifyingglass")
+        .foregroundStyle(.secondary)
+
+      TextField(placeholder, text: $text)
+        .textInputAutocapitalization(.never)
+        .autocorrectionDisabled(true)
+        .submitLabel(.search)
+        .onSubmit(onSubmit)
+
+      if !text.isEmpty {
+        Button {
+          text = ""
+        } label: {
+          Image(systemName: "xmark.circle.fill")
+            .foregroundStyle(.secondary)
+        }
+      }
+    }
+    .padding(.horizontal, 12)
+    .padding(.vertical, 10)
+    .background(
+      RoundedRectangle(cornerRadius: 14, style: .continuous)
+        .fill(AppTheme.Colors.tertiaryFill(for: colorScheme))
+    )
+  }
+}
 
 struct AppTopBarProfileButton: View {
   let isUserMenuPresented: Bool
@@ -135,5 +142,51 @@ struct AppTopBarProfileButton: View {
         }
     }
     .buttonStyle(.plain)
+  }
+}
+
+struct AppTopBarChromeModifier: ViewModifier {
+  let title: String
+  let searchText: Binding<String>?
+  let searchPlaceholder: String
+  let onSearchSubmit: (() -> Void)?
+  let leadingAccessory: AnyView?
+  let trailingAccessory: AnyView?
+
+  func body(content: Content) -> some View {
+    content
+      .toolbar(.hidden, for: .navigationBar)
+      .safeAreaInset(edge: .top, spacing: 0) {
+        AppTopBar(
+          title: title,
+          searchText: searchText,
+          searchPlaceholder: searchPlaceholder,
+          onSearchSubmit: onSearchSubmit,
+          leadingAccessory: leadingAccessory,
+          trailingAccessory: trailingAccessory
+        )
+      }
+  }
+}
+
+extension View {
+  func appTopBarChrome(
+    title: String,
+    searchText: Binding<String>? = nil,
+    searchPlaceholder: String = "Search assets",
+    onSearchSubmit: (() -> Void)? = nil,
+    leadingAccessory: AnyView? = nil,
+    trailingAccessory: AnyView? = nil
+  ) -> some View {
+    modifier(
+      AppTopBarChromeModifier(
+        title: title,
+        searchText: searchText,
+        searchPlaceholder: searchPlaceholder,
+        onSearchSubmit: onSearchSubmit,
+        leadingAccessory: leadingAccessory,
+        trailingAccessory: trailingAccessory
+      )
+    )
   }
 }

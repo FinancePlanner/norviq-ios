@@ -454,3 +454,53 @@ struct UpdateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
     body
   }
 }
+
+// watchlist
+
+struct GetWatchlistEndpoint: Endpoint {
+  typealias Response = [WatchlistItemResponse]
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/watchlist" }
+  var decoder: JSONDecoder { StockDecoding.decoder() }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+struct CreateWatchlistEndpoint: Endpoint {
+  typealias Response = WatchlistItemResponse
+  let payload: WatchlistItemRequest
+
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/watchlist" }
+  var decoder: JSONDecoder { StockDecoding.decoder() }
+
+  func asParameters() throws -> Parameters {
+    try StockEncoding.parameters(for: payload)
+  }
+}
+
+struct UpdateWatchlistEndpoint: Endpoint {
+  typealias Response = WatchlistItemResponse
+  let watchlistId: String
+  let payload: WatchlistItemUpdateRequest
+
+  var method: HTTPMethod { .patch }
+  var path: String { "/v1/watchlist/\(watchlistId)" }
+  var decoder: JSONDecoder { StockDecoding.decoder() }
+
+  func asParameters() throws -> Parameters {
+    try StockEncoding.parameters(for: payload)
+  }
+}
+
+struct DeleteWatchlistEndpoint: Endpoint {
+  typealias Response = EmptyAPIResponse
+  let watchlistId: String
+
+  var method: HTTPMethod { .delete }
+  var path: String { "/v1/watchlist/\(watchlistId)" }
+  var decoder: JSONDecoder { StockDecoding.decoder() }
+
+  func asParameters() throws -> Parameters { [:] }
+}

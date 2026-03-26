@@ -43,6 +43,15 @@ protocol StockServicing {
     rationale: String?,
     targetDate: String?
   ) async throws -> StockValuationRequest
+  func fetchWatchlist() async throws -> [WatchlistItemResponse]
+  @discardableResult
+  func createWatchlistItem(_ request: WatchlistItemRequest) async throws -> WatchlistItemResponse
+  @discardableResult
+  func updateWatchlistItem(
+    id: String,
+    request: WatchlistItemUpdateRequest
+  ) async throws -> WatchlistItemResponse
+  func deleteWatchlistItem(id: String) async throws
 }
 
 final class StockService: StockServicing {
@@ -89,6 +98,12 @@ final class StockService: StockServicing {
     }
   }
 
+  func fetchWatchlist() async throws -> [WatchlistItemResponse] {
+    try await performAuthenticated { client in
+      try await client.call(GetWatchlistEndpoint())
+    }
+  }
+
   func fetchStockDetails(stockId: String) async throws -> StockDetails {
     try await performAuthenticated { client in
       let endpoint = GetStockDetailsEndpoint(stockId: stockId)
@@ -128,6 +143,29 @@ final class StockService: StockServicing {
     try await performAuthenticated { client in
       let endpoint = DeleteStockEndpoint(stockId: id)
       try await client.callWithoutResponse(endpoint)
+    }
+  }
+
+  @discardableResult
+  func createWatchlistItem(_ request: WatchlistItemRequest) async throws -> WatchlistItemResponse {
+    try await performAuthenticated { client in
+      try await client.call(CreateWatchlistEndpoint(payload: request))
+    }
+  }
+
+  @discardableResult
+  func updateWatchlistItem(
+    id: String,
+    request: WatchlistItemUpdateRequest
+  ) async throws -> WatchlistItemResponse {
+    try await performAuthenticated { client in
+      try await client.call(UpdateWatchlistEndpoint(watchlistId: id, payload: request))
+    }
+  }
+
+  func deleteWatchlistItem(id: String) async throws {
+    try await performAuthenticated { client in
+      try await client.callWithoutResponse(DeleteWatchlistEndpoint(watchlistId: id))
     }
   }
 

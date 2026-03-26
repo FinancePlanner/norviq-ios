@@ -31,9 +31,13 @@ final class UIComponentsTests: XCTestCase {
 
     func testAppTopBar_canBeCompiled() {
         let topBar = AppTopBar(
-            username: "testuser",
-            isUserMenuPresented: false,
-            onUserTap: {}
+            title: "FinPlanner",
+            trailingAccessory: AnyView(
+                AppTopBarProfileButton(
+                    isUserMenuPresented: false,
+                    onTap: {}
+                )
+            )
         )
 
         let hostingController = UIHostingController(rootView: topBar)

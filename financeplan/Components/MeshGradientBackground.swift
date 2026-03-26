@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct MeshGradientBackground: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var animate = false
 
     public init() {}
@@ -13,37 +14,35 @@ public struct MeshGradientBackground: View {
 
             GeometryReader { proxy in
                 ZStack {
-                    // Orb 1: Neon Tint
                     Circle()
-                        .fill(AppTheme.Colors.tint(for: colorScheme).opacity(0.25))
+                        .fill(AppTheme.Colors.tint(for: colorScheme).opacity(colorScheme == .dark ? 0.18 : 0.14))
                         .frame(width: proxy.size.width * 0.9)
-                        .blur(radius: 90)
+                        .blur(radius: 110)
                         .offset(
-                            x: animate ? -proxy.size.width * 0.2 : proxy.size.width * 0.2,
-                            y: animate ? -proxy.size.height * 0.1 : proxy.size.height * 0.3)
+                            x: animate ? -proxy.size.width * 0.16 : proxy.size.width * 0.18,
+                            y: animate ? -proxy.size.height * 0.08 : proxy.size.height * 0.24)
 
-                    // Orb 2: Purple/Blue Accent
                     Circle()
-                        .fill(Color(red: 0.60, green: 0.20, blue: 1.00).opacity(0.15))  // Purple neon
+                        .fill(AppTheme.Colors.secondaryTint(for: colorScheme).opacity(colorScheme == .dark ? 0.12 : 0.10))
                         .frame(width: proxy.size.width * 0.8)
-                        .blur(radius: 90)
+                        .blur(radius: 100)
                         .offset(
-                            x: animate ? proxy.size.width * 0.4 : -proxy.size.width * 0.2,
-                            y: animate ? proxy.size.height * 0.5 : -proxy.size.height * 0.1)
+                            x: animate ? proxy.size.width * 0.32 : -proxy.size.width * 0.18,
+                            y: animate ? proxy.size.height * 0.42 : -proxy.size.height * 0.06)
 
-                    // Orb 3: Highlight
                     Circle()
-                        .fill(AppTheme.Colors.tintSoft(for: colorScheme).opacity(0.3))
+                        .fill(AppTheme.Colors.tintSoft(for: colorScheme).opacity(colorScheme == .dark ? 0.22 : 0.28))
                         .frame(width: proxy.size.width * 0.6)
-                        .blur(radius: 70)
+                        .blur(radius: 80)
                         .offset(
-                            x: animate ? proxy.size.width * 0.1 : proxy.size.width * 0.6,
-                            y: animate ? proxy.size.height * 0.8 : proxy.size.height * 0.4)
+                            x: animate ? proxy.size.width * 0.08 : proxy.size.width * 0.52,
+                            y: animate ? proxy.size.height * 0.72 : proxy.size.height * 0.34)
                 }
             }
         }
         .onAppear {
-            withAnimation(.easeInOut(duration: 8).repeatForever(autoreverses: true)) {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 10).repeatForever(autoreverses: true)) {
                 animate.toggle()
             }
         }
