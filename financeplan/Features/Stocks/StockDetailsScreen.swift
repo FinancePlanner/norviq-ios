@@ -11,8 +11,11 @@ import StockPlanShared
 struct StockDetailScreen: View {
     let stockId: String
     let initialSymbol: String
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var viewModel = StockDetailsViewModel()
     @State private var showEditValuation = false
+    @State private var selectedTab: StockDetailTab = .overview
+    @State private var selectedScenario: StockProjectionScenarioKind = .base
 
     var body: some View {
         Group {
@@ -37,6 +40,26 @@ struct StockDetailScreen: View {
         }
         .navigationTitle(viewModel.details?.symbol ?? initialSymbol)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if let shareSnapshot = viewModel.shareSnapshot {
+                    ShareLink(
+                        item: shareSnapshot.body,
+                        subject: Text(shareSnapshot.title),
+                        message: Text("Shared from financeplan")
+                    ) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .accessibilityLabel("Share stock snapshot")
+                } else {
+                    Button(action: {}) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .disabled(true)
+                    .accessibilityLabel("Share stock snapshot")
+                }
+            }
+        }
         .sheet(isPresented: $showEditValuation) {
             EditStockValuationView(
                 symbol: viewModel.details?.symbol ?? initialSymbol,
@@ -61,127 +84,49 @@ struct StockDetailScreen: View {
     }
 
     private var content: some View {
-        List {
-            Section {
-                StockValuationCard(
-                    valuation: viewModel.valuation,
-                    onEditTapped: {
+        ScrollView {
+            VStack(spacing: 16) {
+                StockDetailHeroCard(
+                    details: viewModel.details,
+                    profile: viewModel.primaryComparisonProfile
+                )
+
+                Picker("Stock detail tab", selection: $selectedTab) {
+                    ForEach(StockDetailTab.allCases) { tab in
+                        Text(tab.title).tag(tab)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                switch selectedTab {
+                case .overview:
+                    StockOverviewTab(
+                        details: viewModel.details,
+                        valuation: viewModel.valuation,
+                        history: viewModel.history,
+                        news: viewModel.news,
+                        errorMessage: viewModel.errorMessage
+                    ) {
                         showEditValuation = true
                     }
-                )
-            }
-
-            if let details = viewModel.details {
-                Section("Overview") {
-                    row(title: "Symbol", value: details.symbol, isSecondary: true)
-                    HStack {
-                        Text("Shares")
-                        Spacer()
-                        Text(details.shares, format: .number.precision(.fractionLength(2)))
-                            .fontWeight(.semibold)
-                    }
-                    HStack {
-                        Text("Buy price")
-                        Spacer()
-                        Text(details.buyPrice, format: .currency(code: "USD"))
-                            .fontWeight(.semibold)
-                    }
-                    row(title: "Buy date", value: details.buyDate, isSecondary: true)
-                    HStack {
-                        Text("Position value")
-                        Spacer()
-                        Text(details.shares * details.buyPrice, format: .currency(code: "USD"))
-                    }
-                    if let notes = details.notes, !notes.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Notes")
-                                .foregroundStyle(.secondary)
-                            Text(notes)
-                        }
-                    }
+                case .projections:
+                    StockProjectionsTab(
+                        profile: viewModel.primaryComparisonProfile,
+                        selectedScenario: $selectedScenario
+                    )
+                case .compare:
+                    StockCompareTab(viewModel: viewModel)
                 }
             }
-
-            Section("History") {
-                if viewModel.history.isEmpty {
-                    Text("No price history available.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(Array(viewModel.history.prefix(10).enumerated()), id: \.offset) { _, point in
-                        HStack {
-                            Text(point.date)
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Text(point.close, format: .currency(code: "USD"))
-                                .monospacedDigit()
-                        }
-                    }
-                }
-            }
-
-            Section("Recent News") {
-                if viewModel.news.isEmpty {
-                    Text("No recent news available.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(Array(viewModel.news.prefix(10).enumerated()), id: \.offset) { _, item in
-                        if let url = URL(string: item.url) {
-                            Link(destination: url) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(item.title)
-                                        .font(.subheadline.bold())
-                                        .foregroundStyle(.primary)
-                                    Text(item.date)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        } else {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(item.title)
-                                    .font(.subheadline.bold())
-                                Text(item.date)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-            }
-            
-            Section("Thesis") {
-                Text("Thesis that I must add")
-                    .foregroundStyle(.secondary)
-            }
-            
-            Section("Earnings") {
-                Text("Earnings coming from an API")
-                    .foregroundStyle(.secondary)
-            }
-            
-            Section("Fundamentals") {
-                Text("Fundamentals that I must add")
-                    .foregroundStyle(.secondary)
-            }
-
-            if let errorMessage = viewModel.errorMessage {
-                Section {
-                    Text(errorMessage)
-                        .foregroundStyle(.secondary)
-                }
-            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 20)
         }
+        .background(MeshGradientBackground().ignoresSafeArea())
         .refreshable {
             await viewModel.load(stockId: stockId)
         }
-    }
-
-    private func row(title: String, value: String, isSecondary: Bool = false) -> some View {
-        HStack {
-            Text(title)
-            Spacer()
-            Text(value)
-                .foregroundStyle(isSecondary ? .secondary : .primary)
-        }
+        .animation(.snappy(duration: 0.24), value: selectedTab)
+        .animation(.snappy(duration: 0.24), value: selectedScenario)
+        .tint(AppTheme.Colors.tint(for: colorScheme))
     }
 }

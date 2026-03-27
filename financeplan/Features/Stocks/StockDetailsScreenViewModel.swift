@@ -16,10 +16,37 @@ final class StockDetailsViewModel: ObservableObject {
     @Published var history: [StockHistory] = []
     @Published var news: [StockNews] = []
     @Published var valuation: StockValuationRequest?
+    @Published private(set) var primaryComparisonProfile: StockComparisonProfile?
+    @Published private(set) var comparisonUniverse: [StockComparisonProfile] = []
+    @Published private(set) var selectedPeerSymbols: [String] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
 
     private let service: StockServicing
+
+    var shareSnapshot: StockShareSnapshot? {
+        guard let details else { return nil }
+        return StockShareFormatter.makeSnapshot(
+            details: details,
+            valuation: valuation,
+            history: history,
+            news: news
+        )
+    }
+
+    var selectedPeerProfiles: [StockComparisonProfile] {
+        selectedPeerSymbols.compactMap(comparisonProfile(for:))
+    }
+
+    var comparisonProfiles: [StockComparisonProfile] {
+        guard let primaryComparisonProfile else { return [] }
+        return [primaryComparisonProfile] + selectedPeerProfiles
+    }
+
+    var availablePeerProfiles: [StockComparisonProfile] {
+        guard let primaryComparisonProfile else { return comparisonUniverse }
+        return comparisonUniverse.filter { $0.symbol != primaryComparisonProfile.symbol }
+    }
 
     init() {
         self.service = Container.shared.stockService()
@@ -81,6 +108,7 @@ final class StockDetailsViewModel: ObservableObject {
             async let valuationTask = loadValuation(symbol: symbol)
 
             self.details = details
+            seedMockInsights(for: symbol)
             self.history = await historyTask
             self.news = await newsTask
             self.valuation = await valuationTask
@@ -89,8 +117,53 @@ final class StockDetailsViewModel: ObservableObject {
             history = []
             news = []
             valuation = nil
+            primaryComparisonProfile = nil
+            comparisonUniverse = []
+            selectedPeerSymbols = []
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
+    }
+
+    func projectionScenario(_ kind: StockProjectionScenarioKind) -> StockProjectionScenario? {
+        primaryComparisonProfile?.projectionScenarios[kind]
+    }
+
+    func comparisonProfile(for symbol: String) -> StockComparisonProfile? {
+        comparisonUniverse.first { $0.symbol == symbol.uppercased() }
+    }
+
+    func selectedPeerSymbol(at slot: Int) -> String {
+        guard selectedPeerSymbols.indices.contains(slot) else { return "" }
+        return selectedPeerSymbols[slot]
+    }
+
+    func updatePeerSymbol(_ symbol: String, slot: Int) {
+        guard slot >= 0 else { return }
+
+        let normalized = symbol.uppercased()
+        guard
+            !normalized.isEmpty,
+            let primaryComparisonProfile,
+            normalized != primaryComparisonProfile.symbol
+        else { return }
+
+        var peers = selectedPeerSymbols
+        if peers.count <= slot {
+            peers.append(contentsOf: Array(repeating: "", count: slot - peers.count + 1))
+        }
+
+        if let existingIndex = peers.firstIndex(of: normalized), existingIndex != slot {
+            peers.swapAt(existingIndex, slot)
+        } else {
+            peers[slot] = normalized
+        }
+
+        var seen = Set<String>()
+        selectedPeerSymbols = peers.filter { symbol in
+            !symbol.isEmpty && seen.insert(symbol).inserted
+        }
+
+        fillMissingPeers()
     }
 
     func saveValuation(
@@ -150,5 +223,27 @@ final class StockDetailsViewModel: ObservableObject {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             return nil
         }
+    }
+
+    private func seedMockInsights(for symbol: String) {
+        let normalizedSymbol = symbol.uppercased()
+        let universe = StockInsightsMockStore.universe(for: normalizedSymbol)
+        comparisonUniverse = universe
+        primaryComparisonProfile = universe.first { $0.symbol == normalizedSymbol }
+            ?? StockInsightsMockStore.profile(for: normalizedSymbol)
+        selectedPeerSymbols = []
+        fillMissingPeers()
+    }
+
+    private func fillMissingPeers() {
+        guard let primaryComparisonProfile else { return }
+
+        var resolved = selectedPeerSymbols.filter { $0 != primaryComparisonProfile.symbol }
+        let defaults = comparisonUniverse
+            .map(\.symbol)
+            .filter { $0 != primaryComparisonProfile.symbol && !resolved.contains($0) }
+
+        resolved.append(contentsOf: defaults.prefix(max(0, 2 - resolved.count)))
+        selectedPeerSymbols = Array(resolved.prefix(2))
     }
 }

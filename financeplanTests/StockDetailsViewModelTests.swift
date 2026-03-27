@@ -29,6 +29,10 @@ final class StockDetailsViewModelTests: XCTestCase {
 
     var createValuationResult: Result<StockValuationRequest, Error> = .failure(MockError.notConfigured)
     var updateValuationResult: Result<StockValuationRequest, Error> = .failure(MockError.notConfigured)
+    var fetchStockDetailsResult: Result<StockDetails, Error> = .failure(MockError.notConfigured)
+    var fetchStockHistoryResult: Result<[StockHistory], Error> = .success([])
+    var fetchStockNewsResult: Result<[StockNews], Error> = .success([])
+    var getValuationResult: Result<StockValuationRequest, Error> = .failure(StockHTTPClient.Error.invalidStatus(404))
 
     func create(stock _: StockRequest) async throws -> StockResponse {
       throw MockError.notConfigured
@@ -43,15 +47,15 @@ final class StockDetailsViewModelTests: XCTestCase {
     }
 
     func fetchStockDetails(stockId _: String) async throws -> StockDetails {
-      throw MockError.notConfigured
+      try fetchStockDetailsResult.get()
     }
 
     func fetchStockHistory(symbol _: String) async throws -> [StockHistory] {
-      throw MockError.notConfigured
+      try fetchStockHistoryResult.get()
     }
 
     func fetchStockNews(symbol _: String) async throws -> [StockNews] {
-      throw MockError.notConfigured
+      try fetchStockNewsResult.get()
     }
 
     func updateStock(_: StockResponse) async throws -> StockResponse {
@@ -80,7 +84,7 @@ final class StockDetailsViewModelTests: XCTestCase {
     }
 
     func getValuation(symbol _: String) async throws -> StockValuationRequest {
-      throw MockError.notConfigured
+      try getValuationResult.get()
     }
 
     func createValuation(
@@ -190,6 +194,102 @@ final class StockDetailsViewModelTests: XCTestCase {
       rationale: "Stable margins with steady growth.",
       targetDate: "2026-12-31"
     )
+  }
+
+  private func makeHistory(date: String = "2026-03-26") -> StockHistory {
+    StockHistory(
+      date: date,
+      open: 120,
+      high: 128,
+      low: 118,
+      close: 125,
+      volume: 1_250_000
+    )
+  }
+
+  private func makeNews(
+    title: String = "Apple expands services revenue",
+    date: String = "2026-03-26"
+  ) -> StockNews {
+    StockNews(
+      title: title,
+      url: "https://example.com/apple-services",
+      date: date
+    )
+  }
+
+  func testShareSnapshot_BuildsStructuredExportText() {
+    let service = StockServiceMock()
+    let viewModel = StockDetailsViewModel(service: service)
+
+    viewModel.details = StockDetails(
+      id: "stock-1",
+      symbol: "AAPL",
+      shares: 10,
+      buyPrice: 123.45,
+      buyDate: "2026-03-13",
+      notes: "Watching margins and installed base growth."
+    )
+    viewModel.valuation = makeValuation(symbol: "AAPL")
+    viewModel.history = [makeHistory()]
+    viewModel.news = [
+      makeNews(),
+      makeNews(title: "Analysts review iPhone demand", date: "2026-03-24"),
+    ]
+
+    let snapshot = viewModel.shareSnapshot
+
+    XCTAssertEqual(snapshot?.title, "AAPL stock snapshot")
+    XCTAssertTrue(snapshot?.body.contains("$AAPL position snapshot") == true)
+    XCTAssertTrue(snapshot?.body.contains("Position: 10 shares @ $123.45") == true)
+    XCTAssertTrue(snapshot?.body.contains("Cost basis: $1,234.50") == true)
+    XCTAssertTrue(snapshot?.body.contains("Valuation") == true)
+    XCTAssertTrue(snapshot?.body.contains("Bear: $100.00 - $120.00") == true)
+    XCTAssertTrue(snapshot?.body.contains("Latest close: $125.00") == true)
+    XCTAssertTrue(snapshot?.body.contains("Recent news") == true)
+    XCTAssertTrue(snapshot?.body.contains("Apple expands services revenue") == true)
+  }
+
+  func testShareSnapshot_IsNilWithoutLoadedDetails() {
+    let service = StockServiceMock()
+    let viewModel = StockDetailsViewModel(service: service)
+
+    XCTAssertNil(viewModel.shareSnapshot)
+  }
+
+  func testLoad_PopulatesMockInsightsAndDefaultPeers() async {
+    let service = StockServiceMock()
+    let viewModel = StockDetailsViewModel(service: service)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "META"))
+    service.fetchStockHistoryResult = .success([makeHistory()])
+    service.fetchStockNewsResult = .success([makeNews()])
+    service.getValuationResult = .success(makeValuation(symbol: "META"))
+
+    await viewModel.load(stockId: "stock-1")
+
+    XCTAssertEqual(viewModel.primaryComparisonProfile?.symbol, "META")
+    XCTAssertEqual(viewModel.selectedPeerSymbols.count, 2)
+    XCTAssertEqual(viewModel.comparisonProfiles.count, 3)
+    XCTAssertNotNil(viewModel.projectionScenario(.base))
+    XCTAssertEqual(viewModel.projectionScenario(.base)?.years.count, 5)
+    XCTAssertEqual(viewModel.projectionScenario(.base)?.years.last?.year, 2028)
+  }
+
+  func testUpdatePeerSymbol_WhenSelectingExistingPeer_SwapsVisibleColumns() async {
+    let service = StockServiceMock()
+    let viewModel = StockDetailsViewModel(service: service)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "META"))
+    await viewModel.load(stockId: "stock-1")
+
+    let firstPeer = viewModel.selectedPeerSymbol(at: 0)
+    let secondPeer = viewModel.selectedPeerSymbol(at: 1)
+
+    viewModel.updatePeerSymbol(secondPeer, slot: 0)
+
+    XCTAssertEqual(viewModel.selectedPeerSymbol(at: 0), secondPeer)
+    XCTAssertEqual(viewModel.selectedPeerSymbol(at: 1), firstPeer)
   }
 
   func testSaveValuation_WhenNoExistingValuation_CreatesUsingLoadedDetailsSymbol() async {
