@@ -12,6 +12,7 @@ struct AddPositionDraft: Equatable {
 
 struct AddPositionSheet: View {
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.colorScheme) private var colorScheme
 
   let title: String
   @State var draft: AddPositionDraft
@@ -19,64 +20,109 @@ struct AddPositionSheet: View {
   let onSave: @MainActor (AddPositionDraft) async -> String?
 
   @State private var errorMessage: String?
+  @State private var successFeedbackTrigger = 0
 
   var body: some View {
-    NavigationStack {
-      Form {
-        Section("Stock") {
-          if let companyName = draft.companyName, !companyName.isEmpty {
-            Text(companyName)
-              .foregroundStyle(.secondary)
-          }
+    VStack(spacing: 0) {
+      FormSheetHeader(title: title, onDismiss: { dismiss() })
 
-          TextField("Symbol", text: $draft.symbol)
-            .textInputAutocapitalization(.characters)
-            .autocorrectionDisabled(true)
-            .disabled(draft.symbolLocked)
-        }
-
-        Section("Position") {
-          TextField("Shares", text: $draft.shares)
-            .keyboardType(.decimalPad)
-
-          TextField("Buy price", text: $draft.buyPrice)
-            .keyboardType(.decimalPad)
-
-          DatePicker("Buy date", selection: $draft.buyDate, displayedComponents: .date)
-        }
-
-        Section("Notes") {
-          TextField("Optional notes", text: $draft.notes, axis: .vertical)
-            .lineLimit(3 ... 6)
-        }
-
-        if let errorMessage {
-          Section {
-            Text(errorMessage)
-              .foregroundStyle(AppTheme.Colors.danger)
-          }
-        }
-      }
-      .navigationTitle(title)
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel") { dismiss() }
-        }
-
-        ToolbarItem(placement: .confirmationAction) {
-          Button(isSaving ? "Saving..." : "Save") {
-            Task {
-              errorMessage = await onSave(draft)
-              if errorMessage == nil {
-                dismiss()
+      ScrollView {
+        VStack(spacing: 16) {
+          // MARK: - Stock section
+          FormCard(title: "Stock") {
+            if let companyName = draft.companyName, !companyName.isEmpty {
+              FormRow(icon: "building.2", iconColor: .secondary, label: companyName) {
+                EmptyView()
               }
+              FormDivider()
+            }
+
+            FormTextField(
+              icon: "magnifyingglass",
+              iconColor: AppTheme.Colors.tint(for: colorScheme),
+              placeholder: "Symbol (e.g. AAPL)",
+              text: $draft.symbol,
+              autocapitalization: .characters,
+              disableAutocorrection: true
+            )
+            .disabled(draft.symbolLocked)
+            .opacity(draft.symbolLocked ? 0.6 : 1)
+          }
+
+          // MARK: - Position section
+          FormCard(title: "Position") {
+            FormTextField(
+              icon: "number",
+              placeholder: "Shares",
+              text: $draft.shares,
+              keyboardType: .decimalPad
+            )
+
+            FormDivider()
+
+            FormTextField(
+              icon: "dollarsign.circle",
+              iconColor: AppTheme.Colors.secondaryTint(for: colorScheme),
+              placeholder: "Buy price",
+              text: $draft.buyPrice,
+              keyboardType: .decimalPad
+            )
+
+            FormDivider()
+
+            FormRow(icon: "calendar", iconColor: .orange, label: "Buy date") {
+              DatePicker("", selection: $draft.buyDate, displayedComponents: .date)
+                .labelsHidden()
             }
           }
-          .disabled(isSaving || !isValid)
+
+          // MARK: - Notes section
+          FormCard(title: "Notes") {
+            HStack(spacing: 12) {
+              Image(systemName: "note.text")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 24, alignment: .center)
+                .padding(.top, 2)
+
+              TextField("Optional notes", text: $draft.notes, axis: .vertical)
+                .lineLimit(3...6)
+                .typography(.label)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 13)
+          }
+
+          // MARK: - Error
+          if let errorMessage {
+            FormErrorBanner(message: errorMessage)
+          }
+
+          Spacer(minLength: 80)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+      }
+      .scrollDismissesKeyboard(.interactively)
+
+      // MARK: - Action bar
+      FormActionBar(
+        primaryLabel: isSaving ? "Saving…" : "Save",
+        isLoading: isSaving,
+        isDisabled: !isValid || isSaving
+      ) {
+        Task {
+          errorMessage = await onSave(draft)
+          if errorMessage == nil {
+            successFeedbackTrigger += 1
+            dismiss()
+          }
         }
       }
     }
+    .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
+    .presentationDragIndicator(.visible)
+    .appSensoryFeedback(success: successFeedbackTrigger)
   }
 
   private var isValid: Bool {

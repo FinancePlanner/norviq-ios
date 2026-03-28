@@ -21,11 +21,33 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
   var subtitle: String {
     switch self {
     case .csv:
-      return "Upload your broker/exported CSV file."
+      return "Upload a broker export or CSV file with your positions."
     case .manual:
-      return "Add your positions one by one."
+      return "Type in your holdings one position at a time."
     case .api:
-      return "Sync holdings from a broker/integration API."
+      return "Sync holdings automatically from a broker integration."
+    }
+  }
+
+  var icon: String {
+    switch self {
+    case .csv:
+      return "doc.text.fill"
+    case .manual:
+      return "square.and.pencil"
+    case .api:
+      return "link.circle.fill"
+    }
+  }
+
+  var iconColor: (ColorScheme) -> Color {
+    switch self {
+    case .csv:
+      return { scheme in AppTheme.Colors.secondaryTint(for: scheme) }
+    case .manual:
+      return { scheme in AppTheme.Colors.tint(for: scheme) }
+    case .api:
+      return { _ in .indigo }
     }
   }
 }
@@ -49,82 +71,124 @@ struct InitialStockImportScreen: View {
   @State private var isSubmitting = false
   @State private var message: String?
   @State private var animatedIndices: Set<Int> = []
+  @State private var headerVisible = false
 
   var body: some View {
-    VStack(spacing: 20) {
-      Spacer(minLength: 0)
+    ScrollView {
+      VStack(spacing: 0) {
+        Spacer(minLength: 32)
 
-      LinearGradient(
-        colors: AppTheme.heroGradient(for: colorScheme),
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-      )
-      .frame(height: 80)
-      .mask(
-        RoundedRectangle(cornerRadius: 24, style: .continuous)
-      )
-      .overlay {
-        ZStack {
-          ForEach(0..<4, id: \.self) { i in
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-              .inset(by: CGFloat(i) * 6)
-              .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
-          }
+        // MARK: - Hero header
+        heroHeader
+          .padding(.bottom, 32)
+
+        // MARK: - Method cards
+        methodSelectionList
+          .padding(.bottom, 24)
+
+        // MARK: - Info message
+        if let message {
+          Text(message)
+            .typography(.small)
+            .foregroundStyle(AppTheme.Colors.success)
+            .padding(.bottom, 12)
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
         }
-        .allowsHitTesting(false)
+
+        // MARK: - CTA
+        continueButton
+          .padding(.bottom, 40)
+
+        Spacer(minLength: 20)
       }
-      .overlay(
-        OnboardingHeader(
-          icon: "tray.and.arrow.down.fill",
-          title: "Import Your Stocks",
-          subtitle: "This step is required the first time you sign in. Choose one import method to continue.",
-          namespace: headerNamespace
-        )
-        .padding(.horizontal, 4)
-      )
-
-      methodSelectionList
-
-      if let message {
-        Text(message)
-          .typography(.nano)
-          .foregroundStyle(AppTheme.Colors.success)
-      }
-
-      Button {
-        Task { await completeImport() }
-      } label: {
-        HStack(spacing: 8) {
-          if isSubmitting {
-            ProgressView()
-              .tint(.white)
-          }
-          Text(buttonTitle)
-            .font(.headline)
-            .fontWeight(.bold)
-        }
-      }
-      .buttonStyle(GlowingButtonStyle())
-      .disabled(selectedMethod == nil || isSubmitting)
-      .accessibilityIdentifier("stockImportContinueButton")
-      .opacity(animatedIndices.count == StockImportMethod.allCases.count ? 1 : 0)
-      .animation(.easeIn(duration: 0.3), value: animatedIndices.count)
-
-      Spacer(minLength: 0)
+      .padding(.horizontal, 24)
+      .frame(maxWidth: 520)
+      .frame(maxWidth: .infinity)
     }
+    .scrollBounceBehavior(.basedOnSize)
     .accessibilityIdentifier("initialStockImportScreen")
-    .padding(16)
-    .frame(maxWidth: 520, maxHeight: .infinity)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(MeshGradientBackground().ignoresSafeArea())
   }
 
-  private var buttonTitle: String {
-    guard let selectedMethod else {
-      return "Select a Method"
+  // MARK: - Hero Header
+
+  private var heroHeader: some View {
+    VStack(spacing: 16) {
+      // Animated icon
+      ZStack {
+        // Outer pulsing ring
+        Circle()
+          .stroke(
+            AppTheme.Colors.tint(for: colorScheme).opacity(0.15),
+            lineWidth: 2
+          )
+          .frame(width: 96, height: 96)
+          .scaleEffect(headerVisible ? 1.0 : 0.7)
+
+        // Inner glow circle
+        Circle()
+          .fill(
+            RadialGradient(
+              colors: [
+                AppTheme.Colors.tint(for: colorScheme).opacity(0.18),
+                AppTheme.Colors.tint(for: colorScheme).opacity(0.04),
+                .clear,
+              ],
+              center: .center,
+              startRadius: 5,
+              endRadius: 48
+            )
+          )
+          .frame(width: 96, height: 96)
+
+        // Icon background
+        Circle()
+          .fill(AppTheme.Colors.tintSoft(for: colorScheme))
+          .frame(width: 68, height: 68)
+          .modifier(
+            MatchedGeometryIfAvailable(
+              id: "onboarding.header.icon.bg", namespace: headerNamespace))
+
+        Image(systemName: "chart.line.uptrend.xyaxis")
+          .font(.system(size: 28, weight: .bold))
+          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+          .modifier(
+            MatchedGeometryIfAvailable(
+              id: "onboarding.header.icon", namespace: headerNamespace))
+      }
+      .scaleEffect(headerVisible ? 1.0 : 0.5)
+      .opacity(headerVisible ? 1 : 0)
+
+      VStack(spacing: 8) {
+        Text("Import Your Portfolio")
+          .typography(.heading, weight: .bold)
+          .multilineTextAlignment(.center)
+          .modifier(
+            MatchedGeometryIfAvailable(
+              id: "onboarding.header.title", namespace: headerNamespace))
+          .opacity(headerVisible ? 1 : 0)
+          .offset(y: headerVisible ? 0 : 12)
+
+        Text(
+          "Choose how you'd like to bring in your existing holdings. You can always add more later."
+        )
+        .typography(.small)
+        .foregroundStyle(.secondary)
+        .multilineTextAlignment(.center)
+        .lineSpacing(3)
+        .padding(.horizontal, 8)
+        .opacity(headerVisible ? 1 : 0)
+        .offset(y: headerVisible ? 0 : 12)
+      }
     }
-    return "Continue with \(selectedMethod.title)"
+    .onAppear {
+      withAnimation(.spring(response: 0.7, dampingFraction: 0.75).delay(0.1)) {
+        headerVisible = true
+      }
+    }
   }
+
+  // MARK: - Method Selection
 
   private var methodSelectionList: some View {
     VStack(spacing: 12) {
@@ -137,12 +201,12 @@ struct InitialStockImportScreen: View {
 
   private func methodSelectionButton(for method: StockImportMethod, index: Int) -> some View {
     Button {
-      selectedMethod = method
-      message = nil
-      withAnimation(.spring(response: 0.25, dampingFraction: 0.65)) {
+      withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+        selectedMethod = method
+        message = nil
         tappedMethod = method
       }
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
           tappedMethod = nil
         }
@@ -154,17 +218,53 @@ struct InitialStockImportScreen: View {
     .contentShape(Rectangle())
     .accessibilityIdentifier("stockImportMethod.\(method.rawValue)")
     .opacity(animatedIndices.contains(index) ? 1 : 0)
-    .offset(y: animatedIndices.contains(index) ? 0 : 20)
-    .scaleEffect(tappedMethod == method ? 1.03 : 1.0)
-    .opacity(tappedMethod == method ? 1.0 : 0.98)
-    .animation(.easeInOut(duration: 0.12), value: selectedMethod)
+    .offset(y: animatedIndices.contains(index) ? 0 : 24)
+    .scaleEffect(tappedMethod == method ? 1.02 : 1.0)
     .animation(.spring(response: 0.25, dampingFraction: 0.8), value: tappedMethod)
   }
 
+  // MARK: - Continue Button
+
+  private var continueButton: some View {
+    Button {
+      Task { await completeImport() }
+    } label: {
+      HStack(spacing: 8) {
+        if isSubmitting {
+          ProgressView()
+            .tint(.white)
+        }
+        Text(buttonTitle)
+          .font(.headline)
+          .fontWeight(.bold)
+
+        if selectedMethod != nil && !isSubmitting {
+          Image(systemName: "arrow.right")
+            .font(.subheadline.weight(.bold))
+            .transition(.scale.combined(with: .opacity))
+        }
+      }
+    }
+    .buttonStyle(GlowingButtonStyle())
+    .disabled(selectedMethod == nil || isSubmitting)
+    .accessibilityIdentifier("stockImportContinueButton")
+    .opacity(animatedIndices.count == StockImportMethod.allCases.count ? 1 : 0)
+    .animation(.easeIn(duration: 0.4), value: animatedIndices.count)
+  }
+
+  private var buttonTitle: String {
+    guard let selectedMethod else {
+      return "Select a Method"
+    }
+    return "Continue with \(selectedMethod.title)"
+  }
+
+  // MARK: - Helpers
+
   private func animateMethodOptions() {
     for (index, _) in StockImportMethod.allCases.enumerated() {
-      DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.15 + 0.2) {
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+      DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.12 + 0.35) {
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.75)) {
           _ = animatedIndices.insert(index)
         }
       }
@@ -180,12 +280,14 @@ struct InitialStockImportScreen: View {
     isSubmitting = true
     defer { isSubmitting = false }
 
-    // Placeholder completion. Replace with real import flows.
+    // to fill from endpoint later
     try? await Task.sleep(nanoseconds: 300_000_000)
     message = "\(selectedMethod.title) selected."
     onImportCompleted(selectedMethod)
   }
 }
+
+// MARK: - Import Method Card
 
 private struct ImportMethodCard: View {
   let method: StockImportMethod
@@ -193,12 +295,19 @@ private struct ImportMethodCard: View {
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
-    HStack(alignment: .top, spacing: 12) {
-      Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-        .foregroundStyle(
-          isSelected ? AppTheme.Colors.tint(for: colorScheme) : .secondary)
+    HStack(spacing: 14) {
+      // Icon
+      ZStack {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+          .fill(method.iconColor(colorScheme).opacity(isSelected ? 0.18 : 0.10))
+          .frame(width: 44, height: 44)
 
-      VStack(alignment: .leading, spacing: 4) {
+        Image(systemName: method.icon)
+          .font(.system(size: 18, weight: .semibold))
+          .foregroundStyle(method.iconColor(colorScheme))
+      }
+
+      VStack(alignment: .leading, spacing: 3) {
         Text(method.title)
           .typography(.label, weight: .semibold)
           .foregroundStyle(.primary)
@@ -206,27 +315,62 @@ private struct ImportMethodCard: View {
         Text(method.subtitle)
           .typography(.nano)
           .foregroundStyle(.secondary)
+          .lineLimit(2)
           .frame(maxWidth: .infinity, alignment: .leading)
       }
+
+      Spacer(minLength: 0)
+
+      // Selection indicator
+      ZStack {
+        Circle()
+          .stroke(
+            isSelected
+              ? AppTheme.Colors.tint(for: colorScheme)
+              : AppTheme.Colors.separator(for: colorScheme).opacity(0.5),
+            lineWidth: isSelected ? 0 : 1.5
+          )
+          .frame(width: 24, height: 24)
+
+        if isSelected {
+          Circle()
+            .fill(AppTheme.Colors.tint(for: colorScheme))
+            .frame(width: 24, height: 24)
+            .overlay(
+              Image(systemName: "checkmark")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white)
+            )
+            .transition(.scale.combined(with: .opacity))
+        }
+      }
+      .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
     }
-    .padding(16)
+    .padding(.horizontal, 16)
+    .padding(.vertical, 14)
     .background(
-      RoundedRectangle(cornerRadius: 16, style: .continuous)
-        .fill(.ultraThinMaterial)
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .fill(
+          isSelected
+            ? AppTheme.Colors.tintSoft(for: colorScheme).opacity(colorScheme == .dark ? 0.55 : 0.45)
+            : AppTheme.Colors.cardBackground(for: colorScheme)
+        )
     )
     .overlay(
-      RoundedRectangle(cornerRadius: 16, style: .continuous)
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
         .stroke(
           isSelected
-            ? AppTheme.Colors.tint(for: colorScheme)
-            : Color.white.opacity(colorScheme == .dark ? 0.1 : 0.3),
-          lineWidth: isSelected ? 2 : 1
+            ? AppTheme.Colors.tint(for: colorScheme).opacity(0.5)
+            : AppTheme.Colors.separator(for: colorScheme).opacity(colorScheme == .dark ? 0.28 : 0.14),
+          lineWidth: isSelected ? 1.5 : 0.8
         )
     )
     .shadow(
       color: isSelected
-        ? AppTheme.Colors.tint(for: colorScheme).opacity(0.3) : Color.clear,
-      radius: 10, x: 0, y: 5
+        ? AppTheme.Colors.tint(for: colorScheme).opacity(0.12)
+        : Color.black.opacity(colorScheme == .dark ? 0.10 : 0.03),
+      radius: isSelected ? 12 : 6, x: 0, y: isSelected ? 6 : 3
     )
+    .animation(.easeInOut(duration: 0.2), value: isSelected)
   }
 }

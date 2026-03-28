@@ -47,8 +47,14 @@ public struct UserProfileView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 }
             }
-            .background(AppTheme.Colors.pageBackground(for: scheme))
-            //.navigationTitle("Profile")
+            .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
+            .navigationTitle("Profile")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Edit") { isEditPresented = true }
+                }
+            }
             .task { await viewModel.load() }
             .sheet(isPresented: $isEditPresented) {
                 if let profile = viewModel.profile {
@@ -86,12 +92,6 @@ public struct UserProfileView: View {
             // Avatar
             avatarView(profile)
                 .offset(x: 16, y: avatarOverhang)
-
-            // Edit (pencil) button — top right
-            editButton
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .offset(y: avatarOverhang + avatarInfoGap - 4)
-                .padding(.trailing, 16)
         }
     }
 
@@ -145,6 +145,8 @@ public struct UserProfileView: View {
             Circle()
                 .stroke(AppTheme.Colors.pageBackground(for: scheme), lineWidth: 3)
         )
+        .accessibilityLabel("Profile picture")
+        .accessibilityHidden(profile.avatarURL == nil ? false : true)
     }
 
     private func avatarPlaceholder(_ profile: UserProfile) -> some View {
@@ -160,25 +162,6 @@ public struct UserProfileView: View {
         )
     }
 
-    private var editButton: some View {
-        Button {
-            isEditPresented = true
-        } label: {
-            Image(systemName: "pencil")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(AppTheme.Colors.tint(for: scheme))
-                .padding(8)
-                .background(
-                    Circle()
-                        .fill(AppTheme.Colors.cardBackground(for: scheme))
-                )
-                .overlay(
-                    Circle()
-                        .stroke(AppTheme.Colors.tertiaryFill(for: scheme), lineWidth: 1)
-                )
-        }
-    }
-
     // MARK: - Info Section
 
     private func infoSection(_ profile: UserProfile) -> some View {
@@ -190,6 +173,7 @@ public struct UserProfileView: View {
                 Text(displayTitle(fullName: fullName, username: username, email: profile.email))
                     .font(.title3.bold())
                     .foregroundStyle(.primary)
+                    .minimumScaleFactor(0.85)
 
 //                if let username {
 //                    Text(username)

@@ -42,6 +42,7 @@ struct ToastBanner: View {
 
   let message: String
   let style: Style
+  @AccessibilityFocusState private var isAccessibilityFocused: Bool
 
   var body: some View {
     HStack(alignment: .center, spacing: 10) {
@@ -65,5 +66,28 @@ struct ToastBanner: View {
         .stroke(style.foreground.opacity(0.35), lineWidth: 1)
     )
     .shadow(color: .black.opacity(0.10), radius: 10, y: 3)
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel(Text(accessibilityAnnouncement))
+    .accessibilityHint(Text("Temporary message."))
+    .accessibilityAddTraits(.isStaticText)
+    .accessibilityFocused($isAccessibilityFocused)
+    .accessibilitySortPriority(1)
+    .onAppear {
+      Task { @MainActor in
+        await Task.yield()
+        isAccessibilityFocused = true
+      }
+    }
+  }
+
+  private var accessibilityAnnouncement: String {
+    switch style {
+    case .success:
+      "Success. \(message)"
+    case .error:
+      "Error. \(message)"
+    case .info:
+      "Info. \(message)"
+    }
   }
 }

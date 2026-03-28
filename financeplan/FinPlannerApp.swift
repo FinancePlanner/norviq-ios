@@ -5,13 +5,10 @@ import SwiftUI
 
 @main
 struct FinPlannerApp: App {
-  @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-
   @InjectedObservable(\Container.appEnvironment) var environmentManager
   @StateObject private var sessionManager = SessionManager()
   @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system
     .rawValue
-  @Environment(\.colorScheme) private var colorScheme
 
   private var appAppearance: AppAppearance {
     AppAppearance.from(appAppearanceRawValue)
@@ -20,6 +17,7 @@ struct FinPlannerApp: App {
   var body: some Scene {
     WindowGroup {
       ContentView()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .id(environmentManager.current)
         .environmentObject(sessionManager)
         .preferredColorScheme(appAppearance.colorScheme)

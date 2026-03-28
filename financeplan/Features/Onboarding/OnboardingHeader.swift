@@ -15,68 +15,58 @@ struct OnboardingHeader: View {
   var namespace: Namespace.ID? = nil
 
   var body: some View {
-    HStack(alignment: .top, spacing: 12) {
-      // Gradient badge
+    VStack(spacing: 16) {
       ZStack {
+        // Outer glow
         Circle()
           .fill(
-            LinearGradient(
-              colors: AppTheme.avatarGradient(for: colorScheme),
-              startPoint: .topLeading,
-              endPoint: .bottomTrailing
+            RadialGradient(
+              colors: [
+                AppTheme.Colors.tint(for: colorScheme).opacity(0.15),
+                AppTheme.Colors.tint(for: colorScheme).opacity(0.03),
+                .clear,
+              ],
+              center: .center,
+              startRadius: 5,
+              endRadius: 48
             )
           )
-          .frame(width: 44, height: 44)
+          .frame(width: 88, height: 88)
+
+        Circle()
+          .fill(AppTheme.Colors.tintSoft(for: colorScheme))
+          .frame(width: 56, height: 56)
+
         Image(systemName: icon)
-          .font(.system(size: 18, weight: .bold))
-          .foregroundStyle(.white)
-          .modifier(MatchedGeometryIfAvailable(id: "onboarding.header.icon", namespace: namespace))
+          .font(.system(size: 22, weight: .bold))
+          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+          .modifier(
+            MatchedGeometryIfAvailableHeader(id: "onboarding.header.icon", namespace: namespace))
       }
 
-      VStack(alignment: .leading, spacing: 4) {
+      VStack(spacing: 8) {
         Text(title)
           .typography(.title, weight: .bold)
           .foregroundStyle(.primary)
-          .modifier(MatchedGeometryIfAvailable(id: "onboarding.header.title", namespace: namespace))
+          .multilineTextAlignment(.center)
+          .modifier(
+            MatchedGeometryIfAvailableHeader(id: "onboarding.header.title", namespace: namespace))
 
         if let subtitle, !subtitle.isEmpty {
           Text(subtitle)
-            .typography(.nano)
+            .typography(.small)
             .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .lineSpacing(3)
         }
       }
-
-      Spacer()
     }
-    .padding(16)
-    .background(
-      RoundedRectangle(cornerRadius: 20, style: .continuous)
-        .fill(.ultraThinMaterial)
-    )
-    .overlay {
-      ZStack {
-        ForEach(0..<4, id: \.self) { i in
-          RoundedRectangle(cornerRadius: 20, style: .continuous)
-            .inset(by: CGFloat(i) * 6)
-            .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 1)
-        }
-      }
-      .allowsHitTesting(false)
-    }
-    .overlay(
-      RoundedRectangle(cornerRadius: 20, style: .continuous)
-        .stroke(
-          Color.white.opacity(colorScheme == .dark ? 0.12 : 0.25),
-          lineWidth: 1
-        )
-    )
-    .shadow(
-      color: AppTheme.Colors.tint(for: colorScheme).opacity(0.15),
-      radius: 12, x: 0, y: 6
-    )
+    .padding(.horizontal, 16)
+    .padding(.vertical, 20)
   }
 }
-private struct MatchedGeometryIfAvailable: ViewModifier {
+
+private struct MatchedGeometryIfAvailableHeader: ViewModifier {
   let id: String
   let namespace: Namespace.ID?
   func body(content: Content) -> some View {
@@ -87,4 +77,3 @@ private struct MatchedGeometryIfAvailable: ViewModifier {
     }
   }
 }
-

@@ -53,132 +53,100 @@ enum AppTheme {
 
     static func tint(for scheme: ColorScheme) -> Color {
       scheme == .dark
-        ? Color(red: 0.44, green: 0.69, blue: 1.00)
-        : Color(red: 0.07, green: 0.34, blue: 0.79)
+        ? Color(red: 0.36, green: 0.67, blue: 0.98)
+        : Color(red: 0.00, green: 0.48, blue: 1.00)
     }
 
     static func tintSoft(for scheme: ColorScheme) -> Color {
       scheme == .dark
-        ? Color(red: 0.11, green: 0.16, blue: 0.24)
-        : Color(red: 0.91, green: 0.95, blue: 1.00)
+        ? Color(red: 0.15, green: 0.18, blue: 0.24)
+        : Color(red: 0.92, green: 0.95, blue: 1.00)
     }
 
     static func secondaryTint(for scheme: ColorScheme) -> Color {
       scheme == .dark
-        ? Color(red: 0.39, green: 0.79, blue: 0.76)
-        : Color(red: 0.07, green: 0.56, blue: 0.57)
+        ? Color(red: 0.35, green: 0.82, blue: 0.80)
+        : Color(red: 0.04, green: 0.63, blue: 0.67)
     }
 
     // MARK: - Surfaces
 
     static func pageBackground(for scheme: ColorScheme) -> Color {
       scheme == .dark
-        ? Color(red: 0.05, green: 0.07, blue: 0.11)
-        : Color(red: 0.96, green: 0.97, blue: 0.99)
+        ? Color(red: 0.06, green: 0.07, blue: 0.10)
+        : Color(red: 0.95, green: 0.96, blue: 0.98)
     }
 
     static func cardBackground(for scheme: ColorScheme) -> Color {
       scheme == .dark
-        ? Color(red: 0.09, green: 0.11, blue: 0.16)
+        ? Color(red: 0.10, green: 0.11, blue: 0.15)
         : Color.white
     }
 
     static func elevatedCardBackground(for scheme: ColorScheme) -> Color {
       scheme == .dark
-        ? Color(red: 0.12, green: 0.15, blue: 0.20)
-        : Color(red: 0.93, green: 0.95, blue: 0.98)
+        ? Color(red: 0.14, green: 0.16, blue: 0.20)
+        : Color(red: 0.93, green: 0.94, blue: 0.97)
     }
 
     static func topBarBackground(for scheme: ColorScheme) -> Color {
       scheme == .dark
-        ? pageBackground(for: scheme).opacity(0.92)
-        : Color.white.opacity(0.92)
+        ? Color(red: 0.08, green: 0.09, blue: 0.12)
+        : Color(red: 0.98, green: 0.99, blue: 1.00)
     }
 
     static func tertiaryFill(for scheme: ColorScheme) -> Color {
       scheme == .dark
         ? Color.white.opacity(0.08)
-        : Color.black.opacity(0.06)
+        : Color.black.opacity(0.05)
     }
 
     static func separator(for scheme: ColorScheme) -> Color {
       scheme == .dark
-        ? Color.white.opacity(0.08)
-        : Color.black.opacity(0.08)
+        ? Color.white.opacity(0.10)
+        : Color.black.opacity(0.10)
     }
 
     // MARK: - Nav bar
 
     static func navBarBackground(for scheme: ColorScheme) -> Color {
-      scheme == .dark
-        ? Color(red: 0.07, green: 0.09, blue: 0.14)
-        : Color(red: 0.98, green: 0.99, blue: 1.00)
+      topBarBackground(for: scheme)
     }
 
     static func navBarForeground(for scheme: ColorScheme) -> Color {
-      scheme == .dark
-        ? Color(red: 0.95, green: 0.96, blue: 0.98)
-        : Color(red: 0.12, green: 0.16, blue: 0.24)
+      .primary
     }
 
     static func tabBarBackground(for scheme: ColorScheme) -> Color {
-      scheme == .dark
-        ? Color(red: 0.07, green: 0.09, blue: 0.14)
-        : Color(red: 0.98, green: 0.99, blue: 1.00)
+      topBarBackground(for: scheme)
     }
 
     // MARK: - Status
 
-    static let success = Color(uiColor: .systemGreen)
-    static let danger = Color(uiColor: .systemRed)
-    static let warning = Color(uiColor: .systemOrange)
-    static let disabled = Color(uiColor: .systemGray3)
+    static let success = Color.green
+    static let danger = Color.red
+    static let warning = Color.orange
+    static let disabled = Color.gray.opacity(0.65)
 
     // MARK: - Overlays
 
     static let scrim = Color.black.opacity(0.5)
-    static let splashRing = Color(uiColor: .systemBlue).opacity(0.25)
-    static let splashCore = Color(uiColor: .systemTeal).opacity(0.8)
+    static let splashRing = Color.blue.opacity(0.25)
+    static let splashCore = Color.teal.opacity(0.8)
   }
 
   static func avatarGradient(for scheme: ColorScheme) -> [Color] {
-    switch scheme {
-    case .dark:
-      return [
-        Color(red: 0.22, green: 0.45, blue: 0.83),
-        Color(red: 0.10, green: 0.62, blue: 0.64),
-      ]
-    case .light:
-      return [
-        Color(red: 0.15, green: 0.38, blue: 0.77),
-        Color(red: 0.08, green: 0.57, blue: 0.58),
-      ]
-    @unknown default:
-      return [
-        Color(red: 0.15, green: 0.38, blue: 0.77),
-        Color(red: 0.08, green: 0.57, blue: 0.58),
-      ]
-    }
+    [
+      Colors.tint(for: scheme).opacity(scheme == .dark ? 0.9 : 0.8),
+      Colors.secondaryTint(for: scheme).opacity(scheme == .dark ? 0.85 : 0.75),
+    ]
   }
 
   static func heroGradient(for scheme: ColorScheme) -> [Color] {
-    switch scheme {
-    case .dark:
-      return [
-        Color(red: 0.10, green: 0.28, blue: 0.52),
-        Color(red: 0.05, green: 0.16, blue: 0.28),
-      ]
-    case .light:
-      return [
-        Color(red: 0.89, green: 0.94, blue: 1.00),
-        Color(red: 0.84, green: 0.92, blue: 0.98),
-      ]
-    @unknown default:
-      return [
-        Color(red: 0.89, green: 0.94, blue: 1.00),
-        Color(red: 0.84, green: 0.92, blue: 0.98),
-      ]
-    }
+    [
+      Colors.tintSoft(for: scheme),
+      Colors.pageBackground(for: scheme),
+    ]
   }
 
   static func splashGradient(for scheme: ColorScheme) -> [Color] {

@@ -10,18 +10,33 @@ struct ExpensesPlannerScreen: View {
   @State private var isActivitySheetPresented = false
   @State private var itemDraft: BudgetPlanItemDraft?
   @State private var itemToDelete: BudgetPlanItem?
+  @State private var destructiveFeedbackTrigger = 0
 
   var body: some View {
     NavigationStack {
       ScrollView {
         VStack(spacing: 20) {
-          PlannerMonthCard(
+          ExpensesYearOverviewCard(
+            selectedYear: selectedYearBinding,
+            availableYears: viewModel.availableYears,
+            totalSpent: viewModel.selectedYearActualTotal,
+            averageSpent: viewModel.selectedYearAverageActual,
+            lastMonthLabel: viewModel.selectedYearLastMonthLabel,
+            chartPoints: viewModel.selectedYearChartPoints
+          )
+
+          ExpensesMonthDetailListCard(
             selectedMonthStart: selectedMonthBinding,
-            availableMonths: viewModel.availableMonths,
+            summaries: viewModel.selectedYearSummaries
+          )
+
+          SelectedMonthPlannerCard(
+            monthTitle: viewModel.selectedMonthDisplayTitle,
             onPlanNextMonth: viewModel.createNextMonthPlan
           )
 
           PlannerSalaryCard(
+            monthTitle: viewModel.selectedMonthDisplayTitle,
             netSalary: viewModel.selectedMonthSnapshot.netSalary,
             allocated: viewModel.selectedMonthPlannedTotal,
             spent: viewModel.selectedMonthActualTotal,
@@ -33,37 +48,6 @@ struct ExpensesPlannerScreen: View {
             monthTitle: viewModel.selectedMonthDisplayTitle,
             summaries: viewModel.selectedMonthSummaries
           )
-
-          GlassCard {
-            VStack(alignment: .leading, spacing: 16) {
-              Text("Six-month spending trend")
-                .typography(.small, weight: .semibold)
-
-              Chart(viewModel.monthlySummaries.suffix(6)) { summary in
-                LineMark(
-                  x: .value("Month", summary.shortLabel),
-                  y: .value("Actual", summary.actual)
-                )
-                .interpolationMethod(.catmullRom)
-                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-                .lineStyle(.init(lineWidth: 3))
-
-                PointMark(
-                  x: .value("Month", summary.shortLabel),
-                  y: .value("Actual", summary.actual)
-                )
-                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-              }
-              .frame(height: 180)
-              .chartYAxis {
-                AxisMarks(position: .leading)
-              }
-
-              Text("This line tracks how much of your salary is actually leaving each month after your three-pillar plan is set.")
-                .typography(.nano)
-                .foregroundStyle(.secondary)
-            }
-          }
 
           ForEach(BudgetPillar.allCases) { pillar in
             PillarPlannerCard(
@@ -107,42 +91,58 @@ struct ExpensesPlannerScreen: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 20)
       }
-      .background(MeshGradientBackground())
+      .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
       .navigationTitle("Expenses")
       .navigationBarTitleDisplayMode(.large)
+      .toolbarTitleMenu {
+        Picker("Month", selection: selectedMonthBinding) {
+          ForEach(viewModel.availableMonths, id: \.self) { date in
+            Text(date.formatted(.dateTime.month(.wide).year())).tag(date)
+          }
+        }
+      }
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
-          Menu {
-            Button("Plan next month", systemImage: "calendar.badge.plus") {
-              viewModel.createNextMonthPlan()
-            }
-
-            Button("Adjust net salary", systemImage: "eurosign.circle") {
-              isSalaryEditorPresented = true
-            }
-
-            Button("Adjust pillar targets", systemImage: "slider.horizontal.3") {
-              isTargetEditorPresented = true
-            }
-
-            Button("Add planned item", systemImage: "plus.rectangle.on.folder") {
-              itemDraft = BudgetPlanItemDraft(
-                itemID: nil,
-                title: "",
-                plannedAmount: 0,
-                pillar: .fundamentals
-              )
-            }
-
-            Button("Record spend", systemImage: "plus.circle") {
+          HStack(spacing: 12) {
+            Button {
               isActivitySheetPresented = true
+            } label: {
+              Image(systemName: "plus.circle.fill")
+                .font(.title3)
+                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
             }
-          } label: {
-            Image(systemName: "plus.circle.fill")
-              .font(.title3.weight(.semibold))
-              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+            .accessibilityLabel("Record spend")
+
+            Menu {
+              Button("Plan next month", systemImage: "calendar.badge.plus") {
+                viewModel.createNextMonthPlan()
+              }
+
+              Button("Adjust net salary", systemImage: "eurosign.circle") {
+                isSalaryEditorPresented = true
+              }
+
+              Button("Adjust pillar targets", systemImage: "slider.horizontal.3") {
+                isTargetEditorPresented = true
+              }
+
+              Button("Add planned item", systemImage: "plus.rectangle.on.folder") {
+                itemDraft = BudgetPlanItemDraft(
+                  itemID: nil,
+                  title: "",
+                  plannedAmount: 0,
+                  pillar: .fundamentals
+                )
+              }
+
+              Button("Record spend", systemImage: "plus.circle") {
+                isActivitySheetPresented = true
+              }
+            } label: {
+              Image(systemName: "ellipsis.circle")
+            }
+            .accessibilityLabel("Expense actions")
           }
-          .accessibilityLabel("Expense actions")
         }
       }
       .sheet(isPresented: $isSalaryEditorPresented) {
@@ -181,12 +181,14 @@ struct ExpensesPlannerScreen: View {
         presenting: itemToDelete
       ) { item in
         Button("Delete", role: .destructive) {
+          destructiveFeedbackTrigger += 1
           viewModel.removePlanItem(item.id)
         }
       } message: { item in
         Text("Remove \(item.title) from the \(item.pillar.title) plan for \(viewModel.selectedMonthDisplayTitle).")
       }
     }
+    .appSensoryFeedback(destructive: destructiveFeedbackTrigger)
   }
 
   private var selectedMonthBinding: Binding<Date> {
@@ -195,49 +197,182 @@ struct ExpensesPlannerScreen: View {
       set: { viewModel.selectMonth($0) }
     )
   }
+
+  private var selectedYearBinding: Binding<Int> {
+    Binding(
+      get: { viewModel.selectedYear },
+      set: { viewModel.selectYear($0) }
+    )
+  }
 }
 
-private struct PlannerMonthCard: View {
+private struct ExpensesYearOverviewCard: View {
+  @Binding var selectedYear: Int
+  let availableYears: [Int]
+  let totalSpent: Double
+  let averageSpent: Double
+  let lastMonthLabel: String
+  let chartPoints: [BudgetMonthChartPoint]
+
+  @Environment(\.colorScheme) private var colorScheme
+
+  var body: some View {
+    GlassCard(cornerRadius: 28) {
+      VStack(alignment: .leading, spacing: 18) {
+        Picker("Year", selection: $selectedYear) {
+          ForEach(availableYears, id: \.self) { year in
+            Text(String(year)).tag(year)
+          }
+        }
+        .pickerStyle(.menu)
+
+        VStack(alignment: .leading, spacing: 6) {
+          Text("Total")
+            .typography(.caption, weight: .semibold)
+            .foregroundStyle(.secondary)
+
+          Text(totalSpent.currency)
+            .typography(.hero, weight: .bold)
+
+          Text("Avg \(averageSpent.currency) through \(lastMonthLabel)")
+            .typography(.nano)
+            .foregroundStyle(.secondary)
+        }
+
+        VStack(alignment: .leading, spacing: 12) {
+          Text("Overview")
+            .typography(.caption, weight: .semibold)
+            .foregroundStyle(.secondary)
+
+          VStack(alignment: .leading, spacing: 12) {
+            Text("Expenses")
+              .typography(.small, weight: .semibold)
+            Text("Yearly actual spending")
+              .typography(.nano)
+              .foregroundStyle(.secondary)
+
+            Chart(chartPoints) { point in
+              BarMark(
+                x: .value("Month", point.label),
+                y: .value("Spent", point.actual)
+              )
+              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme).gradient)
+              .cornerRadius(6)
+            }
+            .frame(height: 180)
+            .chartYAxis {
+              AxisMarks(position: .trailing)
+            }
+          }
+          .padding(14)
+          .background(
+            AppTheme.Colors.elevatedCardBackground(for: colorScheme),
+            in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+          )
+        }
+      }
+    }
+  }
+}
+
+private struct ExpensesMonthDetailListCard: View {
   @Binding var selectedMonthStart: Date
-  let availableMonths: [Date]
+  let summaries: [BudgetMonthSummary]
+
+  @Environment(\.colorScheme) private var colorScheme
+
+  var body: some View {
+    GlassCard {
+      VStack(alignment: .leading, spacing: 16) {
+        Text("Monthly detail")
+          .typography(.caption, weight: .semibold)
+          .foregroundStyle(.secondary)
+
+        if summaries.isEmpty {
+          Text("No months available for this year yet.")
+            .typography(.small)
+            .foregroundStyle(.secondary)
+        } else {
+          ForEach(summaries) { summary in
+            Button {
+              selectedMonthStart = summary.monthStart
+            } label: {
+              HStack(spacing: 12) {
+                Text(summary.monthStart.formatted(.dateTime.month(.wide)))
+                  .typography(.small, weight: .semibold)
+                  .foregroundStyle(.primary)
+
+                Spacer()
+
+                Text(summary.actual.currency)
+                  .typography(.small, weight: .semibold)
+                  .foregroundStyle(.primary)
+
+                Image(systemName: "chevron.right")
+                  .font(.caption.weight(.semibold))
+                  .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+              }
+              .padding(.horizontal, 12)
+              .padding(.vertical, 12)
+              .background(
+                calendarHighlight(for: summary),
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+              )
+            }
+            .buttonStyle(.plain)
+
+            if summary.id != summaries.last?.id {
+              Divider()
+                .padding(.leading, 12)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private func calendarHighlight(for summary: BudgetMonthSummary) -> Color {
+    Calendar.current.isDate(summary.monthStart, equalTo: selectedMonthStart, toGranularity: .month)
+      ? AppTheme.Colors.tintSoft(for: colorScheme)
+      : .clear
+  }
+}
+
+private struct SelectedMonthPlannerCard: View {
+  let monthTitle: String
   let onPlanNextMonth: () -> Void
 
   var body: some View {
     GlassCard {
       VStack(alignment: .leading, spacing: 16) {
-        HStack {
+        HStack(alignment: .top) {
           VStack(alignment: .leading, spacing: 4) {
-            Text("Monthly planner")
+            Text("Selected month")
               .typography(.small, weight: .semibold)
-            Text("Duplicate a month, then adjust the pillars as life changes.")
+            Text(monthTitle)
+              .typography(.headline, weight: .bold)
+            Text("Tap a month above to switch context, then adjust salary, pillars, and planned items.")
               .typography(.nano)
               .foregroundStyle(.secondary)
           }
 
           Spacer()
-        }
 
-        Picker("Month", selection: $selectedMonthStart) {
-          ForEach(availableMonths, id: \.self) { month in
-            Text(month.formatted(.dateTime.month(.wide).year()))
-              .tag(month)
+          Button {
+            onPlanNextMonth()
+          } label: {
+            Label("Plan next", systemImage: "calendar.badge.plus")
           }
+          .buttonStyle(.bordered)
+          .controlSize(.small)
         }
-        .pickerStyle(.menu)
-
-        Button {
-          onPlanNextMonth()
-        } label: {
-          Label("Plan next month", systemImage: "calendar.badge.plus")
-            .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.borderedProminent)
       }
     }
   }
 }
 
 private struct PlannerSalaryCard: View {
+  let monthTitle: String
   let netSalary: Double
   let allocated: Double
   let spent: Double
@@ -249,6 +384,10 @@ private struct PlannerSalaryCard: View {
       VStack(alignment: .leading, spacing: 16) {
         Text("Net salary plan")
           .typography(.small, weight: .semibold)
+
+        Text(monthTitle)
+          .typography(.nano)
+          .foregroundStyle(.secondary)
 
         HStack(alignment: .lastTextBaseline, spacing: 8) {
           Text(netSalary.currency)
@@ -435,6 +574,13 @@ private struct PlannerItemRow: View {
           .foregroundStyle(.secondary)
       }
     }
+    .contextMenu {
+      Button("Edit", systemImage: "pencil", action: onEdit)
+      Button("Delete", systemImage: "trash", role: .destructive, action: onDelete)
+    }
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel(Text(item.title))
+    .accessibilityValue(Text("Planned \(item.plannedAmount.currency), Spent \(actualAmount.currency)"))
   }
 }
 
@@ -492,6 +638,9 @@ private struct SummaryMetric: View {
         .typography(.small, weight: .semibold)
         .foregroundStyle(accent)
     }
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel(Text(title))
+    .accessibilityValue(Text(value))
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
@@ -513,6 +662,8 @@ private struct PlannerTableHeader: View {
 private struct NetSalaryEditorSheet: View {
   @Environment(\.dismiss) private var dismiss
   @State private var value: String
+  @FocusState private var isValueFocused: Bool
+  @State private var successFeedbackTrigger = 0
 
   let monthTitle: String
   let onSave: (Double) -> Void
@@ -532,8 +683,10 @@ private struct NetSalaryEditorSheet: View {
 
           TextField("Net salary", text: $value)
             .keyboardType(.decimalPad)
+            .focused($isValueFocused)
         }
       }
+      .listStyle(.insetGrouped)
       .navigationTitle("Adjust Salary")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -545,11 +698,17 @@ private struct NetSalaryEditorSheet: View {
           Button("Save") {
             guard let parsed = Double(value.replacingOccurrences(of: ",", with: ".")) else { return }
             onSave(parsed)
+            successFeedbackTrigger += 1
             dismiss()
           }
         }
+        ToolbarItemGroup(placement: .keyboard) {
+          Spacer()
+          Button("Done") { isValueFocused = false }
+        }
       }
     }
+    .appSensoryFeedback(success: successFeedbackTrigger)
   }
 }
 
@@ -562,6 +721,7 @@ private struct PillarTargetsEditorSheet: View {
   @State private var fundamentals: Double
   @State private var futureYou: Double
   @State private var fun: Double
+  @State private var successFeedbackTrigger = 0
 
   init(
     monthTitle: String,
@@ -585,8 +745,15 @@ private struct PillarTargetsEditorSheet: View {
           TargetSlider(title: BudgetPillar.fundamentals.title, value: $fundamentals)
           TargetSlider(title: BudgetPillar.futureYou.title, value: $futureYou)
           TargetSlider(title: BudgetPillar.fun.title, value: $fun)
+          HStack {
+            Text("Total")
+            Spacer()
+            Text("\(Int((fundamentals + futureYou + fun).rounded()))%")
+              .foregroundStyle((Int((fundamentals + futureYou + fun).rounded()) == 100) ? .secondary : AppTheme.Colors.warning)
+          }
         }
       }
+      .listStyle(.insetGrouped)
       .navigationTitle("Pillar Targets")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -603,11 +770,14 @@ private struct PillarTargetsEditorSheet: View {
                 .fun: fun / 100,
               ]
             )
+            successFeedbackTrigger += 1
             dismiss()
           }
+          .disabled(Int((fundamentals + futureYou + fun).rounded()) != 100)
         }
       }
     }
+    .appSensoryFeedback(success: successFeedbackTrigger)
   }
 }
 
@@ -631,10 +801,13 @@ private struct TargetSlider: View {
 
 private struct PlanItemEditorSheet: View {
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.colorScheme) private var colorScheme
 
   @State private var title: String
   @State private var plannedAmount: String
   @State private var pillar: BudgetPillar
+  @FocusState private var isAmountFocused: Bool
+  @State private var successFeedbackTrigger = 0
 
   let itemID: UUID?
   let onSave: (BudgetPlanItemDraft) -> Void
@@ -652,49 +825,81 @@ private struct PlanItemEditorSheet: View {
   }
 
   var body: some View {
-    NavigationStack {
-      Form {
-        TextField("Name", text: $title)
-        TextField("Planned amount", text: $plannedAmount)
-          .keyboardType(.decimalPad)
+    VStack(spacing: 0) {
+      FormSheetHeader(
+        title: itemID == nil ? "Add Planned Item" : "Edit Planned Item",
+        onDismiss: { dismiss() }
+      )
 
-        Picker("Pillar", selection: $pillar) {
-          ForEach(BudgetPillar.allCases) { pillar in
-            Text(pillar.title).tag(pillar)
-          }
-        }
-      }
-      .navigationTitle(itemID == nil ? "Add Planned Item" : "Edit Planned Item")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel") { dismiss() }
-        }
-
-        ToolbarItem(placement: .confirmationAction) {
-          Button("Save") {
-            guard let amount = Double(plannedAmount.replacingOccurrences(of: ",", with: ".")) else {
-              return
-            }
-            onSave(
-              BudgetPlanItemDraft(
-                itemID: itemID,
-                title: title,
-                plannedAmount: amount,
-                pillar: pillar
-              )
+      ScrollView {
+        VStack(spacing: 16) {
+          FormCard(title: "Details") {
+            FormTextField(
+              icon: "text.cursor",
+              iconColor: AppTheme.Colors.tint(for: colorScheme),
+              placeholder: "Name",
+              text: $title,
+              autocapitalization: .words
             )
-            dismiss()
+
+            FormDivider()
+
+            FormTextField(
+              icon: "dollarsign.circle",
+              iconColor: AppTheme.Colors.secondaryTint(for: colorScheme),
+              placeholder: "Planned amount",
+              text: $plannedAmount,
+              keyboardType: .decimalPad
+            )
+            .focused($isAmountFocused)
           }
-          .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+          FormCard(title: "Category") {
+            FormRow(icon: "square.stack.3d.up", iconColor: .orange, label: "Pillar") {
+              Picker("Pillar", selection: $pillar) {
+                ForEach(BudgetPillar.allCases) { pillar in
+                  Text(pillar.title).tag(pillar)
+                }
+              }
+              .labelsHidden()
+            }
+          }
+
+          Spacer(minLength: 80)
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+      }
+      .scrollDismissesKeyboard(.interactively)
+
+      FormActionBar(
+        primaryLabel: "Save",
+        isDisabled: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      ) {
+        guard let amount = Double(plannedAmount.replacingOccurrences(of: ",", with: ".")) else {
+          return
+        }
+        onSave(
+          BudgetPlanItemDraft(
+            itemID: itemID,
+            title: title,
+            plannedAmount: amount,
+            pillar: pillar
+          )
+        )
+        successFeedbackTrigger += 1
+        dismiss()
       }
     }
+    .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
+    .presentationDragIndicator(.visible)
+    .appSensoryFeedback(success: successFeedbackTrigger)
   }
 }
 
 private struct RecordSpendSheet: View {
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.colorScheme) private var colorScheme
 
   let monthTitle: String
   let availableItems: [BudgetPlanItem]
@@ -705,76 +910,121 @@ private struct RecordSpendSheet: View {
   @State private var pillar: BudgetPillar = .fundamentals
   @State private var occurredOn = Date()
   @State private var linkedPlanItemID: UUID?
+  @FocusState private var isAmountFocused: Bool
+  @State private var successFeedbackTrigger = 0
 
   var body: some View {
-    NavigationStack {
-      Form {
-        Section("Spend") {
-          Text(monthTitle)
-            .foregroundStyle(.secondary)
+    VStack(spacing: 0) {
+      FormSheetHeader(
+        title: "Record Spend",
+        subtitle: monthTitle,
+        onDismiss: { dismiss() }
+      )
 
-          TextField("Title", text: $title)
-          TextField("Amount", text: $amount)
-            .keyboardType(.decimalPad)
-
-          Picker("Pillar", selection: $pillar) {
-            ForEach(BudgetPillar.allCases) { pillar in
-              Text(pillar.title).tag(pillar)
-            }
+      ScrollView {
+        VStack(spacing: 16) {
+          // Month tag
+          HStack {
+            FormInfoTag(text: monthTitle, icon: "calendar")
+            Spacer()
           }
 
-          Picker("Link to plan", selection: $linkedPlanItemID) {
-            Text("None").tag(UUID?.none)
-            ForEach(filteredItems) { item in
-              Text(item.title).tag(Optional(item.id))
-            }
-          }
-
-          DatePicker("Date", selection: $occurredOn, displayedComponents: .date)
-        }
-      }
-      .navigationTitle("Record Spend")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel") { dismiss() }
-        }
-
-        ToolbarItem(placement: .confirmationAction) {
-          Button("Save") {
-            guard let parsedAmount = Double(amount.replacingOccurrences(of: ",", with: ".")) else {
-              return
-            }
-
-            let resolvedTitle =
-              title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-              ? filteredItems.first(where: { $0.id == linkedPlanItemID })?.title ?? ""
-              : title
-
-            onSave(
-              BudgetActivityDraft(
-                title: resolvedTitle,
-                amount: parsedAmount,
-                pillar: pillar,
-                occurredOn: occurredOn,
-                linkedPlanItemID: linkedPlanItemID
-              )
+          FormCard(title: "Spend") {
+            FormTextField(
+              icon: "text.cursor",
+              iconColor: AppTheme.Colors.tint(for: colorScheme),
+              placeholder: "Title",
+              text: $title,
+              autocapitalization: .words,
+              disableAutocorrection: true
             )
-            dismiss()
+
+            FormDivider()
+
+            FormTextField(
+              icon: "dollarsign.circle",
+              iconColor: AppTheme.Colors.secondaryTint(for: colorScheme),
+              placeholder: "Amount",
+              text: $amount,
+              keyboardType: .decimalPad
+            )
+            .focused($isAmountFocused)
+
+            FormDivider()
+
+            FormRow(icon: "calendar", iconColor: .orange, label: "Date") {
+              DatePicker("", selection: $occurredOn, displayedComponents: .date)
+                .labelsHidden()
+            }
           }
-          .disabled(
-            Double(amount.replacingOccurrences(of: ",", with: ".")) == nil
-              || (
-                title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                  && linkedPlanItemID == nil
-              )
-          )
+
+          FormCard(title: "Category") {
+            FormRow(icon: "square.stack.3d.up", iconColor: .purple, label: "Pillar") {
+              Picker("Pillar", selection: $pillar) {
+                ForEach(BudgetPillar.allCases) { pillar in
+                  Text(pillar.title).tag(pillar)
+                }
+              }
+              .labelsHidden()
+            }
+
+            FormDivider()
+
+            FormRow(icon: "link", iconColor: AppTheme.Colors.tint(for: colorScheme), label: "Link to plan") {
+              Picker("Link", selection: $linkedPlanItemID) {
+                Text("None").tag(UUID?.none)
+                ForEach(filteredItems) { item in
+                  Text(item.title).tag(Optional(item.id))
+                }
+              }
+              .labelsHidden()
+            }
+          }
+
+          Spacer(minLength: 80)
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+      }
+      .scrollDismissesKeyboard(.interactively)
+
+      FormActionBar(
+        primaryLabel: "Save",
+        isDisabled: Double(amount.replacingOccurrences(of: ",", with: ".")) == nil
+          || (
+            title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+              && linkedPlanItemID == nil
+          )
+      ) {
+        guard let parsedAmount = Double(amount.replacingOccurrences(of: ",", with: ".")) else {
+          return
+        }
+
+        let resolvedTitle =
+          title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+          ? filteredItems.first(where: { $0.id == linkedPlanItemID })?.title ?? ""
+          : title
+
+        onSave(
+          BudgetActivityDraft(
+            title: resolvedTitle,
+            amount: parsedAmount,
+            pillar: pillar,
+            occurredOn: occurredOn,
+            linkedPlanItemID: linkedPlanItemID
+          )
+        )
+        successFeedbackTrigger += 1
+        dismiss()
       }
     }
+    .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
+    .presentationDragIndicator(.visible)
+    .appSensoryFeedback(success: successFeedbackTrigger)
   }
 
   private var filteredItems: [BudgetPlanItem] {
     availableItems.filter { $0.pillar == pillar }
   }
 }
+

@@ -25,8 +25,13 @@ struct EditProfileView: View {
     @State private var firstName: String
     @State private var lastName: String
     @State private var bio: String
+    @State private var successFeedbackTrigger = 0
+
+    @FocusState private var focusedField: Field?
 
     private let originalProfile: UserProfile
+
+    private enum Field { case username, firstName, lastName, bio }
 
     init(viewModel: UserProfileViewModel, profile: UserProfile) {
         self.viewModel = viewModel
@@ -49,9 +54,9 @@ struct EditProfileView: View {
                         .padding(.top, fieldsTopPadding)
                 }
             }
-            .background(AppTheme.Colors.pageBackground(for: scheme))
+            .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
             .navigationTitle("Edit profile")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -65,8 +70,13 @@ struct EditProfileView: View {
                     .foregroundStyle(AppTheme.Colors.tint(for: scheme))
                     .disabled(viewModel.isLoading)
                 }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { focusedField = nil }
+                }
             }
         }
+        .appSensoryFeedback(success: successFeedbackTrigger)
     }
 
     // MARK: - Header (Banner + Avatar)
@@ -146,6 +156,7 @@ struct EditProfileView: View {
                 .padding(6)
                 .background(Color.black.opacity(0.5))
                 .clipShape(Circle())
+                .accessibilityLabel("Change profile photo")
         )
     }
 
@@ -187,6 +198,7 @@ struct EditProfileView: View {
             .padding(10)
             .background(Color.black.opacity(0.5))
             .clipShape(Circle())
+            .accessibilityLabel("Change banner photo")
     }
 
     // MARK: - Fields
@@ -214,6 +226,9 @@ struct EditProfileView: View {
             TextField(label, text: text)
                 .font(.body)
                 .foregroundStyle(.primary)
+                .focused($focusedField, equals: label == "Username" ? .username : label == "First name" ? .firstName : label == "Last name" ? .lastName : nil)
+                .textInputAutocapitalization(label == "First name" || label == "Last name" ? .words : .never)
+                .autocorrectionDisabled(label == "Username")
         }
         .padding(.vertical, 14)
     }
@@ -232,6 +247,8 @@ struct EditProfileView: View {
                 .frame(minHeight: 80)
                 .scrollContentBackground(.hidden)
                 .background(Color.clear)
+                .focused($focusedField, equals: .bio)
+                .textInputAutocapitalization(.sentences)
         }
         .padding(.vertical, 14)
     }
@@ -253,6 +270,7 @@ struct EditProfileView: View {
 
         Task {
             if await viewModel.save(profile: updated) {
+                successFeedbackTrigger += 1
                 dismiss()
             }
         }

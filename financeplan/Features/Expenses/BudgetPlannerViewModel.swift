@@ -10,7 +10,9 @@ final class BudgetPlannerViewModel: ObservableObject {
   private let calendar: Calendar
 
   init(
+    // to fill from endpoint later
     monthlySnapshots: [MonthlyBudgetSnapshot] = BudgetPlannerViewModel.sampleSnapshots(),
+    // to fill from endpoint later
     activities: [BudgetActivity] = BudgetPlannerViewModel.sampleActivities()
   ) {
     let calendar = Calendar(identifier: .gregorian)
@@ -28,8 +30,61 @@ final class BudgetPlannerViewModel: ObservableObject {
     monthlySnapshots.map(\.monthStart).sorted(by: >)
   }
 
+  var availableYears: [Int] {
+    Array(
+      Set(
+        monthlySnapshots.map { snapshot in
+          calendar.component(.year, from: snapshot.monthStart)
+        }
+      )
+    )
+    .sorted(by: >)
+  }
+
+  var selectedYear: Int {
+    calendar.component(.year, from: selectedMonthStart)
+  }
+
   var selectedMonthSnapshot: MonthlyBudgetSnapshot {
     monthlySnapshots[selectedMonthIndex]
+  }
+
+  var selectedYearSummaries: [BudgetMonthSummary] {
+    summaries(forYear: selectedYear)
+  }
+
+  var selectedYearActualTotal: Double {
+    selectedYearSummaries.reduce(0) { $0 + $1.actual }
+  }
+
+  var selectedYearAverageActual: Double {
+    guard !selectedYearSummaries.isEmpty else { return 0 }
+    return selectedYearActualTotal / Double(selectedYearSummaries.count)
+  }
+
+  var selectedYearLastMonthLabel: String {
+    selectedYearSummaries.last?.monthStart.formatted(.dateTime.month(.abbreviated)) ?? "No data"
+  }
+
+  var selectedYearChartPoints: [BudgetMonthChartPoint] {
+    let year = selectedYear
+    let summariesByMonth = Dictionary(
+      uniqueKeysWithValues: selectedYearSummaries.map {
+        (calendar.component(.month, from: $0.monthStart), $0)
+      }
+    )
+
+    return (1...12).compactMap { month in
+      guard let monthStart = calendar.date(from: DateComponents(year: year, month: month, day: 1)) else {
+        return nil
+      }
+
+      return BudgetMonthChartPoint(
+        monthStart: monthStart,
+        label: monthStart.formatted(.dateTime.month(.narrow)),
+        actual: summariesByMonth[month]?.actual ?? 0
+      )
+    }
   }
 
   var selectedMonthActivities: [BudgetActivity] {
@@ -112,6 +167,11 @@ final class BudgetPlannerViewModel: ObservableObject {
 
   func selectMonth(_ monthStart: Date) {
     selectedMonthStart = calendar.startOfMonth(for: monthStart)
+  }
+
+  func selectYear(_ year: Int) {
+    guard let latestMonthInYear = summaries(forYear: year).last?.monthStart else { return }
+    selectedMonthStart = latestMonthInYear
   }
 
   func createNextMonthPlan() {
@@ -320,6 +380,15 @@ final class BudgetPlannerViewModel: ObservableObject {
     })
   }
 
+  private func summaries(forYear year: Int) -> [BudgetMonthSummary] {
+    monthlySummaries
+      .filter { summary in
+        calendar.component(.year, from: summary.monthStart) == year
+      }
+      .sorted { $0.monthStart < $1.monthStart }
+  }
+
+  // to fill from endpoint later
   nonisolated private static func sampleSnapshots() -> [MonthlyBudgetSnapshot] {
     let calendar = Calendar(identifier: .gregorian)
     let months = [
@@ -359,6 +428,7 @@ final class BudgetPlannerViewModel: ObservableObject {
     }
   }
 
+  // to fill from endpoint later
   nonisolated private static func sampleActivities() -> [BudgetActivity] {
     let calendar = Calendar(identifier: .gregorian)
 

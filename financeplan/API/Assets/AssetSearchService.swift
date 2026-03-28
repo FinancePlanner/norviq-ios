@@ -14,6 +14,7 @@ protocol AssetSearchServicing {
 
 final class AssetSearchService: AssetSearchServicing {
   func searchAssets(query _: String) async throws -> [AssetSearchResult] {
+    // to fill from endpoint later
     []
   }
 }

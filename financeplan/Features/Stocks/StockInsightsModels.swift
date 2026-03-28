@@ -257,6 +257,7 @@ struct StockComparisonProfile: Identifiable, Equatable {
     let projectionScenarios: [StockProjectionScenarioKind: StockProjectionScenario]
 }
 
+// to fill from endpoint later
 enum StockInsightsMockStore {
     private static let actualYear = 2024
     private static let projectionYears = [2025, 2026, 2027, 2028]

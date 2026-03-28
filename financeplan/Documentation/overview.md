@@ -32,8 +32,8 @@ Notes:
 
 ### 1) App entry and lifecycle
 - Entry point is `financeplan/FinPlannerApp.swift` (`@main`).
-- `FinPlannerApp` bootstraps `ContentView` and injects `AppDelegate`.
-- `AppDelegate` currently configures push notification delegation and logs APNs events.
+- `FinPlannerApp` bootstraps `ContentView` and injects the shared session state.
+- App lifecycle is currently managed through the SwiftUI `App` entry point only.
 
 ### 2) Dependency injection
 - DI is handled via Factory (`Container.shared`).

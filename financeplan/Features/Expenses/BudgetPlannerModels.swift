@@ -150,6 +150,14 @@ struct BudgetMonthSummary: Identifiable {
   }
 }
 
+struct BudgetMonthChartPoint: Identifiable {
+  let monthStart: Date
+  let label: String
+  let actual: Double
+
+  var id: Date { monthStart }
+}
+
 struct BudgetYearSummary: Identifiable {
   let year: Int
   let planned: Double

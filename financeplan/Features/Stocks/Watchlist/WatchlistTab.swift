@@ -8,6 +8,7 @@ struct WatchlistTab: View {
   @StateObject private var viewModel = WatchlistViewModel()
   @State private var convertingItem: WatchlistItemResponse?
   @State private var removePromptItem: WatchlistItemResponse?
+  @State private var destructiveFeedbackTrigger = 0
 
   var body: some View {
     List {
@@ -18,6 +19,23 @@ struct WatchlistTab: View {
         }
       }
 
+      if viewModel.items.isEmpty {
+        Section {
+          ContentUnavailableView {
+            Label("No Watchlist Items", systemImage: "star")
+          } description: {
+            Text("Save names you want to revisit so research and entry timing stay organized.")
+          } actions: {
+            Button("Add Watchlist Item") {
+              viewModel.isAddWatchlistPresented = true
+            }
+            .buttonStyle(.borderedProminent)
+          }
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, 16)
+        }
+      }
+
       ForEach(viewModel.items, id: \.id) { item in
         WatchlistRow(
           item: item,
@@ -25,6 +43,7 @@ struct WatchlistTab: View {
         )
         .swipeActions {
           Button(role: .destructive) {
+            destructiveFeedbackTrigger += 1
             Task { await viewModel.removeFromWatchlist(item) }
           } label: {
             Label("Delete", systemImage: "trash")
@@ -32,23 +51,17 @@ struct WatchlistTab: View {
         }
       }
     }
-    .listStyle(.plain)
+    .listStyle(.insetGrouped)
     .scrollContentBackground(.hidden)
-    .background(AppTheme.Colors.pageBackground(for: colorScheme))
-    .overlay(alignment: .bottomTrailing) {
-      Button {
-        viewModel.isAddWatchlistPresented = true
-      } label: {
-        Image(systemName: "plus")
-          .font(.system(size: 18, weight: .bold))
-          .foregroundStyle(.white)
-          .frame(width: 32, height: 32)
-          .background(AppTheme.Colors.tint(for: colorScheme))
-          .clipShape(Circle())
-          .shadow(color: .black.opacity(0.25), radius: 10, y: 6)
+    .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
+    .toolbar {
+      ToolbarItem(placement: .topBarTrailing) {
+        Button {
+          viewModel.isAddWatchlistPresented = true
+        } label: {
+          Image(systemName: "plus")
+        }
       }
-      .padding(.trailing, 16)
-      .padding(.bottom, 24)
     }
     .sheet(isPresented: $viewModel.isAddWatchlistPresented) {
       AddWatchlistSheet(
@@ -90,6 +103,7 @@ struct WatchlistTab: View {
       presenting: removePromptItem
     ) { item in
       Button("Remove", role: .destructive) {
+        destructiveFeedbackTrigger += 1
         Task { await viewModel.removeFromWatchlist(item) }
       }
       Button("Keep", role: .cancel) {
@@ -100,6 +114,7 @@ struct WatchlistTab: View {
     }
     .task { await viewModel.load() }
     .refreshable { await viewModel.load() }
+    .appSensoryFeedback(destructive: destructiveFeedbackTrigger)
   }
 }
 

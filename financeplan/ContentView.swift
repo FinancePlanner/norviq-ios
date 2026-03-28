@@ -55,7 +55,7 @@ public struct ContentView: View {
   }
 
   public var body: some View {
-    ZStack {
+    ZStack(alignment: .top) {
       AppTheme.Colors.topBarBackground(for: colorScheme).ignoresSafeArea()
       WindowSizeSyncView()
 
@@ -83,8 +83,8 @@ public struct ContentView: View {
           .transition(.opacity)
       }
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 //    .environment(\.dynamicTypeSize, .xSmall)
-    .containerShape(.rect(cornerRadius: 34, style: .continuous))
     .onAppear {
       syncSessionUsername()
     }

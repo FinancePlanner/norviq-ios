@@ -106,6 +106,41 @@ final class BudgetPlannerViewModelTests: XCTestCase {
     }
   }
 
+  func testSelectYearBuildsYearSummaryAndMovesSelectionToLatestMonthInYear() async {
+    await MainActor.run {
+      let december2025 = makeMonth(2025, 12)
+      let january2026 = makeMonth(2026, 1)
+      let march2026 = makeMonth(2026, 3)
+
+      let snapshots = [
+        MonthlyBudgetSnapshot(monthStart: december2025, netSalary: 2600, items: []),
+        MonthlyBudgetSnapshot(monthStart: january2026, netSalary: 2700, items: []),
+        MonthlyBudgetSnapshot(monthStart: march2026, netSalary: 2800, items: []),
+      ]
+
+      let activities = [
+        BudgetActivity(title: "December spend", amount: 900, pillar: .fundamentals, occurredOn: makeDate(2025, 12, 5)),
+        BudgetActivity(title: "January spend", amount: 1100, pillar: .fundamentals, occurredOn: makeDate(2026, 1, 5)),
+        BudgetActivity(title: "March spend", amount: 1300, pillar: .fun, occurredOn: makeDate(2026, 3, 6)),
+      ]
+
+      let viewModel = BudgetPlannerViewModel(monthlySnapshots: snapshots, activities: activities)
+
+      viewModel.selectYear(2025)
+
+      XCTAssertEqual(viewModel.selectedYear, 2025)
+      XCTAssertEqual(viewModel.selectedMonthStart, december2025)
+      XCTAssertEqual(viewModel.selectedYearSummaries.count, 1)
+      XCTAssertEqual(viewModel.selectedYearActualTotal, 900, accuracy: 0.001)
+      XCTAssertEqual(viewModel.selectedYearChartPoints.count, 12)
+      XCTAssertEqual(
+        viewModel.selectedYearChartPoints[11].actual,
+        900,
+        accuracy: 0.001
+      )
+    }
+  }
+
   private func makeMonth(_ year: Int, _ month: Int) -> Date {
     calendar.date(from: DateComponents(year: year, month: month, day: 1)) ?? .now
   }
