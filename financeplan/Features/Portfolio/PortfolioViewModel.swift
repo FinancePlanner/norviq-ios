@@ -3,6 +3,14 @@ import Factory
 import Foundation
 import StockPlanShared
 
+struct PortfolioAllocationSlice: Identifiable, Equatable, Sendable {
+  let id: String
+  let symbol: String
+  let value: Double
+  /// Percent of total portfolio value (0–100).
+  let percentage: Double
+}
+
 @MainActor
 final class PortfolioViewModel: ObservableObject {
   @Published private(set) var stocks: [StockResponse] = []
@@ -10,6 +18,7 @@ final class PortfolioViewModel: ObservableObject {
   @Published var errorMessage: String?
   @Published var editingStock: StockResponse?
   @Published var isSaving = false
+  @Published var isDeletingStock = false
 
   private let service: StockServicing
 
@@ -34,6 +43,23 @@ final class PortfolioViewModel: ObservableObject {
     return totalValue / Double(stocks.count)
   }
 
+  /// Cost-basis weights by position value, largest first.
+  var allocationSlices: [PortfolioAllocationSlice] {
+    let total = totalValue
+    guard total > 0 else { return [] }
+    return stocks
+      .map { stock in
+        let value = stock.shares * stock.buyPrice
+        return PortfolioAllocationSlice(
+          id: stock.id,
+          symbol: stock.symbol,
+          value: value,
+          percentage: (value / total) * 100
+        )
+      }
+      .sorted { $0.value > $1.value }
+  }
+
   func load() async {
     guard !isLoading else { return }
     isLoading = true
@@ -47,15 +73,26 @@ final class PortfolioViewModel: ObservableObject {
     }
   }
 
-  func delete(id: String) async {
+  @discardableResult
+  func delete(id: String) async -> Bool {
+    guard !isDeletingStock else { return false }
+    isDeletingStock = true
+    errorMessage = nil
+    defer { isDeletingStock = false }
+
     let old = stocks
     stocks.removeAll(where: { $0.id == id })
 
     do {
       try await service.delete(id: id)
+      if editingStock?.id == id {
+        editingStock = nil
+      }
+      return true
     } catch {
       stocks = old
       errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to delete stock."
+      return false
     }
   }
 
@@ -63,8 +100,8 @@ final class PortfolioViewModel: ObservableObject {
     editingStock = stock
   }
 
-  func saveEdit(_ updated: StockResponse) async {
-    guard !isSaving else { return }
+  func saveEdit(_ updated: StockResponse) async -> Bool {
+    guard !isSaving else { return false }
     isSaving = true
     defer { isSaving = false }
 
@@ -78,8 +115,10 @@ final class PortfolioViewModel: ObservableObject {
       }
 
       editingStock = nil
+      return true
     } catch {
       errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to update stock."
+      return false
     }
   }
 

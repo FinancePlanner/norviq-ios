@@ -13,11 +13,16 @@ struct GlassTextFieldStyle: TextFieldStyle {
   func _body(configuration: TextField<Self._Label>) -> some View {
     configuration
       .padding(14)
-      .background(Color.white.opacity(colorScheme == .dark ? 0.1 : 0.6))
-      .cornerRadius(12)
+      .background(
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
+          .fill(AppTheme.Colors.elevatedCardBackground(for: colorScheme))
+      )
       .overlay(
-        RoundedRectangle(cornerRadius: 12)
-          .stroke(Color.white.opacity(colorScheme == .dark ? 0.15 : 0.4), lineWidth: 1)
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
+          .stroke(
+            AppTheme.Colors.separator(for: colorScheme).opacity(colorScheme == .dark ? 0.35 : 0.18),
+            lineWidth: 0.8
+          )
       )
   }
 }
@@ -28,8 +33,6 @@ struct LoginScreen: View {
   @Environment(\.colorScheme) private var colorScheme
   @StateObject private var viewModel: LoginViewModel
 
-  @State private var contentSize = CGSize.zero
-  @State private var screenSize = CGSize.zero
   @State private var termsURL: URL?
   @State private var privacyURL: URL?
   @State private var isEnvironmentPresented = false
@@ -49,10 +52,8 @@ struct LoginScreen: View {
 
   var body: some View {
     mainLayout
-      .background(MeshGradientBackground().ignoresSafeArea())
-      .overlay(alignment: .center) {
-        forgotPasswordOverlay
-      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+      .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
       .overlay(alignment: .top) {
         successToastOverlay
       }
@@ -61,6 +62,15 @@ struct LoginScreen: View {
       }
       .sheet(isPresented: privacySheetIsPresented) {
         privacySheetContent
+      }
+      .sheet(isPresented: forgotPasswordSheetIsPresented) {
+        ForgotPasswordSheet(
+          onSubmit: { submittedEmail in
+            try await viewModel.requestForgotPassword(for: submittedEmail)
+          }
+        )
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
       }
       .task(id: viewModel.infoMessage) {
         guard let currentMessage = viewModel.infoMessage else {
@@ -102,17 +112,17 @@ struct LoginScreen: View {
   private var authScrollView: some View {
     ScrollView {
       formContent
+        .frame(maxWidth: .infinity)
     }
-    .readSize(into: $screenSize)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     .scrollBounceBehavior(.basedOnSize)
     .scrollDismissesKeyboard(.interactively)
   }
 
   private var formContent: some View {
-    GlassCard {
+    VStack(spacing: 20) {
       content
     }
-    .readSize(into: $contentSize)
     .frame(maxWidth: windowSize.effectiveFormMaxWidth)
     .onChange(of: formTextFieldsState) { _, _ in
       viewModel.clearError()
@@ -125,10 +135,8 @@ struct LoginScreen: View {
     .onChange(of: viewModel.email) { _, _ in viewModel.clearFieldError(.email) }
     .onChange(of: viewModel.firstName) { _, _ in viewModel.clearFieldError(.firstName) }
     .onChange(of: viewModel.lastName) { _, _ in viewModel.clearFieldError(.lastName) }
-    .onAppear {
-      focusedField = .username
-    }
-    .padding(.horizontal, 16)
+    .padding(.horizontal, 20)
+    .padding(.top, 24)
   }
 
   private var legalLinksFooter: some View {
@@ -158,31 +166,31 @@ struct LoginScreen: View {
     )
   }
 
+  private var forgotPasswordSheetIsPresented: Binding<Bool> {
+    Binding(
+      get: { viewModel.isForgotPasswordPresented },
+      set: { viewModel.isForgotPasswordPresented = $0 }
+    )
+  }
+
   @ViewBuilder
   private var termsSheetContent: some View {
     if let termsURL {
-      SafariView(url: termsURL)
+      ExternalBrowserLinkSheet(
+        url: termsURL,
+        openActionTitle: "Open terms of service",
+        message: "Terms open in your default browser."
+      )
     }
   }
 
   @ViewBuilder
   private var privacySheetContent: some View {
     if let privacyURL {
-      SafariView(url: privacyURL)
-    }
-  }
-
-  @ViewBuilder
-  private var forgotPasswordOverlay: some View {
-    if viewModel.isForgotPasswordPresented {
-      ForgotPasswordView(
-        isPresented: Binding(
-          get: { viewModel.isForgotPasswordPresented },
-          set: { viewModel.isForgotPasswordPresented = $0 }
-        ),
-        onSubmit: { submittedEmail in
-          try await viewModel.requestForgotPassword(for: submittedEmail)
-        }
+      ExternalBrowserLinkSheet(
+        url: privacyURL,
+        openActionTitle: "Open privacy policy",
+        message: "Privacy policy opens in your default browser."
       )
     }
   }
@@ -197,53 +205,231 @@ struct LoginScreen: View {
       .padding(.horizontal, 16)
       .padding(.top, 12)
       .transition(.move(edge: .top).combined(with: .opacity))
+      .accessibilityAddTraits(.isStaticText)
     }
   }
 
+  // MARK: - Content
+
   var content: some View {
-    VStack(spacing: 10) {
-      Spacer(minLength: 0)
+    VStack(spacing: 20) {
+      // MARK: - Hero
+      VStack(alignment: .leading, spacing: 14) {
+        PulsingLogo()
 
-      //      PulsingLogo()
-      //        .padding(.bottom, 8)
-      VStack(spacing: 8) {
-        usernameTextField
+        VStack(alignment: .leading, spacing: 6) {
+          Text(viewModel.isSignup ? "Create your account" : "Welcome back")
+            .typography(.heading, weight: .bold)
+            .accessibilityAddTraits(.isHeader)
 
-        if viewModel.isSignup {
-          emailTextField
-            .opacity(viewModel.signupFieldsOpacity)
-        }
-
-        passwordTextField
-        forgotPasswordLink
-
-        if viewModel.isSignup {
-          firstNameTextField
-            .opacity(viewModel.signupFieldsOpacity)
-
-          lastNameTextField
-            .opacity(viewModel.signupFieldsOpacity)
-
-          datePicker
-            .padding(.top, 8)
-            .opacity(viewModel.signupFieldsOpacity)
+          Text(
+            viewModel.isSignup
+              ? "Build your investing workspace with portfolio planning and monthly spending visibility."
+              : "Sign in to review your portfolio, plan expenses, and keep your financial system in one place."
+          )
+          .typography(.small)
+          .foregroundStyle(.secondary)
         }
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
 
+      // MARK: - Connected Field Card
+      connectedFieldCard
+
+      // MARK: - Forgot Password
+      forgotPasswordLink
+
+      // MARK: - Error
       if let error = viewModel.error {
-        Text(error)
+        FormErrorBanner(message: error)
+      }
+
+      // MARK: - Action
+      actionButton
+        .padding(.top, 4)
+
+      // MARK: - Toggle
+      insteadButton
+    }
+  }
+
+  // MARK: - Connected Field Card
+
+  /// Groups all fields into a single card with thin dividers between them.
+  private var connectedFieldCard: some View {
+    VStack(spacing: 0) {
+      // --- Username / Email ---
+      connectedField(
+        icon: viewModel.isSignup ? "person" : "envelope",
+        iconColor: AppTheme.Colors.tint(for: colorScheme)
+      ) {
+        TextField(viewModel.isSignup ? "Username" : "Email", text: $viewModel.username)
+          .textContentType(viewModel.isSignup ? .username : .emailAddress)
+          .keyboardType(viewModel.isSignup ? .default : .emailAddress)
+          .textInputAutocapitalization(.never)
+          .autocorrectionDisabled()
+          .focused($focusedField, equals: .username)
+          .submitLabel(.next)
+          .onSubmit { focusedField = viewModel.isSignup ? .email : .password }
+          .accessibilityLabel(viewModel.isSignup ? "Username" : "Email")
+      }
+      fieldError(for: .username)
+
+      connectedDivider
+
+      // --- Email (signup only) ---
+      if viewModel.isSignup {
+        connectedField(icon: "envelope", iconColor: .orange) {
+          TextField("Email", text: $viewModel.email)
+            .textContentType(.emailAddress)
+            .keyboardType(.emailAddress)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .focused($focusedField, equals: .email)
+            .submitLabel(.next)
+            .onSubmit { focusedField = .password }
+            .accessibilityLabel("Email Address")
+        }
+        .opacity(viewModel.signupFieldsOpacity)
+        fieldError(for: .email)
+
+        connectedDivider
+      }
+
+      // --- Password ---
+      connectedField(icon: "lock", iconColor: .secondary) {
+        SecureField("Password", text: $viewModel.password)
+          .textContentType(viewModel.isSignup ? .newPassword : .password)
+          .textInputAutocapitalization(.never)
+          .autocorrectionDisabled()
+          .focused($focusedField, equals: .password)
+          .submitLabel(viewModel.isSignup ? .next : .go)
+          .onSubmit {
+            if viewModel.isSignup {
+              focusedField = .firstName
+            } else {
+              Task { await viewModel.submit() }
+            }
+          }
+          .accessibilityLabel(viewModel.isSignup ? "New Password" : "Password")
+      }
+      fieldError(for: .password)
+
+      // --- Signup-only fields ---
+      if viewModel.isSignup {
+        connectedDivider
+
+        connectedField(icon: "person.text.rectangle", iconColor: AppTheme.Colors.secondaryTint(for: colorScheme)) {
+          TextField("First Name", text: $viewModel.firstName)
+            .textContentType(.givenName)
+            .textInputAutocapitalization(.words)
+            .focused($focusedField, equals: .firstName)
+            .submitLabel(.next)
+            .onSubmit { focusedField = .lastName }
+            .accessibilityLabel("First Name")
+        }
+        .opacity(viewModel.signupFieldsOpacity)
+        fieldError(for: .firstName)
+
+        connectedDivider
+
+        connectedField(icon: "person.text.rectangle", iconColor: AppTheme.Colors.secondaryTint(for: colorScheme)) {
+          TextField("Last Name", text: $viewModel.lastName)
+            .textContentType(.familyName)
+            .textInputAutocapitalization(.words)
+            .focused($focusedField, equals: .lastName)
+            .submitLabel(.done)
+            .onSubmit { focusedField = nil }
+            .accessibilityLabel("Last Name")
+        }
+        .opacity(viewModel.signupFieldsOpacity)
+        fieldError(for: .lastName)
+
+        connectedDivider
+
+        // Date of birth
+        HStack(spacing: 12) {
+          Image(systemName: "calendar")
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(.orange)
+            .frame(width: 24, alignment: .center)
+
+          DatePicker(
+            "Date of Birth",
+            selection: $viewModel.dateOfBirth,
+            in: ...eighteenYearsAgo,
+            displayedComponents: .date
+          )
+          .datePickerStyle(.compact)
+          .accessibilityLabel("Date of Birth")
+          .accessibilityHint("Must be 18 years or older")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
+        .opacity(viewModel.signupFieldsOpacity)
+      }
+    }
+    .background(
+      RoundedRectangle(cornerRadius: 16, style: .continuous)
+        .fill(AppTheme.Colors.cardBackground(for: colorScheme))
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: 16, style: .continuous)
+        .stroke(
+          AppTheme.Colors.separator(for: colorScheme)
+            .opacity(colorScheme == .dark ? 0.25 : 0.12),
+          lineWidth: 0.8
+        )
+    )
+    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+  }
+
+  /// A single connected field row with leading icon.
+  private func connectedField<Content: View>(
+    icon: String,
+    iconColor: Color,
+    @ViewBuilder content: () -> Content
+  ) -> some View {
+    HStack(spacing: 12) {
+      Image(systemName: icon)
+        .font(.subheadline.weight(.medium))
+        .foregroundStyle(iconColor)
+        .frame(width: 24, alignment: .center)
+
+      content()
+    }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 13)
+  }
+
+  /// Thin internal divider for the connected card.
+  private var connectedDivider: some View {
+    Rectangle()
+      .fill(AppTheme.Colors.separator(for: colorScheme).opacity(0.35))
+      .frame(height: 0.5)
+      .padding(.leading, 52)
+  }
+
+  /// Field-level error displayed below a field in the card.
+  @ViewBuilder
+  private func fieldError(for field: LoginViewModel.Field) -> some View {
+    if let message = viewModel.fieldErrors[field] {
+      HStack(spacing: 6) {
+        Image(systemName: "exclamationmark.circle.fill")
+          .foregroundStyle(AppTheme.Colors.danger)
+          .font(.caption2)
+
+        Text(message)
           .typography(.nano)
           .foregroundStyle(AppTheme.Colors.danger)
       }
-
-      VStack(spacing: 4) {
-        actionButton
-        insteadButton
-      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.horizontal, 52)
+      .padding(.vertical, 4)
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .padding(12)
   }
+
+  // MARK: - Links & Buttons
 
   @ViewBuilder
   var forgotPasswordLink: some View {
@@ -252,10 +438,9 @@ struct LoginScreen: View {
         viewModel.isForgotPasswordPresented = true
       } label: {
         Text("Forgot password?")
-          .typography(.nano)
+          .typography(.small)
           .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
           .frame(maxWidth: .infinity, alignment: .trailing)
-          .padding(.bottom, 2)
       }
     }
   }
@@ -272,9 +457,14 @@ struct LoginScreen: View {
         viewModel.isSignup
           ? "Already have an account? Log in instead" : "No account? Sign up instead"
       )
-      .typography(.nano)
+      .typography(.small)
       .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-      .padding(.top, 8)
+      .padding(.vertical, 10)
+      .padding(.horizontal, 20)
+      .background(
+        Capsule()
+          .stroke(AppTheme.Colors.tint(for: colorScheme).opacity(0.3), lineWidth: 1)
+      )
     }
   }
 
@@ -286,7 +476,6 @@ struct LoginScreen: View {
         Text("Terms of Service")
           .typography(.nano)
           .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-          .underline()
       }
 
       Button {
@@ -295,7 +484,6 @@ struct LoginScreen: View {
         Text("Privacy Policy")
           .typography(.nano)
           .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-          .underline()
       }
 
       if !environment.allowedEnvironmentsWhen(isLoggedIn: false).isEmpty {
@@ -305,7 +493,6 @@ struct LoginScreen: View {
           Text("Environment")
             .typography(.nano)
             .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-            .underline()
         }
       }
     }
@@ -325,104 +512,17 @@ struct LoginScreen: View {
     }
   }
 
-  var firstNameTextField: some View {
-    fieldWithError(field: .firstName) {
-      TextField("First Name", text: $viewModel.firstName)
-        .textContentType(.givenName)
-        .textInputAutocapitalization(.words)
-        .focused($focusedField, equals: .firstName)
-        .submitLabel(.next)
-        .onSubmit { focusedField = .lastName }
-        .textFieldStyle(GlassTextFieldStyle())
-        .accessibilityLabel("First Name")
-    }
-  }
-
-  var lastNameTextField: some View {
-    fieldWithError(field: .lastName) {
-      TextField("Last Name", text: $viewModel.lastName)
-        .textContentType(.familyName)
-        .textInputAutocapitalization(.words)
-        .focused($focusedField, equals: .lastName)
-        .submitLabel(.next)
-        .onSubmit { focusedField = nil }
-        .textFieldStyle(GlassTextFieldStyle())
-        .accessibilityLabel("Last Name")
-    }
-  }
-
   private var eighteenYearsAgo: Date {
     Calendar.current.date(byAdding: .year, value: -18, to: Date()) ?? Date()
   }
 
-  var datePicker: some View {
-    DatePicker(
-      "Date of Birth",
-      selection: $viewModel.dateOfBirth,
-      in: ...eighteenYearsAgo,
-      displayedComponents: .date
-    )
-    .datePickerStyle(.compact)
-    .padding(.top, 4)
-    .accessibilityLabel("Date of Birth")
-    .accessibilityHint("Must be 18 years or older")
-  }
-
-  var passwordTextField: some View {
-    fieldWithError(field: .password) {
-      SecureField("Password", text: $viewModel.password)
-        .textContentType(viewModel.isSignup ? .newPassword : .password)
-        .textInputAutocapitalization(.never)
-        .autocorrectionDisabled()
-        .focused($focusedField, equals: .password)
-        .submitLabel(viewModel.isSignup ? .next : .go)
-        .onSubmit {
-          if viewModel.isSignup {
-            focusedField = .firstName
-          } else {
-            Task { await viewModel.submit() }
-          }
-        }
-        .textFieldStyle(GlassTextFieldStyle())
-        .accessibilityLabel(viewModel.isSignup ? "New Password" : "Password")
-    }
-  }
-
-  var emailTextField: some View {
-    fieldWithError(field: .email) {
-      TextField("Email", text: $viewModel.email)
-        .textContentType(.emailAddress)
-        .keyboardType(.emailAddress)
-        .textInputAutocapitalization(.never)
-        .autocorrectionDisabled()
-        .focused($focusedField, equals: .email)
-        .submitLabel(.next)
-        .onSubmit { focusedField = .password }
-        .textFieldStyle(GlassTextFieldStyle())
-        .accessibilityLabel("Email Address")
-    }
-  }
-
-  var usernameTextField: some View {
-    fieldWithError(field: .username) {
-      TextField(viewModel.isSignup ? "Username" : "Email", text: $viewModel.username)
-        .textContentType(viewModel.isSignup ? .username : .emailAddress)
-        .keyboardType(viewModel.isSignup ? .default : .emailAddress)
-        .textInputAutocapitalization(.never)
-        .autocorrectionDisabled()
-        .focused($focusedField, equals: .username)
-        .submitLabel(.next)
-        .onSubmit { focusedField = viewModel.isSignup ? .email : .password }
-        .textFieldStyle(GlassTextFieldStyle())
-        .accessibilityLabel(viewModel.isSignup ? "Username" : "Email")
-    }
-  }
+  // MARK: - Action Button
 
   var actionButton: some View {
     Button {
       Task { await viewModel.submit() }
     } label: {
-      HStack {
+      HStack(spacing: 8) {
         if viewModel.isSubmitting {
           ProgressView()
             .tint(.white)
@@ -430,35 +530,18 @@ struct LoginScreen: View {
         Text(viewModel.isSignup ? "Sign up" : "Sign in")
           .font(.headline)
           .fontWeight(.bold)
+        if !viewModel.isSubmitting {
+          Image(systemName: "arrow.right")
+            .font(.subheadline.weight(.bold))
+        }
       }
     }
     .buttonStyle(GlowingButtonStyle())
     .disabled(viewModel.isSubmitting)
   }
-
-  @ViewBuilder
-  private func fieldWithError(
-    field: LoginViewModel.Field,
-    @ViewBuilder content: () -> some View
-  ) -> some View {
-    VStack(alignment: .leading, spacing: 4) {
-      content()
-
-      if let message = viewModel.fieldErrors[field] {
-        HStack(alignment: .top, spacing: 6) {
-          Image(systemName: "exclamationmark.circle.fill")
-            .foregroundStyle(AppTheme.Colors.danger)
-            .typography(.caption)
-
-          Text(message)
-            .typography(.nano)
-            .foregroundStyle(AppTheme.Colors.danger)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-      }
-    }
-  }
 }
+
+// MARK: - Pulsing Logo
 
 private struct PulsingLogo: View {
   @Environment(\.colorScheme) private var colorScheme
@@ -466,25 +549,37 @@ private struct PulsingLogo: View {
 
   var body: some View {
     ZStack {
+      // Outer glow ring
+      Circle()
+        .fill(AppTheme.Colors.tint(for: colorScheme).opacity(0.08))
+        .frame(width: 96, height: 96)
+        .scaleEffect(pulse ? 1.08 : 0.92)
+
+      // Inner fill
       Circle()
         .fill(AppTheme.Colors.tintSoft(for: colorScheme))
-        .frame(width: pulse ? 86 : 72, height: pulse ? 86 : 72)
+        .frame(width: 72, height: 72)
 
       Image(systemName: "chart.line.uptrend.xyaxis")
-        .font(.system(size: 26, weight: .bold))
+        .font(.system(size: 28, weight: .bold))
         .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
     }
+    .frame(width: 96, height: 96)
     .onAppear {
-      withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
+      withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
         pulse = true
       }
     }
   }
 }
 
-private struct ForgotPasswordView: View {
-  @Binding var isPresented: Bool
+// MARK: - Forgot Password Sheet
+
+private struct ForgotPasswordSheet: View {
   let onSubmit: (String) async throws -> String
+
+  @Environment(\.dismiss) private var dismiss
+  @Environment(\.colorScheme) private var colorScheme
 
   @State private var email = ""
   @State private var isSubmitting = false
@@ -492,67 +587,76 @@ private struct ForgotPasswordView: View {
   @State private var errorMessage: String?
 
   var body: some View {
-    ZStack {
-      AppTheme.Colors.scrim
-        .ignoresSafeArea()
-        .onTapGesture {
-          isPresented = false
-        }
+    VStack(spacing: 0) {
+      FormSheetHeader(title: "Reset Password", onDismiss: { dismiss() })
 
-      VStack(alignment: .leading, spacing: 12) {
-        Text("Reset password")
-          .typography(.label, weight: .semibold)
+      ScrollView {
+        VStack(spacing: 16) {
+          // Icon
+          ZStack {
+            Circle()
+              .fill(AppTheme.Colors.tintSoft(for: colorScheme))
+              .frame(width: 64, height: 64)
 
-        Text("Enter your account email and we will send reset instructions.")
-          .typography(.small)
-          .foregroundStyle(.secondary)
-
-        TextField("Email", text: $email)
-          .keyboardType(.emailAddress)
-          .textInputAutocapitalization(.never)
-          .autocorrectionDisabled()
-          .textFieldStyle(.roundedBorder)
-
-        if let message {
-          Text(message)
-            .typography(.nano)
-            .foregroundStyle(AppTheme.Colors.success)
-        }
-
-        if let errorMessage {
-          Text(errorMessage)
-            .typography(.nano)
-            .foregroundStyle(AppTheme.Colors.danger)
-        }
-
-        HStack {
-          Button("Close") {
-            isPresented = false
+            Image(systemName: "key.fill")
+              .font(.system(size: 24, weight: .semibold))
+              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
           }
 
-          Spacer()
+          Text("Enter your account email and we'll send reset instructions.")
+            .typography(.small)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 16)
 
-          Button {
-            Task { await submit() }
-          } label: {
-            HStack {
-              if isSubmitting {
-                ProgressView()
-                  .tint(.white)
-              }
-              Text("Send")
-                .typography(.button, weight: .semibold)
+          FormCard {
+            FormTextField(
+              icon: "envelope",
+              iconColor: AppTheme.Colors.tint(for: colorScheme),
+              placeholder: "Email address",
+              text: $email,
+              keyboardType: .emailAddress,
+              autocapitalization: .never,
+              disableAutocorrection: true
+            )
+          }
+
+          if let message {
+            HStack(spacing: 8) {
+              Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(AppTheme.Colors.success)
+              Text(message)
+                .typography(.small)
+                .foregroundStyle(AppTheme.Colors.success)
             }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+              RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(AppTheme.Colors.success.opacity(0.08))
+            )
           }
-          .buttonStyle(.borderedProminent)
-          .disabled(isSubmitting)
+
+          if let errorMessage {
+            FormErrorBanner(message: errorMessage)
+          }
+
+          Spacer(minLength: 60)
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 16)
       }
-      .padding(16)
-      .frame(maxWidth: 420)
-      .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-      .padding(20)
+      .scrollDismissesKeyboard(.interactively)
+
+      FormActionBar(
+        primaryLabel: isSubmitting ? "Sending…" : "Send Instructions",
+        isLoading: isSubmitting,
+        isDisabled: email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSubmitting
+      ) {
+        Task { await submit() }
+      }
     }
+    .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
   }
 
   @MainActor

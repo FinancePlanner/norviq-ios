@@ -12,8 +12,10 @@ struct StockDetailScreen: View {
     let stockId: String
     let initialSymbol: String
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = StockDetailsViewModel()
     @State private var showEditValuation = false
+    @State private var showEditPosition = false
     @State private var selectedTab: StockDetailTab = .overview
     @State private var selectedScenario: StockProjectionScenarioKind = .base
 
@@ -60,6 +62,31 @@ struct StockDetailScreen: View {
                 }
             }
         }
+        .sheet(isPresented: $showEditPosition) {
+            if let stock = viewModel.details {
+                EditStockPositionSheet(
+                    stock: stock,
+                    isSaving: viewModel.isSavingPosition,
+                    isDeleting: viewModel.isDeletingPosition,
+                    onCancel: { showEditPosition = false },
+                    onSave: { updated in
+                        let ok = await viewModel.savePosition(updated)
+                        if ok {
+                            showEditPosition = false
+                        }
+                        return ok
+                    },
+                    onDelete: {
+                        let ok = await viewModel.deletePosition()
+                        if ok {
+                            showEditPosition = false
+                            dismiss()
+                        }
+                        return ok
+                    }
+                )
+            }
+        }
         .sheet(isPresented: $showEditValuation) {
             EditStockValuationView(
                 symbol: viewModel.details?.symbol ?? initialSymbol,
@@ -102,13 +129,14 @@ struct StockDetailScreen: View {
                 case .overview:
                     StockOverviewTab(
                         details: viewModel.details,
+                        profile: viewModel.primaryComparisonProfile,
                         valuation: viewModel.valuation,
                         history: viewModel.history,
                         news: viewModel.news,
-                        errorMessage: viewModel.errorMessage
-                    ) {
-                        showEditValuation = true
-                    }
+                        errorMessage: viewModel.errorMessage,
+                        onEditValuation: { showEditValuation = true },
+                        onEditPosition: { showEditPosition = true }
+                    )
                 case .projections:
                     StockProjectionsTab(
                         profile: viewModel.primaryComparisonProfile,

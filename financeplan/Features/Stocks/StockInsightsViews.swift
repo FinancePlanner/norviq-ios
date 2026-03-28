@@ -23,15 +23,15 @@ struct StockDetailHeroCard: View {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .top, spacing: 16) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(profile?.companyName ?? details?.symbol ?? "Stock")
-                            .typography(.headline, weight: .bold)
+                        Text(profile?.symbol ?? details?.symbol ?? "Stock")
+                            .typography(.hero, weight: .bold)
 
-                        Text(profile?.symbol ?? details?.symbol ?? "Waiting for market data")
-                            .typography(.caption, weight: .semibold)
-                            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                        Text(profile?.companyName ?? "Waiting for market data")
+                            .typography(.small)
+                            .foregroundStyle(.secondary)
 
                         if let details {
-                            Text("Purchased \(details.buyDate)")
+                            Text("Purchased \(details.buyDate) • \(details.shares.formatted(.number.precision(.fractionLength(0...2)))) shares")
                                 .typography(.nano)
                                 .foregroundStyle(.secondary)
                         }
@@ -39,9 +39,14 @@ struct StockDetailHeroCard: View {
 
                     Spacer()
 
-                    Image(systemName: "chart.line.uptrend.xyaxis.circle.fill")
-                        .font(.system(size: 28, weight: .semibold))
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.headline.weight(.semibold))
                         .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                        .padding(12)
+                        .background(
+                            AppTheme.Colors.tintSoft(for: colorScheme),
+                            in: Circle()
+                        )
                 }
 
                 HStack(spacing: 10) {
@@ -76,11 +81,13 @@ struct StockDetailHeroCard: View {
 
 struct StockOverviewTab: View {
     let details: StockDetails?
+    let profile: StockComparisonProfile?
     let valuation: StockValuationRequest?
     let history: [StockHistory]
     let news: [StockNews]
     let errorMessage: String?
     let onEditValuation: () -> Void
+    let onEditPosition: () -> Void
 
     var body: some View {
         LazyVStack(spacing: 16) {
@@ -90,7 +97,11 @@ struct StockOverviewTab: View {
             )
 
             if let details {
-                StockPositionOverviewCard(details: details)
+                StockPositionOverviewCard(details: details, onEditPosition: onEditPosition)
+            }
+
+            if let profile {
+                StockCurrentMetricsCard(profile: profile)
             }
 
             StockHistoryCard(history: history)
@@ -101,11 +112,13 @@ struct StockOverviewTab: View {
                 bodyText: "Use this section for the long-form why now, key risks, and what must happen for the position to work."
             )
 
+            // to fill from endpoint later
             ResearchPlaceholderCard(
                 title: "Earnings",
                 bodyText: "Wire the future earnings API here for quarter dates, analyst estimates, and surprises versus expectations."
             )
 
+            // to fill from endpoint later
             ResearchPlaceholderCard(
                 title: "Fundamentals",
                 bodyText: "Wire the fundamentals API here for balance sheet strength, cash generation, and capital allocation signals."
@@ -127,8 +140,6 @@ struct StockProjectionsTab: View {
     let profile: StockComparisonProfile?
     @Binding var selectedScenario: StockProjectionScenarioKind
 
-    @Environment(\.colorScheme) private var colorScheme
-
     private var scenario: StockProjectionScenario? {
         profile?.projectionScenarios[selectedScenario]
     }
@@ -136,96 +147,21 @@ struct StockProjectionsTab: View {
     var body: some View {
         if let profile, let scenario {
             LazyVStack(spacing: 16) {
-                GlassCard {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("5-year valuation model")
-                            .typography(.small, weight: .semibold)
+                ProjectionScenarioHeaderCard(
+                    profile: profile,
+                    scenario: scenario,
+                    selectedScenario: $selectedScenario
+                )
 
-                        Picker("Projection scenario", selection: $selectedScenario) {
-                            ForEach(StockProjectionScenarioKind.allCases) { kind in
-                                Text(kind.title).tag(kind)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-
-                        Text(selectedScenario.subtitle)
-                            .typography(.nano)
-                            .foregroundStyle(.secondary)
-
-                        Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 12) {
-                            GridRow {
-                                ProjectionSummaryBlock(
-                                    title: "Stock price",
-                                    value: profile.currentPrice.currency,
-                                    detail: "Current market price"
-                                )
-                                ProjectionSummaryBlock(
-                                    title: "Market cap",
-                                    value: compactCurrency(profile.marketCap),
-                                    detail: "Today"
-                                )
-                            }
-
-                            GridRow {
-                                ProjectionSummaryBlock(
-                                    title: "Shares outstanding",
-                                    value: compactNumber(profile.sharesOutstanding),
-                                    detail: "Used for EPS"
-                                )
-                                ProjectionSummaryBlock(
-                                    title: "2028 range",
-                                    value: projectionRangeText(for: scenario.years.last),
-                                    detail: "Low to high case"
-                                )
-                            }
-                        }
-                    }
-                }
-
-                GlassCard {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Projected share-price range")
-                            .typography(.small, weight: .semibold)
-
-                        Chart(scenario.years) { point in
-                            AreaMark(
-                                x: .value("Year", point.year),
-                                yStart: .value("Low", point.sharePriceLow),
-                                yEnd: .value("High", point.sharePriceHigh)
-                            )
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [
-                                        AppTheme.Colors.secondaryTint(for: colorScheme).opacity(0.20),
-                                        .clear,
-                                    ],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-
-                            LineMark(
-                                x: .value("Year", point.year),
-                                y: .value("Low", point.sharePriceLow)
-                            )
-                            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-                            .lineStyle(.init(lineWidth: 2.5))
-
-                            LineMark(
-                                x: .value("Year", point.year),
-                                y: .value("High", point.sharePriceHigh)
-                            )
-                            .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme))
-                            .lineStyle(.init(lineWidth: 2.5))
-                        }
-                        .frame(height: 240)
-                        .chartYAxis {
-                            AxisMarks(position: .leading)
-                        }
-                    }
-                }
+                ProjectionHighlightsCard(
+                    profile: profile,
+                    scenario: scenario,
+                    scenarioKind: selectedScenario
+                )
 
                 ProjectionTableCard(scenario: scenario)
+
+                ProjectionRangeChartCard(scenario: scenario)
             }
         } else {
             GlassCard {
@@ -364,6 +300,303 @@ private struct ProjectionSummaryBlock: View {
     }
 }
 
+private struct ProjectionScenarioHeaderCard: View {
+    let profile: StockComparisonProfile
+    let scenario: StockProjectionScenario
+    @Binding var selectedScenario: StockProjectionScenarioKind
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("5-year forecast")
+                        .typography(.small, weight: .semibold)
+
+                    Text("Review the operating path, valuation range, and expected return using a bear, base, or bull scenario.")
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                }
+
+                Picker("Projection scenario", selection: $selectedScenario) {
+                    ForEach(StockProjectionScenarioKind.allCases) { kind in
+                        Text(kind.title).tag(kind)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Text(selectedScenario.subtitle)
+                    .typography(.nano)
+                    .foregroundStyle(.secondary)
+
+                Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 14) {
+                    GridRow {
+                        ProjectionSummaryBlock(
+                            title: "Stock price",
+                            value: profile.currentPrice.currency,
+                            detail: "Current market price"
+                        )
+                        ProjectionSummaryBlock(
+                            title: "Market cap",
+                            value: compactCurrency(profile.marketCap),
+                            detail: "Current size"
+                        )
+                    }
+
+                    GridRow {
+                        ProjectionSummaryBlock(
+                            title: "Shares outstanding",
+                            value: compactNumber(profile.sharesOutstanding),
+                            detail: "Used to derive EPS"
+                        )
+                        ProjectionSummaryBlock(
+                            title: "Terminal range",
+                            value: projectionRangeText(for: scenario.years.last),
+                            detail: "Latest forecast year"
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct StockCurrentMetricsCard: View {
+    let profile: StockComparisonProfile
+
+    private var keyMetrics: [StockComparisonMetric] {
+        [
+            .ttmPE,
+            .forwardPE,
+            .twoYearForwardPE,
+            .ttmEPSGrowth,
+            .currentYearExpectedEPSGrowth,
+            .nextYearEPSGrowth,
+            .ttmRevenueGrowth,
+            .currentYearExpectedRevenueGrowth,
+            .nextYearRevenueGrowth,
+            .grossMargin,
+            .netMargin,
+            .ttmPEGRatio,
+        ]
+    }
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Current metrics")
+                        .typography(.small, weight: .semibold)
+
+                    Text("A current snapshot of valuation, growth, and profitability before moving into forecasts or peer comparison.")
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                }
+
+                ForEach(Array(keyMetrics.enumerated()), id: \.element.id) { index, metric in
+                    CurrentMetricRow(
+                        title: metric.title,
+                        value: formattedMetricValue(metric, value: profile.metrics[metric]),
+                        detail: metric.benchmarkText
+                    )
+
+                    if index < keyMetrics.count - 1 {
+                        Divider()
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct CurrentMetricRow: View {
+    let title: String
+    let value: String
+    let detail: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .typography(.nano, weight: .semibold)
+                    .foregroundStyle(.primary)
+
+                Text(detail)
+                    .typography(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 12)
+
+            Text(value)
+                .typography(.small, weight: .semibold)
+                .monospacedDigit()
+                .foregroundStyle(.primary)
+        }
+    }
+}
+
+private struct ProjectionHighlightsCard: View {
+    let profile: StockComparisonProfile
+    let scenario: StockProjectionScenario
+    let scenarioKind: StockProjectionScenarioKind
+
+    private var firstProjectedYear: StockProjectionYear? {
+        scenario.years.dropFirst().first
+    }
+
+    private var terminalYear: StockProjectionYear? {
+        scenario.years.last
+    }
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Scenario highlights")
+                            .typography(.small, weight: .semibold)
+
+                        Text("A compact read on the near-term setup and the longer-term valuation path.")
+                            .typography(.nano)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Text(scenarioKind.title)
+                        .typography(.caption, weight: .semibold)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.secondary.opacity(0.10), in: Capsule())
+                }
+
+                HStack(spacing: 10) {
+                    ProjectionHighlightTile(
+                        title: firstProjectedYear.map { String($0.year) } ?? "Next year",
+                        value: projectionRangeText(for: firstProjectedYear),
+                        detail: firstProjectedYear.map {
+                            "Rev growth \(percentText($0.revenueGrowth))"
+                        } ?? "Awaiting data"
+                    )
+
+                    ProjectionHighlightTile(
+                        title: terminalYear.map { String($0.year) } ?? "Terminal",
+                        value: projectionRangeText(for: terminalYear),
+                        detail: terminalYear.map {
+                            upsideText(
+                                currentPrice: profile.currentPrice,
+                                projectedLow: $0.sharePriceLow,
+                                projectedHigh: $0.sharePriceHigh
+                            )
+                        } ?? "Awaiting data"
+                    )
+                }
+
+                HStack(spacing: 10) {
+                    ProjectionHighlightTile(
+                        title: "Terminal CAGR",
+                        value: cagrRangeText(for: terminalYear),
+                        detail: "Annualized return range"
+                    )
+
+                    ProjectionHighlightTile(
+                        title: "Terminal margins",
+                        value: terminalYear.map { percentText($0.netMargin) } ?? "—",
+                        detail: terminalYear.map {
+                            "PE \(multipleText($0.peLowEstimate)) to \(multipleText($0.peHighEstimate))"
+                        } ?? "Awaiting data"
+                    )
+                }
+            }
+        }
+    }
+}
+
+private struct ProjectionHighlightTile: View {
+    let title: String
+    let value: String
+    let detail: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .typography(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(value)
+                .typography(.small, weight: .semibold)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(detail)
+                .typography(.nano)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+private struct ProjectionRangeChartCard: View {
+    let scenario: StockProjectionScenario
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Projected share-price range")
+                    .typography(.small, weight: .semibold)
+
+                Text("The band shows the low and high valuation outputs for each year in the selected scenario.")
+                    .typography(.nano)
+                    .foregroundStyle(.secondary)
+
+                Chart(scenario.years) { point in
+                    AreaMark(
+                        x: .value("Year", point.year),
+                        yStart: .value("Low", point.sharePriceLow),
+                        yEnd: .value("High", point.sharePriceHigh)
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [
+                                AppTheme.Colors.secondaryTint(for: colorScheme).opacity(0.20),
+                                .clear,
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+
+                    LineMark(
+                        x: .value("Year", point.year),
+                        y: .value("Low", point.sharePriceLow)
+                    )
+                    .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                    .lineStyle(.init(lineWidth: 2.5))
+
+                    LineMark(
+                        x: .value("Year", point.year),
+                        y: .value("High", point.sharePriceHigh)
+                    )
+                    .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme))
+                    .lineStyle(.init(lineWidth: 2.5))
+                }
+                .frame(height: 240)
+                .chartYAxis {
+                    AxisMarks(position: .leading)
+                }
+            }
+        }
+    }
+}
+
 private struct StockValuationSummaryCard: View {
     let valuation: StockValuationRequest?
     let onEditValuation: () -> Void
@@ -428,6 +661,9 @@ private struct ValuationCaseTile: View {
 
 private struct StockPositionOverviewCard: View {
     let details: StockDetails
+    let onEditPosition: () -> Void
+
+    @Environment(\.colorScheme) private var colorScheme
 
     private var costBasis: Double {
         details.shares * details.buyPrice
@@ -436,8 +672,14 @@ private struct StockPositionOverviewCard: View {
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Position details")
-                    .typography(.small, weight: .semibold)
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Position details")
+                        .typography(.small, weight: .semibold)
+                    Spacer()
+                    Button("Edit", action: onEditPosition)
+                        .typography(.small, weight: .semibold)
+                        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                }
 
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 12) {
                     GridRow {
@@ -605,17 +847,28 @@ private struct ProjectionTableCard: View {
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Scenario assumptions and outputs")
-                    .typography(.small, weight: .semibold)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Scenario assumptions and outputs")
+                        .typography(.small, weight: .semibold)
+
+                    Text("Use the actual year as the base, then review how revenue, margins, EPS, valuation multiples, and price targets evolve across the forecast.")
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                }
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     VStack(spacing: 0) {
                         ProjectionTableHeader(years: scenario.years)
                         Divider()
 
-                        ForEach(projectionRows) { row in
-                            ProjectionTableRowView(row: row)
+                        ForEach(projectionGroups) { group in
+                            ProjectionTableGroupHeader(title: group.title)
                             Divider()
+
+                            ForEach(group.rows) { row in
+                                ProjectionTableRowView(row: row)
+                                Divider()
+                            }
                         }
                     }
                     .frame(minWidth: 720, alignment: .leading)
@@ -624,35 +877,45 @@ private struct ProjectionTableCard: View {
         }
     }
 
-    private var projectionRows: [ProjectionTableRow] {
+    private var projectionGroups: [ProjectionTableGroup] {
         [
-            ProjectionTableRow(title: "Revenue", values: scenario.years.map { compactCurrency($0.revenue) }),
-            ProjectionTableRow(title: "Rev Growth", values: scenario.years.map { percentText($0.revenueGrowth) }),
-            ProjectionTableRow(title: "Net Income", values: scenario.years.map { compactCurrency($0.netIncome) }),
-            ProjectionTableRow(title: "Net Inc. Growth", values: scenario.years.map { percentText($0.netIncomeGrowth) }),
-            ProjectionTableRow(title: "Net Margins", values: scenario.years.map { percentText($0.netMargin) }),
-            ProjectionTableRow(title: "EPS", values: scenario.years.map { $0.eps.currency }),
-            ProjectionTableRow(title: "PE Low Est", values: scenario.years.map { multipleText($0.peLowEstimate) }),
-            ProjectionTableRow(title: "PE High Est", values: scenario.years.map { multipleText($0.peHighEstimate) }),
-            ProjectionTableRow(
-                title: "Share Price Low",
-                values: scenario.years.map { $0.sharePriceLow.currency },
-                isEmphasized: true
+            ProjectionTableGroup(
+                title: "Operating assumptions",
+                rows: [
+                    ProjectionTableRow(title: "Revenue", values: scenario.years.map { compactCurrency($0.revenue) }),
+                    ProjectionTableRow(title: "Rev Growth", values: scenario.years.map { percentText($0.revenueGrowth) }),
+                    ProjectionTableRow(title: "Net Income", values: scenario.years.map { compactCurrency($0.netIncome) }),
+                    ProjectionTableRow(title: "Net Inc. Growth", values: scenario.years.map { percentText($0.netIncomeGrowth) }),
+                    ProjectionTableRow(title: "Net Margins", values: scenario.years.map { percentText($0.netMargin) }),
+                    ProjectionTableRow(title: "EPS", values: scenario.years.map { $0.eps.currency }),
+                    ProjectionTableRow(title: "PE Low Est", values: scenario.years.map { multipleText($0.peLowEstimate) }),
+                    ProjectionTableRow(title: "PE High Est", values: scenario.years.map { multipleText($0.peHighEstimate) }),
+                ]
             ),
-            ProjectionTableRow(
-                title: "Share Price High",
-                values: scenario.years.map { $0.sharePriceHigh.currency },
-                isEmphasized: true
-            ),
-            ProjectionTableRow(
-                title: "CAGR Low",
-                values: scenario.years.map { percentText($0.cagrLow) },
-                isEmphasized: true
-            ),
-            ProjectionTableRow(
-                title: "CAGR High",
-                values: scenario.years.map { percentText($0.cagrHigh) },
-                isEmphasized: true
+            ProjectionTableGroup(
+                title: "Valuation outputs",
+                rows: [
+                    ProjectionTableRow(
+                        title: "Share Price Low",
+                        values: scenario.years.map { $0.sharePriceLow.currency },
+                        isEmphasized: true
+                    ),
+                    ProjectionTableRow(
+                        title: "Share Price High",
+                        values: scenario.years.map { $0.sharePriceHigh.currency },
+                        isEmphasized: true
+                    ),
+                    ProjectionTableRow(
+                        title: "CAGR Low",
+                        values: scenario.years.map { percentText($0.cagrLow) },
+                        isEmphasized: true
+                    ),
+                    ProjectionTableRow(
+                        title: "CAGR High",
+                        values: scenario.years.map { percentText($0.cagrHigh) },
+                        isEmphasized: true
+                    ),
+                ]
             ),
         ]
     }
@@ -679,6 +942,18 @@ private struct ProjectionTableHeader: View {
     }
 }
 
+private struct ProjectionTableGroupHeader: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .typography(.caption, weight: .semibold)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 10)
+    }
+}
+
 private struct ProjectionTableRowView: View {
     let row: ProjectionTableRow
 
@@ -691,20 +966,46 @@ private struct ProjectionTableRowView: View {
                 .foregroundStyle(.primary)
                 .frame(width: 150, alignment: .leading)
 
-            ForEach(Array(row.values.enumerated()), id: \.offset) { _, value in
+            ForEach(Array(row.values.enumerated()), id: \.offset) { index, value in
                 Text(value)
                     .typography(.nano, weight: row.isEmphasized ? .semibold : .regular)
                     .foregroundStyle(.primary)
                     .frame(width: 114, alignment: .trailing)
                     .padding(.vertical, 10)
                     .background(
-                        row.isEmphasized
-                            ? AppTheme.Colors.tintSoft(for: colorScheme).opacity(0.55)
-                            : Color.clear
+                        ProjectionValueCellBackground(
+                            isActualYear: index == 0,
+                            isEmphasized: row.isEmphasized,
+                            colorScheme: colorScheme
+                        )
                     )
             }
         }
     }
+}
+
+private struct ProjectionValueCellBackground: View {
+    let isActualYear: Bool
+    let isEmphasized: Bool
+    let colorScheme: ColorScheme
+
+    var body: some View {
+        Group {
+            if isActualYear {
+                AppTheme.Colors.tertiaryFill(for: colorScheme)
+            } else if isEmphasized {
+                AppTheme.Colors.tintSoft(for: colorScheme).opacity(0.55)
+            } else {
+                Color.clear
+            }
+        }
+    }
+}
+
+private struct ProjectionTableGroup: Identifiable {
+    let id = UUID()
+    let title: String
+    let rows: [ProjectionTableRow]
 }
 
 private struct ProjectionTableRow: Identifiable {
@@ -863,6 +1164,22 @@ private func formattedMetricValue(_ metric: StockComparisonMetric, value: Double
 private func projectionRangeText(for year: StockProjectionYear?) -> String {
     guard let year else { return "Pending" }
     return "\(year.sharePriceLow.currency) - \(year.sharePriceHigh.currency)"
+}
+
+private func cagrRangeText(for year: StockProjectionYear?) -> String {
+    guard let year else { return "—" }
+    return "\(percentText(year.cagrLow)) to \(percentText(year.cagrHigh))"
+}
+
+private func upsideText(
+    currentPrice: Double,
+    projectedLow: Double,
+    projectedHigh: Double
+) -> String {
+    guard currentPrice > 0 else { return "Awaiting data" }
+    let lowUpside = (projectedLow / currentPrice) - 1
+    let highUpside = (projectedHigh / currentPrice) - 1
+    return "\(percentText(lowUpside)) to \(percentText(highUpside)) vs today"
 }
 
 private func compactCurrency(_ value: Double) -> String {

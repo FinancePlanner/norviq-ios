@@ -13,6 +13,7 @@ private enum HomeTab: Hashable {
 
 private enum PortfolioSegment: String, CaseIterable, Identifiable {
   case holdings
+  case allocation
   case watchlist
 
   var id: String { rawValue }
@@ -21,6 +22,8 @@ private enum PortfolioSegment: String, CaseIterable, Identifiable {
     switch self {
     case .holdings:
       "Holdings"
+    case .allocation:
+      "Allocation"
     case .watchlist:
       "Watchlist"
     }
@@ -83,9 +86,22 @@ private struct DashboardRoot: View {
   @StateObject private var searchViewModel = AssetSearchViewModel()
   @State private var isProfilePresented = false
 
+  // to fill from endpoint later
   private let trendPoints = PortfolioTrendPoint.mock
+  // to fill from endpoint later
   private let spendingPoints = SpendingPoint.mock
+  // to fill from endpoint later
   private let insightCards = InsightCard.mock
+
+  private var greetingText: String {
+    let hour = Calendar.current.component(.hour, from: Date())
+    switch hour {
+    case 5..<12: return "Good morning"
+    case 12..<17: return "Good afternoon"
+    case 17..<22: return "Good evening"
+    default: return "Good night"
+    }
+  }
 
   var body: some View {
     NavigationStack {
@@ -119,16 +135,14 @@ private struct DashboardRoot: View {
         .padding(.vertical, 20)
       }
       .background(MeshGradientBackground())
-      .navigationBarTitleDisplayMode(.inline)
+      .navigationTitle(greetingText)
+      .navigationBarTitleDisplayMode(.large)
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
-          Button {
-            isProfilePresented = true
-          } label: {
-            Image(systemName: "person.crop.circle")
-              .font(.title3.weight(.semibold))
-              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-          }
+          AppTopBarProfileButton(
+            isUserMenuPresented: isProfilePresented,
+            onTap: { isProfilePresented = true }
+          )
           .accessibilityLabel("Open profile")
         }
       }
@@ -152,12 +166,13 @@ private struct DashboardRoot: View {
 
 private struct PortfolioRoot: View {
   @Environment(\.colorScheme) private var colorScheme
+  @StateObject private var portfolioViewModel = PortfolioViewModel()
   @State private var selectedSegment: PortfolioSegment = .holdings
   @State private var isProfilePresented = false
 
   var body: some View {
     NavigationStack {
-      VStack(spacing: 12) {
+      VStack(spacing: 16) {
         Picker("Portfolio section", selection: $selectedSegment) {
           ForEach(PortfolioSegment.allCases) { segment in
             Text(segment.title).tag(segment)
@@ -172,6 +187,9 @@ private struct PortfolioRoot: View {
           case .holdings:
             PortfolioScreen()
               .transition(.opacity.combined(with: .move(edge: .leading)))
+          case .allocation:
+            PortfolioAllocationScreen()
+              .transition(.opacity)
           case .watchlist:
             WatchlistTab()
               .transition(.opacity.combined(with: .move(edge: .trailing)))
@@ -179,18 +197,19 @@ private struct PortfolioRoot: View {
         }
         .animation(.snappy(duration: 0.24), value: selectedSegment)
       }
-      .background(AppTheme.Colors.pageBackground(for: colorScheme))
+      .environmentObject(portfolioViewModel)
+      .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
       .navigationTitle("Portfolio")
       .navigationBarTitleDisplayMode(.large)
+      .task {
+        await portfolioViewModel.load()
+      }
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
-          Button {
-            isProfilePresented = true
-          } label: {
-            Image(systemName: "person.crop.circle")
-              .font(.title3.weight(.semibold))
-              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-          }
+          AppTopBarProfileButton(
+            isUserMenuPresented: isProfilePresented,
+            onTap: { isProfilePresented = true }
+          )
         }
       }
       .sheet(isPresented: $isProfilePresented) {
@@ -212,13 +231,42 @@ private struct SettingsDetailView: View {
 
   var body: some View {
     List {
-      Section("Profile") {
+      // MARK: - User Card (Apple Settings style)
+      Section {
         NavigationLink {
           UserProfileView()
         } label: {
-          Label("Profile", systemImage: "person.crop.circle")
-        }
+          HStack(spacing: 14) {
+            // Avatar
+            ZStack {
+              Circle()
+                .fill(
+                  LinearGradient(
+                    colors: AppTheme.avatarGradient(for: colorScheme),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                  )
+                )
+                .frame(width: 56, height: 56)
 
+              Image(systemName: "person.fill")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+              Text("Your Profile")
+                .typography(.label, weight: .semibold)
+              Text("View and edit your account")
+                .typography(.caption)
+                .foregroundStyle(.secondary)
+            }
+          }
+          .padding(.vertical, 4)
+        }
+      }
+
+      Section("Security") {
         Label("Face ID ready", systemImage: "faceid")
           .foregroundStyle(.primary)
       }
@@ -271,7 +319,8 @@ private struct SettingsDetailView: View {
       }
     }
     .scrollContentBackground(.hidden)
-    .background(AppTheme.Colors.pageBackground(for: colorScheme))
+    .listStyle(.insetGrouped)
+    .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
     .navigationTitle("Settings")
     .navigationBarTitleDisplayMode(.large)
   }
@@ -305,16 +354,19 @@ private struct DashboardHeroCard: View {
           .foregroundStyle(.secondary)
 
         VStack(alignment: .leading, spacing: 8) {
+          // to fill from endpoint later
           Text("$124,830.42")
             .typography(.display, weight: .bold)
             .minimumScaleFactor(0.7)
             .lineLimit(1)
 
           HStack(spacing: 10) {
+            // to fill from endpoint later
             Label("+2.31%", systemImage: "arrow.up.right")
               .typography(.small, weight: .semibold)
               .foregroundStyle(AppTheme.Colors.success)
 
+            // to fill from endpoint later
             Text("Monthly budget is 15% under plan")
               .typography(.small)
               .foregroundStyle(.secondary)
@@ -460,6 +512,7 @@ private struct InsightsGrid: View {
 }
 
 private struct FocusListCard: View {
+  // to fill from endpoint later
   private let items = [
     "Review watchlist names before next earnings window.",
     "Keep discretionary spend below 12% of take-home this month.",
@@ -568,6 +621,7 @@ private struct PortfolioTrendPoint: Identifiable {
 
   var id: String { label }
 
+  // to fill from endpoint later
   static let mock: [PortfolioTrendPoint] = [
     .init(label: "Mon", value: 112_300),
     .init(label: "Tue", value: 113_840),
@@ -585,6 +639,7 @@ private struct SpendingPoint: Identifiable {
 
   var id: String { label }
 
+  // to fill from endpoint later
   static let mock: [SpendingPoint] = [
     .init(label: "Jan", value: 980),
     .init(label: "Feb", value: 860),
@@ -602,6 +657,7 @@ private struct InsightCard: Identifiable {
 
   var id: String { title }
 
+  // to fill from endpoint later
   static let mock: [InsightCard] = [
     .init(
       title: "Savings rate",

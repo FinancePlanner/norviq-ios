@@ -33,6 +33,7 @@ final class StockDetailsViewModelTests: XCTestCase {
     var fetchStockHistoryResult: Result<[StockHistory], Error> = .success([])
     var fetchStockNewsResult: Result<[StockNews], Error> = .success([])
     var getValuationResult: Result<StockValuationRequest, Error> = .failure(StockHTTPClient.Error.invalidStatus(404))
+    var updateStockResult: Result<StockResponse, Error> = .failure(MockError.notConfigured)
 
     func create(stock _: StockRequest) async throws -> StockResponse {
       throw MockError.notConfigured
@@ -58,8 +59,13 @@ final class StockDetailsViewModelTests: XCTestCase {
       try fetchStockNewsResult.get()
     }
 
-    func updateStock(_: StockResponse) async throws -> StockResponse {
-      throw MockError.notConfigured
+    func updateStock(_ stock: StockResponse) async throws -> StockResponse {
+      switch updateStockResult {
+      case let .success(response):
+        return response
+      case let .failure(error):
+        throw error
+      }
     }
 
     func delete(id _: String) async throws {}
@@ -255,6 +261,47 @@ final class StockDetailsViewModelTests: XCTestCase {
     let viewModel = StockDetailsViewModel(service: service)
 
     XCTAssertNil(viewModel.shareSnapshot)
+  }
+
+  func testDeletePosition_ClearsDetails() async {
+    let service = StockServiceMock()
+    let initial = makeDetails(symbol: "AAPL")
+    service.fetchStockDetailsResult = .success(initial)
+
+    let viewModel = StockDetailsViewModel(service: service)
+    await viewModel.load(stockId: initial.id)
+
+    let ok = await viewModel.deletePosition()
+
+    XCTAssertTrue(ok)
+    XCTAssertNil(viewModel.details)
+    XCTAssertTrue(viewModel.history.isEmpty)
+    XCTAssertTrue(viewModel.news.isEmpty)
+    XCTAssertNil(viewModel.valuation)
+  }
+
+  func testSavePosition_UpdatesDetailsFromService() async {
+    let service = StockServiceMock()
+    let initial = makeDetails(symbol: "AAPL")
+    let updated = StockResponse(
+      id: initial.id,
+      symbol: initial.symbol,
+      shares: 25,
+      buyPrice: initial.buyPrice,
+      buyDate: initial.buyDate,
+      notes: initial.notes
+    )
+    service.fetchStockDetailsResult = .success(initial)
+    service.updateStockResult = .success(updated)
+
+    let viewModel = StockDetailsViewModel(service: service)
+    await viewModel.load(stockId: initial.id)
+
+    let ok = await viewModel.savePosition(updated)
+
+    XCTAssertTrue(ok)
+    XCTAssertEqual(viewModel.details?.shares, 25)
+    XCTAssertNil(viewModel.errorMessage)
   }
 
   func testLoad_PopulatesMockInsightsAndDefaultPeers() async {

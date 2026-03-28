@@ -20,6 +20,8 @@ final class StockDetailsViewModel: ObservableObject {
     @Published private(set) var comparisonUniverse: [StockComparisonProfile] = []
     @Published private(set) var selectedPeerSymbols: [String] = []
     @Published var isLoading = false
+    @Published var isSavingPosition = false
+    @Published var isDeletingPosition = false
     @Published var errorMessage: String?
 
     private let service: StockServicing
@@ -54,6 +56,47 @@ final class StockDetailsViewModel: ObservableObject {
 
     init(service: StockServicing) {
         self.service = service
+    }
+
+    func savePosition(_ updated: StockResponse) async -> Bool {
+        guard !isSavingPosition else { return false }
+        isSavingPosition = true
+        errorMessage = nil
+        defer { isSavingPosition = false }
+
+        do {
+            let saved = try await service.updateStock(updated)
+            details = saved
+            return true
+        } catch {
+            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            errorMessage = message
+            return false
+        }
+    }
+
+    func deletePosition() async -> Bool {
+        guard let current = details else { return false }
+        guard !isDeletingPosition else { return false }
+        isDeletingPosition = true
+        errorMessage = nil
+        defer { isDeletingPosition = false }
+
+        do {
+            try await service.delete(id: current.id)
+            details = nil
+            history = []
+            news = []
+            valuation = nil
+            primaryComparisonProfile = nil
+            comparisonUniverse = []
+            selectedPeerSymbols = []
+            return true
+        } catch {
+            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            errorMessage = message
+            return false
+        }
     }
 
     func saveValuation(_ draft: StockValuationDraft) async -> String? {
@@ -108,6 +151,7 @@ final class StockDetailsViewModel: ObservableObject {
             async let valuationTask = loadValuation(symbol: symbol)
 
             self.details = details
+            // to fill from endpoint later
             seedMockInsights(for: symbol)
             self.history = await historyTask
             self.news = await newsTask
@@ -226,6 +270,7 @@ final class StockDetailsViewModel: ObservableObject {
     }
 
     private func seedMockInsights(for symbol: String) {
+        // to fill from endpoint later
         let normalizedSymbol = symbol.uppercased()
         let universe = StockInsightsMockStore.universe(for: normalizedSymbol)
         comparisonUniverse = universe
