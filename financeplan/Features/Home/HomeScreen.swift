@@ -169,6 +169,7 @@ private struct PortfolioRoot: View {
   @StateObject private var portfolioViewModel = PortfolioViewModel()
   @State private var selectedSegment: PortfolioSegment = .holdings
   @State private var isProfilePresented = false
+  @Namespace private var segmentContentNamespace
 
   var body: some View {
     NavigationStack {
@@ -186,13 +187,13 @@ private struct PortfolioRoot: View {
           switch selectedSegment {
           case .holdings:
             PortfolioScreen()
-              .transition(.opacity.combined(with: .move(edge: .leading)))
+              .matchedGeometryEffect(id: "portfolio.segment.content", in: segmentContentNamespace)
           case .allocation:
             PortfolioAllocationScreen()
-              .transition(.opacity)
+              .matchedGeometryEffect(id: "portfolio.segment.content", in: segmentContentNamespace)
           case .watchlist:
             WatchlistTab()
-              .transition(.opacity.combined(with: .move(edge: .trailing)))
+              .matchedGeometryEffect(id: "portfolio.segment.content", in: segmentContentNamespace)
           }
         }
         .animation(.snappy(duration: 0.24), value: selectedSegment)
