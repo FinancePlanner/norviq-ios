@@ -123,7 +123,8 @@ struct StockDetailScreen: View {
             VStack(spacing: 16) {
                 StockDetailHeroCard(
                     details: viewModel.details,
-                    profile: viewModel.primaryComparisonProfile,
+                    companyProfile: viewModel.companyProfile,
+                    comparisonProfile: viewModel.primaryComparisonProfile,
                     marketSnapshot: viewModel.marketSnapshot
                 )
 

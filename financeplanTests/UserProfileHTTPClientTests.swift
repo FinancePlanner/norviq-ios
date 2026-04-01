@@ -77,6 +77,18 @@ final class UserProfileHTTPClientTests: XCTestCase {
       XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
 
       let body = try XCTUnwrap(request.httpBody)
+      let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+      let userProfileJSON = try XCTUnwrap(json["userProfile"] as? [String: Any])
+
+      XCTAssertEqual(userProfileJSON["id"] as? String, "user-123")
+      XCTAssertEqual(userProfileJSON["email"] as? String, "user@example.com")
+      XCTAssertEqual(userProfileJSON["username"] as? String, "updated_user")
+      XCTAssertEqual(userProfileJSON["firstName"] as? String, "Jane")
+      XCTAssertEqual(userProfileJSON["lastName"] as? String, "Doe")
+      XCTAssertNil(json["user_profile"])
+      XCTAssertNil(userProfileJSON["first_name"])
+      XCTAssertNil(userProfileJSON["last_name"])
+
       let decoded = try JSONDecoder().decode(UpdateUserProfileRequest.self, from: body)
       XCTAssertEqual(decoded, requestDTO)
 

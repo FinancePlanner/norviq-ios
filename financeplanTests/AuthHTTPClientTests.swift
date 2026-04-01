@@ -240,6 +240,52 @@ final class AuthHTTPClientTests: XCTestCase {
     XCTAssertEqual(response, expected)
   }
 
+  func testLogin_DecodesSnakeCaseDBStyleDateResponse() async throws {
+    let session = SessionMock()
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
+    let expected = AuthResponse(
+      token: "token-123",
+      userId: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+      expiresIn: 3600,
+      refreshToken: "refresh-123",
+      refreshExpiresIn: 86_400,
+      username: "valid_user",
+      email: "user@example.com",
+      firstName: "Jane",
+      lastName: "Doe",
+      dateOfBirth: Date(timeIntervalSince1970: 1_136_073_600)
+    )
+
+    session.handler = { request in
+      let payload = """
+      {
+        "token": "token-123",
+        "user_id": "11111111-1111-1111-1111-111111111111",
+        "expires_in": 3600,
+        "refresh_token": "refresh-123",
+        "refresh_expires_in": 86400,
+        "username": "valid_user",
+        "email": "user@example.com",
+        "first_name": "Jane",
+        "last_name": "Doe",
+        "date_of_birth": "2006-01-01 00:00:00 +0000"
+      }
+      """.data(using: .utf8) ?? Data()
+
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (payload, response)
+    }
+
+    let client = AuthHTTPClient(baseURL: baseURL, session: session)
+    let response = try await client.login(
+      AuthLoginRequest(email: "user@example.com", password: "Password123")
+    )
+
+    XCTAssertEqual(response, expected)
+  }
+
   func testLogout_WhenV2Returns404_FallsBackToAuthLogout() async throws {
     let session = SessionMock()
     let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))

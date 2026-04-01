@@ -29,7 +29,7 @@ struct UpdateUserProfileEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    let data = try JSONEncoder.stockPlanShared.encode(request)
+    let data = try JSONEncoder.default.encode(request)
     let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
     var params: Parameters = [:]
     for (k, v) in json { params[k] = v }
@@ -46,4 +46,3 @@ struct DeleteUserProfileEndpoint: Endpoint {
 
   func asParameters() throws -> Parameters { [:] }
 }
-

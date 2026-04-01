@@ -4,13 +4,14 @@ import SwiftUI
 
 struct StockDetailHeroCard: View {
     let details: StockDetails?
-    let profile: StockComparisonProfile?
+    let companyProfile: CompanyProfileResponse?
+    let comparisonProfile: StockComparisonProfile?
     let marketSnapshot: StockMarketSnapshot?
 
     @Environment(\.colorScheme) private var colorScheme
 
     private var displayPrice: Double? {
-        marketSnapshot?.currentPrice ?? profile?.currentPrice
+        marketSnapshot?.currentPrice ?? comparisonProfile?.currentPrice
     }
 
     private var positionMarketValue: Double? {
@@ -23,17 +24,58 @@ struct StockDetailHeroCard: View {
         return details.shares * details.buyPrice
     }
 
+    private var symbolText: String {
+        companyProfile?.displayTicker ?? comparisonProfile?.symbol ?? details?.symbol ?? "Stock"
+    }
+
+    private var companyNameText: String {
+        companyProfile?.displayName ?? comparisonProfile?.companyName ?? "Waiting for company profile"
+    }
+
+    private var summaryText: String? {
+        var values: [String] = []
+
+        if let exchange = companyProfile?.exchange?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !exchange.isEmpty {
+            values.append(exchange)
+        }
+
+        if let industry = companyProfile?.finnhubIndustry?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !industry.isEmpty {
+            values.append(industry)
+        }
+
+        if let country = companyProfile?.localizedCountryName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !country.isEmpty {
+            values.append(country)
+        }
+
+        return values.isEmpty ? nil : values.joined(separator: " • ")
+    }
+
     var body: some View {
         GlassCard(cornerRadius: 28) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .top, spacing: 16) {
+                    StockCompanyAvatarView(
+                        companyProfile: companyProfile,
+                        fallbackText: symbolText,
+                        colorScheme: colorScheme
+                    )
+
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(profile?.symbol ?? details?.symbol ?? "Stock")
+                        Text(symbolText)
                             .typography(.hero, weight: .bold)
 
-                        Text(profile?.companyName ?? "Waiting for market data")
+                        Text(companyNameText)
                             .typography(.small)
                             .foregroundStyle(.secondary)
+
+                        if let summaryText {
+                            Text(summaryText)
+                                .typography(.nano)
+                                .foregroundStyle(.secondary)
+                        }
 
                         if let details {
                             Text("Purchased \(details.buyDate) • \(details.shares.formatted(.number.precision(.fractionLength(0...2)))) shares")
@@ -43,15 +85,6 @@ struct StockDetailHeroCard: View {
                     }
 
                     Spacer()
-
-                    Image(systemName: "chart.line.uptrend.xyaxis")
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-                        .padding(12)
-                        .background(
-                            AppTheme.Colors.tintSoft(for: colorScheme),
-                            in: Circle()
-                        )
                 }
 
                 HStack(alignment: .top, spacing: 10) {
@@ -70,6 +103,43 @@ struct StockDetailHeroCard: View {
                         value: costBasis?.currency ?? "Pending",
                         tint: AppTheme.Colors.warning
                     )
+                }
+
+                if let companyProfile {
+                    Divider()
+
+                    Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 12) {
+                        GridRow {
+                            DetailItem(title: "Exchange", value: companyProfile.exchange ?? "—")
+                            DetailItem(title: "Industry", value: companyProfile.finnhubIndustry ?? "—")
+                        }
+
+                        GridRow {
+                            DetailItem(title: "Country", value: companyProfile.localizedCountryName ?? "—")
+                            DetailItem(title: "IPO", value: companyProfile.ipo ?? "—")
+                        }
+
+                        GridRow {
+                            DetailItem(title: "Currency", value: companyProfile.currency ?? "—")
+                            DetailItem(title: "Estimate currency", value: companyProfile.estimateCurrency ?? "—")
+                        }
+
+                        GridRow {
+                            DetailItem(
+                                title: "Market cap",
+                                value: companyProfile.marketCapitalizationAmount.map(compactCurrency) ?? "—"
+                            )
+                            DetailItem(
+                                title: "Shares outstanding",
+                                value: companyProfile.sharesOutstandingAmount.map(compactNumber) ?? "—"
+                            )
+                        }
+
+                        GridRow {
+                            DetailItem(title: "Phone", value: companyProfile.phone ?? "—")
+                            CompanyProfileWebsiteItem(companyProfile: companyProfile)
+                        }
+                    }
                 }
             }
         }
@@ -94,7 +164,7 @@ struct StockOverviewTab: View {
                 StockMarketSnapshotCard(snapshot: marketSnapshot)
             } else {
                 GlassCard {
-                    Text("Market snapshot will appear after the quote endpoint is connected.")
+                    Text("No live quote data is available for this stock right now.")
                         .typography(.small)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -441,8 +511,12 @@ private struct ProjectionScenarioHeaderCard: View {
 private struct StockMarketSnapshotCard: View {
     let snapshot: StockMarketSnapshot
 
+    private var sessionChange: Double {
+        snapshot.resolvedChange
+    }
+
     private var changeTint: Color {
-        snapshot.isPositiveSession ? AppTheme.Colors.success : AppTheme.Colors.danger
+        sessionChange >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger
     }
 
     private var timestampText: String {
@@ -457,7 +531,7 @@ private struct StockMarketSnapshotCard: View {
                     Text("Market snapshot")
                         .typography(.small, weight: .semibold)
 
-                    Text("Current price, session move, and today's range. Use a historical endpoint later for a real price chart.")
+                    Text("Live quote for \(snapshot.symbol) in \(snapshot.currency). Current price, session move, and today's range.")
                         .typography(.nano)
                         .foregroundStyle(.secondary)
                 }
@@ -467,12 +541,12 @@ private struct StockMarketSnapshotCard: View {
                         .typography(.hero, weight: .bold)
                         .monospacedDigit()
 
-                    Text(signedCurrencyText(snapshot.change ?? 0))
+                    Text(signedCurrencyText(sessionChange))
                         .typography(.small, weight: .semibold)
                         .monospacedDigit()
                         .foregroundStyle(changeTint)
 
-                    Text(signedPercentText(snapshot.percentChange ?? 0))
+                    Text(signedPercentText(snapshot.resolvedPercentChange ?? 0))
                         .typography(.small, weight: .semibold)
                         .foregroundStyle(changeTint)
                         .monospacedDigit()
@@ -481,6 +555,11 @@ private struct StockMarketSnapshotCard: View {
                 StockSessionRangeBar(snapshot: snapshot, tint: changeTint)
 
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 12) {
+                    GridRow {
+                        DetailItem(title: "Symbol", value: snapshot.symbol)
+                        DetailItem(title: "Currency", value: snapshot.currency)
+                    }
+
                     GridRow {
                         DetailItem(title: "Open", value: snapshot.open?.currency ?? "—")
                         DetailItem(title: "Prev close", value: snapshot.previousClose?.currency ?? "—")
@@ -1062,6 +1141,89 @@ private struct DetailItem: View {
 
             Text(value)
                 .typography(.small, weight: .semibold)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct StockCompanyAvatarView: View {
+    let companyProfile: CompanyProfileResponse?
+    let fallbackText: String
+    let colorScheme: ColorScheme
+
+    private var logoURL: URL? {
+        guard let logo = companyProfile?.logo?.trimmingCharacters(in: .whitespacesAndNewlines), !logo.isEmpty else {
+            return nil
+        }
+        return URL(string: logo)
+    }
+
+    private var placeholderText: String {
+        String(fallbackText.prefix(1)).uppercased()
+    }
+
+    var body: some View {
+        ZStack {
+            if let logoURL {
+                AsyncImage(url: logoURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    default:
+                        placeholder
+                    }
+                }
+            } else {
+                placeholder
+            }
+        }
+        .frame(width: 56, height: 56)
+        .clipShape(Circle())
+        .overlay(
+            Circle()
+                .stroke(AppTheme.Colors.pageBackground(for: colorScheme), lineWidth: 2)
+        )
+    }
+
+    private var placeholder: some View {
+        LinearGradient(
+            colors: AppTheme.avatarGradient(for: colorScheme),
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .overlay(
+            Text(placeholderText)
+                .typography(.small, weight: .bold)
+                .foregroundStyle(.white)
+        )
+    }
+}
+
+private struct CompanyProfileWebsiteItem: View {
+    let companyProfile: CompanyProfileResponse
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Website")
+                .typography(.caption)
+                .foregroundStyle(.secondary)
+
+            if let websiteURL = companyProfile.websiteURL, let weburl = companyProfile.weburl {
+                Link(destination: websiteURL) {
+                    Text(weburl)
+                        .typography(.small, weight: .semibold)
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.plain)
+            } else {
+                Text("—")
+                    .typography(.small, weight: .semibold)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

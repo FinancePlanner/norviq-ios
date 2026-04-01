@@ -44,7 +44,7 @@ struct BulkCreateStocksEndpoint: Endpoint {
 
   func asParameters() throws -> Parameters {
     // Encode array of StockRequest into JSON-compatible Parameters
-    let data = try JSONEncoder.stockPlanShared.encode(stocks)
+    let data = try JSONEncoder.default.encode(stocks)
     let json = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] ?? []
     var params: Parameters = [:]
     params["stocks"] = json
@@ -72,7 +72,7 @@ struct UpdateStockEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    let data = try JSONEncoder.stockPlanShared.encode(payload)
+    let data = try JSONEncoder.default.encode(payload)
     return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
   }
 }
@@ -158,7 +158,7 @@ struct CreateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
       rationale: draft.rationale,
       targetDate: draft.targetDate
     )
-    body = try JSONEncoder.stockPlanShared.encode(request)
+    body = try JSONEncoder.default.encode(request)
   }
 
 
@@ -182,7 +182,7 @@ struct CreateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
       rationale: rationale,
       targetDate: targetDate
     )
-    body = try JSONEncoder.stockPlanShared.encode(request)
+    body = try JSONEncoder.default.encode(request)
   }
 
 
@@ -218,7 +218,7 @@ struct UpdateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
       rationale: draft.rationale,
       targetDate: draft.targetDate
     )
-    body = try JSONEncoder.stockPlanShared.encode(request)
+    body = try JSONEncoder.default.encode(request)
   }
 
 
@@ -242,7 +242,7 @@ struct UpdateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
       rationale: rationale,
       targetDate: targetDate
     )
-    body = try JSONEncoder.stockPlanShared.encode(request)
+    body = try JSONEncoder.default.encode(request)
   }
 
   var method: HTTPMethod { .put }
@@ -280,7 +280,7 @@ struct CreateWatchlistEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    let data = try JSONEncoder.stockPlanShared.encode(payload)
+    let data = try JSONEncoder.default.encode(payload)
     return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
   }
 }
@@ -296,7 +296,7 @@ struct UpdateWatchlistEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    let data = try JSONEncoder.stockPlanShared.encode(payload)
+    let data = try JSONEncoder.default.encode(payload)
     return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
   }
 }

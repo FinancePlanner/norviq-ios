@@ -16,6 +16,7 @@ final class StockDetailsViewModel: ObservableObject {
     @Published var history: [StockHistory] = []
     @Published var news: [StockNews] = []
     @Published var valuation: StockValuationRequest?
+    @Published private(set) var companyProfile: CompanyProfileResponse?
     @Published private(set) var marketSnapshot: StockMarketSnapshot?
     @Published private(set) var primaryComparisonProfile: StockComparisonProfile?
     @Published private(set) var comparisonUniverse: [StockComparisonProfile] = []
@@ -26,6 +27,7 @@ final class StockDetailsViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let service: StockServicing
+    private let marketDataService: MarketDataServicing
 
     var shareSnapshot: StockShareSnapshot? {
         guard let details else { return nil }
@@ -53,10 +55,12 @@ final class StockDetailsViewModel: ObservableObject {
 
     init() {
         self.service = Container.shared.stockService()
+        self.marketDataService = Container.shared.marketDataService()
     }
 
-    init(service: StockServicing) {
+    init(service: StockServicing, marketDataService: MarketDataServicing = MarketDataServiceStub()) {
         self.service = service
+        self.marketDataService = marketDataService
     }
 
     func savePosition(_ updated: StockResponse) async -> Bool {
@@ -89,6 +93,7 @@ final class StockDetailsViewModel: ObservableObject {
             history = []
             news = []
             valuation = nil
+            companyProfile = nil
             marketSnapshot = nil
             primaryComparisonProfile = nil
             comparisonUniverse = []
@@ -151,20 +156,22 @@ final class StockDetailsViewModel: ObservableObject {
             async let historyTask = loadHistory(symbol: symbol)
             async let newsTask = loadNews(symbol: symbol)
             async let valuationTask = loadValuation(symbol: symbol)
+            async let companyProfileTask = loadCompanyProfile(symbol: symbol)
+            async let quoteTask = loadQuote(symbol: symbol)
 
             self.details = details
-            // to fill from endpoint later
             seedMockInsights(for: symbol)
-            // to fill from endpoint later
-            seedMockMarketSnapshot(for: symbol)
             self.history = await historyTask
             self.news = await newsTask
             self.valuation = await valuationTask
+            self.companyProfile = await companyProfileTask
+            self.marketSnapshot = await quoteTask
         } catch {
             details = nil
             history = []
             news = []
             valuation = nil
+            companyProfile = nil
             marketSnapshot = nil
             primaryComparisonProfile = nil
             comparisonUniverse = []
@@ -301,8 +308,23 @@ final class StockDetailsViewModel: ObservableObject {
         }
     }
 
+    private func loadCompanyProfile(symbol: String) async -> CompanyProfileResponse? {
+        do {
+            return try await marketDataService.fetchCompanyProfile(symbol: symbol)
+        } catch {
+            return nil
+        }
+    }
+
+    private func loadQuote(symbol: String) async -> StockMarketSnapshot? {
+        do {
+            return try await marketDataService.fetchQuote(symbol: symbol)
+        } catch {
+            return nil
+        }
+    }
+
     private func seedMockInsights(for symbol: String) {
-        // to fill from endpoint later
         let normalizedSymbol = symbol.uppercased()
         let universe = StockInsightsMockStore.universe(for: normalizedSymbol)
         comparisonUniverse = universe
@@ -310,39 +332,6 @@ final class StockDetailsViewModel: ObservableObject {
             ?? StockInsightsMockStore.profile(for: normalizedSymbol)
         selectedPeerSymbols = []
         fillMissingPeers()
-    }
-
-    private func seedMockMarketSnapshot(for symbol: String) {
-        // to fill from endpoint later
-        let normalizedSymbol = symbol.uppercased()
-        let profile = primaryComparisonProfile ?? comparisonProfile(for: normalizedSymbol)
-
-        guard let profile else {
-            marketSnapshot = nil
-            return
-        }
-
-        let seed = Double(abs(normalizedSymbol.hashValue % 37)) / 10_000
-        let signedMove = (abs(normalizedSymbol.hashValue) % 2 == 0 ? 1 : -1) * max(0.004, seed)
-        let previousClose = profile.currentPrice / (1 + signedMove)
-        let change = profile.currentPrice - previousClose
-        let open = previousClose * (1 + signedMove * 0.32)
-        let rangeSize = max(abs(change) * 2.4, profile.currentPrice * 0.015)
-        let high = max(profile.currentPrice, open) + (rangeSize * 0.45)
-        let low = max(0.01, min(profile.currentPrice, open) - (rangeSize * 0.55))
-
-        marketSnapshot = StockMarketSnapshot(
-            symbol: profile.symbol,
-            currency: "USD",
-            currentPrice: profile.currentPrice,
-            change: change,
-            percentChange: nil,
-            high: high,
-            low: low,
-            open: open,
-            previousClose: previousClose,
-            timestamp: Date.now.timeIntervalSince1970
-        )
     }
 
 

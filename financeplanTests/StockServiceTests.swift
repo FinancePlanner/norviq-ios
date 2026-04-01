@@ -85,7 +85,7 @@ final class StockServiceTests: XCTestCase {
       created: 1,
       failed: 0,
       results: [
-        BulkCreateStocksItem(
+        BulkStockResultItem(
           index: 0,
           stock: StockResponse(
             id: "stock-1",
@@ -104,6 +104,18 @@ final class StockServiceTests: XCTestCase {
       XCTAssertEqual(request.url?.path, "/v1/stocks/bulk")
       XCTAssertEqual(request.httpMethod, "POST")
       XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+
+      let body = try XCTUnwrap(request.httpBody)
+      let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+      let stocks = try XCTUnwrap(json["stocks"] as? [[String: Any]])
+      let firstStock = try XCTUnwrap(stocks.first)
+
+      XCTAssertEqual((firstStock["shares"] as? NSNumber)?.doubleValue, 10)
+      XCTAssertEqual((firstStock["buyPrice"] as? NSNumber)?.doubleValue, 123.45)
+      XCTAssertEqual(firstStock["buyDate"] as? String, "2026-03-08")
+      XCTAssertEqual(firstStock["symbol"] as? String, "AAPL")
+      XCTAssertNil(firstStock["buy_price"])
+      XCTAssertNil(firstStock["buy_date"])
 
       let response = try XCTUnwrap(
         HTTPURLResponse(

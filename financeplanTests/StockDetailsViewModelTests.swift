@@ -176,6 +176,19 @@ final class StockDetailsViewModelTests: XCTestCase {
     }
   }
 
+  private final class MarketDataServiceMock: MarketDataServicing {
+    var fetchCompanyProfileResult: Result<CompanyProfileResponse, Error> = .failure(MockError.notConfigured)
+    var fetchQuoteResult: Result<QuoteResponse, Error> = .failure(MockError.notConfigured)
+
+    func fetchCompanyProfile(symbol _: String) async throws -> CompanyProfileResponse {
+      try fetchCompanyProfileResult.get()
+    }
+
+    func fetchQuote(symbol _: String) async throws -> QuoteResponse {
+      try fetchQuoteResult.get()
+    }
+  }
+
   private enum MockError: Error {
     case notConfigured
   }
@@ -244,14 +257,18 @@ final class StockDetailsViewModelTests: XCTestCase {
     ]
 
     let snapshot = viewModel.shareSnapshot
+    let expectedPositionLine = "Position: 10 shares @ \(123.45.currency)"
+    let expectedCostBasisLine = "Cost basis: \((10.0 * 123.45).currency)"
+    let expectedBearLine = "Bear: \(100.0.currency) - \(120.0.currency)"
+    let expectedLatestCloseLine = "Latest close: \(125.0.currency)"
 
     XCTAssertEqual(snapshot?.title, "AAPL stock snapshot")
-    XCTAssertTrue(snapshot?.body.contains("$AAPL position snapshot") == true)
-    XCTAssertTrue(snapshot?.body.contains("Position: 10 shares @ $123.45") == true)
-    XCTAssertTrue(snapshot?.body.contains("Cost basis: $1,234.50") == true)
+    XCTAssertTrue(snapshot?.body.contains("position snapshot") == true)
+    XCTAssertTrue(snapshot?.body.contains(expectedPositionLine) == true)
+    XCTAssertTrue(snapshot?.body.contains(expectedCostBasisLine) == true)
     XCTAssertTrue(snapshot?.body.contains("Valuation") == true)
-    XCTAssertTrue(snapshot?.body.contains("Bear: $100.00 - $120.00") == true)
-    XCTAssertTrue(snapshot?.body.contains("Latest close: $125.00") == true)
+    XCTAssertTrue(snapshot?.body.contains(expectedBearLine) == true)
+    XCTAssertTrue(snapshot?.body.contains(expectedLatestCloseLine) == true)
     XCTAssertTrue(snapshot?.body.contains("Recent news") == true)
     XCTAssertTrue(snapshot?.body.contains("Apple expands services revenue") == true)
   }
@@ -305,17 +322,50 @@ final class StockDetailsViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.errorMessage)
   }
 
-  func testLoad_PopulatesMockInsightsAndDefaultPeers() async {
+  func testLoad_PopulatesMockInsightsAndDefaultPeers() async throws {
     let service = StockServiceMock()
-    let viewModel = StockDetailsViewModel(service: service)
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
 
     service.fetchStockDetailsResult = .success(makeDetails(symbol: "META"))
     service.fetchStockHistoryResult = .success([makeHistory()])
     service.fetchStockNewsResult = .success([makeNews()])
     service.getValuationResult = .success(makeValuation(symbol: "META"))
+    marketDataService.fetchCompanyProfileResult = .success(
+      CompanyProfileResponse(
+        country: "US",
+        currency: "USD",
+        estimateCurrency: "USD",
+        exchange: "NASDAQ",
+        finnhubIndustry: "Communication Services",
+        ipo: "2012-05-18",
+        logo: "https://example.com/meta.png",
+        marketCapitalization: 2_500_000,
+        name: "Meta Platforms, Inc.",
+        phone: "16505434800",
+        shareOutstanding: 2_500,
+        ticker: "META",
+        weburl: "https://investor.fb.com"
+      )
+    )
+    marketDataService.fetchQuoteResult = .success(
+      QuoteResponse(
+        symbol: "META",
+        currency: "USD",
+        currentPrice: 612.42,
+        change: 7.15,
+        percentChange: 1.18,
+        high: 615.20,
+        low: 606.30,
+        open: 608.10,
+        previousClose: 605.27,
+        timestamp: 1_775_073_600
+      )
+    )
 
     await viewModel.load(stockId: "stock-1")
 
+    XCTAssertEqual(viewModel.companyProfile?.ticker, "META")
     XCTAssertEqual(viewModel.primaryComparisonProfile?.symbol, "META")
     XCTAssertEqual(viewModel.selectedPeerSymbols.count, 2)
     XCTAssertEqual(viewModel.comparisonProfiles.count, 3)
@@ -323,10 +373,11 @@ final class StockDetailsViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.projectionScenario(.base)?.years.count, 5)
     XCTAssertEqual(viewModel.projectionScenario(.base)?.years.last?.year, 2028)
     XCTAssertNotNil(viewModel.marketSnapshot)
-    XCTAssertEqual(viewModel.marketSnapshot?.currentPrice, viewModel.primaryComparisonProfile?.currentPrice)
+    let currentPrice = try XCTUnwrap(viewModel.marketSnapshot?.currentPrice)
+    XCTAssertEqual(currentPrice, 612.42, accuracy: 0.001)
   }
 
-  func testMarketSnapshot_WhenChangeFieldsMissing_ComputesChangeAndPercent() {
+  func testMarketSnapshot_WhenChangeFieldsMissing_ComputesChangeAndPercent() throws {
     let snapshot = StockMarketSnapshot(
       symbol: "TEST",
       currency: "USD",
@@ -338,10 +389,30 @@ final class StockDetailsViewModelTests: XCTestCase {
       timestamp: 1_582_641_000
     )
 
-    XCTAssertEqual(snapshot.change, 2.29, accuracy: 0.001)
-    XCTAssertEqual(snapshot.percentChange, 2.29 / 259.45, accuracy: 0.0001)
+    XCTAssertEqual(snapshot.resolvedChange, 2.29, accuracy: 0.001)
+    let resolvedPercentChange = try XCTUnwrap(snapshot.resolvedPercentChange)
+    XCTAssertEqual(resolvedPercentChange, 2.29 / 259.45, accuracy: 0.0001)
     XCTAssertGreaterThan(snapshot.rangeProgress, 0)
     XCTAssertLessThan(snapshot.rangeProgress, 1)
+  }
+
+  func testMarketSnapshot_WhenEndpointProvidesPercentagePoints_NormalizesForDisplay() throws {
+    let snapshot = StockMarketSnapshot(
+      symbol: "ZETA",
+      currency: "USD",
+      currentPrice: 15.73,
+      change: -0.19,
+      percentChange: -1.1935,
+      high: 16.3,
+      low: 15.53,
+      open: 16.2,
+      previousClose: 15.92,
+      timestamp: 1_775_073_600
+    )
+
+    XCTAssertEqual(snapshot.resolvedChange, -0.19, accuracy: 0.0001)
+    let resolvedPercentChange = try XCTUnwrap(snapshot.resolvedPercentChange)
+    XCTAssertEqual(resolvedPercentChange, -0.011935, accuracy: 0.000001)
   }
 
   func testUpdatePeerSymbol_WhenSelectingExistingPeer_SwapsVisibleColumns() async {
