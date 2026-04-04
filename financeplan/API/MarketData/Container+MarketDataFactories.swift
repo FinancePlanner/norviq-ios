@@ -22,4 +22,13 @@ extension Container {
       )
     }
   }
+
+  var cryptoService: Factory<CryptoServicing> {
+    self { [unowned self] in
+      CryptoHTTPService(
+        environmentManager: self.appEnvironment(),
+        authSessionManager: self.authSessionManager()
+      )
+    }
+  }
 }

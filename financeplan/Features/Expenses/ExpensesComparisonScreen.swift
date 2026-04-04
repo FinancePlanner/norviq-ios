@@ -18,10 +18,12 @@ private enum BudgetComparisonMode: String, CaseIterable, Identifiable {
 }
 
 struct ExpensesComparisonScreen: View {
+  @Binding var isSettingsPresented: Bool
   @ObservedObject var viewModel: BudgetPlannerViewModel
 
   @Environment(\.colorScheme) private var colorScheme
   @State private var mode: BudgetComparisonMode = .monthly
+  @State private var isProfilePresented = false
 
   var body: some View {
     NavigationStack {
@@ -41,19 +43,25 @@ struct ExpensesComparisonScreen: View {
           )
 
           if mode == .monthly {
-            MonthlyCashflowChart(summaries: viewModel.monthlySummaries)
-            MonthlyComparisonChart(summaries: viewModel.monthlySummaries)
-            PillarStackedChart(
-              summaries: viewModel.monthlySummaries,
-              colorScheme: colorScheme
-            )
-            MonthlyComparisonList(summaries: viewModel.monthlySummaries)
+            VStack(spacing: 20) {
+              MonthlyCashflowChart(summaries: viewModel.monthlySummaries)
+              MonthlyComparisonChart(summaries: viewModel.monthlySummaries)
+              PillarStackedChart(
+                summaries: viewModel.monthlySummaries,
+                colorScheme: colorScheme
+              )
+              MonthlyComparisonList(summaries: viewModel.monthlySummaries)
+            }
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
           } else {
-            YearlyComparisonChart(
-              summaries: viewModel.yearlySummaries,
-              colorScheme: colorScheme
-            )
-            YearlyComparisonList(summaries: viewModel.yearlySummaries)
+            VStack(spacing: 20) {
+              YearlyComparisonChart(
+                summaries: viewModel.yearlySummaries,
+                colorScheme: colorScheme
+              )
+              YearlyComparisonList(summaries: viewModel.yearlySummaries)
+            }
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
           }
         }
         .padding(.horizontal, 16)
@@ -63,6 +71,29 @@ struct ExpensesComparisonScreen: View {
       .navigationTitle("Reports")
       .navigationBarTitleDisplayMode(.large)
       .animation(.snappy(duration: 0.24), value: mode)
+      .toolbar {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+          Button {
+            isSettingsPresented = true
+          } label: {
+            Image(systemName: "gearshape")
+              .font(.system(size: 16, weight: .semibold))
+              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+              .padding(6)
+              .appGlassEffect(.capsule)
+          }
+          .accessibilityLabel("Open settings")
+
+          AppTopBarProfileButton(
+            isUserMenuPresented: isProfilePresented,
+            onTap: { isProfilePresented = true }
+          )
+          .accessibilityLabel("Open profile")
+        }
+      }
+      .sheet(isPresented: $isProfilePresented) {
+        UserProfileView()
+      }
     }
   }
 
@@ -134,6 +165,7 @@ private struct MonthlyCashflowChart: View {
   let summaries: [BudgetMonthSummary]
 
   @Environment(\.colorScheme) private var colorScheme
+  @State private var chartProgress: Double = 0.0
 
   var body: some View {
     GlassCard {
@@ -144,13 +176,13 @@ private struct MonthlyCashflowChart: View {
         Chart(summaries) { summary in
           LineMark(
             x: .value("Month", summary.shortLabel),
-            y: .value("Salary", summary.salary)
+            y: .value("Salary", summary.salary * chartProgress)
           )
           .foregroundStyle(AppTheme.Colors.tint(for: colorScheme).opacity(0.35))
 
           LineMark(
             x: .value("Month", summary.shortLabel),
-            y: .value("Remaining", summary.remainingAfterSpending)
+            y: .value("Remaining", summary.remainingAfterSpending * chartProgress)
           )
           .interpolationMethod(.catmullRom)
           .foregroundStyle(AppTheme.Colors.success)
@@ -158,7 +190,7 @@ private struct MonthlyCashflowChart: View {
 
           AreaMark(
             x: .value("Month", summary.shortLabel),
-            y: .value("Remaining", summary.remainingAfterSpending)
+            y: .value("Remaining", summary.remainingAfterSpending * chartProgress)
           )
           .interpolationMethod(.catmullRom)
           .foregroundStyle(
@@ -175,6 +207,11 @@ private struct MonthlyCashflowChart: View {
         }
       }
     }
+    .onAppear {
+      withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.1)) {
+        chartProgress = 1.0
+      }
+    }
   }
 }
 
@@ -182,6 +219,7 @@ private struct MonthlyComparisonChart: View {
   let summaries: [BudgetMonthSummary]
 
   @Environment(\.colorScheme) private var colorScheme
+  @State private var chartProgress: Double = 0.0
 
   var body: some View {
     GlassCard {
@@ -192,7 +230,7 @@ private struct MonthlyComparisonChart: View {
         Chart(summaries) { summary in
           BarMark(
             x: .value("Month", summary.shortLabel),
-            y: .value("Amount", summary.planned)
+            y: .value("Amount", summary.planned * chartProgress)
           )
           .position(by: .value("Series", "Planned"))
           .foregroundStyle(AppTheme.Colors.tint(for: colorScheme).opacity(0.35))
@@ -200,7 +238,7 @@ private struct MonthlyComparisonChart: View {
 
           BarMark(
             x: .value("Month", summary.shortLabel),
-            y: .value("Amount", summary.actual)
+            y: .value("Amount", summary.actual * chartProgress)
           )
           .position(by: .value("Series", "Actual"))
           .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme))
@@ -212,12 +250,18 @@ private struct MonthlyComparisonChart: View {
         }
       }
     }
+    .onAppear {
+      withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2)) {
+        chartProgress = 1.0
+      }
+    }
   }
 }
 
 private struct PillarStackedChart: View {
   let summaries: [BudgetMonthSummary]
   let colorScheme: ColorScheme
+  @State private var chartProgress: Double = 0.0
 
   var body: some View {
     GlassCard {
@@ -230,7 +274,7 @@ private struct PillarStackedChart: View {
             ForEach(BudgetPillar.allCases) { pillar in
               BarMark(
                 x: .value("Month", summary.shortLabel),
-                y: .value("Amount", summary.pillarActuals[pillar] ?? 0)
+                y: .value("Amount", (summary.pillarActuals[pillar] ?? 0) * chartProgress)
               )
               .foregroundStyle(pillar.color(for: colorScheme))
             }
@@ -248,6 +292,11 @@ private struct PillarStackedChart: View {
               .typography(.nano)
           }
         }
+      }
+    }
+    .onAppear {
+      withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.3)) {
+        chartProgress = 1.0
       }
     }
   }
@@ -296,6 +345,7 @@ private struct MonthlyComparisonList: View {
 private struct YearlyComparisonChart: View {
   let summaries: [BudgetYearSummary]
   let colorScheme: ColorScheme
+  @State private var chartProgress: Double = 0.0
 
   var body: some View {
     GlassCard {
@@ -306,12 +356,12 @@ private struct YearlyComparisonChart: View {
         Chart(summaries) { summary in
           BarMark(
             x: .value("Year", String(summary.year)),
-            y: .value("Actual", summary.actual)
+            y: .value("Actual", summary.actual * chartProgress)
           )
           .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
           .cornerRadius(8)
 
-          RuleMark(y: .value("Planned", summary.planned))
+          RuleMark(y: .value("Planned", summary.planned * chartProgress))
             .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme))
             .lineStyle(.init(lineWidth: 2, dash: [6, 4]))
         }
@@ -319,6 +369,11 @@ private struct YearlyComparisonChart: View {
         .chartYAxis {
           AxisMarks(position: .leading)
         }
+      }
+    }
+    .onAppear {
+      withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.1)) {
+        chartProgress = 1.0
       }
     }
   }
@@ -375,6 +430,7 @@ private struct SummaryBlock: View {
         .foregroundStyle(.secondary)
       Text(value)
         .typography(.small, weight: .semibold)
+        .contentTransition(.numericText())
       Text(detail)
         .typography(.nano)
         .foregroundStyle(.secondary)

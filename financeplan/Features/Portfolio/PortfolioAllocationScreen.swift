@@ -42,8 +42,8 @@ struct PortfolioAllocationScreen: View {
   var body: some View {
     Group {
       if viewModel.isLoading && stocks.isEmpty {
-        ProgressView("Loading portfolio...")
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
+        PortfolioAllocationSkeletonView()
+          .transition(.opacity)
       } else if let error = viewModel.errorMessage, stocks.isEmpty {
         ContentUnavailableView {
           Label("Unable to Load Portfolio", systemImage: "exclamationmark.triangle")
@@ -58,8 +58,10 @@ struct PortfolioAllocationScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else {
         allocationContent
+          .transition(.opacity)
       }
     }
+    .animation(.smooth(duration: 0.3), value: viewModel.isLoading)
     .onAppear {
         viewModel.setModelContext(modelContext)
     }
@@ -108,6 +110,7 @@ struct PortfolioAllocationScreen: View {
 
               Text(totalValue.currency)
                 .typography(.hero, weight: .bold)
+                .contentTransition(.numericText())
 
               Text(
                 "\(allocationSlices.count) positions · percentages sum to how much each holding contributes to total value."
@@ -142,10 +145,12 @@ struct PortfolioAllocationScreen: View {
                       .typography(.label, weight: .semibold)
                       .foregroundStyle(.secondary)
                       .monospacedDigit()
+                      .contentTransition(.numericText())
 
                     Text(slice.value.currency)
                       .typography(.small)
                       .foregroundStyle(.secondary)
+                      .contentTransition(.numericText())
                   }
                 }
               }
@@ -199,11 +204,13 @@ struct PortfolioAllocationScreen: View {
 private struct AllocationDonutChart: View {
   let slices: [PortfolioAllocationSlice]
   let colorScheme: ColorScheme
+  
+  @State private var animationProgress: Double = 0.0
 
   var body: some View {
     Chart(slices) { slice in
       SectorMark(
-        angle: .value("Value", slice.value),
+        angle: .value("Value", slice.value * animationProgress),
         innerRadius: .ratio(0.56),
         angularInset: 1.2
       )
@@ -215,6 +222,11 @@ private struct AllocationDonutChart: View {
       range: slices.indices.map { AllocationPalette.color(at: $0, colorScheme: colorScheme) }
     )
     .chartLegend(.hidden)
+    .onAppear {
+      withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2)) {
+        animationProgress = 1.0
+      }
+    }
   }
 }
 
@@ -319,6 +331,42 @@ private struct AllocationShareReadySheet: View {
           Button("Done", action: onDismiss)
         }
       }
+    }
+  }
+}
+
+// MARK: - Skeleton View
+
+private struct PortfolioAllocationSkeletonView: View {
+  var body: some View {
+    ScrollView {
+      VStack(spacing: 20) {
+        RoundedRectangle(cornerRadius: 24, style: .continuous)
+          .fill(.gray.opacity(0.12))
+          .frame(height: 110)
+          .shimmer()
+        
+        GlassCard {
+          VStack(spacing: 20) {
+            Circle()
+              .stroke(.gray.opacity(0.12), lineWidth: 50)
+              .frame(height: 200)
+              .padding()
+              .shimmer()
+            
+            VStack(alignment: .leading, spacing: 16) {
+              ForEach(0..<4, id: \.self) { _ in
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                  .fill(.gray.opacity(0.12))
+                  .frame(height: 20)
+                  .shimmer()
+              }
+            }
+          }
+        }
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 12)
     }
   }
 }

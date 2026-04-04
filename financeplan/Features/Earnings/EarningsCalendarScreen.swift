@@ -7,55 +7,112 @@ struct EarningsCalendarScreen: View {
   
   @State private var selectedDate = Date()
   @State private var earnings: [EarningsEvent] = []
+  @State private var upcomingEarnings: [EarningsEvent] = []
   @State private var isLoading = false
+  @State private var isLoadingUpcoming = false
   @State private var errorMessage: String?
   @State private var selectedEvent: EarningsEvent?
 
   var body: some View {
-    VStack(spacing: 0) {
-      // Marked Calendar Picker
-      EarningsMarkedCalendar(
-        selectedDate: $selectedDate,
-        markedDates: Set(earnings.map { $0.date })
-      )
-      .frame(height: 380)
-      .background(AppTheme.Colors.cardBackground(for: colorScheme))
-      .clipShape(RoundedRectangle(cornerRadius: 16))
-      .padding()
-
-      // Earnings List
-      ZStack {
-        if isLoading && earnings.isEmpty {
-          ProgressView()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-          List {
-            Section("Earnings for \(selectedDate.formatted(date: .long, time: .omitted))") {
-              let dayEarnings = earningsForSelectedDate
-              if dayEarnings.isEmpty {
-                ContentUnavailableView {
-                  Label("No Earnings Today", systemImage: "calendar.badge.exclamationmark")
-                } description: {
-                  Text("No earnings releases found for the selected date.")
-                }
-                .listRowBackground(Color.clear)
-              } else {
-                ForEach(dayEarnings) { event in
-                  Button {
-                    selectedEvent = event
-                  } label: {
-                    EarningsRow(event: event)
+    ZStack {
+      if isLoading && earnings.isEmpty && upcomingEarnings.isEmpty {
+        ProgressView()
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      } else {
+        List {
+          // 1. Upcoming in the Next 30 Days
+          if isLoadingUpcoming {
+            ProgressView("Loading upcoming...")
+              .frame(maxWidth: .infinity, alignment: .center)
+              .listRowBackground(Color.clear)
+          } else if !upcomingEarnings.isEmpty {
+            Section("Upcoming in the Next 30 Days") {
+              ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 16) {
+                  ForEach(upcomingEarnings) { event in
+                    Button {
+                      selectedEvent = event
+                    } label: {
+                      UpcomingEarningsCard(event: event)
+                    }
+                    .buttonStyle(.plain)
                   }
-                  .buttonStyle(.plain)
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+              }
+              .listRowInsets(EdgeInsets())
+              .listRowBackground(Color.clear)
+            }
+          }
+
+          // 2. Calendar
+          Section {
+            EarningsMarkedCalendar(
+              selectedDate: $selectedDate,
+              markedDates: Set(earnings.map { $0.date })
+            )
+            .frame(height: 380)
+            .background(AppTheme.Colors.cardBackground(for: colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+          }
+          .listRowInsets(EdgeInsets())
+          .listRowBackground(Color.clear)
+
+          // 3. Selected Date Earnings
+          Section("Earnings for \(selectedDate.formatted(date: .long, time: .omitted))") {
+            let dayEarnings = earningsForSelectedDate
+            if dayEarnings.isEmpty {
+              ContentUnavailableView {
+                Label("No Earnings Today", systemImage: "calendar.badge.exclamationmark")
+              } description: {
+                Text("No earnings releases found for the selected date.")
+              }
+              .listRowBackground(Color.clear)
+            } else {
+              ForEach(dayEarnings) { event in
+                Button {
+                  selectedEvent = event
+                } label: {
+                  EarningsRow(event: event)
+                }
+                .buttonStyle(.plain)
               }
             }
           }
-          .listStyle(.insetGrouped)
-          .scrollContentBackground(.hidden)
-          .refreshable {
-            await loadEarnings()
+          
+          // 4. "Earnings Transcripts" title + warning
+          Section {
+            VStack(alignment: .leading, spacing: 16) {
+              Text("Earnings Transcripts")
+                .typography(.title, weight: .bold)
+              
+              HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "info.circle.fill")
+                  .foregroundStyle(Color.blue)
+                VStack(alignment: .leading, spacing: 4) {
+                  Text("Coming in Future Updates")
+                    .typography(.small, weight: .semibold)
+                  Text("Earnings Transcripts and the ability to select the specific timestamp of the earnings (pre-market vs. after-hours) are currently limited and will be fully supported in future versions.")
+                    .typography(.nano)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+              }
+              .padding()
+              .appGlassEffect(.rect(cornerRadius: 16), tint: Color.blue.opacity(0.05))
+            }
           }
+          .listRowBackground(Color.clear)
+          .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 24, trailing: 16))
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .refreshable {
+          await loadEarnings()
+          await loadUpcomingEarnings()
         }
       }
     }
@@ -65,6 +122,9 @@ struct EarningsCalendarScreen: View {
     .task(id: selectedDate) {
       // Reload if we cross into a date we don't have cached in the current set
       await loadEarnings()
+    }
+    .task {
+      await loadUpcomingEarnings()
     }
     .overlay(alignment: .top) {
       if let errorMessage {
@@ -108,6 +168,25 @@ struct EarningsCalendarScreen: View {
         }
         isLoading = false
     }
+  }
+
+  private func loadUpcomingEarnings() async {
+    guard upcomingEarnings.isEmpty else { return }
+    isLoadingUpcoming = true
+    
+    let from = formatISODateOnly(Date())
+    let toDate = Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date()
+    let to = formatISODateOnly(toDate)
+    
+    do {
+      let results = try await marketDataService.fetchEarningsCalendar(from: from, to: to)
+      // Sort by date soonest first
+      self.upcomingEarnings = results.sorted(by: { $0.date < $1.date })
+    } catch {
+      // Don't show hard error for this background fetch, just log it or ignore
+      print("Error fetching upcoming earnings: \(error)")
+    }
+    isLoadingUpcoming = false
   }
 
   private func formatISODateOnly(_ date: Date) -> String {
@@ -175,14 +254,7 @@ struct EarningsMarkedCalendar: UIViewRepresentable {
             
             if parent.markedDates.contains(dateString) {
                 // Use a star symbol for better visibility as requested
-                return .customView {
-                    let image = UIImage(systemName: "star.fill")
-                    let imageView = UIImageView(image: image)
-                    imageView.tintColor = .systemBlue
-                    imageView.contentMode = .scaleAspectFit
-                    imageView.frame = CGRect(x: 0, y: 0, width: 10, height: 10)
-                    return imageView
-                }
+                return .image(UIImage(systemName: "star.fill"), color: .systemOrange, size: .medium)
             }
             return nil
         }
@@ -322,5 +394,46 @@ struct EarningsMetricPill: View {
     .padding(.horizontal, 10)
     .padding(.vertical, 8)
     .appGlassEffect(.rect(cornerRadius: 12), tint: tint.opacity(0.1))
+  }
+}
+
+// MARK: - Upcoming Earnings Card
+
+struct UpcomingEarningsCard: View {
+  let event: EarningsEvent
+  @Environment(\.colorScheme) private var colorScheme
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack(alignment: .top) {
+        Text(event.symbol)
+          .typography(.headline, weight: .bold)
+        Spacer()
+        VStack(alignment: .trailing, spacing: 2) {
+          Text("EST. EPS")
+            .typography(.nano)
+            .foregroundStyle(.secondary)
+          Text(event.epsEstimated?.formatted() ?? "—")
+            .typography(.small, weight: .semibold)
+            .foregroundStyle(event.epsEstimated ?? 0 >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger)
+        }
+      }
+      
+      Spacer()
+      
+      HStack {
+        Image(systemName: "calendar")
+          .font(.caption2)
+        Text(event.date)
+          .typography(.caption)
+      }
+      .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+      .padding(.horizontal, 8)
+      .padding(.vertical, 4)
+      .appGlassEffect(.capsule, tint: AppTheme.Colors.tint(for: colorScheme).opacity(0.15))
+    }
+    .frame(width: 150, height: 110)
+    .padding(16)
+    .appGlassEffect(.rect(cornerRadius: 20))
   }
 }

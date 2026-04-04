@@ -2,9 +2,11 @@ import Charts
 import SwiftUI
 
 struct ExpensesPlannerScreen: View {
+  @Binding var isSettingsPresented: Bool
   @ObservedObject var viewModel: BudgetPlannerViewModel
 
   @Environment(\.colorScheme) private var colorScheme
+  @State private var isProfilePresented = false
   @State private var isSalaryEditorPresented = false
   @State private var isTargetEditorPresented = false
   @State private var isActivitySheetPresented = false
@@ -103,13 +105,15 @@ struct ExpensesPlannerScreen: View {
       }
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
-          HStack(spacing: 12) {
+          HStack(spacing: 8) {
             Button {
               isActivitySheetPresented = true
             } label: {
-              Image(systemName: "plus.circle.fill")
-                .font(.title3)
+              Image(systemName: "plus.circle")
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                .padding(6)
+                .appGlassEffect(.capsule)
             }
             .accessibilityLabel("Record spend")
 
@@ -140,10 +144,34 @@ struct ExpensesPlannerScreen: View {
               }
             } label: {
               Image(systemName: "ellipsis.circle")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                .padding(6)
+                .appGlassEffect(.capsule)
             }
             .accessibilityLabel("Expense actions")
+
+            Button {
+              isSettingsPresented = true
+            } label: {
+              Image(systemName: "gearshape")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                .padding(6)
+                .appGlassEffect(.capsule)
+            }
+            .accessibilityLabel("Open settings")
+
+            AppTopBarProfileButton(
+              isUserMenuPresented: isProfilePresented,
+              onTap: { isProfilePresented = true }
+            )
+            .accessibilityLabel("Open profile")
           }
         }
+      }
+      .sheet(isPresented: $isProfilePresented) {
+        UserProfileView()
       }
       .sheet(isPresented: $isSalaryEditorPresented) {
         NetSalaryEditorSheet(
@@ -216,6 +244,8 @@ private struct ExpensesYearOverviewCard: View {
 
   @Environment(\.colorScheme) private var colorScheme
 
+  @State private var chartProgress: Double = 0.0
+
   var body: some View {
     GlassCard(cornerRadius: 28) {
       VStack(alignment: .leading, spacing: 18) {
@@ -233,10 +263,12 @@ private struct ExpensesYearOverviewCard: View {
 
           Text(totalSpent.currency)
             .typography(.hero, weight: .bold)
+            .contentTransition(.numericText())
 
           Text("Avg \(averageSpent.currency) through \(lastMonthLabel)")
             .typography(.nano)
             .foregroundStyle(.secondary)
+            .contentTransition(.numericText())
         }
 
         VStack(alignment: .leading, spacing: 12) {
@@ -254,7 +286,7 @@ private struct ExpensesYearOverviewCard: View {
             Chart(chartPoints) { point in
               BarMark(
                 x: .value("Month", point.label),
-                y: .value("Spent", point.actual)
+                y: .value("Spent", point.actual * chartProgress)
               )
               .foregroundStyle(AppTheme.Colors.tint(for: colorScheme).gradient)
               .cornerRadius(6)
@@ -270,6 +302,11 @@ private struct ExpensesYearOverviewCard: View {
             in: RoundedRectangle(cornerRadius: 20, style: .continuous)
           )
         }
+      }
+    }
+    .onAppear {
+      withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.1)) {
+        chartProgress = 1.0
       }
     }
   }
@@ -392,6 +429,7 @@ private struct PlannerSalaryCard: View {
         HStack(alignment: .lastTextBaseline, spacing: 8) {
           Text(netSalary.currency)
             .typography(.hero, weight: .bold)
+            .contentTransition(.numericText())
           Text("monthly take-home")
             .typography(.small)
             .foregroundStyle(.secondary)
@@ -550,30 +588,38 @@ private struct PlannerItemRow: View {
   }
 
   var body: some View {
-    HStack(alignment: .top, spacing: 12) {
-      VStack(alignment: .leading, spacing: 4) {
-        Text(item.title)
+    Button {
+      onEdit()
+    } label: {
+      HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: 4) {
+          Text(item.title)
+            .typography(.small, weight: .semibold)
+            .foregroundStyle(.primary)
+          Text("Planned \(item.plannedAmount.currency) • Spent \(actualAmount.currency)")
+            .typography(.nano)
+            .foregroundStyle(.secondary)
+        }
+
+        Spacer()
+
+        Text(variance.currency)
           .typography(.small, weight: .semibold)
-        Text("Planned \(item.plannedAmount.currency) • Spent \(actualAmount.currency)")
-          .typography(.nano)
-          .foregroundStyle(.secondary)
+          .foregroundStyle(variance >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger)
+          .contentTransition(.numericText())
+
+        Menu {
+          Button("Edit", systemImage: "pencil", action: onEdit)
+          Button("Delete", systemImage: "trash", role: .destructive, action: onDelete)
+        } label: {
+          Image(systemName: "ellipsis.circle")
+            .font(.body)
+            .foregroundStyle(.secondary)
+        }
       }
-
-      Spacer()
-
-      Text(variance.currency)
-        .typography(.small, weight: .semibold)
-        .foregroundStyle(variance >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger)
-
-      Menu {
-        Button("Edit", systemImage: "pencil", action: onEdit)
-        Button("Delete", systemImage: "trash", role: .destructive, action: onDelete)
-      } label: {
-        Image(systemName: "ellipsis.circle")
-          .font(.body)
-          .foregroundStyle(.secondary)
-      }
+      .contentShape(Rectangle())
     }
+    .buttonStyle(CardButtonStyle())
     .contextMenu {
       Button("Edit", systemImage: "pencil", action: onEdit)
       Button("Delete", systemImage: "trash", role: .destructive, action: onDelete)
@@ -637,11 +683,23 @@ private struct SummaryMetric: View {
       Text(value)
         .typography(.small, weight: .semibold)
         .foregroundStyle(accent)
+        .contentTransition(.numericText())
     }
     .accessibilityElement(children: .combine)
     .accessibilityLabel(Text(title))
     .accessibilityValue(Text(value))
     .frame(maxWidth: .infinity, alignment: .leading)
+  }
+}
+
+// MARK: - Premium UI Helpers
+
+private struct CardButtonStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+      .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
+      .opacity(configuration.isPressed ? 0.9 : 1.0)
   }
 }
 

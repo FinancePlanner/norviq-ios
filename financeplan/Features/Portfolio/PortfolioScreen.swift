@@ -30,8 +30,8 @@ struct PortfolioScreen: View {
   var body: some View {
     Group {
       if viewModel.isLoading && stocks.isEmpty {
-        ProgressView("Loading portfolio...")
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
+        PortfolioSkeletonView()
+          .transition(.opacity)
       } else if let error = viewModel.errorMessage, stocks.isEmpty {
         ContentUnavailableView {
           Label("Unable to Load Portfolio", systemImage: "exclamationmark.triangle")
@@ -56,9 +56,11 @@ struct PortfolioScreen: View {
                 HStack(alignment: .lastTextBaseline, spacing: 8) {
                   Text(totalValue.currency)
                     .typography(.hero, weight: .bold)
+                    .contentTransition(.numericText())
                   Text("\(stocks.count) positions")
                     .typography(.small)
                     .foregroundStyle(.secondary)
+                    .contentTransition(.numericText())
                 }
 
                 HStack {
@@ -96,7 +98,7 @@ struct PortfolioScreen: View {
                 } label: {
                   PortfolioRow(stock: stock)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(CardButtonStyle())
                 .contextMenu {
                   Button("Edit", systemImage: "pencil") {
                     viewModel.beginEdit(StockResponse(
@@ -120,8 +122,10 @@ struct PortfolioScreen: View {
           .padding(.horizontal, 16)
           .padding(.vertical, 12)
         }
+        .transition(.opacity)
       }
     }
+    .animation(.smooth(duration: 0.3), value: viewModel.isLoading)
     .onAppear {
         viewModel.setModelContext(modelContext)
         Task { await viewModel.load() }
@@ -201,6 +205,7 @@ private struct PortfolioRow: View {
           Text((stock.shares * stock.buyPrice).currency)
             .typography(.label, weight: .semibold)
             .foregroundStyle(.primary)
+            .contentTransition(.numericText())
         }
 
         HStack(spacing: 8) {
@@ -240,11 +245,45 @@ private struct PortfolioMetricPill: View {
       Text(value)
         .typography(.small, weight: .semibold)
         .foregroundStyle(.primary)
+        .contentTransition(.numericText())
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.horizontal, 12)
     .padding(.vertical, 10)
     .appGlassEffect(.rect(cornerRadius: 16), tint: tint.opacity(0.10))
+  }
+}
+
+// MARK: - Premium UI Helpers
+
+private struct CardButtonStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+      .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
+      .opacity(configuration.isPressed ? 0.9 : 1.0)
+  }
+}
+
+private struct PortfolioSkeletonView: View {
+  var body: some View {
+    ScrollView {
+      VStack(spacing: 16) {
+        RoundedRectangle(cornerRadius: 24, style: .continuous)
+          .fill(.gray.opacity(0.12))
+          .frame(height: 140)
+          .shimmer()
+        
+        ForEach(0..<4, id: \.self) { _ in
+          RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .fill(.gray.opacity(0.12))
+            .frame(height: 110)
+            .shimmer()
+        }
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 12)
+    }
   }
 }
 

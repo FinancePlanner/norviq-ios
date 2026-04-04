@@ -8,7 +8,6 @@ private enum HomeTab: Hashable {
   case dashboard
   case portfolio
   case expenses
-  case crypto
   case reports
 }
 
@@ -60,20 +59,13 @@ struct HomeScreen: View {
         }
         .tag(HomeTab.portfolio)
 
-      ExpensesPlannerScreen(viewModel: budgetPlannerViewModel)
+      ExpensesPlannerScreen(isSettingsPresented: $isSettingsPresented, viewModel: budgetPlannerViewModel)
         .tabItem {
           Label("Expenses", systemImage: "creditcard")
         }
         .tag(HomeTab.expenses)
 
-      Color.clear
-        .tabItem {
-          Label("Crypto", systemImage: "bitcoinsign.circle")
-        }
-        .tag(HomeTab.crypto)
-        .disabled(true)
-
-      ExpensesComparisonScreen(viewModel: budgetPlannerViewModel)
+      ExpensesComparisonScreen(isSettingsPresented: $isSettingsPresented, viewModel: budgetPlannerViewModel)
         .tabItem {
           Label("Reports", systemImage: "chart.bar.xaxis")
         }
@@ -481,6 +473,13 @@ private struct DashboardHeroCard: View {
             tint: .indigo,
             action: onReportsTap
           )
+          DashboardActionButton(
+            title: "Crypto",
+            symbol: "bitcoinsign.circle",
+            tint: .red,
+            isDisabled: true,
+            action: {}
+          )
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -683,6 +682,7 @@ private struct DashboardActionButton: View {
   let title: String
   let symbol: String
   let tint: Color
+  var isDisabled: Bool = false
   let action: () -> Void
 
   var body: some View {
@@ -690,15 +690,30 @@ private struct DashboardActionButton: View {
       VStack(spacing: 8) {
         Image(systemName: symbol)
           .font(.headline.weight(.semibold))
-        Text(title)
-          .typography(.nano, weight: .semibold)
+          .foregroundStyle(isDisabled ? .secondary.opacity(0.8) : tint)
+          
+        HStack(spacing: 4) {
+          Text(title)
+            .typography(.nano, weight: .semibold)
+            .foregroundStyle(isDisabled ? .secondary : tint)
+            
+          if isDisabled {
+            Text("Soon")
+              .font(.system(size: 8, weight: .bold, design: .rounded))
+              .foregroundStyle(.white)
+              .padding(.horizontal, 4)
+              .padding(.vertical, 1)
+              .background(Color.red, in: Capsule())
+          }
+        }
       }
-      .foregroundStyle(tint)
       .frame(maxWidth: .infinity)
       .padding(.vertical, 12)
       .appGlassEffect(.rect(cornerRadius: 18), tint: tint.opacity(0.10))
+      .opacity(isDisabled ? 0.6 : 1.0)
     }
     .buttonStyle(.plain)
+    .disabled(isDisabled)
   }
 }
 

@@ -111,7 +111,9 @@ struct OnboardingMainMenu: View {
           title: "Crypto Assets",
           subtitle: "Sync wallets and exchange data",
           icon: "bitcoinsign.circle.fill",
-          color: .purple,
+          color: .red,
+          isDisabled: true,
+          showSoonBadge: true,
           action: { /* Soon */ }
         )
       }
@@ -152,6 +154,8 @@ private struct OnboardingMenuButton: View {
   let subtitle: String
   let icon: String
   let color: Color
+  var isDisabled: Bool = false
+  var showSoonBadge: Bool = false
   let action: () -> Void
   @Environment(\.colorScheme) private var colorScheme
 
@@ -169,9 +173,20 @@ private struct OnboardingMenuButton: View {
         }
 
         VStack(alignment: .leading, spacing: 2) {
-          Text(title)
-            .typography(.label, weight: .bold)
-            .foregroundStyle(.primary)
+          HStack(spacing: 6) {
+            Text(title)
+              .typography(.label, weight: .bold)
+              .foregroundStyle(isDisabled ? .secondary : .primary)
+            
+            if showSoonBadge {
+              Text("Soon")
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.red, in: Capsule())
+            }
+          }
           
           Text(subtitle)
             .typography(.nano)
@@ -187,8 +202,10 @@ private struct OnboardingMenuButton: View {
       .padding(.horizontal, 16)
       .padding(.vertical, 14)
       .appGlassEffect(.rect(cornerRadius: 20))
+      .opacity(isDisabled ? 0.6 : 1.0)
     }
     .buttonStyle(PressEffectStyle())
+    .disabled(isDisabled)
   }
 }
 
