@@ -2,76 +2,27 @@ import Charts
 import SwiftUI
 import StockPlanShared
 
-private enum BudgetComparisonMode: String, CaseIterable, Identifiable {
-  case monthly
-  case yearly
-
-  var id: String { rawValue }
-
-  var title: String {
-    switch self {
-    case .monthly:
-      "Months"
-    case .yearly:
-      "Years"
-    }
-  }
-}
-
 struct ExpensesComparisonScreen: View {
   @Binding var isSettingsPresented: Bool
   @ObservedObject var viewModel: BudgetPlannerViewModel
 
   @Environment(\.colorScheme) private var colorScheme
-  @State private var mode: BudgetComparisonMode = .monthly
   @State private var isProfilePresented = false
 
   var body: some View {
     NavigationStack {
       ScrollView {
         VStack(spacing: 20) {
-          Picker("Comparison mode", selection: $mode) {
-            ForEach(BudgetComparisonMode.allCases) { mode in
-              Text(mode.title).tag(mode)
-            }
-          }
-          .pickerStyle(.segmented)
-
-          ComparisonOverviewCard(
-            highestActual: monthlyHighestActual,
-            lowestActual: monthlyLowestActual,
-            currentMonth: currentMonthSummary
-          )
-
-          if mode == .monthly {
-            VStack(spacing: 20) {
-              MonthlyCashflowChart(summaries: viewModel.monthlySummaries)
-              MonthlyComparisonChart(summaries: viewModel.monthlySummaries)
-              PillarStackedChart(
-                summaries: viewModel.monthlySummaries,
-                colorScheme: colorScheme
-              )
-              MonthlyComparisonList(summaries: viewModel.monthlySummaries)
-            }
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
-          } else {
-            VStack(spacing: 20) {
-              YearlyComparisonChart(
-                summaries: viewModel.yearlySummaries,
-                colorScheme: colorScheme
-              )
-              YearlyComparisonList(summaries: viewModel.yearlySummaries)
-            }
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
-          }
+          NetWorthCard()
+          CashFlowCard()
+          AssetAllocationCard()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 20)
       }
-      .background(MeshGradientBackground())
-      .navigationTitle("Reports")
+      .background(Color(uiColor: .systemBackground).ignoresSafeArea())
+      .navigationTitle("Financial Insights & Reports")
       .navigationBarTitleDisplayMode(.large)
-      .animation(.snappy(duration: 0.24), value: mode)
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
           Button {
@@ -97,345 +48,182 @@ struct ExpensesComparisonScreen: View {
       }
     }
   }
-
-  private var currentMonthSummary: BudgetMonthSummary {
-    viewModel.monthlySummaries.last
-      ?? BudgetMonthSummary(
-        monthStart: .now,
-        planned: 0,
-        actual: 0,
-        salary: 0,
-        pillarActuals: [:],
-        pillarPlans: [:]
-      )
-  }
-
-  private var monthlyHighestActual: BudgetMonthSummary? {
-    viewModel.monthlySummaries.max { $0.actual < $1.actual }
-  }
-
-  private var monthlyLowestActual: BudgetMonthSummary? {
-    viewModel.monthlySummaries.min { $0.actual < $1.actual }
-  }
 }
 
-private struct ComparisonOverviewCard: View {
-  let highestActual: BudgetMonthSummary?
-  let lowestActual: BudgetMonthSummary?
-  let currentMonth: BudgetMonthSummary
+// MARK: - Net Worth Card
 
+private struct NetWorthCard: View {
   var body: some View {
-    GlassCard {
-      VStack(alignment: .leading, spacing: 16) {
-        Text("Comparison highlights")
-          .typography(.small, weight: .semibold)
-
-        Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 14) {
-          GridRow {
-            SummaryBlock(
-              title: "Current spend",
-              value: currentMonth.actual.currency,
-              detail: currentMonth.longLabel
-            )
-            SummaryBlock(
-              title: "Money left",
-              value: currentMonth.remainingAfterSpending.currency,
-              detail: "After actual spending"
-            )
-          }
-
-          GridRow {
-          SummaryBlock(
-              title: "Highest",
-              value: highestActual?.actual.currency ?? "$0.00",
-              detail: highestActual?.longLabel ?? "No data"
-            )
-            SummaryBlock(
-              title: "Lowest",
-              value: lowestActual?.actual.currency ?? "$0.00",
-              detail: lowestActual?.longLabel ?? "No data"
-            )
-          }
+    GlassCard(cornerRadius: 20) {
+      HStack(alignment: .top) {
+        VStack(alignment: .leading, spacing: 8) {
+          Text("Net Worth")
+            .font(.headline)
+          Text("$124,830.42")
+            .font(.system(size: 34, weight: .bold, design: .rounded))
         }
+        Spacer()
+        HStack(spacing: 4) {
+          Image(systemName: "arrow.up.right")
+          Text("+2.31%")
+        }
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(.green)
       }
     }
   }
 }
 
-private struct MonthlyCashflowChart: View {
-  let summaries: [BudgetMonthSummary]
+// MARK: - Cash Flow Card
 
-  @Environment(\.colorScheme) private var colorScheme
-  @State private var chartProgress: Double = 0.0
-
-  var body: some View {
-    GlassCard {
-      VStack(alignment: .leading, spacing: 16) {
-        Text("Salary vs money left")
-          .typography(.small, weight: .semibold)
-
-        Chart(summaries) { summary in
-          LineMark(
-            x: .value("Month", summary.shortLabel),
-            y: .value("Salary", summary.salary * chartProgress)
-          )
-          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme).opacity(0.35))
-
-          LineMark(
-            x: .value("Month", summary.shortLabel),
-            y: .value("Remaining", summary.remainingAfterSpending * chartProgress)
-          )
-          .interpolationMethod(.catmullRom)
-          .foregroundStyle(AppTheme.Colors.success)
-          .lineStyle(.init(lineWidth: 3))
-
-          AreaMark(
-            x: .value("Month", summary.shortLabel),
-            y: .value("Remaining", summary.remainingAfterSpending * chartProgress)
-          )
-          .interpolationMethod(.catmullRom)
-          .foregroundStyle(
-            LinearGradient(
-              colors: [AppTheme.Colors.success.opacity(0.22), .clear],
-              startPoint: .top,
-              endPoint: .bottom
-            )
-          )
-        }
-        .frame(height: 220)
-        .chartYAxis {
-          AxisMarks(position: .leading)
-        }
-      }
-    }
-    .onAppear {
-      withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.1)) {
-        chartProgress = 1.0
-      }
-    }
-  }
+private struct CashFlowData: Identifiable {
+  let id = UUID()
+  let month: String
+  let income: Double
+  let expenses: Double
 }
 
-private struct MonthlyComparisonChart: View {
-  let summaries: [BudgetMonthSummary]
-
-  @Environment(\.colorScheme) private var colorScheme
-  @State private var chartProgress: Double = 0.0
-
+private struct CashFlowCard: View {
+  let data: [CashFlowData] = [
+    .init(month: "Nov", income: 5000, expenses: 3100),
+    .init(month: "Dec", income: 6500, expenses: 4000),
+    .init(month: "Jan", income: 5400, expenses: 3800),
+    .init(month: "Feb", income: 6200, expenses: 4200),
+    .init(month: "Mar", income: 6800, expenses: 4700),
+    .init(month: "Apr", income: 7400, expenses: 5000)
+  ]
+  
   var body: some View {
-    GlassCard {
+    GlassCard(cornerRadius: 20) {
       VStack(alignment: .leading, spacing: 16) {
-        Text("Planned vs actual by month")
-          .typography(.small, weight: .semibold)
-
-        Chart(summaries) { summary in
-          BarMark(
-            x: .value("Month", summary.shortLabel),
-            y: .value("Amount", summary.planned * chartProgress)
-          )
-          .position(by: .value("Series", "Planned"))
-          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme).opacity(0.35))
-          .cornerRadius(6)
-
-          BarMark(
-            x: .value("Month", summary.shortLabel),
-            y: .value("Amount", summary.actual * chartProgress)
-          )
-          .position(by: .value("Series", "Actual"))
-          .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme))
-          .cornerRadius(6)
-        }
-        .frame(height: 220)
-        .chartYAxis {
-          AxisMarks(position: .leading)
-        }
-      }
-    }
-    .onAppear {
-      withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2)) {
-        chartProgress = 1.0
-      }
-    }
-  }
-}
-
-private struct PillarStackedChart: View {
-  let summaries: [BudgetMonthSummary]
-  let colorScheme: ColorScheme
-  @State private var chartProgress: Double = 0.0
-
-  var body: some View {
-    GlassCard {
-      VStack(alignment: .leading, spacing: 16) {
-        Text("Actual spending by pillar")
-          .typography(.small, weight: .semibold)
-
+        Text("Cash Flow (Last 6 Months)")
+          .font(.headline)
+        
         Chart {
-          ForEach(summaries) { summary in
-            ForEach(BudgetPillar.allCases) { pillar in
-              BarMark(
-                x: .value("Month", summary.shortLabel),
-                y: .value("Amount", (summary.pillarActuals[pillar] ?? 0) * chartProgress)
+          ForEach(data) { item in
+            BarMark(
+              x: .value("Month", item.month),
+              y: .value("Amount", item.income)
+            )
+            .foregroundStyle(Color.green)
+            .position(by: .value("Type", "Income"))
+            
+            BarMark(
+              x: .value("Month", item.month),
+              y: .value("Amount", item.expenses)
+            )
+            .foregroundStyle(Color.red)
+            .position(by: .value("Type", "Expenses"))
+          }
+        }
+        .frame(height: 200)
+        .chartYAxis {
+          AxisMarks(position: .leading, values: .automatic(desiredCount: 5)) { value in
+            AxisGridLine(stroke: StrokeStyle(lineWidth: 1)).foregroundStyle(Color.white.opacity(0.1))
+            AxisValueLabel {
+              if let doubleValue = value.as(Double.self) {
+                Text("\(Int(doubleValue / 1000))k")
+                  .foregroundStyle(Color.secondary)
+                  .font(.caption2)
+              }
+            }
+          }
+        }
+        .chartXAxis {
+          AxisMarks(values: .automatic) { _ in
+            AxisValueLabel().foregroundStyle(Color.secondary).font(.caption2)
+          }
+        }
+        
+        HStack(spacing: 16) {
+          Spacer()
+          HStack(spacing: 6) {
+            RoundedRectangle(cornerRadius: 2)
+              .fill(Color.green)
+              .frame(width: 12, height: 12)
+            Text("Income (Green)")
+              .font(.caption)
+          }
+          HStack(spacing: 6) {
+            RoundedRectangle(cornerRadius: 2)
+              .fill(Color.red)
+              .frame(width: 12, height: 12)
+            Text("Expenses (Red)")
+              .font(.caption)
+          }
+          Spacer()
+        }
+      }
+    }
+  }
+}
+
+// MARK: - Asset Allocation Card
+
+private struct AssetAllocationData: Identifiable {
+  let id = UUID()
+  let category: String
+  let percentage: Double
+  let color: Color
+}
+
+private struct AssetAllocationCard: View {
+  let data: [AssetAllocationData] = [
+    .init(category: "Stocks", percentage: 55, color: .blue),
+    .init(category: "Bonds", percentage: 25, color: .orange),
+    .init(category: "Crypto", percentage: 10, color: .purple),
+    .init(category: "Cash", percentage: 10, color: .green)
+  ]
+  
+  var body: some View {
+    GlassCard(cornerRadius: 20) {
+      VStack(alignment: .leading, spacing: 20) {
+        Text("Diversification (Asset Allocation)")
+          .font(.headline)
+        
+        HStack(spacing: 20) {
+          if #available(iOS 17.0, *) {
+            Chart(data) { item in
+              SectorMark(
+                angle: .value("Percentage", item.percentage),
+                innerRadius: .ratio(0.0),
+                angularInset: 1.0
               )
-              .foregroundStyle(pillar.color(for: colorScheme))
+              .foregroundStyle(item.color)
+              .annotation(position: .overlay) {
+                VStack(spacing: 2) {
+                  Text(item.category)
+                    .font(.caption2)
+                    .foregroundStyle(.white)
+                    .shadow(radius: 2)
+                  Text("\(Int(item.percentage))%")
+                    .font(.caption2)
+                    .foregroundStyle(.white)
+                    .shadow(radius: 2)
+                }
+              }
+            }
+            .frame(height: 180)
+            .chartLegend(.hidden)
+          } else {
+             Circle()
+                 .fill(Color.blue)
+                 .frame(height: 180)
+          }
+          
+          VStack(alignment: .leading, spacing: 12) {
+            ForEach(data) { item in
+              HStack(spacing: 8) {
+                RoundedRectangle(cornerRadius: 4)
+                  .fill(item.color)
+                  .frame(width: 12, height: 12)
+                Text(item.category)
+                  .font(.subheadline)
+              }
             }
           }
         }
-        .frame(height: 220)
-        .chartYAxis {
-          AxisMarks(position: .leading)
-        }
-
-        HStack(spacing: 12) {
-          ForEach(BudgetPillar.allCases) { pillar in
-            Label(pillar.title, systemImage: "circle.fill")
-              .foregroundStyle(pillar.color(for: colorScheme))
-              .typography(.nano)
-          }
-        }
       }
     }
-    .onAppear {
-      withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.3)) {
-        chartProgress = 1.0
-      }
-    }
-  }
-}
-
-private struct MonthlyComparisonList: View {
-  let summaries: [BudgetMonthSummary]
-
-  var body: some View {
-    GlassCard {
-      VStack(alignment: .leading, spacing: 16) {
-        Text("Month breakdown")
-          .typography(.small, weight: .semibold)
-
-        ForEach(summaries.reversed()) { summary in
-          HStack {
-            VStack(alignment: .leading, spacing: 4) {
-              Text(summary.longLabel)
-                .typography(.small, weight: .semibold)
-              Text("Salary \(summary.salary.currency) • Planned \(summary.planned.currency)")
-                .typography(.nano)
-                .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 4) {
-              Text(summary.actual.currency)
-                .typography(.small, weight: .semibold)
-                .foregroundStyle(summary.actual <= summary.planned ? AppTheme.Colors.success : AppTheme.Colors.danger)
-              Text("Left \(summary.remainingAfterSpending.currency)")
-                .typography(.nano)
-                .foregroundStyle(.secondary)
-            }
-          }
-
-          if summary.id != summaries.first?.id {
-            Divider()
-          }
-        }
-      }
-    }
-  }
-}
-
-private struct YearlyComparisonChart: View {
-  let summaries: [BudgetYearSummary]
-  let colorScheme: ColorScheme
-  @State private var chartProgress: Double = 0.0
-
-  var body: some View {
-    GlassCard {
-      VStack(alignment: .leading, spacing: 16) {
-        Text("Year-over-year comparison")
-          .typography(.small, weight: .semibold)
-
-        Chart(summaries) { summary in
-          BarMark(
-            x: .value("Year", String(summary.year)),
-            y: .value("Actual", summary.actual * chartProgress)
-          )
-          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-          .cornerRadius(8)
-
-          RuleMark(y: .value("Planned", summary.planned * chartProgress))
-            .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme))
-            .lineStyle(.init(lineWidth: 2, dash: [6, 4]))
-        }
-        .frame(height: 220)
-        .chartYAxis {
-          AxisMarks(position: .leading)
-        }
-      }
-    }
-    .onAppear {
-      withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.1)) {
-        chartProgress = 1.0
-      }
-    }
-  }
-}
-
-private struct YearlyComparisonList: View {
-  let summaries: [BudgetYearSummary]
-
-  var body: some View {
-    GlassCard {
-      VStack(alignment: .leading, spacing: 16) {
-        Text("Year summary")
-          .typography(.small, weight: .semibold)
-
-        ForEach(summaries.reversed()) { summary in
-          HStack {
-            VStack(alignment: .leading, spacing: 4) {
-              Text(String(summary.year))
-                .typography(.small, weight: .semibold)
-              Text("Salary \(summary.salary.currency)")
-                .typography(.nano)
-                .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 4) {
-              Text(summary.actual.currency)
-                .typography(.small, weight: .semibold)
-              Text("Left \(summary.remainingAfterSpending.currency)")
-                .typography(.nano)
-                .foregroundStyle(.secondary)
-            }
-          }
-
-          if summary.id != summaries.first?.id {
-            Divider()
-          }
-        }
-      }
-    }
-  }
-}
-
-private struct SummaryBlock: View {
-  let title: String
-  let value: String
-  let detail: String
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      Text(title)
-        .typography(.caption)
-        .foregroundStyle(.secondary)
-      Text(value)
-        .typography(.small, weight: .semibold)
-        .contentTransition(.numericText())
-      Text(detail)
-        .typography(.nano)
-        .foregroundStyle(.secondary)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
   }
 }

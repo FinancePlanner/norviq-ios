@@ -25,6 +25,32 @@ struct ExpensesPlannerScreen: View {
           )
           .padding(.top, 10)
 
+          ExpensesYearOverviewCard(
+            selectedYear: selectedYearBinding,
+            availableYears: viewModel.availableYears,
+            totalSpent: viewModel.selectedYearActualTotal,
+            averageSpent: viewModel.selectedYearAverageActual,
+            lastMonthLabel: viewModel.selectedYearLastMonthLabel,
+            chartPoints: viewModel.selectedYearChartPoints
+          )
+          .padding(.horizontal, 16)
+
+          PlannerSalaryCard(
+            monthTitle: viewModel.selectedMonthDisplayTitle,
+            netSalary: viewModel.selectedMonthSnapshot?.netSalary ?? 0,
+            allocated: viewModel.selectedMonthPlannedTotal,
+            spent: viewModel.selectedMonthActualTotal,
+            leftToAllocate: viewModel.selectedMonthAvailableAfterPillarPlan,
+            leftAfterSpending: viewModel.selectedMonthLeftAfterSpending
+          )
+          .padding(.horizontal, 16)
+
+          PillarAllocationTableCard(
+            monthTitle: viewModel.selectedMonthDisplayTitle,
+            summaries: viewModel.selectedMonthSummaries
+          )
+          .padding(.horizontal, 16)
+
           SmartSuggestionsCard()
             .padding(.horizontal, 16)
 
@@ -397,42 +423,47 @@ private struct PlannerSalaryCard: View {
   let leftAfterSpending: Double
 
   var body: some View {
-    GlassCard {
-      VStack(alignment: .leading, spacing: 16) {
-        Text("Net salary plan")
-          .typography(.small, weight: .semibold)
-
-        Text(monthTitle)
-          .typography(.nano)
-          .foregroundStyle(.secondary)
-
-        HStack(alignment: .lastTextBaseline, spacing: 8) {
-          Text(netSalary.currency)
-            .typography(.hero, weight: .bold)
-            .contentTransition(.numericText())
-          Text("monthly take-home")
-            .typography(.small)
+    GlassCard(cornerRadius: 20) {
+      VStack(alignment: .center, spacing: 16) {
+        HStack {
+          Text("Net salary plan")
+            .font(.headline)
+          Spacer()
+          Text(monthTitle)
+            .font(.subheadline)
             .foregroundStyle(.secondary)
         }
-
-        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
-          GridRow {
-            SummaryMetric(title: "Planned", value: allocated.currency)
-            SummaryMetric(title: "Spent", value: spent.currency)
-          }
-
-          GridRow {
-            SummaryMetric(
-              title: "Available after plan",
-              value: leftToAllocate.currency,
-              accent: leftToAllocate >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger
-            )
-            SummaryMetric(
-              title: "Available after spend",
-              value: leftAfterSpending.currency,
-              accent: leftAfterSpending >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger
-            )
-          }
+        
+        VStack(spacing: 4) {
+          Text(netSalary.currency)
+            .font(.system(size: 40, weight: .bold, design: .rounded))
+            .contentTransition(.numericText())
+          Text("monthly take-home")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 8)
+        
+        HStack(spacing: 0) {
+          MetricItem(title: "Planned", value: allocated.currency, color: .primary)
+          Divider().background(Color.white.opacity(0.1))
+          MetricItem(title: "Spent", value: spent.currency, color: .primary)
+        }
+        
+        Divider().background(Color.white.opacity(0.1))
+        
+        HStack(spacing: 0) {
+          MetricItem(
+            title: "Available after plan",
+            value: leftToAllocate.currency,
+            color: leftToAllocate >= 0 ? .green : .red
+          )
+          Divider().background(Color.white.opacity(0.1))
+          MetricItem(
+            title: "Available after spend",
+            value: leftAfterSpending.currency,
+            color: leftAfterSpending >= 0 ? .green : .red
+          )
         }
       }
     }
@@ -444,39 +475,44 @@ private struct PillarAllocationTableCard: View {
   let summaries: [PillarPlanningSummary]
 
   var body: some View {
-    GlassCard {
+    GlassCard(cornerRadius: 20) {
       VStack(alignment: .leading, spacing: 16) {
-        Text("Where your salary goes")
-          .typography(.small, weight: .semibold)
-
-        Text(monthTitle)
-          .typography(.nano)
-          .foregroundStyle(.secondary)
+        HStack {
+          Text("Where your salary goes")
+            .font(.headline)
+          Spacer()
+          Text(monthTitle)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
 
         Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 12) {
           GridRow {
-            PlannerTableHeader("Pillar")
-            PlannerTableHeader("Goal")
-            PlannerTableHeader("Plan")
-            PlannerTableHeader("Actual")
-            PlannerTableHeader("Left")
+            Text("Pillar").font(.subheadline).foregroundStyle(.secondary)
+            Text("Goal").font(.subheadline).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+            Text("Plan").font(.subheadline).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+            Text("Actual").font(.subheadline).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+            Text("Left").font(.subheadline).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
           }
+
+          Divider().background(Color.white.opacity(0.1))
 
           ForEach(summaries) { summary in
             GridRow {
               Text(summary.pillar.title)
-                .typography(.nano, weight: .semibold)
+                .font(.subheadline)
               Text(summary.targetAmount.currency)
-                .typography(.nano)
+                .font(.subheadline).foregroundStyle(.secondary)
               Text(summary.plannedAmount.currency)
-                .typography(.nano)
+                .font(.subheadline).foregroundStyle(.secondary)
               Text(summary.actualAmount.currency)
-                .typography(.nano)
+                .font(.subheadline).foregroundStyle(.secondary)
               Text(summary.availableToPlan.currency)
-                .typography(.nano, weight: .semibold)
-                .foregroundStyle(
-                  summary.availableToPlan >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger
-                )
+                .font(.subheadline)
+                .foregroundStyle(summary.availableToPlan >= 0 ? .green : .red)
+            }
+            if summary.id != summaries.last?.id {
+              Divider().background(Color.white.opacity(0.1))
             }
           }
         }
@@ -1237,6 +1273,24 @@ struct RecentTransactionsList: View {
       .background(Color(uiColor: .secondarySystemGroupedBackground))
       .cornerRadius(20)
     }
+  }
+}
+
+private struct MetricItem: View {
+  let title: String
+  let value: String
+  let color: Color
+
+  var body: some View {
+    VStack(spacing: 4) {
+      Text(title)
+        .font(.caption)
+        .foregroundStyle(.secondary)
+      Text(value)
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(color)
+    }
+    .frame(maxWidth: .infinity)
   }
 }
 

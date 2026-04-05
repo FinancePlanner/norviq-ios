@@ -141,14 +141,7 @@ private struct DashboardRoot: View {
               .transition(.opacity.combined(with: .move(edge: .top)))
           }
 
-          TrendOverviewCard(
-            title: "Portfolio outlook",
-            subtitle: "Planned value over the last 7 checkpoints",
-            points: trendPoints,
-            accent: AppTheme.Colors.tint(for: colorScheme)
-          )
-
-          SpendingSnapshotCard(points: spendingPoints)
+          HomeExpensesInteractiveChartCard()
 
           InsightsGrid(cards: insightCards)
 
@@ -513,79 +506,49 @@ private struct DashboardHeroCard: View {
   }
 }
 
-private struct TrendOverviewCard: View {
-  let title: String
-  let subtitle: String
-  let points: [PortfolioTrendPoint]
-  let accent: Color
-
-  var body: some View {
-    GlassCard {
-      VStack(alignment: .leading, spacing: 16) {
-        Text(title)
-          .typography(.small, weight: .semibold)
-        Text(subtitle)
-          .typography(.nano)
-          .foregroundStyle(.secondary)
-
-        Chart(points) { point in
-          LineMark(
-            x: .value("Date", point.label),
-            y: .value("Value", point.value)
-          )
-          .interpolationMethod(.catmullRom)
-          .foregroundStyle(accent)
-          .lineStyle(.init(lineWidth: 3))
-
-          AreaMark(
-            x: .value("Date", point.label),
-            y: .value("Value", point.value)
-          )
-          .interpolationMethod(.catmullRom)
-          .foregroundStyle(
-            LinearGradient(
-              colors: [accent.opacity(0.24), .clear],
-              startPoint: .top,
-              endPoint: .bottom
-            )
-          )
-        }
-        .frame(height: 190)
-        .chartYAxis {
-          AxisMarks(position: .leading)
-        }
+private struct HomeExpensesInteractiveChartCard: View {
+  private var mockExpensesChartData: [ChartDataPoint] {
+      let calendar = Calendar.current
+      let today = Date()
+      let baseValue = 3500.0
+      
+      return (0..<30).map { i in
+          let date = calendar.date(byAdding: .day, value: -(29 - i), to: today)!
+          let noise = sin(Double(i) * 0.8) * 500.0 + Double.random(in: -200...200)
+          let trend = Double(i) * 15.0
+          return ChartDataPoint(date: date, value: max(0, baseValue * 0.5 + noise + trend))
       }
-    }
   }
-}
-
-private struct SpendingSnapshotCard: View {
-  let points: [SpendingPoint]
 
   var body: some View {
-    GlassCard {
+    GlassCard(cornerRadius: 22) {
       VStack(alignment: .leading, spacing: 16) {
-        Text("Spending trend")
-          .typography(.small, weight: .semibold)
-
-        Chart(points) { point in
-          BarMark(
-            x: .value("Month", point.label),
-            y: .value("Amount", point.value)
-          )
-          .foregroundStyle(
-            point.value <= 900 ? AppTheme.Colors.success : AppTheme.Colors.warning
-          )
-          .cornerRadius(8)
+        VStack(alignment: .leading, spacing: 4) {
+          Text("Expenses trend")
+            .typography(.small, weight: .semibold)
+            .foregroundStyle(.secondary)
+          
+          HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(3250.45.currency)
+              .typography(.hero, weight: .bold)
+              .contentTransition(.numericText())
+            Text("this month")
+              .typography(.small)
+              .foregroundStyle(.secondary)
+          }
+          
+          HStack(spacing: 4) {
+            Image(systemName: "arrow.down.right")
+            Text("-12.4% vs last month")
+          }
+          .font(.subheadline.weight(.semibold))
+          .foregroundStyle(.green)
         }
-        .frame(height: 180)
-        .chartYAxis {
-          AxisMarks(position: .leading)
-        }
-
-        Text("Glanceable month-by-month comparison keeps expense review readable at a glance.")
-          .typography(.nano)
-          .foregroundStyle(.secondary)
+        .padding(.horizontal, 4)
+        
+        InteractiveLineChart(data: mockExpensesChartData, color: .purple)
+          .frame(height: 160)
+          .padding(.horizontal, -12) // Bleed to edges of card padding
       }
     }
   }
