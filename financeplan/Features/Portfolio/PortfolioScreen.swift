@@ -13,9 +13,50 @@ struct PortfolioScreen: View {
 
   @State private var isAddPositionPresented = false
   @State private var destructiveFeedbackTrigger = 0
+  @State private var selectedTimeRange: TimeRange = .month
+  @State private var selectedAssetFilter: AssetFilter = .all
+
+  enum TimeRange: String, CaseIterable, Identifiable {
+      case day = "1D"
+      case week = "1W"
+      case month = "1M"
+      case threeMonths = "3M"
+      case year = "1Y"
+      case all = "ALL"
+      var id: String { rawValue }
+  }
+
+  enum AssetFilter: String, CaseIterable, Identifiable {
+      case all = "All Assets"
+      case stocks = "Stocks"
+      case etfs = "ETFs"
+      case crypto = "Crypto"
+      var id: String { rawValue }
+  }
 
   private var totalValue: Double {
     stocks.reduce(0) { $0 + ($1.shares * $1.buyPrice) }
+  }
+
+  private var mockChartData: [ChartDataPoint] {
+      let calendar = Calendar.current
+      let today = Date()
+      let baseValue = totalValue == 0 ? 100000.0 : totalValue
+      
+      return (0..<30).map { i in
+          let date = calendar.date(byAdding: .day, value: -(29 - i), to: today)!
+          let noise = sin(Double(i) * 0.5) * 5000.0 + Double.random(in: -1000...1000)
+          let trend = Double(i) * 300.0
+          return ChartDataPoint(date: date, value: max(0, baseValue * 0.8 + noise + trend))
+      }
+  }
+
+  private var filteredStocks: [SDPortfolioStock] {
+      switch selectedAssetFilter {
+      case .all: return stocks
+      case .stocks: return stocks // Assuming all current are stocks for now
+      case .etfs, .crypto: return []
+      }
   }
 
   private var totalShares: Double {
@@ -47,22 +88,53 @@ struct PortfolioScreen: View {
       } else {
         ScrollView {
           VStack(spacing: 16) {
-              GlassCard(backgroundColor: .blue.opacity(0.12)) {
+            // Hero Chart Card
+            GlassCard(cornerRadius: 22) {
               VStack(alignment: .leading, spacing: 16) {
-                Text("Portfolio value")
-                  .typography(.small, weight: .semibold)
-                  .foregroundStyle(.secondary)
-
-                HStack(alignment: .lastTextBaseline, spacing: 8) {
-                  Text(totalValue.currency)
-                    .typography(.hero, weight: .bold)
-                    .contentTransition(.numericText())
-                  Text("\(stocks.count) positions")
-                    .typography(.small)
+                VStack(alignment: .leading, spacing: 4) {
+                  Text("Portfolio value")
+                    .typography(.small, weight: .semibold)
                     .foregroundStyle(.secondary)
-                    .contentTransition(.numericText())
+                  
+                  HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(totalValue.currency)
+                      .typography(.hero, weight: .bold)
+                      .contentTransition(.numericText())
+                    Text("\(stocks.count) positions")
+                      .typography(.small)
+                      .foregroundStyle(.secondary)
+                  }
+                  
+                  HStack(spacing: 4) {
+                    Image(systemName: "arrow.up.right")
+                    Text("+2.31% ($2,816.32)")
+                  }
+                  .font(.subheadline.weight(.semibold))
+                  .foregroundStyle(.green)
                 }
-
+                .padding(.horizontal, 4)
+                
+                InteractiveLineChart(data: mockChartData, color: .green)
+                  .frame(height: 160)
+                  .padding(.horizontal, -12) // Bleed to edges of card padding
+                
+                // Time range picker
+                HStack(spacing: 0) {
+                  ForEach(TimeRange.allCases) { range in
+                    Button(action: {
+                      withAnimation { selectedTimeRange = range }
+                    }) {
+                      Text(range.rawValue)
+                        .font(.caption.weight(.semibold))
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                        .background(selectedTimeRange == range ? Color.white.opacity(0.15) : Color.clear)
+                        .cornerRadius(8)
+                        .foregroundStyle(selectedTimeRange == range ? .primary : .secondary)
+                    }
+                  }
+                }
+                
                 HStack {
                   PortfolioMetricPill(
                     title: "Shares",
@@ -79,11 +151,31 @@ struct PortfolioScreen: View {
             }
             .foregroundStyle(.primary)
 
-            if stocks.isEmpty {
+            // Asset Filter
+            HStack(spacing: 0) {
+              ForEach(AssetFilter.allCases) { filter in
+                Button(action: {
+                  withAnimation { selectedAssetFilter = filter }
+                }) {
+                  Text(filter.rawValue)
+                    .font(.subheadline.weight(.medium))
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity)
+                    .background(selectedAssetFilter == filter ? Color.white.opacity(0.15) : Color.clear)
+                    .cornerRadius(10)
+                    .foregroundStyle(selectedAssetFilter == filter ? .primary : .secondary)
+                }
+              }
+            }
+            .padding(4)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(14)
+
+            if filteredStocks.isEmpty {
               ContentUnavailableView {
-                Label("No Positions Yet", systemImage: "chart.line.uptrend.xyaxis")
+                Label("No Positions", systemImage: "chart.line.uptrend.xyaxis")
               } description: {
-                Text("Add your first holding to start tracking cost basis, notes, and valuation work.")
+                Text("Add your first holding or change your filter.")
               } actions: {
                 Button("Add Position") {
                   isAddPositionPresented = true
@@ -92,7 +184,7 @@ struct PortfolioScreen: View {
               }
               .padding(.vertical, 24)
             } else {
-              ForEach(stocks) { stock in
+              ForEach(filteredStocks) { stock in
                 NavigationLink {
                   StockDetailScreen(stockId: stock.id, initialSymbol: stock.symbol)
                 } label: {

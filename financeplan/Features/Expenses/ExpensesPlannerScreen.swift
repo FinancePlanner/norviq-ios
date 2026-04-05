@@ -18,85 +18,54 @@ struct ExpensesPlannerScreen: View {
   var body: some View {
     NavigationStack {
       ScrollView {
-        VStack(spacing: 20) {
-          ExpensesYearOverviewCard(
-            selectedYear: selectedYearBinding,
-            availableYears: viewModel.availableYears,
-            totalSpent: viewModel.selectedYearActualTotal,
-            averageSpent: viewModel.selectedYearAverageActual,
-            lastMonthLabel: viewModel.selectedYearLastMonthLabel,
-            chartPoints: viewModel.selectedYearChartPoints
+        VStack(spacing: 24) {
+          ExpensesCircularOverviewCard(
+            leftAmount: viewModel.selectedMonthLeftAfterSpending,
+            totalAmount: viewModel.selectedMonthSnapshot?.netSalary ?? 0
           )
+          .padding(.top, 10)
 
-          ExpensesMonthDetailListCard(
-            selectedMonthStart: selectedMonthBinding,
-            summaries: viewModel.selectedYearSummaries
-          )
+          SmartSuggestionsCard()
+            .padding(.horizontal, 16)
 
-          SelectedMonthPlannerCard(
-            monthTitle: viewModel.selectedMonthDisplayTitle,
-            onPlanNextMonth: viewModel.createNextMonthPlan
-          )
-
-          PlannerSalaryCard(
-            monthTitle: viewModel.selectedMonthDisplayTitle,
-            netSalary: viewModel.selectedMonthSnapshot?.netSalary ?? 0,
-            allocated: viewModel.selectedMonthPlannedTotal,
-            spent: viewModel.selectedMonthActualTotal,
-            leftToAllocate: viewModel.selectedMonthAvailableAfterPillarPlan,
-            leftAfterSpending: viewModel.selectedMonthLeftAfterSpending
-          )
-
-          PillarAllocationTableCard(
-            monthTitle: viewModel.selectedMonthDisplayTitle,
-            summaries: viewModel.selectedMonthSummaries
-          )
-
-          ForEach(BudgetPillar.allCases) { pillar in
-            PillarPlannerCard(
-              pillar: pillar,
-              items: viewModel.items(for: pillar),
-              summary: viewModel.selectedMonthSummaries.first { $0.pillar == pillar }
-                ?? PillarPlanningSummary(
-                  pillar: pillar,
-                  targetAmount: 0,
-                  plannedAmount: 0,
-                  actualAmount: 0,
-                  unplannedActualAmount: 0
-                ),
-              actualAmount: { item in
-                viewModel.actualAmount(for: item)
-              },
-              onEdit: { item in
-                itemDraft = BudgetPlanItemDraft(
-                  itemID: item.id,
-                  title: item.title,
-                  plannedAmount: item.plannedAmount,
-                  pillar: item.pillar
-                )
-              },
-              onAdd: {
-                itemDraft = BudgetPlanItemDraft(
-                  itemID: nil,
-                  title: "",
-                  plannedAmount: 0,
-                  pillar: pillar
-                )
-              },
-              onDelete: { item in
-                itemToDelete = item
-              }
+          RecentTransactionsList(activities: viewModel.selectedMonthActivities)
+            .padding(.horizontal, 16)
+            
+          NavigationLink {
+            BudgetCategoryDetailsScreen(
+              viewModel: viewModel,
+              isProfilePresented: $isProfilePresented,
+              isActivitySheetPresented: $isActivitySheetPresented,
+              itemDraft: $itemDraft
+            )
+          } label: {
+            HStack {
+              Image(systemName: "square.grid.2x2.fill")
+                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+              Text("Budget Category Details")
+                .font(.headline)
+                .foregroundStyle(.primary)
+              Spacer()
+              Image(systemName: "chevron.right")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+            }
+            .padding()
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(16)
+            .overlay(
+              RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.05), lineWidth: 1)
             )
           }
-
-          RecentActivityCard(activities: viewModel.selectedMonthActivities)
+          .padding(.horizontal, 16)
+          .padding(.bottom, 40)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 20)
+        .padding(.vertical, 10)
       }
       .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
-      .navigationTitle("Expenses")
-      .navigationBarTitleDisplayMode(.large)
+      .navigationTitle("Expenses and Budgeting")
+      .navigationBarTitleDisplayMode(.inline)
       .task {
         await viewModel.load()
       }
@@ -1094,6 +1063,180 @@ private struct RecordSpendSheet: View {
 
   private var filteredItems: [BudgetPlanItem] {
     availableItems.filter { $0.pillar == pillar }
+  }
+}
+
+// MARK: - Native Feel Components
+
+struct ExpensesCircularOverviewCard: View {
+  let leftAmount: Double
+  let totalAmount: Double
+  @State private var progress: Double = 0
+  
+  var body: some View {
+    VStack {
+      ZStack {
+        Circle()
+          .stroke(Color.white.opacity(0.1), lineWidth: 20)
+        
+        Circle()
+          .trim(from: 0, to: progress)
+          .stroke(
+            AngularGradient(
+              gradient: Gradient(colors: [
+                Color(red: 0.7, green: 0.3, blue: 1.0), // Purple at top
+                Color(red: 0.9, green: 0.4, blue: 0.8), // Pink at right
+                Color(red: 0.5, green: 0.3, blue: 1.0), // Purple at bottom
+                Color(red: 0.2, green: 0.6, blue: 1.0), // Blue at left
+                Color(red: 0.7, green: 0.3, blue: 1.0)  // Purple at top
+              ]),
+              center: .center,
+              startAngle: .degrees(-90),
+              endAngle: .degrees(270)
+            ),
+            style: StrokeStyle(lineWidth: 20, lineCap: .round)
+          )
+          .rotationEffect(.degrees(-90))
+        
+        VStack(spacing: 8) {
+          Text("Monthly Budget")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+          
+          HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text(leftAmount.currency)
+              .font(.system(size: 40, weight: .bold, design: .rounded))
+            Text("Left")
+              .font(.title2)
+          }
+          
+          Text("of \(totalAmount.currency)")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+      }
+      .frame(height: 260)
+      .padding(.horizontal, 40)
+      .padding(.vertical, 20)
+    }
+    .onAppear {
+      withAnimation(.spring(response: 1.5, dampingFraction: 0.8).delay(0.2)) {
+        progress = totalAmount > 0 ? max(0, min(1, leftAmount / totalAmount)) : 0
+      }
+    }
+  }
+}
+
+struct SmartSuggestionsCard: View {
+  var body: some View {
+    VStack(alignment: .leading, spacing: 16) {
+      HStack(spacing: 8) {
+        Image(systemName: "lightbulb.fill")
+          .foregroundStyle(.yellow)
+          .font(.title3)
+        Text("Smart Suggestions")
+          .font(.headline)
+      }
+      
+      Text("AI insight: You could save ~£45 this month by reducing dining out frequency. Review your 8 recent restaurant visits.")
+        .font(.subheadline)
+        .lineLimit(nil)
+        .fixedSize(horizontal: false, vertical: true)
+      
+      HStack(spacing: 12) {
+        Button(action: {}) {
+          Text("View Details")
+            .font(.subheadline.weight(.semibold))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(Color.white.opacity(0.1))
+            .cornerRadius(12)
+            .foregroundStyle(.white)
+        }
+        
+        Button(action: {}) {
+          Text("Dismiss")
+            .font(.subheadline.weight(.semibold))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(Color.white.opacity(0.1))
+            .cornerRadius(12)
+            .foregroundStyle(.white)
+        }
+      }
+    }
+    .padding(20)
+    .background(Color(uiColor: .secondarySystemGroupedBackground))
+    .cornerRadius(20)
+  }
+}
+
+struct RecentTransactionsList: View {
+  let activities: [BudgetActivity]
+  
+  private func relativeDateString(from date: Date) -> String {
+      let calendar = Calendar.current
+      if calendar.isDateInToday(date) { return "Today" }
+      if calendar.isDateInYesterday(date) { return "Yesterday" }
+      let formatter = DateFormatter()
+      formatter.dateFormat = "MMM d"
+      return formatter.string(from: date)
+  }
+  
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("Recent Transactions")
+        .font(.title2.bold())
+        .padding(.horizontal, 4)
+      
+      VStack(spacing: 0) {
+        if activities.isEmpty {
+          Text("No recent transactions.")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .padding()
+        } else {
+          ForEach(activities.prefix(5)) { activity in
+            HStack(spacing: 16) {
+              Circle()
+                .fill(activity.pillar.color(for: .dark))
+                .frame(width: 48, height: 48)
+                .overlay(
+                  Image(systemName: activity.pillar.symbol)
+                    .foregroundStyle(.white)
+                    .font(.title3)
+                )
+              
+              VStack(alignment: .leading, spacing: 4) {
+                Text(activity.pillar.title)
+                  .font(.headline)
+                Text(activity.title)
+                  .font(.subheadline)
+                  .foregroundStyle(.secondary)
+                Text(relativeDateString(from: activity.occurredOn))
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+              }
+              
+              Spacer()
+              
+              Text("-\(activity.amount.currency)")
+                .font(.headline)
+            }
+            .padding(.vertical, 14)
+            .padding(.horizontal, 16)
+            
+            if activity.id != activities.prefix(5).last?.id {
+              Divider()
+                .background(Color.white.opacity(0.1))
+                .padding(.leading, 80)
+            }
+          }
+        }
+      }
+      .background(Color(uiColor: .secondarySystemGroupedBackground))
+      .cornerRadius(20)
+    }
   }
 }
 
