@@ -127,10 +127,10 @@ struct LoginScreen: View {
             VaultColors.background.ignoresSafeArea()
             
             if viewModel.isSignup {
-                SignUpView(viewModel: viewModel)
+                SignUpView(viewModel: viewModel, isEnvironmentPresented: $isEnvironmentPresented)
                     .transition(.opacity.combined(with: .move(edge: .trailing)))
             } else {
-                SignInView(viewModel: viewModel)
+                SignInView(viewModel: viewModel, isEnvironmentPresented: $isEnvironmentPresented)
                     .transition(.opacity.combined(with: .move(edge: .leading)))
             }
             
@@ -168,12 +168,27 @@ struct LoginScreen: View {
                 viewModel.infoMessage = nil
             }
         }
+        .confirmationDialog(
+            "Switch from \(environment.current.title) to",
+            isPresented: $isEnvironmentPresented,
+            titleVisibility: .visible
+        ) {
+            ForEach(environment.allowedEnvironmentsWhen(isLoggedIn: false), id: \.title) { env in
+                Button(action: {
+                    environment.change(to: env)
+                }) {
+                    Text(env.title)
+                }
+                .disabled(env == environment.current)
+            }
+        }
     }
 }
 
 // MARK: - Sign In View
 private struct SignInView: View {
     @ObservedObject var viewModel: LoginViewModel
+    @Binding var isEnvironmentPresented: Bool
     @State private var isPasswordVisible = false
     
     var body: some View {
@@ -295,6 +310,11 @@ private struct SignInView: View {
                     Text("Privacy Policy")
                     Text("Terms of Service")
                     Text("Help Center")
+                    #if DEBUG
+                    Button("Environment") {
+                        isEnvironmentPresented = true
+                    }
+                    #endif
                 }
                 .font(.system(size: 12))
                 .foregroundColor(VaultColors.textSecondary)
@@ -313,6 +333,7 @@ private struct SignInView: View {
 // MARK: - Sign Up View
 private struct SignUpView: View {
     @ObservedObject var viewModel: LoginViewModel
+    @Binding var isEnvironmentPresented: Bool
     @State private var isPasswordVisible = false
     
     var body: some View {
@@ -481,6 +502,11 @@ private struct SignUpView: View {
                         Text("PRIVACY\nPOLICY").multilineTextAlignment(.center)
                         Text("TERMS OF\nSERVICE").multilineTextAlignment(.center)
                         Text("HELP\nCENTER").multilineTextAlignment(.center)
+                        #if DEBUG
+                        Button(action: { isEnvironmentPresented = true }) {
+                            Text("DEV\nENV").multilineTextAlignment(.center)
+                        }
+                        #endif
                     }
                     .font(.system(size: 10, weight: .bold))
                     .tracking(1.0)
@@ -687,6 +713,10 @@ private struct VaultForgotPasswordView: View {
                         .padding(.vertical, 10)
                         .background(VaultColors.cardBackground)
                         .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(VaultColors.textSecondary.opacity(0.2), lineWidth: 1)
+                        )
                         .padding(.bottom, 40)
                     }
                 }
