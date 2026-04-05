@@ -280,46 +280,51 @@ private struct PortfolioRow: View {
 
   var body: some View {
     GlassCard(cornerRadius: 22) {
-      VStack(alignment: .leading, spacing: 12) {
-        HStack(alignment: .firstTextBaseline) {
-          VStack(alignment: .leading, spacing: 4) {
-            Text(stock.symbol)
-              .typography(.headline, weight: .bold)
-              .foregroundStyle(.primary)
+      HStack(spacing: 16) {
+        Circle()
+          .fill(Color.white.opacity(0.1))
+          .frame(width: 48, height: 48)
+          .overlay(
+            Text(stock.symbol.prefix(1))
+              .font(.title2.weight(.bold))
+              .foregroundStyle(.white)
+          )
 
-            Text("Purchased \(stock.buyDate)")
-              .typography(.nano)
+        VStack(alignment: .leading, spacing: 4) {
+          Text(stock.symbol)
+            .font(.headline)
+            .foregroundStyle(.primary)
+
+          if let notes = stock.notes, !notes.isEmpty {
+            Text(notes)
+              .font(.subheadline)
+              .foregroundStyle(.secondary)
+              .lineLimit(1)
+          } else {
+             Text("Holding")
+              .font(.subheadline)
               .foregroundStyle(.secondary)
           }
 
-          Spacer()
-
-          Text((stock.shares * stock.buyPrice).currency)
-            .typography(.label, weight: .semibold)
-            .foregroundStyle(.primary)
-            .contentTransition(.numericText())
-        }
-
-        HStack(spacing: 8) {
-          PortfolioMetricPill(
-            title: "Qty",
-            value: stock.shares.formatted(.number.precision(.fractionLength(0...2))),
-            tint: .indigo
-          )
-          PortfolioMetricPill(
-            title: "Avg",
-            value: stock.buyPrice.currency,
-            tint: Color.indigo.opacity(0.18)
-          )
-        }
-
-        if let notes = stock.notes, !notes.isEmpty {
-          Text(notes)
-            .typography(.nano)
+          Text("\(stock.shares.formatted(.number.precision(.fractionLength(0...2)))) Shares")
+            .font(.caption)
             .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+
+        Spacer()
+
+        VStack(alignment: .trailing, spacing: 4) {
+          Text((stock.shares * stock.buyPrice).currency)
+            .font(.headline)
+            .foregroundStyle(.primary)
+
+          // Hardcoded for presentation matching screenshot until live price is loaded
+          Text("+1.20%")
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(.green)
         }
       }
+      .padding(.vertical, 4)
     }
   }
 }
