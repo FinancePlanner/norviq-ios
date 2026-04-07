@@ -1,62 +1,23 @@
 import SwiftUI
 
 struct SplashScreen: View {
-  @State private var pulse = false
-  @State private var spin = false
-  @State private var showText = false
-  @Environment(\.colorScheme) private var colorScheme
+  @State private var isAnimating = false
 
   var body: some View {
     ZStack {
-      LinearGradient(
-        colors: AppTheme.splashGradient(for: colorScheme),
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-      )
-      .ignoresSafeArea()
+      Color.black
+        .ignoresSafeArea()
 
-      Circle()
-        .fill(Color.white.opacity(0.1))
-        .frame(width: pulse ? 230 : 170, height: pulse ? 230 : 170)
-        .blur(radius: 16)
-
-      VStack(spacing: 18) {
-        ZStack {
-          Circle()
-            .stroke(AppTheme.Colors.splashRing, lineWidth: 2)
-            .frame(width: 96, height: 96)
-            .rotationEffect(.degrees(spin ? 360 : 0))
-
-          Image("NorviqaLogoLight")
-            .resizable()
-            .scaledToFit()
-            .frame(width: 72, height: 72)
-        }
-
-        VStack(spacing: 6) {
-          Text("Norviqa")
-            .typography(.hero, weight: .bold)
-            .foregroundStyle(colorScheme == .dark ? .white : Color(red: 0.04, green: 0.09, blue: 0.20))
-            .opacity(showText ? 1 : 0)
-            .offset(y: showText ? 0 : 8)
-
-          Text("Loading your workspace")
-            .typography(.nano, weight: .medium)
-            .foregroundStyle(colorScheme == .dark ? .white.opacity(0.8) : Color(red: 0.04, green: 0.09, blue: 0.20).opacity(0.7))
-            .opacity(showText ? 1 : 0)
-        }
-      }
-      .padding(.horizontal, 24)
+      Image("OwlMascotSplash")
+        .resizable()
+        .scaledToFill()
+        .ignoresSafeArea()
+        .scaleEffect(isAnimating ? 1.02 : 1.0)
+        .opacity(isAnimating ? 1.0 : 0.9)
     }
     .onAppear {
-      withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
-        pulse = true
-      }
-      withAnimation(.linear(duration: 1.8).repeatForever(autoreverses: false)) {
-        spin = true
-      }
-      withAnimation(.easeOut(duration: 0.45).delay(0.2)) {
-        showText = true
+      withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+        isAnimating = true
       }
     }
   }
