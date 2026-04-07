@@ -827,7 +827,12 @@ struct OnboardingNavBar: View {
   var namespace: Namespace.ID? = nil
   let onBack: () -> Void
 
-  init(title: String, icon: String, namespace: Namespace.ID? = nil, onBack: @escaping () -> Void) {
+  init(
+    title: String,
+    icon: String,
+    namespace: Namespace.ID? = nil,
+    onBack: @escaping () -> Void
+  ) {
     self.title = title
     self.icon = icon
     self.namespace = namespace
@@ -922,122 +927,125 @@ struct ExpenseBudgetSetupScreen: View {
         onBack: onBack
       )
 
-      ScrollView {
-        VStack(spacing: 24) {
-          // Instructions
-          HStack(spacing: 12) {
-            Image(systemName: "info.circle.fill")
-              .font(.title3)
-              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+        ScrollView(.vertical) {
+            Group {
+                VStack(spacing: 24) {
+                  // Instructions
+                  HStack(spacing: 12) {
+                    Image(systemName: "info.circle.fill")
+                      .font(.title3)
+                      .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
 
-            Text(
-              "Set up your monthly budget by defining your income and allocating it across spending pillars."
-            )
-            .typography(.small)
-            .foregroundStyle(.secondary)
-          }
-          .padding(14)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .appGlassEffect(.rect(cornerRadius: 14), tint: AppTheme.Colors.tintSoft(for: colorScheme).opacity(0.4))
-          .padding(.horizontal, 20)
-          .padding(.top, 16)
-
-          // Monthly Income
-          VStack(alignment: .leading, spacing: 12) {
-            Text("Monthly Income")
-              .typography(.label, weight: .semibold)
-              .padding(.horizontal, 4)
-
-            HStack(spacing: 12) {
-              Image(systemName: "banknote.fill")
-                .font(.title3)
-                .foregroundStyle(AppTheme.Colors.success)
-                .frame(width: 32)
-
-              TextField("Enter your net monthly income", text: $viewModel.monthlyIncome)
-                .keyboardType(.decimalPad)
-                .typography(.label, weight: .semibold)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .appGlassEffect(.rect(cornerRadius: 16))
-          }
-          .padding(.horizontal, 20)
-
-          // Budget Pillars
-          VStack(alignment: .leading, spacing: 16) {
-            HStack {
-              Text("Budget Pillars")
-                .typography(.label, weight: .semibold)
-              
-              Spacer()
-              
-              Text("\(Int(totalPercent))%")
-                .typography(.label, weight: .bold)
-                .foregroundStyle(totalPercent == 100 ? AppTheme.Colors.success : AppTheme.Colors.warning)
-            }
-            .padding(.horizontal, 4)
-
-            ForEach(BudgetPillar.allCases, id: \.self) { pillar in
-              PillarAllocationCard(
-                pillar: pillar,
-                percentage: Binding(
-                  get: { viewModel.pillars[pillar] ?? 0 },
-                  set: { viewModel.pillars[pillar] = $0 }
-                ),
-                monthlyIncome: viewModel.monthlyIncomeValue
-              )
-            }
-          }
-          .padding(.horizontal, 20)
-
-          // Initial Expenses (Optional)
-          VStack(alignment: .leading, spacing: 12) {
-            HStack {
-              Text("Add Initial Expenses (Optional)")
-                .typography(.label, weight: .semibold)
-              
-              Spacer()
-              
-              Button {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                  viewModel.addExpense()
-                }
-              } label: {
-                Image(systemName: "plus.circle.fill")
-                  .font(.title3)
-                  .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-              }
-            }
-            .padding(.horizontal, 4)
-
-            if viewModel.expenses.isEmpty {
-              Text("You can add expenses later from the Expenses tab")
-                .typography(.nano)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 4)
-            } else {
-                ForEach(Array(viewModel.expenses.enumerated()), id: \.element.id) { (index, _) in
-                    ExpenseEntryCard(
-                        expense: $viewModel.expenses[index],
-                        index: index + 1,
-                        onDelete: {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                viewModel.expenses.remove(at: index)
-                            }
-                        }
+                    Text(
+                      "Set up your monthly budget by defining your income and allocating it across spending pillars."
                     )
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 0.9).combined(with: .opacity).combined(with: .move(edge: .top)),
-                        removal: .scale(scale: 0.9).combined(with: .opacity)
-                    ))
+                    .typography(.small)
+                    .foregroundStyle(.secondary)
+                  }
+                  .padding(14)
+                  .frame(maxWidth: .infinity, alignment: .leading)
+                  .appGlassEffect(.rect(cornerRadius: 14), tint: AppTheme.Colors.tintSoft(for: colorScheme).opacity(0.4))
+                  .padding(.horizontal, 20)
+                  .padding(.top, 16)
+
+                  // Monthly Income
+                  VStack(alignment: .leading, spacing: 12) {
+                    Text("Monthly Income")
+                      .typography(.label, weight: .semibold)
+                      .padding(.horizontal, 4)
+
+                    HStack(spacing: 12) {
+                      Image(systemName: "banknote.fill")
+                        .font(.title3)
+                        .foregroundStyle(AppTheme.Colors.success)
+                        .frame(width: 32)
+
+                      TextField("Enter your net monthly income", text: $viewModel.monthlyIncome)
+                        .keyboardType(.decimalPad)
+                        .typography(.label, weight: .semibold)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .appGlassEffect(.rect(cornerRadius: 16))
+                  }
+                  .padding(.horizontal, 20)
+
+                  // Budget Pillars
+                  VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                      Text("Budget Pillars")
+                        .typography(.label, weight: .semibold)
+                      
+                      Spacer()
+                      
+                      Text("\(Int(totalPercent))%")
+                        .typography(.label, weight: .bold)
+                        .foregroundStyle(totalPercent == 100 ? AppTheme.Colors.success : AppTheme.Colors.warning)
+                    }
+                    .padding(.horizontal, 4)
+
+                    ForEach(BudgetPillar.allCases, id: \.self) { pillar in
+                      PillarAllocationCard(
+                        pillar: pillar,
+                        percentage: Binding(
+                          get: { viewModel.pillars[pillar] ?? 0 },
+                          set: { viewModel.pillars[pillar] = $0 }
+                        ),
+                        monthlyIncome: viewModel.monthlyIncomeValue
+                      )
+                    }
+                  }
+                  .padding(.horizontal, 20)
+
+                  // Initial Expenses (Optional)
+                  VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                      Text("Add Initial Expenses (Optional)")
+                        .typography(.label, weight: .semibold)
+                      
+                      Spacer()
+                      
+                      Button {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                          viewModel.addExpense()
+                        }
+                      } label: {
+                        Image(systemName: "plus.circle.fill")
+                          .font(.title3)
+                          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                      }
+                    }
+                    .padding(.horizontal, 4)
+
+                    if viewModel.expenses.isEmpty {
+                      Text("You can add expenses later from the Expenses tab")
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 4)
+                    } else {
+                        ForEach(Array(viewModel.expenses.enumerated()), id: \.element.id) { (index, _) in
+                            ExpenseEntryCard(
+                                expense: $viewModel.expenses[index],
+                                index: index + 1,
+                                onDelete: {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                        viewModel.expenses.remove(at: index)
+                                    }
+                                }
+                            )
+                            .transition(.asymmetric(
+                                insertion: .scale(scale: 0.9).combined(with: .opacity).combined(with: .move(edge: .top)),
+                                removal: .scale(scale: 0.9).combined(with: .opacity)
+                            ))
+                        }
+                    }
+                  }
+                  .padding(.horizontal, 20)
+
+                  Spacer(minLength: 100)
                 }
             }
-          }
-          .padding(.horizontal, 20)
-
-          Spacer(minLength: 100)
-        }
+        
       }
       .scrollDismissesKeyboard(.interactively)
 

@@ -4,7 +4,7 @@ import StockPlanShared
 extension BudgetPillar: Identifiable {
   public var id: String { rawValue }
 
-  var title: String {
+  public var title: String {
     switch self {
     case .fundamentals:
       return "Fundamentals"
@@ -15,7 +15,7 @@ extension BudgetPillar: Identifiable {
     }
   }
 
-  var subtitle: String {
+  public var subtitle: String {
     switch self {
     case .fundamentals:
       return "Daily life and recurring essentials."
@@ -26,7 +26,7 @@ extension BudgetPillar: Identifiable {
     }
   }
 
-  var symbol: String {
+  public var symbol: String {
     switch self {
     case .fundamentals:
       return "house"
@@ -37,7 +37,7 @@ extension BudgetPillar: Identifiable {
     }
   }
 
-  var defaultTargetShare: Double {
+  public var defaultTargetShare: Double {
     switch self {
     case .fundamentals:
       return 0.50
@@ -48,7 +48,7 @@ extension BudgetPillar: Identifiable {
     }
   }
 
-  func color(for scheme: ColorScheme) -> Color {
+  public func color(for scheme: ColorScheme) -> Color {
     switch self {
     case .fundamentals:
       return AppTheme.Colors.tint(for: scheme)
