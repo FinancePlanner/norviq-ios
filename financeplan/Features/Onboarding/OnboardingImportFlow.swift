@@ -827,6 +827,13 @@ struct OnboardingNavBar: View {
   var namespace: Namespace.ID? = nil
   let onBack: () -> Void
 
+  init(title: String, icon: String, namespace: Namespace.ID? = nil, onBack: @escaping () -> Void) {
+    self.title = title
+    self.icon = icon
+    self.namespace = namespace
+    self.onBack = onBack
+  }
+    
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
@@ -897,13 +904,13 @@ struct ExpenseBudgetSetupScreen: View {
   let onBack: () -> Void
   let onDone: () -> Void
 
-    private var totalPercent: Double {
-      viewModel.pillars.values.reduce(0, +)
-    }
+  private var totalPercent: Double {
+    viewModel.pillars.values.reduce(0, +)
+  }
 
-    private var isValid: Bool {
-      !viewModel.monthlyIncome.isEmpty && totalPercent == 100
-    }
+  private var isValid: Bool {
+    !viewModel.monthlyIncome.isEmpty && totalPercent == 100
+  }
     
   var body: some View {
     VStack(spacing: 0) {
@@ -965,7 +972,6 @@ struct ExpenseBudgetSetupScreen: View {
               
               Spacer()
               
-              let totalPercent = viewModel.pillars.values.reduce(0, +)
               Text("\(Int(totalPercent))%")
                 .typography(.label, weight: .bold)
                 .foregroundStyle(totalPercent == 100 ? AppTheme.Colors.success : AppTheme.Colors.warning)
@@ -1011,20 +1017,20 @@ struct ExpenseBudgetSetupScreen: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 4)
             } else {
-                ForEach(viewModel.expenses.indices, id: \.self) { index in
-                  ExpenseEntryCard(
-                    expense: $viewModel.expenses[index],
-                    index: index + 1,
-                    onDelete: {
-                      withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                        viewModel.expenses.remove(at: index)
-                      }
-                    }
-                  )
-                  .transition(.asymmetric(
-                    insertion: .scale(scale: 0.9).combined(with: .opacity).combined(with: .move(edge: .top)),
-                    removal: .scale(scale: 0.9).combined(with: .opacity)
-                  ))
+                ForEach(Array(viewModel.expenses.enumerated()), id: \.element.id) { (index, _) in
+                    ExpenseEntryCard(
+                        expense: $viewModel.expenses[index],
+                        index: index + 1,
+                        onDelete: {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                viewModel.expenses.remove(at: index)
+                            }
+                        }
+                    )
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.9).combined(with: .opacity).combined(with: .move(edge: .top)),
+                        removal: .scale(scale: 0.9).combined(with: .opacity)
+                    ))
                 }
             }
           }
@@ -1292,7 +1298,7 @@ final class ExpenseBudgetSetupViewModel: ObservableObject {
   }
 
   func createBudgetSnapshot() async throws {
-    let service = Container.shared.expensesService()
+    let expensesService = Container.shared.expensesService()
     
     // Create budget snapshot
     let calendar = Calendar.current
@@ -1312,7 +1318,7 @@ final class ExpenseBudgetSetupViewModel: ObservableObject {
       targetShares: targetShares
     )
     
-    _ = try await service.createBudgetSnapshot(request: snapshotRequest)
+    _ = try await expensesService.createBudgetSnapshot(request: snapshotRequest)
     
     // Create expenses if any
     for expense in expenses where !expense.title.isEmpty {
@@ -1326,7 +1332,7 @@ final class ExpenseBudgetSetupViewModel: ObservableObject {
         linkedPlanItemId: nil
       )
       
-      try await service.createExpense(request: expenseRequest)
+      try await expensesService.createExpense(request: expenseRequest)
     }
   }
 }
@@ -1337,3 +1343,4 @@ struct ExpenseEntry: Identifiable {
   var amount: String = ""
   var pillar: BudgetPillar = .fundamentals
 }
+
