@@ -140,7 +140,7 @@ struct WatchlistTab: View {
       Text("\(item.symbol) was added to your portfolio.")
     }
     .task { await viewModel.load() }
-    .refreshable { await viewModel.load() }
+    .refreshable { await viewModel.load(force: true) }
     .appSensoryFeedback(destructive: destructiveFeedbackTrigger)
   }
 }

@@ -62,8 +62,6 @@ struct AuthHTTPClient {
       username: request.username,
       email: request.email,
       password: request.password,
-      firstName: request.firstName,
-      lastName: request.lastName,
       dateOfBirth: request.dateOfBirth
     )
     try await callWithoutResponse(endpoint)
@@ -256,8 +254,6 @@ struct AuthHTTPClient {
       refreshExpiresIn: requireInt(in: payload, camel: "refreshExpiresIn", snake: "refresh_expires_in"),
       username: requireString(in: payload, camel: "username"),
       email: requireString(in: payload, camel: "email"),
-      firstName: requireString(in: payload, camel: "firstName", snake: "first_name"),
-      lastName: requireString(in: payload, camel: "lastName", snake: "last_name"),
       dateOfBirth: requireDate(in: payload, camel: "dateOfBirth", snake: "date_of_birth")
     )
   }

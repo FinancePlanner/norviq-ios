@@ -27,8 +27,6 @@ final class AuthHTTPClientTests: XCTestCase {
       refreshExpiresIn: 86_400,
       username: "valid_user",
       email: "user@example.com",
-      firstName: "Jane",
-      lastName: "Doe",
       dateOfBirth: Date(timeIntervalSince1970: 946684800)
     )
 
@@ -79,8 +77,6 @@ final class AuthHTTPClientTests: XCTestCase {
           username: "dupe_user",
           password: "Password123",
           email: "dupe@example.com",
-          firstName: "Dupe",
-          lastName: "User",
           dateOfBirth: Date(timeIntervalSince1970: 946684800)
         )
       )
@@ -114,8 +110,6 @@ final class AuthHTTPClientTests: XCTestCase {
           username: "dupe_user",
           password: "Password123",
           email: "dupe@example.com",
-          firstName: "Dupe",
-          lastName: "User",
           dateOfBirth: Date(timeIntervalSince1970: 946684800)
         )
       )
@@ -147,8 +141,6 @@ final class AuthHTTPClientTests: XCTestCase {
         username: "new_user",
         password: "Password123",
         email: "new@example.com",
-        firstName: "New",
-        lastName: "User",
         dateOfBirth: Date(timeIntervalSince1970: 946684800)
       )
     )
@@ -213,8 +205,6 @@ final class AuthHTTPClientTests: XCTestCase {
       refreshExpiresIn: 86_400,
       username: "valid_user",
       email: "user@example.com",
-      firstName: "Jane",
-      lastName: "Doe",
       dateOfBirth: Date(timeIntervalSince1970: 946684800)
     )
 
@@ -251,8 +241,6 @@ final class AuthHTTPClientTests: XCTestCase {
       refreshExpiresIn: 86_400,
       username: "valid_user",
       email: "user@example.com",
-      firstName: "Jane",
-      lastName: "Doe",
       dateOfBirth: Date(timeIntervalSince1970: 1_136_073_600)
     )
 
@@ -266,8 +254,6 @@ final class AuthHTTPClientTests: XCTestCase {
         "refresh_expires_in": 86400,
         "username": "valid_user",
         "email": "user@example.com",
-        "first_name": "Jane",
-        "last_name": "Doe",
         "date_of_birth": "2006-01-01 00:00:00 +0000"
       }
       """.data(using: .utf8) ?? Data()

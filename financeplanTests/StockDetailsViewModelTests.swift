@@ -6,6 +6,7 @@ import XCTest
 @MainActor
 final class StockDetailsViewModelTests: XCTestCase {
   private final class StockServiceMock: StockServicing {
+    var fetchStockDetailsCalls = 0
     var createValuationCalls = 0
     var updateValuationCalls = 0
     var lastCreateValuationSymbol: String?
@@ -48,7 +49,8 @@ final class StockDetailsViewModelTests: XCTestCase {
     }
 
     func fetchStockDetails(stockId _: String) async throws -> StockDetails {
-      try fetchStockDetailsResult.get()
+      fetchStockDetailsCalls += 1
+      return try fetchStockDetailsResult.get()
     }
 
     func fetchStockHistory(symbol _: String) async throws -> [StockHistory] {
@@ -179,6 +181,8 @@ final class StockDetailsViewModelTests: XCTestCase {
   private final class MarketDataServiceMock: MarketDataServicing {
     var fetchAnalystConsensusCalls = 0
     var lastFetchAnalystConsensusSymbol: String?
+    var fetchStockEarningsCalls = 0
+    var lastFetchStockEarningsSymbol: String?
     var fetchCompanyProfileResult: Result<CompanyProfileResponse, Error> = .failure(MockError.notConfigured)
     var fetchQuoteResult: Result<QuoteResponse, Error> = .failure(MockError.notConfigured)
     var fetchAnalystConsensusResult: Result<StockAnalystConsensus, Error> = .failure(MockError.notConfigured)
@@ -190,6 +194,9 @@ final class StockDetailsViewModelTests: XCTestCase {
     var fetchRatiosTTMResult: Result<[RatiosTTMResponse], Error> = .success([])
     var fetchFinancialGrowthResult: Result<[FinancialGrowthResponse], Error> = .success([])
     var fetchAnalystEstimatesResult: Result<[AnalystEstimatesResponse], Error> = .success([])
+    var fetchStockEarningsResult: Result<[EarningsEvent], Error> = .success([])
+    var fetchEarningsCalendarResult: Result<[EarningsEvent], Error> = .success([])
+    var fetchMarketNewsResult: Result<[StockNews], Error> = .success([])
     var fetchMarketCompareResult: Result<[StockAnalysisMetrics], Error> = .success([])
 
     func fetchCompanyProfile(symbol _: String) async throws -> CompanyProfileResponse {
@@ -239,6 +246,20 @@ final class StockDetailsViewModelTests: XCTestCase {
 
     func fetchAnalystEstimates(symbol _: String, limit _: Int?, period _: String?) async throws -> [AnalystEstimatesResponse] {
       try fetchAnalystEstimatesResult.get()
+    }
+
+    func fetchStockEarnings(symbol: String, limit _: Int) async throws -> [EarningsEvent] {
+      fetchStockEarningsCalls += 1
+      lastFetchStockEarningsSymbol = symbol
+      return try fetchStockEarningsResult.get()
+    }
+
+    func fetchEarningsCalendar(from _: String, to _: String) async throws -> [EarningsEvent] {
+      try fetchEarningsCalendarResult.get()
+    }
+
+    func fetchMarketNews(limit _: Int?) async throws -> [StockNews] {
+      try fetchMarketNewsResult.get()
     }
 
     func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements {
@@ -913,14 +934,22 @@ final class StockDetailsViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.analystConsensus?.symbol, "META")
     XCTAssertNil(viewModel.analystConsensusMessage)
     XCTAssertEqual(viewModel.basicFinancials?.symbol, "META")
+    XCTAssertNil(viewModel.analysisMetrics)
     XCTAssertNil(viewModel.analysisMetricsMessage)
+    XCTAssertNil(viewModel.financialStatements)
+    XCTAssertNil(viewModel.financialStatementsMessage)
+    await viewModel.loadSupplementaryDataIfNeeded(for: .analysis)
+    await viewModel.loadSupplementaryDataIfNeeded(for: .statements)
+    await viewModel.loadSupplementaryDataIfNeeded(for: .earnings)
+    XCTAssertEqual(viewModel.analysisMetrics?.symbol, "META")
     XCTAssertEqual(viewModel.financialStatements?.symbol, "META")
     XCTAssertEqual(viewModel.financialStatements?.ratios(for: .fy).first?.symbol, "META")
     XCTAssertEqual(viewModel.financialStatements?.estimates.count, 3)
+    XCTAssertEqual(viewModel.stockEarnings.count, 0)
+    XCTAssertEqual(marketDataService.fetchStockEarningsCalls, 1)
     XCTAssertEqual(marketDataService.fetchAnalystConsensusCalls, 1)
     XCTAssertEqual(marketDataService.lastFetchAnalystConsensusSymbol, "META")
     XCTAssertEqual(viewModel.primaryComparisonProfile?.symbol, "META")
-    XCTAssertEqual(viewModel.analysisMetrics?.symbol, "META")
     XCTAssertEqual(viewModel.primaryComparisonProfile?.metrics[.ttmPE], 18.4)
     XCTAssertEqual(viewModel.primaryComparisonProfile?.metrics[.grossMargin], 0.58)
     XCTAssertEqual(viewModel.selectedPeerSymbols.count, 2)
@@ -931,6 +960,32 @@ final class StockDetailsViewModelTests: XCTestCase {
     XCTAssertNotNil(viewModel.marketSnapshot)
     let currentPrice = try XCTUnwrap(viewModel.marketSnapshot?.currentPrice)
     XCTAssertEqual(currentPrice, 612.42, accuracy: 0.001)
+  }
+
+  func testLoad_WithoutForceSkipsReloadForSameStock() async {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "AAPL"))
+
+    await viewModel.load(stockId: "stock-1")
+    await viewModel.load(stockId: "stock-1")
+
+    XCTAssertEqual(service.fetchStockDetailsCalls, 1)
+  }
+
+  func testLoad_WithForceReloadsForSameStock() async {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "AAPL"))
+
+    await viewModel.load(stockId: "stock-1")
+    await viewModel.load(stockId: "stock-1", force: true)
+
+    XCTAssertEqual(service.fetchStockDetailsCalls, 2)
   }
 
   func testLoad_WhenOneStatementsEndpointReturnsNotFound_PreservesOtherStatementData() async {
@@ -947,6 +1002,7 @@ final class StockDetailsViewModelTests: XCTestCase {
     marketDataService.fetchAnalystEstimatesResult = .failure(MarketDataHTTPClient.Error.api("Not found"))
 
     await viewModel.load(stockId: "stock-1")
+    await viewModel.loadSupplementaryDataIfNeeded(for: .statements)
 
     XCTAssertEqual(viewModel.financialStatements?.symbol, "UBER")
     XCTAssertEqual(viewModel.financialStatements?.balanceSheets(for: .fy).first?.symbol, "UBER")
@@ -979,6 +1035,7 @@ final class StockDetailsViewModelTests: XCTestCase {
     service.fetchStockDetailsResult = .success(makeDetails(symbol: "ZETA"))
 
     await viewModel.load(stockId: "stock-1")
+    await viewModel.loadSupplementaryDataIfNeeded(for: .analysis)
 
     XCTAssertNil(viewModel.analysisMetrics)
     XCTAssertEqual(
@@ -999,12 +1056,28 @@ final class StockDetailsViewModelTests: XCTestCase {
     marketDataService.fetchAnalysisMetricsResult = .failure(MockError.notConfigured)
 
     await viewModel.load(stockId: "stock-1")
+    await viewModel.loadSupplementaryDataIfNeeded(for: .analysis)
 
     XCTAssertNil(viewModel.analysisMetrics)
     XCTAssertNil(viewModel.analysisMetricsMessage)
     XCTAssertEqual(viewModel.primaryComparisonProfile?.symbol, "META")
     XCTAssertEqual(viewModel.primaryComparisonProfile?.metrics[.ttmPE], 24.9)
     XCTAssertEqual(viewModel.primaryComparisonProfile?.metrics[.grossMargin], 0.81)
+  }
+
+  func testLoadSupplementaryDataIfNeeded_EarningsLoadsOnlyOncePerSymbol() async {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "AAPL"))
+
+    await viewModel.load(stockId: "stock-1")
+    await viewModel.loadSupplementaryDataIfNeeded(for: .earnings)
+    await viewModel.loadSupplementaryDataIfNeeded(for: .earnings)
+
+    XCTAssertEqual(marketDataService.fetchStockEarningsCalls, 1)
+    XCTAssertEqual(marketDataService.lastFetchStockEarningsSymbol, "AAPL")
   }
 
   func testMarketSnapshot_WhenChangeFieldsMissing_ComputesChangeAndPercent() throws {

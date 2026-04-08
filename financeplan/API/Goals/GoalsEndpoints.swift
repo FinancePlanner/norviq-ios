@@ -35,6 +35,19 @@ struct UpdateGoalEndpoint: Endpoint {
     }
 }
 
+struct UpdateGoalStatusEndpoint: Endpoint {
+    typealias Response = GoalResponse
+    let id: String
+    let payload: GoalStatusUpdateRequest
+    var method: HTTPMethod { .patch }
+    var path: String { "/v1/goals/\(id)/status" }
+    var decoder: JSONDecoder { .stockPlanShared }
+    func asParameters() throws -> Parameters {
+        let data = try JSONEncoder.stockPlanShared.encode(payload)
+        return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+    }
+}
+
 struct DeleteGoalEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let id: String

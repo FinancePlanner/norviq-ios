@@ -6,6 +6,7 @@ protocol GoalsServicing {
     func getGoals() async throws -> [GoalResponse]
     func createGoal(payload: GoalRequest) async throws -> GoalResponse
     func updateGoal(id: String, payload: GoalRequest) async throws -> GoalResponse
+    func updateGoalStatus(id: String, payload: GoalStatusUpdateRequest) async throws -> GoalResponse
     func deleteGoal(id: String) async throws
 }
 
@@ -33,6 +34,10 @@ struct DefaultGoalsService: GoalsServicing {
         try await client.updateGoal(id: id, payload: payload)
     }
 
+    func updateGoalStatus(id: String, payload: GoalStatusUpdateRequest) async throws -> GoalResponse {
+        try await client.updateGoalStatus(id: id, payload: payload)
+    }
+
     func deleteGoal(id: String) async throws {
         try await client.deleteGoal(id: id)
     }
@@ -41,17 +46,27 @@ struct DefaultGoalsService: GoalsServicing {
 struct GoalsServiceStub: GoalsServicing {
     func getGoals() async throws -> [GoalResponse] {
         [
-            GoalResponse(id: UUID().uuidString, title: "Max out 401k"),
-            GoalResponse(id: UUID().uuidString, title: "Save for European vacation")
+            GoalResponse(id: UUID().uuidString, title: "Max out 401k", status: .pending),
+            GoalResponse(id: UUID().uuidString, title: "Save for European vacation", status: .completed)
         ]
     }
     
     func createGoal(payload: GoalRequest) async throws -> GoalResponse {
-        GoalResponse(id: UUID().uuidString, title: payload.title)
+        GoalResponse(id: UUID().uuidString, title: payload.title, status: .pending)
     }
     
     func updateGoal(id: String, payload: GoalRequest) async throws -> GoalResponse {
-        GoalResponse(id: id, title: payload.title)
+        GoalResponse(id: id, title: payload.title, status: .pending)
+    }
+
+    func updateGoalStatus(id: String, payload: GoalStatusUpdateRequest) async throws -> GoalResponse {
+        GoalResponse(
+            id: id,
+            title: "Updated",
+            status: payload.status,
+            statusUpdatedBy: payload.source,
+            completedAt: payload.status == .completed ? ISO8601DateFormatter().string(from: Date()) : nil
+        )
     }
     
     func deleteGoal(id: String) async throws {}

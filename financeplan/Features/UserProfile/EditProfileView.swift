@@ -22,24 +22,18 @@ struct EditProfileView: View {
 
     // Local editable copy
     @State private var username: String
-    @State private var firstName: String
-    @State private var lastName: String
-    @State private var bio: String
     @State private var successFeedbackTrigger = 0
 
     @FocusState private var focusedField: Field?
 
     private let originalProfile: UserProfile
 
-    private enum Field { case username, firstName, lastName, bio }
+    private enum Field { case username, bio }
 
     init(viewModel: UserProfileViewModel, profile: UserProfile) {
         self.viewModel = viewModel
         self.originalProfile = profile
         _username = State(initialValue: profile.username ?? "")
-        _firstName = State(initialValue: profile.firstName ?? "")
-        _lastName = State(initialValue: profile.lastName ?? "")
-        _bio = State(initialValue: profile.bio ?? "")
     }
 
     var body: some View {
@@ -177,8 +171,6 @@ struct EditProfileView: View {
         let seed =
             normalized(username)
             ?? normalized(originalProfile.username)
-            ?? normalized(firstName)
-            ?? normalized(lastName)
             ?? normalized(originalProfile.email)
             ?? "?"
 
@@ -207,11 +199,6 @@ struct EditProfileView: View {
         VStack(spacing: 0) {
             editableRow(label: "Username", text: $username)
             divider
-            editableRow(label: "First name", text: $firstName)
-            divider
-            editableRow(label: "Last name", text: $lastName)
-            divider
-            bioRow
         }
         .padding(.horizontal, 16)
     }
@@ -226,29 +213,9 @@ struct EditProfileView: View {
             TextField(label, text: text)
                 .font(.body)
                 .foregroundStyle(.primary)
-                .focused($focusedField, equals: label == "Username" ? .username : label == "First name" ? .firstName : label == "Last name" ? .lastName : nil)
-                .textInputAutocapitalization(label == "First name" || label == "Last name" ? .words : .never)
+                .focused($focusedField, equals: label == "Username" ? .username : label == "Bio" ? .bio : nil)
+                .textInputAutocapitalization(.never)
                 .autocorrectionDisabled(label == "Username")
-        }
-        .padding(.vertical, 14)
-    }
-
-    private var bioRow: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Text("Bio")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .frame(width: 90, alignment: .leading)
-                .padding(.top, 8)
-
-            TextEditor(text: $bio)
-                .font(.body)
-                .foregroundStyle(.primary)
-                .frame(minHeight: 80)
-                .scrollContentBackground(.hidden)
-                .background(Color.clear)
-                .focused($focusedField, equals: .bio)
-                .textInputAutocapitalization(.sentences)
         }
         .padding(.vertical, 14)
     }
@@ -264,9 +231,6 @@ struct EditProfileView: View {
     private func saveProfile() {
         var updated = originalProfile
         updated.username = username.isEmpty ? nil : username
-        updated.firstName = firstName.isEmpty ? nil : firstName
-        updated.lastName = lastName.isEmpty ? nil : lastName
-        updated.bio = bio.isEmpty ? nil : bio
 
         Task {
             if await viewModel.save(profile: updated) {
@@ -282,10 +246,7 @@ struct EditProfileView: View {
     let stubProfile = UserProfile(
         id: "preview-id",
         email: "preview@example.com",
-        bio: "This is a preview bio.",
-        username: "previewuser",
-        firstName: "Preview",
-        lastName: "User"
+        username: "previewuser"
     )
 
     EditProfileView(viewModel: vm, profile: stubProfile)

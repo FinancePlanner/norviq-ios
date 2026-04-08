@@ -1,8 +1,14 @@
 import Combine
 import Factory
 import Foundation
+import OSLog
 import StockPlanShared
 import SwiftData
+
+private let watchlistViewModelLogger = Logger(
+  subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
+  category: "WatchlistViewModel"
+)
 
 @MainActor
 final class WatchlistViewModel: ObservableObject {
@@ -15,6 +21,7 @@ final class WatchlistViewModel: ObservableObject {
 
   private let service: StockServicing
   private var modelContext: ModelContext?
+  private var hasLoadedOnce = false
 
   init(service: StockServicing, modelContext: ModelContext? = nil) {
     self.service = service
@@ -29,7 +36,8 @@ final class WatchlistViewModel: ObservableObject {
     self.modelContext = context
   }
 
-  func load() async {
+  func load(force: Bool = false) async {
+    if !force, hasLoadedOnce { return }
     guard !isLoading else { return }
     isLoading = true
     errorMessage = nil
@@ -38,6 +46,7 @@ final class WatchlistViewModel: ObservableObject {
     do {
       let remoteItems = try await service.fetchWatchlist()
       await syncWithSwiftData(remoteItems)
+      hasLoadedOnce = true
     } catch {
       errorMessage = error.localizedDescription
     }
@@ -50,6 +59,7 @@ final class WatchlistViewModel: ObservableObject {
     do {
       let descriptor = FetchDescriptor<SDWatchlistItem>()
       let localItems = try modelContext.fetch(descriptor)
+      let localById = Dictionary(uniqueKeysWithValues: localItems.map { ($0.id, $0) })
 
       for local in localItems {
         if !remoteIds.contains(local.id) {
@@ -58,7 +68,7 @@ final class WatchlistViewModel: ObservableObject {
       }
 
       for remote in remoteItems {
-        if let existing = localItems.first(where: { $0.id == remote.id }) {
+        if let existing = localById[remote.id] {
           existing.update(from: remote)
         } else {
           modelContext.insert(SDWatchlistItem(from: remote))
@@ -67,7 +77,7 @@ final class WatchlistViewModel: ObservableObject {
 
       try modelContext.save()
     } catch {
-      print("Failed to sync watchlist with SwiftData: \(error)")
+      watchlistViewModelLogger.error("SwiftData watchlist sync failed: \(error.localizedDescription, privacy: .public)")
     }
   }
 

@@ -32,7 +32,7 @@ struct StockDetailScreen: View {
                         .foregroundStyle(.secondary)
                     Button("Retry") {
                         Task {
-                            await viewModel.load(stockId: stockId)
+                            await viewModel.load(stockId: stockId, force: true)
                         }
                     }
                     .buttonStyle(.bordered)
@@ -94,16 +94,6 @@ struct StockDetailScreen: View {
                 symbol: viewModel.details?.symbol ?? initialSymbol,
                 existing: viewModel.valuation
             ) { draft in
-                print(
-                    """
-                    StockDetailScreen.onSave \
-                    bearLow=\(draft.bearLow) bearHigh=\(draft.bearHigh) \
-                    baseLow=\(draft.baseLow) baseHigh=\(draft.baseHigh) \
-                    bullLow=\(draft.bullLow) bullHigh=\(draft.bullHigh) \
-                    rationale=\(draft.rationale ?? "<nil>") \
-                    targetDate=\(draft.targetDate ?? "<nil>")
-                    """
-                )
                 return await viewModel.saveValuation(draft)
             }
         }
@@ -116,6 +106,9 @@ struct StockDetailScreen: View {
         }
         .task {
             await viewModel.load(stockId: stockId)
+        }
+        .task(id: selectedTab) {
+            await viewModel.loadSupplementaryDataIfNeeded(for: selectedTab)
         }
     }
 
@@ -169,7 +162,12 @@ struct StockDetailScreen: View {
                 case .news:
                     StockNewsTab(news: viewModel.news)
                 case .earnings:
-                    StockEarningsTab(symbol: viewModel.details?.symbol ?? initialSymbol)
+                    StockEarningsTab(
+                        symbol: viewModel.details?.symbol ?? initialSymbol,
+                        earnings: viewModel.stockEarnings,
+                        isLoading: viewModel.isEarningsLoading,
+                        errorMessage: viewModel.stockEarningsMessage
+                    )
                 }
             }
             .padding(.horizontal, 16)
@@ -177,7 +175,8 @@ struct StockDetailScreen: View {
         }
         .background(MeshGradientBackground().ignoresSafeArea())
         .refreshable {
-            await viewModel.load(stockId: stockId)
+            await viewModel.load(stockId: stockId, force: true)
+            await viewModel.loadSupplementaryDataIfNeeded(for: selectedTab)
         }
         .animation(.snappy(duration: 0.24), value: selectedTab)
         .animation(.snappy(duration: 0.24), value: selectedScenario)

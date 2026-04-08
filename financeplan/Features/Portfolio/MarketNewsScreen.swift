@@ -9,6 +9,7 @@ struct MarketNewsScreen: View {
     @State private var news: [StockNews] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var hasLoadedNews = false
 
     var body: some View {
         ScrollView {
@@ -39,21 +40,24 @@ struct MarketNewsScreen: View {
             .padding(.vertical, 20)
         }
         .refreshable {
-            await loadNews()
+            await loadNews(force: true)
         }
         .task {
             await loadNews()
         }
     }
 
-    private func loadNews() async {
+    private func loadNews(force: Bool = false) async {
+        if !force, hasLoadedNews { return }
+        guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
+        defer { isLoading = false }
         do {
             self.news = try await marketDataService.fetchMarketNews(limit: 20)
+            hasLoadedNews = true
         } catch {
             self.errorMessage = error.localizedDescription
         }
-        isLoading = false
     }
 }

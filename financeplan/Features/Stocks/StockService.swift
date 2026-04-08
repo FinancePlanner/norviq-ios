@@ -1,5 +1,11 @@
 import Foundation
+import OSLog
 import StockPlanShared
+
+private let stockServiceLogger = Logger(
+  subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
+  category: "StockService"
+)
 
 protocol StockServicing {
   @discardableResult
@@ -77,7 +83,8 @@ final class StockService: StockServicing {
         shares: stock.shares,
         buyPrice: stock.buyPrice,
         buyDate: stock.buyDate,
-        notes: stock.notes
+        notes: stock.notes,
+        category: stock.category
       )
       return try await client.call(endpoint)
     }
@@ -132,7 +139,8 @@ final class StockService: StockServicing {
         shares: stock.shares,
         buyPrice: stock.buyPrice,
         buyDate: stock.buyDate,
-        notes: stock.notes ?? ""
+        notes: stock.notes ?? "",
+        category: stock.category
       )
       let endpoint = UpdateStockEndpoint(stockId: stock.id, payload: request)
       return try await client.call(endpoint)
@@ -180,16 +188,8 @@ final class StockService: StockServicing {
     symbol: String,
     draft: StockValuationDraft
   ) async throws -> StockValuationRequest {
-    print(
-      """
-      StockService.createValuation \
-      symbol=\(symbol) \
-      bearLow=\(draft.bearLow) bearHigh=\(draft.bearHigh) \
-      baseLow=\(draft.baseLow) baseHigh=\(draft.baseHigh) \
-      bullLow=\(draft.bullLow) bullHigh=\(draft.bullHigh) \
-      rationale=\(draft.rationale ?? "<nil>") \
-      targetDate=\(draft.targetDate ?? "<nil>")
-      """
+    stockServiceLogger.debug(
+      "Create valuation symbol=\(symbol, privacy: .public)"
     )
     return try await performAuthenticated { client in
       let endpoint = try CreateStockValuationEndpoint(
@@ -230,16 +230,8 @@ final class StockService: StockServicing {
     symbol: String,
     draft: StockValuationDraft
   ) async throws -> StockValuationRequest {
-    print(
-      """
-      StockService.updateValuation \
-      symbol=\(symbol) \
-      bearLow=\(draft.bearLow) bearHigh=\(draft.bearHigh) \
-      baseLow=\(draft.baseLow) baseHigh=\(draft.baseHigh) \
-      bullLow=\(draft.bullLow) bullHigh=\(draft.bullHigh) \
-      rationale=\(draft.rationale ?? "<nil>") \
-      targetDate=\(draft.targetDate ?? "<nil>")
-      """
+    stockServiceLogger.debug(
+      "Update valuation symbol=\(symbol, privacy: .public)"
     )
     return try await performAuthenticated { client in
       let endpoint = try UpdateStockValuationEndpoint(

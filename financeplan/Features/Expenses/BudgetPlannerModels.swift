@@ -4,7 +4,7 @@ import StockPlanShared
 extension BudgetPillar: Identifiable {
   public var id: String { rawValue }
 
-  var title: String {
+  public var title: String {
     switch self {
     case .fundamentals:
       return "Fundamentals"
@@ -15,7 +15,7 @@ extension BudgetPillar: Identifiable {
     }
   }
 
-  var subtitle: String {
+  public var subtitle: String {
     switch self {
     case .fundamentals:
       return "Daily life and recurring essentials."
@@ -26,7 +26,7 @@ extension BudgetPillar: Identifiable {
     }
   }
 
-  var symbol: String {
+  public var symbol: String {
     switch self {
     case .fundamentals:
       return "house"
@@ -37,7 +37,7 @@ extension BudgetPillar: Identifiable {
     }
   }
 
-  var defaultTargetShare: Double {
+  public var defaultTargetShare: Double {
     switch self {
     case .fundamentals:
       return 0.50
@@ -48,7 +48,7 @@ extension BudgetPillar: Identifiable {
     }
   }
 
-  func color(for scheme: ColorScheme) -> Color {
+  public func color(for scheme: ColorScheme) -> Color {
     switch self {
     case .fundamentals:
       return AppTheme.Colors.tint(for: scheme)
@@ -87,12 +87,23 @@ struct BudgetPlanItem: Identifiable, Equatable {
   var title: String
   var plannedAmount: Double
   var pillar: BudgetPillar
+  var splitMode: ExpenseSplitMode
+  var userSharePercent: Double
 
-  init(id: UUID = UUID(), title: String, plannedAmount: Double, pillar: BudgetPillar) {
+  init(
+    id: UUID = UUID(),
+    title: String,
+    plannedAmount: Double,
+    pillar: BudgetPillar,
+    splitMode: ExpenseSplitMode = .personal,
+    userSharePercent: Double = 100
+  ) {
     self.id = id
     self.title = title
     self.plannedAmount = plannedAmount
     self.pillar = pillar
+    self.splitMode = splitMode
+    self.userSharePercent = userSharePercent
   }
 }
 
@@ -103,6 +114,8 @@ struct BudgetActivity: Identifiable, Equatable {
   var pillar: BudgetPillar
   var occurredOn: Date
   var linkedPlanItemID: UUID?
+  var splitMode: ExpenseSplitMode
+  var userSharePercent: Double
 
   init(
     id: UUID = UUID(),
@@ -110,7 +123,9 @@ struct BudgetActivity: Identifiable, Equatable {
     amount: Double,
     pillar: BudgetPillar,
     occurredOn: Date,
-    linkedPlanItemID: UUID? = nil
+    linkedPlanItemID: UUID? = nil,
+    splitMode: ExpenseSplitMode = .personal,
+    userSharePercent: Double = 100
   ) {
     self.id = id
     self.title = title
@@ -118,6 +133,8 @@ struct BudgetActivity: Identifiable, Equatable {
     self.pillar = pillar
     self.occurredOn = occurredOn
     self.linkedPlanItemID = linkedPlanItemID
+    self.splitMode = splitMode
+    self.userSharePercent = userSharePercent
   }
 }
 
@@ -127,8 +144,48 @@ struct BudgetMonthSummary: Identifiable {
   let planned: Double
   let actual: Double
   let salary: Double
+  let myPlanned: Double
+  let partnerPlanned: Double
+  let myActual: Double
+  let partnerActual: Double
   let pillarActuals: [BudgetPillar: Double]
   let pillarPlans: [BudgetPillar: Double]
+  let myPillarActuals: [BudgetPillar: Double]
+  let partnerPillarActuals: [BudgetPillar: Double]
+  let myPillarPlans: [BudgetPillar: Double]
+  let partnerPillarPlans: [BudgetPillar: Double]
+
+  init(
+    monthStart: Date,
+    planned: Double,
+    actual: Double,
+    salary: Double,
+    myPlanned: Double = 0,
+    partnerPlanned: Double = 0,
+    myActual: Double = 0,
+    partnerActual: Double = 0,
+    pillarActuals: [BudgetPillar: Double],
+    pillarPlans: [BudgetPillar: Double],
+    myPillarActuals: [BudgetPillar: Double] = [:],
+    partnerPillarActuals: [BudgetPillar: Double] = [:],
+    myPillarPlans: [BudgetPillar: Double] = [:],
+    partnerPillarPlans: [BudgetPillar: Double] = [:]
+  ) {
+    self.monthStart = monthStart
+    self.planned = planned
+    self.actual = actual
+    self.salary = salary
+    self.myPlanned = myPlanned
+    self.partnerPlanned = partnerPlanned
+    self.myActual = myActual
+    self.partnerActual = partnerActual
+    self.pillarActuals = pillarActuals
+    self.pillarPlans = pillarPlans
+    self.myPillarActuals = myPillarActuals
+    self.partnerPillarActuals = partnerPillarActuals
+    self.myPillarPlans = myPillarPlans
+    self.partnerPillarPlans = partnerPillarPlans
+  }
 
   var shortLabel: String {
     monthStart.formatted(.dateTime.month(.abbreviated))
@@ -145,6 +202,10 @@ struct BudgetMonthSummary: Identifiable {
   var remainingAfterSpending: Double {
     salary - actual
   }
+
+  var partnerRemainingAfterSpending: Double {
+    partnerPlanned - partnerActual
+  }
 }
 
 struct BudgetMonthChartPoint: Identifiable {
@@ -160,6 +221,30 @@ struct BudgetYearSummary: Identifiable {
   let planned: Double
   let actual: Double
   let salary: Double
+  let myPlanned: Double
+  let partnerPlanned: Double
+  let myActual: Double
+  let partnerActual: Double
+
+  init(
+    year: Int,
+    planned: Double,
+    actual: Double,
+    salary: Double,
+    myPlanned: Double = 0,
+    partnerPlanned: Double = 0,
+    myActual: Double = 0,
+    partnerActual: Double = 0
+  ) {
+    self.year = year
+    self.planned = planned
+    self.actual = actual
+    self.salary = salary
+    self.myPlanned = myPlanned
+    self.partnerPlanned = partnerPlanned
+    self.myActual = myActual
+    self.partnerActual = partnerActual
+  }
 
   var id: Int { year }
 
@@ -192,6 +277,24 @@ struct BudgetPlanItemDraft: Identifiable {
   var title: String
   var plannedAmount: Double
   var pillar: BudgetPillar
+  var splitMode: ExpenseSplitMode
+  var userSharePercent: Double
+
+  init(
+    itemID: UUID? = nil,
+    title: String,
+    plannedAmount: Double,
+    pillar: BudgetPillar,
+    splitMode: ExpenseSplitMode = .personal,
+    userSharePercent: Double = 100
+  ) {
+    self.itemID = itemID
+    self.title = title
+    self.plannedAmount = plannedAmount
+    self.pillar = pillar
+    self.splitMode = splitMode
+    self.userSharePercent = userSharePercent
+  }
 }
 
 struct BudgetActivityDraft {
@@ -200,6 +303,26 @@ struct BudgetActivityDraft {
   var pillar: BudgetPillar
   var occurredOn: Date
   var linkedPlanItemID: UUID?
+  var splitMode: ExpenseSplitMode
+  var userSharePercent: Double
+
+  init(
+    title: String,
+    amount: Double,
+    pillar: BudgetPillar,
+    occurredOn: Date,
+    linkedPlanItemID: UUID? = nil,
+    splitMode: ExpenseSplitMode = .personal,
+    userSharePercent: Double = 100
+  ) {
+    self.title = title
+    self.amount = amount
+    self.pillar = pillar
+    self.occurredOn = occurredOn
+    self.linkedPlanItemID = linkedPlanItemID
+    self.splitMode = splitMode
+    self.userSharePercent = userSharePercent
+  }
 }
 
 extension BudgetPillar {

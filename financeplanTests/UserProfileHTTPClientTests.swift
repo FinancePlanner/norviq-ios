@@ -25,9 +25,7 @@ final class UserProfileHTTPClientTests: XCTestCase {
       bio: "Hello",
       avatarURL: URL(string: "https://cdn.example.com/avatar.png"),
       bannerAvatarURL: URL(string: "https://cdn.example.com/banner.png"),
-      username: "user123",
-      firstName: "Jane",
-      lastName: "Doe"
+      username: "user123"
     )
     let expectedResponse = GetUserProfileResponse(userProfile: expectedProfile)
 
@@ -64,9 +62,7 @@ final class UserProfileHTTPClientTests: XCTestCase {
       bio: "Updated bio",
       avatarURL: nil,
       bannerAvatarURL: nil,
-      username: "updated_user",
-      firstName: "Jane",
-      lastName: "Doe"
+      username: "updated_user"
     )
     let requestDTO = UpdateUserProfileRequest(userProfile: profile)
     let expectedResponse = UpdateUserProfileResponse(userProfile: profile)
@@ -83,11 +79,11 @@ final class UserProfileHTTPClientTests: XCTestCase {
       XCTAssertEqual(userProfileJSON["id"] as? String, "user-123")
       XCTAssertEqual(userProfileJSON["email"] as? String, "user@example.com")
       XCTAssertEqual(userProfileJSON["username"] as? String, "updated_user")
-      XCTAssertEqual(userProfileJSON["firstName"] as? String, "Jane")
-      XCTAssertEqual(userProfileJSON["lastName"] as? String, "Doe")
       XCTAssertNil(json["user_profile"])
       XCTAssertNil(userProfileJSON["first_name"])
       XCTAssertNil(userProfileJSON["last_name"])
+      XCTAssertNil(userProfileJSON["firstName"])
+      XCTAssertNil(userProfileJSON["lastName"])
 
       let decoded = try JSONDecoder().decode(UpdateUserProfileRequest.self, from: body)
       XCTAssertEqual(decoded, requestDTO)

@@ -8,16 +8,12 @@ final class LoginViewModel: ObservableObject {
     case username
     case password
     case email
-    case firstName
-    case lastName
   }
 
 
   @Published var username = ""
   @Published var password = ""
   @Published var email = ""
-  @Published var firstName = ""
-  @Published var lastName = ""
   @Published var dateOfBirth = {
     let calendar = Calendar.current
     let currentYear = calendar.component(.year, from: Date())
@@ -151,8 +147,6 @@ final class LoginViewModel: ObservableObject {
         username: username.trimmingCharacters(in: .whitespacesAndNewlines),
         email: email.trimmingCharacters(in: .whitespacesAndNewlines),
         password: password,
-        firstName: firstName.trimmingCharacters(in: .whitespacesAndNewlines),
-        lastName: lastName.trimmingCharacters(in: .whitespacesAndNewlines),
         dateOfBirth: dateOfBirth
       )
 
@@ -176,7 +170,7 @@ final class LoginViewModel: ObservableObject {
     fieldErrors.removeAll()
 
     let fieldsToValidate: [Field] = isSignup
-      ? [.username, .email, .firstName, .lastName, .password]
+      ? [.username, .email, .password]
       : [.username, .password]
 
     for field in fieldsToValidate {
@@ -213,14 +207,6 @@ final class LoginViewModel: ObservableObject {
         if !AuthValidation.isValidEmail(email) {
           return "Please enter a valid email address"
         }
-      }
-    case .firstName:
-      if isSignup, firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-        return "First name is required"
-      }
-    case .lastName:
-      if isSignup, lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-        return "Last name is required"
       }
     }
 

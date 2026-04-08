@@ -7,8 +7,6 @@ protocol AuthServicing {
     username: String,
     email: String,
     password: String,
-    firstName: String,
-    lastName: String,
     dateOfBirth: Date
   ) async throws
   func forgotPassword(email: String) async throws -> AuthForgotPasswordResponse
@@ -51,8 +49,6 @@ final class AuthService: AuthServicing {
     username: String,
     email: String,
     password: String,
-    firstName: String,
-    lastName: String,
     dateOfBirth: Date
   ) async throws {
     try await client().register(
@@ -60,8 +56,6 @@ final class AuthService: AuthServicing {
         username: username,
         password: password,
         email: email,
-        firstName: firstName,
-        lastName: lastName,
         dateOfBirth: dateOfBirth
       )
     )
@@ -161,12 +155,6 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring, @unchecked Sendabl
     currentUserID = authResponse.userId.uuidString
 
     let resolvedDisplayName = authResponse.username.trimmingCharacters(in: .whitespacesAndNewlines)
-    if !resolvedDisplayName.isEmpty {
-      currentUsername = resolvedDisplayName
-    } else {
-      let firstName = authResponse.firstName.trimmingCharacters(in: .whitespacesAndNewlines)
-      currentUsername = firstName.isEmpty ? authResponse.email : firstName
-    }
 
     authTokenExpiresAt = JWTTokenInspector.expirationDate(in: authResponse.token)
       ?? nowProvider().addingTimeInterval(TimeInterval(authResponse.expiresIn))

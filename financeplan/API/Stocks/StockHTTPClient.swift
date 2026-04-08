@@ -75,11 +75,6 @@ struct StockHTTPClient {
   }
 
   private func perform<E: Endpoint>(_ endpoint: E) async throws -> Data {
-    let requestURL = baseURL.appendingPathComponent(
-      endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-    ).absoluteString
-    print("Preparing stock request [\(endpoint.method.rawValue)] \(requestURL)")
-
     let request = try makeURLRequest(for: endpoint)
     logRequest(request, endpoint: endpoint)
     let (data, response) = try await session.data(for: request)
@@ -109,9 +104,11 @@ struct StockHTTPClient {
 
   private func logRequest<E: Endpoint>(_ request: URLRequest, endpoint: E) {
     let method = request.httpMethod ?? endpoint.method.rawValue
-    let urlString = request.url?.absoluteString ?? baseURL.appendingPathComponent(endpoint.path).absoluteString
-    let body = request.httpBody.flatMap { String(data: $0, encoding: .utf8) } ?? "<empty>"
-    print("Stock request [\(method)] \(urlString) body=\(body)")
+    let urlString =
+      request.url?.absoluteString ?? baseURL.appendingPathComponent(endpoint.path).absoluteString
+    stockHTTPLogger.debug(
+      "Stock request [\(method, privacy: .public)] \(urlString, privacy: .public)"
+    )
   }
 
   private func errorMessage(from data: Data) -> String? {

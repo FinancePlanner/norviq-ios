@@ -1,5 +1,31 @@
 import SwiftUI
 import Factory
+import OSLog
+
+private let earningsCalendarLogger = Logger(
+  subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
+  category: "EarningsCalendar"
+)
+
+private enum EarningsDateFormatterCache {
+  static let dateOnly: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.calendar = Calendar(identifier: .gregorian)
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    formatter.dateFormat = "yyyy-MM-dd"
+    return formatter
+  }()
+
+  static let monthKey: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.calendar = Calendar(identifier: .gregorian)
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    formatter.dateFormat = "yyyy-MM"
+    return formatter
+  }()
+}
 
 struct EarningsCalendarScreen: View {
   @Environment(\.colorScheme) private var colorScheme
@@ -12,6 +38,7 @@ struct EarningsCalendarScreen: View {
   @State private var isLoadingUpcoming = false
   @State private var errorMessage: String?
   @State private var selectedEvent: EarningsEvent?
+  @State private var loadedMonthKeys: Set<String> = []
 
   var body: some View {
     ZStack {
@@ -27,22 +54,14 @@ struct EarningsCalendarScreen: View {
               .listRowBackground(Color.clear)
           } else if !upcomingEarnings.isEmpty {
             Section("Upcoming in the Next 30 Days") {
-              ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 16) {
-                  ForEach(upcomingEarnings) { event in
-                    Button {
-                      selectedEvent = event
-                    } label: {
-                      UpcomingEarningsCard(event: event)
-                    }
-                    .buttonStyle(.plain)
-                  }
+              ForEach(upcomingEarnings.prefix(5)) { event in
+                Button {
+                  selectedEvent = event
+                } label: {
+                  EarningsRow(event: event)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                .buttonStyle(.plain)
               }
-              .listRowInsets(EdgeInsets())
-              .listRowBackground(Color.clear)
             }
           }
 
@@ -111,6 +130,9 @@ struct EarningsCalendarScreen: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .refreshable {
+          loadedMonthKeys = []
+          earnings = []
+          upcomingEarnings = []
           await loadEarnings()
           await loadUpcomingEarnings()
         }
@@ -146,28 +168,28 @@ struct EarningsCalendarScreen: View {
           let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth) else {
       return
     }
-    
+
+    let monthKey = EarningsDateFormatterCache.monthKey.string(from: startOfMonth)
+    guard !loadedMonthKeys.contains(monthKey) else { return }
+
     let from = formatISODateOnly(startOfMonth)
     let to = formatISODateOnly(endOfMonth)
-    
-    // Simple optimization: only fetch if we don't have any earnings for this range yet
-    let currentDates = Set(earnings.map { $0.date })
-    if earnings.isEmpty || !currentDates.contains(from) {
-        isLoading = true
-        errorMessage = nil
-        
-        do {
-          let results = try await marketDataService.fetchEarningsCalendar(from: from, to: to)
-          // Merge results to keep a local cache of this session's browsed months
-          let newEarnings = (self.earnings + results).reduce(into: [String: EarningsEvent]()) { dict, event in
-              dict[event.id] = event
-          }.values
-          self.earnings = Array(newEarnings)
-        } catch {
-          self.errorMessage = error.localizedDescription
-        }
-        isLoading = false
+
+    isLoading = true
+    errorMessage = nil
+
+    do {
+      let results = try await marketDataService.fetchEarningsCalendar(from: from, to: to)
+      // Merge results to keep a local cache of this session's browsed months.
+      let merged = (self.earnings + results).reduce(into: [String: EarningsEvent]()) { dict, event in
+        dict[event.id] = event
+      }.values
+      self.earnings = Array(merged)
+      loadedMonthKeys.insert(monthKey)
+    } catch {
+      self.errorMessage = error.localizedDescription
     }
+    isLoading = false
   }
 
   private func loadUpcomingEarnings() async {
@@ -183,16 +205,13 @@ struct EarningsCalendarScreen: View {
       // Sort by date soonest first
       self.upcomingEarnings = results.sorted(by: { $0.date < $1.date })
     } catch {
-      // Don't show hard error for this background fetch, just log it or ignore
-      print("Error fetching upcoming earnings: \(error)")
+      earningsCalendarLogger.error("Upcoming earnings load failed: \(error.localizedDescription, privacy: .public)")
     }
     isLoadingUpcoming = false
   }
 
   private func formatISODateOnly(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    return formatter.string(from: date)
+    EarningsDateFormatterCache.dateOnly.string(from: date)
   }
 }
 
@@ -223,9 +242,7 @@ struct EarningsMarkedCalendar: UIViewRepresentable {
         
         // Refresh decorations
         uiView.reloadDecorations(forDateComponents: Array(markedDates).compactMap { dateString -> DateComponents? in
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            guard let date = formatter.date(from: dateString) else { return nil }
+            guard let date = EarningsDateFormatterCache.dateOnly.date(from: dateString) else { return nil }
             return Calendar.current.dateComponents([.year, .month, .day], from: date)
         }, animated: true)
     }
@@ -247,10 +264,8 @@ struct EarningsMarkedCalendar: UIViewRepresentable {
         }
 
         func calendarView(_ calendarView: UICalendarView, decorationFor dateComponents: DateComponents) -> UICalendarView.Decoration? {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
             guard let date = dateComponents.date else { return nil }
-            let dateString = formatter.string(from: date)
+            let dateString = EarningsDateFormatterCache.dateOnly.string(from: date)
             
             if parent.markedDates.contains(dateString) {
                 // Use a star symbol for better visibility as requested
@@ -397,43 +412,4 @@ struct EarningsMetricPill: View {
   }
 }
 
-// MARK: - Upcoming Earnings Card
 
-struct UpcomingEarningsCard: View {
-  let event: EarningsEvent
-  @Environment(\.colorScheme) private var colorScheme
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      HStack(alignment: .top) {
-        Text(event.symbol)
-          .typography(.headline, weight: .bold)
-        Spacer()
-        VStack(alignment: .trailing, spacing: 2) {
-          Text("EST. EPS")
-            .typography(.nano)
-            .foregroundStyle(.secondary)
-          Text(event.epsEstimated?.formatted() ?? "—")
-            .typography(.small, weight: .semibold)
-            .foregroundStyle(event.epsEstimated ?? 0 >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger)
-        }
-      }
-      
-      Spacer()
-      
-      HStack {
-        Image(systemName: "calendar")
-          .font(.caption2)
-        Text(event.date)
-          .typography(.caption)
-      }
-      .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-      .padding(.horizontal, 8)
-      .padding(.vertical, 4)
-      .appGlassEffect(.capsule, tint: AppTheme.Colors.tint(for: colorScheme).opacity(0.15))
-    }
-    .frame(width: 150, height: 110)
-    .padding(16)
-    .appGlassEffect(.rect(cornerRadius: 20))
-  }
-}

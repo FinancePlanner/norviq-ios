@@ -1,8 +1,14 @@
 import Combine
 import Factory
 import Foundation
+import OSLog
 import StockPlanShared
 import SwiftData
+
+private let portfolioViewModelLogger = Logger(
+  subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
+  category: "PortfolioViewModel"
+)
 
 struct PortfolioAllocationSlice: Identifiable, Equatable, Sendable {
   let id: String
@@ -22,6 +28,7 @@ final class PortfolioViewModel: ObservableObject {
 
   private let service: StockServicing
   private var modelContext: ModelContext?
+  private var hasLoadedOnce = false
 
   init(service: StockServicing, modelContext: ModelContext? = nil) {
     self.service = service
@@ -36,7 +43,8 @@ final class PortfolioViewModel: ObservableObject {
     self.modelContext = context
   }
 
-  func load() async {
+  func load(force: Bool = false) async {
+    if !force, hasLoadedOnce { return }
     guard !isLoading else { return }
     isLoading = true
     errorMessage = nil
@@ -45,6 +53,7 @@ final class PortfolioViewModel: ObservableObject {
     do {
       let remoteStocks = try await service.fetchPortfolio()
       await syncWithSwiftData(remoteStocks)
+      hasLoadedOnce = true
     } catch {
       errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load portfolio."
     }
@@ -60,6 +69,7 @@ final class PortfolioViewModel: ObservableObject {
     do {
         let descriptor = FetchDescriptor<SDPortfolioStock>()
         let localStocks = try modelContext.fetch(descriptor)
+        let localById = Dictionary(uniqueKeysWithValues: localStocks.map { ($0.id, $0) })
         
         // Delete local stocks that are not in remote
         for local in localStocks {
@@ -70,7 +80,7 @@ final class PortfolioViewModel: ObservableObject {
         
         // Update or insert remote stocks
         for remote in remoteStocks {
-            if let existing = localStocks.first(where: { $0.id == remote.id }) {
+            if let existing = localById[remote.id] {
                 existing.update(from: remote)
             } else {
                 modelContext.insert(SDPortfolioStock(from: remote))
@@ -79,7 +89,7 @@ final class PortfolioViewModel: ObservableObject {
         
         try modelContext.save()
     } catch {
-        print("Failed to sync with SwiftData: \(error)")
+        portfolioViewModelLogger.error("SwiftData portfolio sync failed: \(error.localizedDescription, privacy: .public)")
     }
   }
 
@@ -163,8 +173,8 @@ final class PortfolioViewModel: ObservableObject {
           shares: shares,
           buyPrice: buyPrice,
           buyDate: DateFormatter.yyyyMMdd.string(from: draft.buyDate),
-
-          notes: draft.notes.isEmpty ? nil : draft.notes
+          notes: draft.notes.isEmpty ? nil : draft.notes,
+          category: draft.category
         )
       )
 
@@ -181,4 +191,3 @@ final class PortfolioViewModel: ObservableObject {
     }
   }
 }
-

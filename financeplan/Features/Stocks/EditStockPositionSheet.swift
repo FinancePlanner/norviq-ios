@@ -13,6 +13,7 @@ struct EditStockPositionSheet: View {
   @Environment(\.colorScheme) private var colorScheme
   @State private var sharesText: String
   @State private var buyPriceText: String
+  @State private var category: AssetCategory
   @State private var notes: String
   @State private var successFeedbackTrigger = 0
   @State private var deleteConfirmationShown = false
@@ -33,6 +34,7 @@ struct EditStockPositionSheet: View {
     self.onDelete = onDelete
     _sharesText = State(initialValue: String(stock.shares))
     _buyPriceText = State(initialValue: String(stock.buyPrice))
+    _category = State(initialValue: stock.category)
     _notes = State(initialValue: stock.notes ?? "")
   }
 
@@ -52,6 +54,17 @@ struct EditStockPositionSheet: View {
           }
 
           FormCard(title: "Position") {
+            FormRow(icon: "tag", iconColor: .purple, label: "Category") {
+              Picker("", selection: $category) {
+                ForEach(AssetCategory.allCases, id: \.self) { category in
+                  Text(category.rawValue.capitalized).tag(category)
+                }
+              }
+              .labelsHidden()
+            }
+
+            FormDivider()
+
             FormTextField(
               icon: "number",
               placeholder: "Shares",
@@ -117,7 +130,8 @@ struct EditStockPositionSheet: View {
               shares: shares,
               buyPrice: buyPrice,
               buyDate: stock.buyDate,
-              notes: notes.isEmpty ? nil : notes
+              notes: notes.isEmpty ? nil : notes,
+              category: category
             )
           )
           if didSave {
