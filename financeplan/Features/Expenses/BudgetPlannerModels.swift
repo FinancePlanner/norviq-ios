@@ -274,6 +274,7 @@ struct PillarPlanningSummary: Identifiable {
 struct BudgetPlanItemDraft: Identifiable {
   let id = UUID()
   var itemID: UUID?
+  var placeholderItemID: UUID?
   var title: String
   var plannedAmount: Double
   var pillar: BudgetPillar
@@ -282,6 +283,7 @@ struct BudgetPlanItemDraft: Identifiable {
 
   init(
     itemID: UUID? = nil,
+    placeholderItemID: UUID? = nil,
     title: String,
     plannedAmount: Double,
     pillar: BudgetPillar,
@@ -289,6 +291,7 @@ struct BudgetPlanItemDraft: Identifiable {
     userSharePercent: Double = 100
   ) {
     self.itemID = itemID
+    self.placeholderItemID = placeholderItemID
     self.title = title
     self.plannedAmount = plannedAmount
     self.pillar = pillar

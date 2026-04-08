@@ -330,6 +330,10 @@ private struct DashboardRoot: View {
       .task {
           await loadContent()
       }
+      .onChange(of: selectedTab) { tab in
+        guard tab == .dashboard else { return }
+        Task { await loadContent(force: true) }
+      }
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
           Button {

@@ -51,6 +51,37 @@ final class ExpensesHTTPClientTests: XCTestCase {
     super.tearDown()
   }
 
+  private func jsonBody(from request: URLRequest) throws -> [String: Any] {
+    if let body = request.httpBody {
+      return try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+    }
+
+    guard let stream = request.httpBodyStream else {
+      XCTFail("Expected request body in httpBody or httpBodyStream")
+      return [:]
+    }
+
+    stream.open()
+    defer { stream.close() }
+
+    var data = Data()
+    let bufferSize = 4096
+    var buffer = [UInt8](repeating: 0, count: bufferSize)
+
+    while stream.hasBytesAvailable {
+      let readCount = stream.read(&buffer, maxLength: bufferSize)
+      if readCount < 0 {
+        throw stream.streamError ?? URLError(.cannotDecodeRawData)
+      }
+      if readCount == 0 {
+        break
+      }
+      data.append(buffer, count: readCount)
+    }
+
+    return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+  }
+
   // MARK: - Create Expense
 
   func testCreateExpense_SendsCorrectSnakeCasePayload() async throws {
@@ -58,8 +89,7 @@ final class ExpensesHTTPClientTests: XCTestCase {
       XCTAssertEqual(request.httpMethod, "POST")
       XCTAssertEqual(request.url?.path, "/v1/expenses")
 
-      let body = try XCTUnwrap(request.httpBody)
-      let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+      let json = try self.jsonBody(from: request)
 
       // Verify snake_case keys (the bug fix)
       XCTAssertEqual(json["title"] as? String, "Groceries")
@@ -101,8 +131,7 @@ final class ExpensesHTTPClientTests: XCTestCase {
 
   func testCreateExpense_SharedSplitMode_EncodesCorrectly() async throws {
     MockURLProtocol.handler = { request in
-      let body = try XCTUnwrap(request.httpBody)
-      let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+      let json = try self.jsonBody(from: request)
 
       XCTAssertEqual(json["split_mode"] as? String, "shared")
       XCTAssertEqual(json["user_share_percent"] as? Double, 35)
@@ -142,8 +171,7 @@ final class ExpensesHTTPClientTests: XCTestCase {
       XCTAssertEqual(request.httpMethod, "POST")
       XCTAssertEqual(request.url?.path, "/v1/budget/items")
 
-      let body = try XCTUnwrap(request.httpBody)
-      let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+      let json = try self.jsonBody(from: request)
 
       // Verify snake_case keys
       XCTAssertEqual(json["snapshot_id"] as? String, "snap-123")
@@ -185,8 +213,7 @@ final class ExpensesHTTPClientTests: XCTestCase {
 
   func testCreatePlanItem_SharedSplit_EncodesCorrectPercentage() async throws {
     MockURLProtocol.handler = { request in
-      let body = try XCTUnwrap(request.httpBody)
-      let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+      let json = try self.jsonBody(from: request)
 
       XCTAssertEqual(json["split_mode"] as? String, "shared")
       XCTAssertEqual(json["user_share_percent"] as? Double, 60)
@@ -222,8 +249,7 @@ final class ExpensesHTTPClientTests: XCTestCase {
       XCTAssertEqual(request.httpMethod, "PATCH")
       XCTAssertTrue(request.url?.path.contains("/v1/expenses/") == true)
 
-      let body = try XCTUnwrap(request.httpBody)
-      let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+      let json = try self.jsonBody(from: request)
 
       XCTAssertEqual(json["split_mode"] as? String, "shared")
       XCTAssertEqual(json["user_share_percent"] as? Double, 70)
@@ -256,19 +282,19 @@ final class ExpensesHTTPClientTests: XCTestCase {
 
   // MARK: - Create Snapshot
 
-  func testCreateSnapshot_SendsSnakeCasePayload() async throws {
+  func testCreateSnapshot_SendsCamelCasePayload() async throws {
     MockURLProtocol.handler = { request in
       XCTAssertEqual(request.httpMethod, "POST")
       XCTAssertEqual(request.url?.path, "/v1/budget/snapshots")
 
-      let body = try XCTUnwrap(request.httpBody)
-      let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+      let json = try self.jsonBody(from: request)
 
-      XCTAssertEqual(json["month_start"] as? String, "2026-05-01")
-      XCTAssertEqual(json["net_salary"] as? Double, 4500)
-      XCTAssertNil(json["monthStart"])
-      XCTAssertNil(json["netSalary"])
-      XCTAssertNil(json["targetShares"])
+      XCTAssertEqual(json["monthStart"] as? String, "2026-05-01")
+      XCTAssertEqual(json["netSalary"] as? Double, 4500)
+      XCTAssertEqual((json["targetShares"] as? [String: Double])?["fundamentals"], 0.5)
+      XCTAssertNil(json["month_start"])
+      XCTAssertNil(json["net_salary"])
+      XCTAssertNil(json["target_shares"])
 
       let response = BudgetSnapshotResponse(
         id: UUID().uuidString, monthStart: "2026-05-01",
@@ -288,6 +314,41 @@ final class ExpensesHTTPClientTests: XCTestCase {
     )
 
     XCTAssertEqual(result.netSalary, 4500)
+  }
+
+  func testUpdateSnapshot_SendsCamelCasePayload() async throws {
+    MockURLProtocol.handler = { request in
+      XCTAssertEqual(request.httpMethod, "PATCH")
+      XCTAssertEqual(request.url?.path, "/v1/budget/snapshots/snap-123")
+
+      let json = try self.jsonBody(from: request)
+
+      XCTAssertEqual(json["monthStart"] as? String, "2026-05-01")
+      XCTAssertEqual(json["netSalary"] as? Double, 5000)
+      XCTAssertEqual((json["targetShares"] as? [String: Double])?["futureYou"], 0.4)
+      XCTAssertNil(json["month_start"])
+      XCTAssertNil(json["net_salary"])
+      XCTAssertNil(json["target_shares"])
+
+      let response = BudgetSnapshotResponse(
+        id: "snap-123", monthStart: "2026-05-01",
+        netSalary: 5000, targetShares: ["futureYou": 0.4]
+      )
+      let data = try JSONEncoder.stockPlanShared.encode(response)
+      return (data, HTTPURLResponse(
+        url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil
+      )!)
+    }
+
+    let result = try await client.updateSnapshot(
+      snapshotId: "snap-123",
+      payload: BudgetSnapshotRequest(
+        monthStart: "2026-05-01", netSalary: 5000, targetShares: ["futureYou": 0.4]
+      )
+    )
+
+    XCTAssertEqual(result.id, "snap-123")
+    XCTAssertEqual(result.netSalary, 5000)
   }
 
   // MARK: - Suggestions

@@ -6,6 +6,13 @@ import XCTest
 
 final class BudgetPlannerViewModelTests: XCTestCase {
   private let calendar = Calendar(identifier: .gregorian)
+  private let utcDateFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd"
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    return formatter
+  }()
 
   func testSelectedMonthUsesSalaryAndPillarTargetsToComputeAvailability() async {
     await MainActor.run {
@@ -143,6 +150,52 @@ final class BudgetPlannerViewModelTests: XCTestCase {
         900,
         accuracy: 0.001
       )
+    }
+  }
+
+  func testMonthsWithExpensesAreAvailableEvenWithoutSnapshot() async {
+    await MainActor.run {
+      let april = makeMonth(2026, 4)
+      let may = makeMonth(2026, 5)
+
+      let snapshots = [
+        MonthlyBudgetSnapshot(monthStart: april, netSalary: 3000, items: [])
+      ]
+      let activities = [
+        BudgetActivity(
+          title: "Rent",
+          amount: 700,
+          pillar: .fundamentals,
+          occurredOn: makeDate(2026, 5, 8)
+        )
+      ]
+
+      let viewModel = BudgetPlannerViewModel(monthlySnapshots: snapshots, activities: activities)
+
+      XCTAssertEqual(viewModel.availableMonths.count, 2)
+      XCTAssertEqual(viewModel.availableMonths.first, may)
+      XCTAssertEqual(viewModel.selectedMonthStart, may)
+      XCTAssertEqual(viewModel.selectedMonthActivities.count, 1)
+      XCTAssertNil(viewModel.selectedMonthSnapshot)
+      XCTAssertEqual(viewModel.selectedMonthActualTotal, 700, accuracy: 0.001)
+    }
+  }
+
+  func testDeleteCurrentSnapshotDoesNotDeleteDifferentMonthByFallback() async {
+    await MainActor.run {
+      let april = makeMonth(2026, 4)
+      let may = makeMonth(2026, 5)
+      let snapshots = [
+        MonthlyBudgetSnapshot(monthStart: april, netSalary: 3000, items: [])
+      ]
+
+      let viewModel = BudgetPlannerViewModel(monthlySnapshots: snapshots, activities: [])
+      viewModel.selectMonth(may)
+      viewModel.deleteCurrentSnapshot()
+
+      XCTAssertEqual(viewModel.monthlySnapshots.count, 1)
+      XCTAssertEqual(viewModel.monthlySnapshots.first?.monthStart, april)
+      XCTAssertEqual(viewModel.errorMessage, "No monthly plan exists for the selected month.")
     }
   }
 
@@ -377,6 +430,259 @@ final class BudgetPlannerViewModelTests: XCTestCase {
     }
   }
 
+  func testAddOrUpdatePlanItemCreatesSnapshotWhenMissingAndPersistsZeroAmount() async {
+    let mock = BudgetPlannerServiceMock()
+    let createdSnapshotID = "11111111-1111-1111-1111-111111111111"
+    mock.createSnapshotResult = .success(
+      BudgetSnapshotResponse(
+        id: createdSnapshotID,
+        monthStart: "2026-06-01",
+        netSalary: 3200,
+        targetShares: [
+          BudgetPillar.fundamentals.rawValue: 0.5,
+          BudgetPillar.futureYou.rawValue: 0.2,
+          BudgetPillar.fun.rawValue: 0.3,
+        ]
+      )
+    )
+    mock.createPlanItemResult = .success(
+      BudgetPlanItemResponse(
+        id: UUID().uuidString,
+        snapshotId: createdSnapshotID,
+        title: "Rent",
+        plannedAmount: 0,
+        pillar: .fundamentals,
+        splitMode: .personal,
+        userSharePercent: 100,
+        createdAt: nil,
+        updatedAt: nil
+      )
+    )
+
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(monthlySnapshots: [], activities: [], expensesService: mock)
+    }
+
+    await MainActor.run {
+      viewModel.selectMonth(makeMonth(2026, 6))
+      viewModel.addOrUpdatePlanItem(
+        BudgetPlanItemDraft(
+          title: "Rent",
+          plannedAmount: 0,
+          pillar: .fundamentals
+        )
+      )
+    }
+
+    for _ in 0..<60 where mock.createPlanItemRequests.isEmpty {
+      try? await Task.sleep(nanoseconds: 20_000_000)
+    }
+
+    let expectedMonthStart = formattedUTCDate(makeMonth(2026, 6))
+    XCTAssertEqual(mock.createBudgetSnapshotRequests.count, 1)
+    XCTAssertEqual(mock.createBudgetSnapshotRequests.first?.monthStart, expectedMonthStart)
+    XCTAssertEqual(mock.createPlanItemRequests.count, 1)
+    XCTAssertEqual(mock.createPlanItemRequests.first?.snapshotId, createdSnapshotID)
+    XCTAssertEqual(mock.createPlanItemRequests.first?.plannedAmount ?? -1, 0, accuracy: 0.001)
+    XCTAssertEqual(mock.createPlanItemRequests.first?.title, "Rent")
+  }
+
+  func testRecordExpenseInAnotherMonthSwitchesSelectedMonth() async {
+    let mock = BudgetPlannerServiceMock()
+    mock.createExpenseResult = .success(
+      ExpenseResponse(
+        id: "exp-1",
+        title: "Coffee",
+        amount: 6,
+        pillar: .fun,
+        occurredOn: "2026-05-12",
+        linkedPlanItemId: nil,
+        splitMode: .personal,
+        userSharePercent: 100,
+        createdAt: nil,
+        updatedAt: nil
+      )
+    )
+
+    let april = makeMonth(2026, 4)
+    let mayDate = makeDate(2026, 5, 12)
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(
+        monthlySnapshots: [MonthlyBudgetSnapshot(monthStart: april, netSalary: 3000, items: [])],
+        activities: [],
+        expensesService: mock
+      )
+    }
+
+    await MainActor.run {
+      viewModel.recordExpense(
+        BudgetActivityDraft(
+          title: "Coffee",
+          amount: 6,
+          pillar: .fun,
+          occurredOn: mayDate
+        )
+      )
+      XCTAssertEqual(viewModel.selectedMonthStart, makeMonth(2026, 5))
+    }
+
+    for _ in 0..<60 where mock.createExpenseRequests.isEmpty {
+      try? await Task.sleep(nanoseconds: 20_000_000)
+    }
+
+    XCTAssertEqual(mock.createExpenseRequests.count, 1)
+    XCTAssertEqual(mock.createExpenseRequests.first?.occurredOn, formattedUTCDate(mayDate))
+    XCTAssertEqual(mock.createExpenseRequests.first?.title, "Coffee")
+  }
+
+  func testRecordExpenseInMonthWithoutSnapshotDoesNotCreateLocalSnapshotPlaceholder() async {
+    let mock = BudgetPlannerServiceMock()
+    mock.createExpenseResult = .success(
+      ExpenseResponse(
+        id: "exp-2",
+        title: "Food",
+        amount: 50,
+        pillar: .fun,
+        occurredOn: "2026-05-08",
+        linkedPlanItemId: nil,
+        splitMode: .personal,
+        userSharePercent: 100,
+        createdAt: nil,
+        updatedAt: nil
+      )
+    )
+    mock.expensesResult = .success(
+      [
+        ExpenseResponse(
+          id: "exp-2",
+          title: "Food",
+          amount: 50,
+          pillar: .fun,
+          occurredOn: "2026-05-08",
+          linkedPlanItemId: nil,
+          splitMode: .personal,
+          userSharePercent: 100,
+          createdAt: nil,
+          updatedAt: nil
+        )
+      ]
+    )
+
+    let april = makeMonth(2026, 4)
+    let mayDate = makeDate(2026, 5, 8)
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(
+        monthlySnapshots: [MonthlyBudgetSnapshot(monthStart: april, netSalary: 2050, items: [])],
+        activities: [],
+        expensesService: mock
+      )
+    }
+
+    await MainActor.run {
+      viewModel.recordExpense(
+        BudgetActivityDraft(
+          title: "Food",
+          amount: 50,
+          pillar: .fun,
+          occurredOn: mayDate
+        )
+      )
+
+      XCTAssertEqual(viewModel.selectedMonthStart, makeMonth(2026, 5))
+      XCTAssertNil(viewModel.selectedMonthSnapshot)
+      XCTAssertEqual(viewModel.selectedMonthActualTotal, 50, accuracy: 0.001)
+    }
+  }
+
+  func testLoadFallsBackToLocalSummariesWhenReportEndpointsReturnEmpty() async {
+    let mock = BudgetPlannerServiceMock()
+    mock.monthlyReportsResult = .success([])
+    mock.yearlyReportsResult = .success([])
+    mock.expensesResult = .success(
+      [
+        ExpenseResponse(
+          id: "33333333-3333-4333-8333-333333333333",
+          title: "Groceries",
+          amount: 120,
+          pillar: .fundamentals,
+          occurredOn: "2026-04-08",
+          linkedPlanItemId: nil,
+          splitMode: .personal,
+          userSharePercent: 100,
+          createdAt: nil,
+          updatedAt: nil
+        )
+      ]
+    )
+
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(monthlySnapshots: [], activities: [], expensesService: mock)
+    }
+
+    await viewModel.load(force: true)
+
+    await MainActor.run {
+      XCTAssertFalse(viewModel.selectedYearSummaries.isEmpty)
+      XCTAssertEqual(viewModel.selectedYearActualTotal, 120, accuracy: 0.001)
+      XCTAssertEqual(viewModel.selectedMonthActualTotal, 120, accuracy: 0.001)
+    }
+  }
+
+  func testForceLoadQueuesOneFollowUpReloadWhenCalledDuringLoad() async {
+    let mock = BudgetPlannerServiceMock()
+    mock.getSnapshotsDelayNanos = 150_000_000
+
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(monthlySnapshots: [], activities: [], expensesService: mock)
+    }
+
+    let firstLoadTask = Task {
+      await viewModel.load(force: true)
+    }
+    try? await Task.sleep(nanoseconds: 30_000_000)
+
+    await viewModel.load(force: true)
+    await firstLoadTask.value
+
+    XCTAssertEqual(mock.getSnapshotsCallCount, 2)
+  }
+
+  func testBeginPlannedItemDraftAddsPlaceholderAndCancelRemovesIt() async {
+    let mock = BudgetPlannerServiceMock()
+    mock.createSnapshotResult = .success(
+      BudgetSnapshotResponse(
+        id: "A1BF8A69-5CF6-49E4-B291-6E920B34E7DE",
+        monthStart: "2026-06-01",
+        netSalary: 3200,
+        targetShares: [
+          BudgetPillar.fundamentals.rawValue: 0.5,
+          BudgetPillar.futureYou.rawValue: 0.2,
+          BudgetPillar.fun.rawValue: 0.3,
+        ]
+      )
+    )
+
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(monthlySnapshots: [], activities: [], expensesService: mock)
+    }
+
+    await MainActor.run {
+      viewModel.selectMonth(makeMonth(2026, 6))
+    }
+    let resolvedDraft = await viewModel.beginPlannedItemDraft(pillar: .fundamentals)
+
+    await MainActor.run {
+      guard let resolvedDraft else {
+        XCTFail("Expected a draft")
+        return
+      }
+      XCTAssertEqual(viewModel.items(for: .fundamentals).count, 1)
+      XCTAssertEqual(viewModel.items(for: .fundamentals).first?.plannedAmount ?? -1, 0, accuracy: 0.001)
+      viewModel.cancelPlanItemDraft(resolvedDraft)
+      XCTAssertTrue(viewModel.items(for: .fundamentals).isEmpty)
+    }
+  }
+
   private func makeMonth(_ year: Int, _ month: Int) -> Date {
     calendar.date(from: DateComponents(year: year, month: month, day: 1)) ?? .now
   }
@@ -384,27 +690,17 @@ final class BudgetPlannerViewModelTests: XCTestCase {
   private func makeDate(_ year: Int, _ month: Int, _ day: Int) -> Date {
     calendar.date(from: DateComponents(year: year, month: month, day: day)) ?? .now
   }
+
+  private func formattedUTCDate(_ date: Date) -> String {
+    utcDateFormatter.string(from: date)
+  }
 }
 
 private final class BudgetPlannerServiceMock: ExpensesServicing {
-  var suggestionsResult: Result<ReportSuggestionsResponse, Error> = .success(
-    ReportSuggestionsResponse(generatedAt: "", suggestions: [])
-  )
-  var suggestionsDelayNanos: UInt64 = 0
-  var dismissedSuggestionIds: [String] = []
-
-  func getHouseholdPartner() async throws -> HouseholdPartnerProfileResponse {
-    HouseholdPartnerProfileResponse(displayName: "Partner")
-  }
-
-  func updateHouseholdPartner(payload _: HouseholdPartnerProfileRequest) async throws -> HouseholdPartnerProfileResponse {
-    HouseholdPartnerProfileResponse(displayName: "Partner")
-  }
-
-  func getSnapshots(year _: Int?, month _: Int?) async throws -> [BudgetSnapshotResponse] {
+  var snapshotsResult: Result<[BudgetSnapshotResponse], Error> = .success(
     [
       BudgetSnapshotResponse(
-        id: UUID().uuidString,
+        id: "6CC8C5FE-39A5-4E53-94B4-4BE6A7A66A7D",
         monthStart: "2026-04-01",
         netSalary: 3000,
         targetShares: [
@@ -416,10 +712,56 @@ private final class BudgetPlannerServiceMock: ExpensesServicing {
         updatedAt: nil
       )
     ]
+  )
+  var itemsResult: Result<[BudgetPlanItemResponse], Error> = .success([])
+  var expensesResult: Result<[ExpenseResponse], Error> = .success([])
+  var monthlyReportsResult: Result<[BudgetMonthSummaryResponse], Error> = .success(
+    [
+      BudgetMonthSummaryResponse(
+        monthStart: "2026-04-01",
+        planned: 1000,
+        actual: 900,
+        salary: 3000,
+        pillarActuals: [:],
+        pillarPlans: [:]
+      )
+    ]
+  )
+  var yearlyReportsResult: Result<[BudgetYearSummaryResponse], Error> = .success([])
+  var createSnapshotResult: Result<BudgetSnapshotResponse, Error> = .failure(MockPlannerError.notConfigured)
+  var createPlanItemResult: Result<BudgetPlanItemResponse, Error> = .failure(MockPlannerError.notConfigured)
+  var createExpenseResult: Result<ExpenseResponse, Error> = .failure(MockPlannerError.notConfigured)
+
+  var suggestionsResult: Result<ReportSuggestionsResponse, Error> = .success(
+    ReportSuggestionsResponse(generatedAt: "", suggestions: [])
+  )
+  var getSnapshotsDelayNanos: UInt64 = 0
+  var suggestionsDelayNanos: UInt64 = 0
+  var getSnapshotsCallCount = 0
+  var createBudgetSnapshotRequests: [BudgetSnapshotRequest] = []
+  var createPlanItemRequests: [BudgetPlanItemRequest] = []
+  var createExpenseRequests: [ExpenseRequest] = []
+  var dismissedSuggestionIds: [String] = []
+
+  func getHouseholdPartner() async throws -> HouseholdPartnerProfileResponse {
+    HouseholdPartnerProfileResponse(displayName: "Partner")
   }
 
-  func createBudgetSnapshot(request _: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
-    throw MockPlannerError.notConfigured
+  func updateHouseholdPartner(payload _: HouseholdPartnerProfileRequest) async throws -> HouseholdPartnerProfileResponse {
+    HouseholdPartnerProfileResponse(displayName: "Partner")
+  }
+
+  func getSnapshots(year _: Int?, month _: Int?) async throws -> [BudgetSnapshotResponse] {
+    getSnapshotsCallCount += 1
+    if getSnapshotsDelayNanos > 0 {
+      try? await Task.sleep(nanoseconds: getSnapshotsDelayNanos)
+    }
+    return try snapshotsResult.get()
+  }
+
+  func createBudgetSnapshot(request: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
+    createBudgetSnapshotRequests.append(request)
+    return try createSnapshotResult.get()
   }
 
   func updateSnapshot(snapshotId _: String, payload _: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
@@ -430,10 +772,13 @@ private final class BudgetPlannerServiceMock: ExpensesServicing {
 
   func getSnapshotItems(snapshotId _: String) async throws -> [BudgetPlanItemResponse] { [] }
 
-  func getAllPlanItems() async throws -> [BudgetPlanItemResponse] { [] }
+  func getAllPlanItems() async throws -> [BudgetPlanItemResponse] {
+    try itemsResult.get()
+  }
 
-  func createPlanItem(payload _: BudgetPlanItemRequest) async throws -> BudgetPlanItemResponse {
-    throw MockPlannerError.notConfigured
+  func createPlanItem(payload: BudgetPlanItemRequest) async throws -> BudgetPlanItemResponse {
+    createPlanItemRequests.append(payload)
+    return try createPlanItemResult.get()
   }
 
   func updatePlanItem(itemId _: String, payload _: BudgetPlanItemRequest) async throws -> BudgetPlanItemResponse {
@@ -442,10 +787,13 @@ private final class BudgetPlannerServiceMock: ExpensesServicing {
 
   func deletePlanItem(itemId _: String) async throws {}
 
-  func getExpenses(from _: String?, to _: String?) async throws -> [ExpenseResponse] { [] }
+  func getExpenses(from _: String?, to _: String?) async throws -> [ExpenseResponse] {
+    try expensesResult.get()
+  }
 
-  func createExpense(request _: ExpenseRequest) async throws -> ExpenseResponse {
-    throw MockPlannerError.notConfigured
+  func createExpense(request: ExpenseRequest) async throws -> ExpenseResponse {
+    createExpenseRequests.append(request)
+    return try createExpenseResult.get()
   }
 
   func updateExpense(expenseId _: String, payload _: ExpenseRequest) async throws -> ExpenseResponse {
@@ -477,20 +825,11 @@ private final class BudgetPlannerServiceMock: ExpensesServicing {
   }
 
   func getMonthlyExpenseReports(from _: String?, to _: String?) async throws -> [BudgetMonthSummaryResponse] {
-    [
-      BudgetMonthSummaryResponse(
-        monthStart: "2026-04-01",
-        planned: 1000,
-        actual: 900,
-        salary: 3000,
-        pillarActuals: [:],
-        pillarPlans: [:]
-      )
-    ]
+    try monthlyReportsResult.get()
   }
 
   func getYearlyExpenseReports(from _: String?, to _: String?) async throws -> [BudgetYearSummaryResponse] {
-    []
+    try yearlyReportsResult.get()
   }
 
   func getReportSuggestions(from _: String?, to _: String?) async throws -> ReportSuggestionsResponse {
