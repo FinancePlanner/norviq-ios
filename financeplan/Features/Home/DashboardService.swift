@@ -45,7 +45,12 @@ struct DashboardServiceStub: DashboardServicing {
             savingsRate: 15.0,
             budgetStreak: 3,
             watchlistCount: 5,
-            cashBuffer: 10000.0
+            cashBuffer: 10000.0,
+            financialHealth: DashboardFinancialHealthDTO(
+                score: 72,
+                maxScore: 100,
+                status: .healthy
+            )
         )
     }
 }

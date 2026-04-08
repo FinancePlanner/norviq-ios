@@ -15,6 +15,7 @@ struct PortfolioScreen: View {
   @State private var destructiveFeedbackTrigger = 0
   @State private var selectedTimeRange: TimeRange = .month
   @State private var selectedAssetFilter: AssetFilter = .all
+  @State private var chartData: [ChartDataPoint] = []
 
   enum TimeRange: String, CaseIterable, Identifiable {
       case day = "1D"
@@ -36,19 +37,6 @@ struct PortfolioScreen: View {
 
   private var totalValue: Double {
     stocks.reduce(0) { $0 + ($1.shares * $1.buyPrice) }
-  }
-
-  private var mockChartData: [ChartDataPoint] {
-      let calendar = Calendar.current
-      let today = Date()
-      let baseValue = totalValue == 0 ? 100000.0 : totalValue
-      
-      return (0..<30).map { i in
-          let date = calendar.date(byAdding: .day, value: -(29 - i), to: today)!
-          let noise = sin(Double(i) * 0.5) * 5000.0 + Double.random(in: -1000...1000)
-          let trend = Double(i) * 300.0
-          return ChartDataPoint(date: date, value: max(0, baseValue * 0.8 + noise + trend))
-      }
   }
 
   private var filteredStocks: [SDPortfolioStock] {
@@ -81,7 +69,7 @@ struct PortfolioScreen: View {
           Text(error)
         } actions: {
           Button("Retry") {
-            Task { await viewModel.load() }
+            Task { await viewModel.load(force: true) }
           }
           .buttonStyle(.borderedProminent)
         }
@@ -115,7 +103,7 @@ struct PortfolioScreen: View {
                 }
                 .padding(.horizontal, 4)
                 
-                InteractiveLineChart(data: mockChartData, color: .green)
+                InteractiveLineChart(data: chartData, color: .green)
                   .frame(height: 160)
                   .padding(.horizontal, -12) // Bleed to edges of card padding
                 
@@ -222,8 +210,15 @@ struct PortfolioScreen: View {
     .onAppear {
         viewModel.setModelContext(modelContext)
         Task { await viewModel.load() }
+        rebuildChartData()
     }
-    .refreshable { await viewModel.load() }
+    .onChange(of: totalValue) { _ in
+      rebuildChartData()
+    }
+    .onChange(of: selectedTimeRange) { _ in
+      rebuildChartData()
+    }
+    .refreshable { await viewModel.load(force: true) }
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
         Button {
@@ -273,6 +268,48 @@ struct PortfolioScreen: View {
       )
     }
     .appSensoryFeedback(destructive: destructiveFeedbackTrigger)
+  }
+
+  private func rebuildChartData() {
+    chartData = Self.makeChartData(totalValue: totalValue, timeRange: selectedTimeRange)
+  }
+
+  private static func makeChartData(totalValue: Double, timeRange: TimeRange) -> [ChartDataPoint] {
+    let calendar = Calendar.current
+    let today = Date()
+    let baseValue = totalValue == 0 ? 100_000.0 : totalValue
+
+    let (count, component): (Int, Calendar.Component) = {
+      switch timeRange {
+      case .day:
+        return (24, .hour)
+      case .week:
+        return (7, .day)
+      case .month:
+        return (30, .day)
+      case .threeMonths:
+        return (90, .day)
+      case .year:
+        return (52, .weekOfYear)
+      case .all:
+        return (60, .month)
+      }
+    }()
+
+    return (0..<count).compactMap { i in
+      let offset = count - 1 - i
+      guard let date = calendar.date(byAdding: component, value: -offset, to: today) else {
+        return nil
+      }
+
+      let phase = Double(i)
+      let seasonal = sin(phase * 0.45) * baseValue * 0.018
+      let secondaryWave = cos(phase * 0.19) * baseValue * 0.007
+      let trend = phase * (baseValue * 0.0012)
+      let value = max(0, baseValue * 0.78 + seasonal + secondaryWave + trend)
+
+      return ChartDataPoint(date: date, value: value)
+    }
   }
 }
 
@@ -384,4 +421,3 @@ private struct PortfolioSkeletonView: View {
     }
   }
 }
-

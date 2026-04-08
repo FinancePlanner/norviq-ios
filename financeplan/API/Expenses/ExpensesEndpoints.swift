@@ -108,6 +108,26 @@ struct DeletePlanItemEndpoint: Endpoint {
 
 // MARK: - Expenses
 
+struct GetHouseholdPartnerEndpoint: Endpoint {
+    typealias Response = HouseholdPartnerProfileResponse
+    var method: HTTPMethod { .get }
+    var path: String { "/v1/expenses/partner" }
+    var decoder: JSONDecoder { .stockPlanShared }
+    func asParameters() throws -> Parameters { [:] }
+}
+
+struct UpdateHouseholdPartnerEndpoint: Endpoint {
+    typealias Response = HouseholdPartnerProfileResponse
+    let payload: HouseholdPartnerProfileRequest
+    var method: HTTPMethod { .put }
+    var path: String { "/v1/expenses/partner" }
+    var decoder: JSONDecoder { .stockPlanShared }
+    func asParameters() throws -> Parameters {
+        let data = try JSONEncoder.stockPlanShared.encode(payload)
+        return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+    }
+}
+
 struct GetExpensesEndpoint: Endpoint {
     typealias Response = [ExpenseResponse]
     let from: String?
@@ -159,6 +179,21 @@ struct DeleteExpenseEndpoint: Endpoint {
 
 // MARK: - Reports
 
+struct GetReportsOverviewEndpoint: Endpoint {
+    typealias Response = ReportsOverviewResponse
+    let from: String?
+    let to: String?
+    var method: HTTPMethod { .get }
+    var path: String { "/v1/reports/overview" }
+    var decoder: JSONDecoder { .stockPlanShared }
+    func asParameters() throws -> Parameters {
+        var params: Parameters = [:]
+        if let from { params["from"] = from }
+        if let to { params["to"] = to }
+        return params
+    }
+}
+
 struct GetMonthlyExpenseReportsEndpoint: Endpoint {
     typealias Response = [BudgetMonthSummaryResponse]
     let from: String?
@@ -187,4 +222,28 @@ struct GetYearlyExpenseReportsEndpoint: Endpoint {
         if let to { params["to"] = to }
         return params
     }
+}
+
+struct GetReportSuggestionsEndpoint: Endpoint {
+    typealias Response = ReportSuggestionsResponse
+    let from: String?
+    let to: String?
+    var method: HTTPMethod { .get }
+    var path: String { "/v1/reports/suggestions" }
+    var decoder: JSONDecoder { .stockPlanShared }
+    func asParameters() throws -> Parameters {
+        var params: Parameters = [:]
+        if let from { params["from"] = from }
+        if let to { params["to"] = to }
+        return params
+    }
+}
+
+struct DismissReportSuggestionEndpoint: Endpoint {
+    typealias Response = APISuccess
+    let suggestionId: String
+    var method: HTTPMethod { .post }
+    var path: String { "/v1/reports/suggestions/\(suggestionId)/dismiss" }
+    var decoder: JSONDecoder { .stockPlanShared }
+    func asParameters() throws -> Parameters { [:] }
 }

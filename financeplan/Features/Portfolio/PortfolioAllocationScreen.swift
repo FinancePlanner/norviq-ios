@@ -51,7 +51,7 @@ struct PortfolioAllocationScreen: View {
           Text(error)
         } actions: {
           Button("Retry") {
-            Task { await viewModel.load() }
+            Task { await viewModel.load(force: true) }
           }
           .buttonStyle(.borderedProminent)
         }
@@ -65,7 +65,7 @@ struct PortfolioAllocationScreen: View {
     .onAppear {
         viewModel.setModelContext(modelContext)
     }
-    .refreshable { await viewModel.load() }
+    .refreshable { await viewModel.load(force: true) }
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
         if !allocationSlices.isEmpty {

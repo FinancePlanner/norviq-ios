@@ -3,6 +3,25 @@ import SwiftUI
 
 @MainActor
 final class OnboardingImportViewModel: ObservableObject {
+  enum CompletedFlow {
+    case stocks
+    case expenses
+  }
+
+  enum OptionalNextAction {
+    case setUpExpenses
+    case setUpStocks
+
+    var title: String {
+      switch self {
+      case .setUpExpenses:
+        return "Set up expenses next"
+      case .setUpStocks:
+        return "Set up stocks next"
+      }
+    }
+  }
+
   enum Step: Hashable {
     case mainMenu
     case chooseStockMethod
@@ -15,6 +34,8 @@ final class OnboardingImportViewModel: ObservableObject {
   }
 
   @Published var step: Step = .mainMenu
+  private var hasCompletedStocksSetup = false
+  private var hasCompletedExpensesSetup = false
 
   func startStockImport() {
     step = .chooseStockMethod
@@ -37,6 +58,36 @@ final class OnboardingImportViewModel: ObservableObject {
 
   func backToMain() { step = .mainMenu }
   func backToChooseStock() { step = .chooseStockMethod }
-  func finish() { step = .success }
+  func finish(completedFlow: CompletedFlow) {
+    switch completedFlow {
+    case .stocks:
+      hasCompletedStocksSetup = true
+    case .expenses:
+      hasCompletedExpensesSetup = true
+    }
+    step = .success
+  }
+
+  var optionalNextAction: OptionalNextAction? {
+    if hasCompletedStocksSetup && !hasCompletedExpensesSetup {
+      return .setUpExpenses
+    }
+    if hasCompletedExpensesSetup && !hasCompletedStocksSetup {
+      return .setUpStocks
+    }
+    return nil
+  }
+
+  func startOptionalNextAction() {
+    switch optionalNextAction {
+    case .setUpExpenses:
+      step = .expenseBudgetSetup
+    case .setUpStocks:
+      step = .chooseStockMethod
+    case .none:
+      break
+    }
+  }
+
   func complete() { step = .done }
 }

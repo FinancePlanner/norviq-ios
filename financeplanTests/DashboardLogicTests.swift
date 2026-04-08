@@ -25,13 +25,20 @@ final class DashboardLogicTests: XCTestCase {
             savingsRate: 20.0,
             budgetStreak: 5,
             watchlistCount: 10,
-            cashBuffer: 15000.0
+            cashBuffer: 15000.0,
+            financialHealth: DashboardFinancialHealthDTO(
+                score: 88,
+                maxScore: 100,
+                status: .healthy
+            )
         )
         
         XCTAssertEqual(insights.savingsRate, 20.0)
         XCTAssertEqual(insights.budgetStreak, 5)
         XCTAssertEqual(insights.watchlistCount, 10)
         XCTAssertEqual(insights.cashBuffer, 15000.0)
+        XCTAssertEqual(insights.financialHealth.score, 88)
+        XCTAssertEqual(insights.financialHealth.status, .healthy)
     }
     
     @MainActor

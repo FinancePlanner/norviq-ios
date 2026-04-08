@@ -105,6 +105,17 @@ public struct UserProfileView: View {
                 .padding(.horizontal, 4)
             }
             
+            // Achievements
+            Section("ACHIEVEMENTS") {
+                NavigationLink(destination: BadgesView()) {
+                    HStack(spacing: 12) {
+                        iconView("trophy.fill", backgroundColor: Color(red: 0.35, green: 0.25, blue: 0.10), foregroundColor: .yellow)
+                        Text("Badges")
+                    }
+                }
+            }
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+            
             // Integrations
             Section("INTEGRATIONS") {
                 VStack(alignment: .leading, spacing: 16) {

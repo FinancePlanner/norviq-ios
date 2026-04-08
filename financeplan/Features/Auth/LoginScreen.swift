@@ -18,6 +18,148 @@ private struct VaultColors {
     static let textSecondary = Color(white: 0.6)
 }
 
+private enum SocialAuthProvider: String, CaseIterable, Identifiable {
+    case apple
+    case google
+    case x
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .apple:
+            return "Continue with Apple"
+        case .google:
+            return "Continue with Google"
+        case .x:
+            return "Continue with X"
+        }
+    }
+
+    var platformName: String {
+        switch self {
+        case .apple:
+            return "Apple"
+        case .google:
+            return "Google"
+        case .x:
+            return "X"
+        }
+    }
+}
+
+private struct SocialAuthButton: View {
+    let provider: SocialAuthProvider
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                icon
+                    .frame(width: 20, height: 20)
+
+                Text(provider.title)
+                    .font(.system(size: 15, weight: .semibold))
+
+                Spacer()
+            }
+            .foregroundColor(foregroundColor)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity)
+            .background(backgroundColor)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(borderColor, lineWidth: 1)
+            )
+            .cornerRadius(12)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var icon: some View {
+        switch provider {
+        case .apple:
+            Image(systemName: "apple.logo")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.white)
+        case .google:
+            Image("GoogleLogo")
+                .resizable()
+                .interpolation(.high)
+                .scaledToFit()
+        case .x:
+            Image("XLogo")
+                .resizable()
+                .interpolation(.high)
+                .scaledToFit()
+        }
+    }
+
+    private var foregroundColor: Color {
+        switch provider {
+        case .google:
+            return .black
+        case .apple, .x:
+            return .white
+        }
+    }
+
+    private var backgroundColor: Color {
+        switch provider {
+        case .google:
+            return .white
+        case .apple:
+            return .black
+        case .x:
+            return Color(red: 0.02, green: 0.02, blue: 0.02)
+        }
+    }
+
+    private var borderColor: Color {
+        switch provider {
+        case .google:
+            return Color.black.opacity(0.08)
+        case .apple, .x:
+            return Color.white.opacity(0.08)
+        }
+    }
+}
+
+private struct SocialAuthSection: View {
+    @ObservedObject var viewModel: LoginViewModel
+    let intentLabel: String
+
+    var body: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 10) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.08))
+                    .frame(height: 1)
+                Text("OR")
+                    .font(.system(size: 10, weight: .bold))
+                    .tracking(1.2)
+                    .foregroundColor(VaultColors.textSecondary)
+                Rectangle()
+                    .fill(Color.white.opacity(0.08))
+                    .frame(height: 1)
+            }
+
+            VStack(spacing: 10) {
+                ForEach(SocialAuthProvider.allCases) { provider in
+                    SocialAuthButton(provider: provider) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            viewModel.error = nil
+                            viewModel.infoMessage = "\(provider.platformName) \(intentLabel) will be available soon."
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Logo Component
 private struct NorviqaLogo: View {
     var size: CGFloat = 64
@@ -268,6 +410,9 @@ private struct SignInView: View {
                     }
                     .disabled(viewModel.isSubmitting)
                     .padding(.top, 8)
+
+                    SocialAuthSection(viewModel: viewModel, intentLabel: "sign in")
+                        .padding(.top, 6)
                 }
                 .padding(24)
                 .background(VaultColors.cardBackground)
@@ -445,6 +590,8 @@ private struct SignUpView: View {
                         .cornerRadius(12)
                     }
                     .disabled(viewModel.isSubmitting)
+
+                    SocialAuthSection(viewModel: viewModel, intentLabel: "sign up")
                     
                     Button(action: { viewModel.hideSignup() }) {
                         HStack(spacing: 8) {

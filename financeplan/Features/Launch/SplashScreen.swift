@@ -56,7 +56,7 @@ struct SplashScreen: View {
             .opacity(pulseAnimation ? 0.4 : 0.2)
           
           // Owl image
-          Image("OwlMascotTransparent")
+          Image("FoxMascotTransparent")
             .resizable()
             .scaledToFit()
             .frame(width: 160, height: 160)

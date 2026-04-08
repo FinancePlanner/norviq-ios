@@ -30,7 +30,9 @@ struct BudgetCategoryDetailsScreen: View {
                 itemID: nil,
                 title: "",
                 plannedAmount: 0,
-                pillar: pillar
+                pillar: pillar,
+                splitMode: .personal,
+                userSharePercent: 100
               )
             }
           )

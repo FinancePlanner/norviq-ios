@@ -42,28 +42,30 @@ struct OnboardingImportFlow: View {
         CSVImportScreen(
           headerNamespace: headerNS,
           onBack: { viewModel.backToChooseStock() },
-          onDone: { _ in viewModel.finish() }
+          onDone: { _ in viewModel.finish(completedFlow: .stocks) }
         )
       case .manual:
         ManualImportScreen(
           headerNamespace: headerNS,
           onBack: { viewModel.backToChooseStock() },
-          onDone: { _ in viewModel.finish() }
+          onDone: { _ in viewModel.finish(completedFlow: .stocks) }
         )
       case .api:
         APIKeyImportScreen(
           headerNamespace: headerNS,
           onBack: { viewModel.backToChooseStock() },
-          onDone: { viewModel.finish() }
+          onDone: { viewModel.finish(completedFlow: .stocks) }
         )
       case .expenseBudgetSetup:
         ExpenseBudgetSetupScreen(
           headerNamespace: headerNS,
           onBack: { viewModel.backToMain() },
-          onDone: { viewModel.finish() }
+          onDone: { viewModel.finish(completedFlow: .expenses) }
         )
       case .success:
         SuccessImportScreen(
+          optionalNextActionTitle: viewModel.optionalNextAction?.title,
+          onOptionalNextAction: { viewModel.startOptionalNextAction() },
           onDone: { viewModel.complete() }
         )
       case .done:
@@ -223,6 +225,8 @@ private struct OnboardingMenuButton: View {
 struct SuccessImportScreen: View {
   @Environment(\.requestReview) var requestReview
   @Environment(\.colorScheme) private var colorScheme
+  let optionalNextActionTitle: String?
+  let onOptionalNextAction: () -> Void
   let onDone: () -> Void
 
   var body: some View {
@@ -265,6 +269,17 @@ struct SuccessImportScreen: View {
         }
         .buttonStyle(GlowingButtonStyle())
         .padding(.horizontal, 24)
+
+        if let optionalNextActionTitle {
+          Button {
+            onOptionalNextAction()
+          } label: {
+            Text(optionalNextActionTitle)
+              .typography(.label, weight: .semibold)
+          }
+          .buttonStyle(GlowingButtonStyle())
+          .padding(.horizontal, 24)
+        }
 
         Button {
           onDone()
@@ -914,7 +929,7 @@ struct ExpenseBudgetSetupScreen: View {
   }
 
   private var isValid: Bool {
-    !viewModel.monthlyIncome.isEmpty && totalPercent == 100
+    viewModel.hasValidMonthlyIncome && abs(totalPercent - 100) < 0.001
   }
     
   var body: some View {
@@ -927,171 +942,19 @@ struct ExpenseBudgetSetupScreen: View {
         onBack: onBack
       )
 
-        ScrollView(.vertical) {
-            Group {
-                VStack(spacing: 24) {
-                  // Instructions
-                  HStack(spacing: 12) {
-                    Image(systemName: "info.circle.fill")
-                      .font(.title3)
-                      .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-
-                    Text(
-                      "Set up your monthly budget by defining your income and allocating it across spending pillars."
-                    )
-                    .typography(.small)
-                    .foregroundStyle(.secondary)
-                  }
-                  .padding(14)
-                  .frame(maxWidth: .infinity, alignment: .leading)
-                  .appGlassEffect(.rect(cornerRadius: 14), tint: AppTheme.Colors.tintSoft(for: colorScheme).opacity(0.4))
-                  .padding(.horizontal, 20)
-                  .padding(.top, 16)
-
-                  // Monthly Income
-                  VStack(alignment: .leading, spacing: 12) {
-                    Text("Monthly Income")
-                      .typography(.label, weight: .semibold)
-                      .padding(.horizontal, 4)
-
-                    HStack(spacing: 12) {
-                      Image(systemName: "banknote.fill")
-                        .font(.title3)
-                        .foregroundStyle(AppTheme.Colors.success)
-                        .frame(width: 32)
-
-                      TextField("Enter your net monthly income", text: $viewModel.monthlyIncome)
-                        .keyboardType(.decimalPad)
-                        .typography(.label, weight: .semibold)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                    .appGlassEffect(.rect(cornerRadius: 16))
-                  }
-                  .padding(.horizontal, 20)
-
-                  // Budget Pillars
-                  VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                      Text("Budget Pillars")
-                        .typography(.label, weight: .semibold)
-                      
-                      Spacer()
-                      
-                      Text("\(Int(totalPercent))%")
-                        .typography(.label, weight: .bold)
-                        .foregroundStyle(totalPercent == 100 ? AppTheme.Colors.success : AppTheme.Colors.warning)
-                    }
-                    .padding(.horizontal, 4)
-
-                    ForEach(BudgetPillar.allCases, id: \.self) { pillar in
-                      PillarAllocationCard(
-                        pillar: pillar,
-                        percentage: Binding(
-                          get: { viewModel.pillars[pillar] ?? 0 },
-                          set: { viewModel.pillars[pillar] = $0 }
-                        ),
-                        monthlyIncome: viewModel.monthlyIncomeValue
-                      )
-                    }
-                  }
-                  .padding(.horizontal, 20)
-
-                  // Initial Expenses (Optional)
-                  VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                      Text("Add Initial Expenses (Optional)")
-                        .typography(.label, weight: .semibold)
-                      
-                      Spacer()
-                      
-                      Button {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                          viewModel.addExpense()
-                        }
-                      } label: {
-                        Image(systemName: "plus.circle.fill")
-                          .font(.title3)
-                          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-                      }
-                    }
-                    .padding(.horizontal, 4)
-
-                    if viewModel.expenses.isEmpty {
-                      Text("You can add expenses later from the Expenses tab")
-                        .typography(.nano)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 4)
-                    } else {
-                        ForEach(Array(viewModel.expenses.enumerated()), id: \.element.id) { (index, _) in
-                            ExpenseEntryCard(
-                                expense: $viewModel.expenses[index],
-                                index: index + 1,
-                                onDelete: {
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                        viewModel.expenses.remove(at: index)
-                                    }
-                                }
-                            )
-                            .transition(.asymmetric(
-                                insertion: .scale(scale: 0.9).combined(with: .opacity).combined(with: .move(edge: .top)),
-                                removal: .scale(scale: 0.9).combined(with: .opacity)
-                            ))
-                        }
-                    }
-                  }
-                  .padding(.horizontal, 20)
-
-                  Spacer(minLength: 100)
-                }
-            }
-        
+      ScrollView(.vertical) {
+        VStack(spacing: 24) {
+          instructionsSection
+          monthlyIncomeSection
+          budgetPillarsSection
+          initialExpensesSection
+          Spacer(minLength: 100)
+        }
       }
       .scrollDismissesKeyboard(.interactively)
 
       // Bottom bar
-      VStack(spacing: 0) {
-        Divider().opacity(0.3)
-
-        HStack(spacing: 12) {
-          if !isValid {
-            Text(totalPercent != 100 ? "Pillars must total 100%" : "Enter income")
-              .typography(.small)
-              .foregroundStyle(AppTheme.Colors.warning)
-          }
-
-          Spacer()
-
-          Button {
-            submitBudgetSetup()
-          } label: {
-            HStack(spacing: 6) {
-              Text("Continue")
-                .font(.headline)
-                .fontWeight(.bold)
-              Image(systemName: "arrow.right")
-                .font(.subheadline.weight(.bold))
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 12)
-            .background(
-              Capsule()
-                .fill(AppTheme.Colors.tint(for: colorScheme))
-            )
-            .shadow(
-              color: AppTheme.Colors.tint(for: colorScheme).opacity(0.25),
-              radius: 8, x: 0, y: 4
-            )
-          }
-          .disabled(!isValid)
-          .opacity(isValid ? 1 : 0.5)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-        .appGlassEffect(.rect(cornerRadius: 0))
-        .ignoresSafeArea(edges: .bottom)
-      }
+      bottomBarSection
     }
     .background(MeshGradientBackground().ignoresSafeArea())
     .overlay(alignment: .top) {
@@ -1109,6 +972,180 @@ struct ExpenseBudgetSetupScreen: View {
       withAnimation(.easeInOut(duration: 0.2)) {
         errorMessage = nil
       }
+    }
+  }
+
+  @ViewBuilder
+  private var instructionsSection: some View {
+    HStack(spacing: 12) {
+      Image(systemName: "info.circle.fill")
+        .font(.title3)
+        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+
+      Text(
+        "Set up your monthly budget (salary + side income) and allocate it across spending pillars."
+      )
+      .typography(.small)
+      .foregroundStyle(.secondary)
+    }
+    .padding(14)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .appGlassEffect(.rect(cornerRadius: 14), tint: AppTheme.Colors.tintSoft(for: colorScheme).opacity(0.4))
+    .padding(.horizontal, 20)
+    .padding(.top, 16)
+  }
+
+  @ViewBuilder
+  private var monthlyIncomeSection: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("Monthly Budget")
+        .typography(.label, weight: .semibold)
+        .padding(.horizontal, 4)
+
+      HStack(spacing: 12) {
+        Image(systemName: "banknote.fill")
+          .font(.title3)
+          .foregroundStyle(AppTheme.Colors.success)
+          .frame(width: 32)
+
+        TextField("Enter your total monthly budget", text: $viewModel.monthlyIncome)
+          .keyboardType(.decimalPad)
+          .typography(.label, weight: .semibold)
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 14)
+      .appGlassEffect(.rect(cornerRadius: 16))
+
+      if let monthlyBudget = viewModel.parsedMonthlyIncome, monthlyBudget > 0 {
+        Text("Monthly budget will be set to \(monthlyBudget.currency). Include salary and side income. You can edit this later in Expenses.")
+          .typography(.nano)
+          .foregroundStyle(.secondary)
+          .padding(.horizontal, 4)
+      }
+    }
+    .padding(.horizontal, 20)
+  }
+
+  @ViewBuilder
+  private var budgetPillarsSection: some View {
+    VStack(alignment: .leading, spacing: 16) {
+      HStack {
+        Text("Budget Pillars")
+          .typography(.label, weight: .semibold)
+        
+        Spacer()
+        
+        Text("\(Int(totalPercent))%")
+          .typography(.label, weight: .bold)
+          .foregroundStyle(totalPercent == 100 ? AppTheme.Colors.success : AppTheme.Colors.warning)
+      }
+      .padding(.horizontal, 4)
+
+      ForEach(BudgetPillar.allCases, id: \.self) { pillar in
+        PillarAllocationCard(
+          pillar: pillar,
+          percentage: Binding(
+            get: { viewModel.pillars[pillar] ?? 0 },
+            set: { viewModel.pillars[pillar] = $0 }
+          ),
+          monthlyIncome: viewModel.monthlyIncomeValue
+        )
+      }
+    }
+    .padding(.horizontal, 20)
+  }
+
+  @ViewBuilder
+  private var initialExpensesSection: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack {
+        Text("Add Initial Expenses (Optional)")
+          .typography(.label, weight: .semibold)
+        
+        Spacer()
+        
+        Button {
+          withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+            viewModel.addExpense()
+          }
+        } label: {
+          Image(systemName: "plus.circle.fill")
+            .font(.title3)
+            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+        }
+      }
+      .padding(.horizontal, 4)
+
+      if viewModel.expenses.isEmpty {
+        Text("You can add expenses later from the Expenses tab")
+          .typography(.nano)
+          .foregroundStyle(.secondary)
+          .padding(.horizontal, 4)
+      } else {
+          ForEach($viewModel.expenses) { $expense in
+              let index = viewModel.expenses.firstIndex(where: { $0.id == expense.id }) ?? 0
+              ExpenseEntryCard(
+                  expense: $expense,
+                  index: index + 1,
+                  onDelete: {
+                      withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                          viewModel.expenses.removeAll(where: { $0.id == expense.id })
+                      }
+                  }
+              )
+              .transition(.asymmetric(
+                  insertion: .scale(scale: 0.9).combined(with: .opacity).combined(with: .move(edge: .top)),
+                  removal: .scale(scale: 0.9).combined(with: .opacity)
+              ))
+          }
+      }
+    }
+    .padding(.horizontal, 20)
+  }
+
+  @ViewBuilder
+  private var bottomBarSection: some View {
+    VStack(spacing: 0) {
+      Divider().opacity(0.3)
+
+      HStack(spacing: 12) {
+        if !isValid {
+          Text(totalPercent != 100 ? "Pillars must total 100%" : "Enter a valid monthly budget greater than 0")
+            .typography(.small)
+            .foregroundStyle(AppTheme.Colors.warning)
+        }
+
+        Spacer()
+
+        Button {
+          submitBudgetSetup()
+        } label: {
+          HStack(spacing: 6) {
+            Text("Continue")
+              .font(.headline)
+              .fontWeight(.bold)
+            Image(systemName: "arrow.right")
+              .font(.subheadline.weight(.bold))
+          }
+          .foregroundStyle(.white)
+          .padding(.horizontal, 24)
+          .padding(.vertical, 12)
+          .background(
+            Capsule()
+              .fill(AppTheme.Colors.tint(for: colorScheme))
+          )
+          .shadow(
+            color: AppTheme.Colors.tint(for: colorScheme).opacity(0.25),
+            radius: 8, x: 0, y: 4
+          )
+        }
+        .disabled(!isValid)
+        .opacity(isValid ? 1 : 0.5)
+      }
+      .padding(.horizontal, 20)
+      .padding(.vertical, 14)
+      .appGlassEffect(.rect(cornerRadius: 0))
+      .ignoresSafeArea(edges: .bottom)
     }
   }
 
@@ -1297,8 +1334,16 @@ final class ExpenseBudgetSetupViewModel: ObservableObject {
   ]
   @Published var expenses: [ExpenseEntry] = []
 
+  var parsedMonthlyIncome: Double? {
+    Self.parseMonetaryValue(monthlyIncome)
+  }
+
   var monthlyIncomeValue: Double {
-    Double(monthlyIncome) ?? 0
+    parsedMonthlyIncome ?? 0
+  }
+
+  var hasValidMonthlyIncome: Bool {
+    monthlyIncomeValue > 0
   }
 
   func addExpense() {
@@ -1314,6 +1359,8 @@ final class ExpenseBudgetSetupViewModel: ObservableObject {
     let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
     let dateFormatter = DateFormatter()
     dateFormatter.dateFormat = "yyyy-MM-dd"
+    dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+    dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
     
     var targetShares: [String: Double] = [:]
     for (pillar, percentage) in pillars {
@@ -1330,7 +1377,7 @@ final class ExpenseBudgetSetupViewModel: ObservableObject {
     
     // Create expenses if any
     for expense in expenses where !expense.title.isEmpty {
-      guard let amount = Double(expense.amount), amount > 0 else { continue }
+      guard let amount = Self.parseMonetaryValue(expense.amount), amount > 0 else { continue }
       
       let expenseRequest = ExpenseRequest(
         title: expense.title,
@@ -1343,6 +1390,55 @@ final class ExpenseBudgetSetupViewModel: ObservableObject {
       try await expensesService.createExpense(request: expenseRequest)
     }
   }
+
+  private static func parseMonetaryValue(_ raw: String) -> Double? {
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return nil }
+
+    let filtered = trimmed.filter { $0.isNumber || $0 == "," || $0 == "." }
+    guard !filtered.isEmpty else { return nil }
+
+    let characters = Array(filtered)
+    let separatorIndexes = characters.indices.filter { characters[$0] == "," || characters[$0] == "." }
+
+    if separatorIndexes.isEmpty {
+      return Double(filtered)
+    }
+
+    if separatorIndexes.count == 1 {
+      let separatorIndex = separatorIndexes[0]
+      let leadingDigits = separatorIndex
+      let trailingDigits = characters.count - separatorIndex - 1
+      if leadingDigits > 0 && trailingDigits == 3 {
+        let normalized = filtered
+          .replacingOccurrences(of: ",", with: "")
+          .replacingOccurrences(of: ".", with: "")
+        return Double(normalized)
+      }
+    }
+
+    let decimalSeparator = characters[separatorIndexes.last!]
+    var normalized = ""
+    var consumedDecimal = false
+
+    for character in characters {
+      if character.isNumber {
+        normalized.append(character)
+        continue
+      }
+
+      if (character == "," || character == ".")
+        && character == decimalSeparator
+        && !consumedDecimal
+      {
+        normalized.append(".")
+        consumedDecimal = true
+      }
+    }
+
+    guard normalized != "." else { return nil }
+    return Double(normalized)
+  }
 }
 
 struct ExpenseEntry: Identifiable {
@@ -1351,4 +1447,3 @@ struct ExpenseEntry: Identifiable {
   var amount: String = ""
   var pillar: BudgetPillar = .fundamentals
 }
-

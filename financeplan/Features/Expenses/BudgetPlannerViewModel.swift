@@ -9,12 +9,17 @@ final class BudgetPlannerViewModel: ObservableObject {
   @Published private(set) var activities: [BudgetActivity] = []
   @Published private(set) var monthlySummaries: [BudgetMonthSummary] = []
   @Published private(set) var yearlySummaries: [BudgetYearSummary] = []
+  @Published private(set) var reportSuggestions: [ReportSuggestionResponse] = []
+  @Published private(set) var isSuggestionsLoading = false
+  @Published private(set) var suggestionsUnavailable = false
+  @Published private(set) var partnerDisplayName: String = "Partner"
   @Published var selectedMonthStart: Date = .now
   @Published var isLoading = false
   @Published var errorMessage: String? = nil
 
   private let calendar: Calendar
-  private let expensesService: any ExpensesServicing = Container.shared.expensesService()
+  private let expensesService: any ExpensesServicing
+  private var hasLoadedOnce = false
 
   private let dateFormatter: DateFormatter = {
       let formatter = DateFormatter()
@@ -26,19 +31,50 @@ final class BudgetPlannerViewModel: ObservableObject {
 
   init() {
     self.calendar = Calendar(identifier: .gregorian)
+    self.expensesService = Container.shared.expensesService()
     self.selectedMonthStart = self.calendar.startOfMonth(for: .now)
   }
 
-  func load() async {
+  init(
+    monthlySnapshots: [MonthlyBudgetSnapshot],
+    activities: [BudgetActivity],
+    expensesService: any ExpensesServicing = Container.shared.expensesService()
+  ) {
+    let calendar = Calendar(identifier: .gregorian)
+    self.calendar = calendar
+    self.expensesService = expensesService
+    self.monthlySnapshots = monthlySnapshots.sorted { $0.monthStart < $1.monthStart }
+    self.activities = activities.sorted { $0.occurredOn > $1.occurredOn }
+    self.selectedMonthStart = self.monthlySnapshots.last?.monthStart ?? calendar.startOfMonth(for: .now)
+    self.monthlySummaries = Self.makeLocalMonthlySummaries(
+      snapshots: self.monthlySnapshots,
+      activities: self.activities,
+      calendar: calendar
+    )
+    self.yearlySummaries = Self.makeLocalYearlySummaries(from: self.monthlySummaries, calendar: calendar)
+  }
+
+  func load(force: Bool = false) async {
+      if !force, hasLoadedOnce { return }
+      guard !isLoading else { return }
       isLoading = true
+      isSuggestionsLoading = true
+      suggestionsUnavailable = false
+      errorMessage = nil
+      defer {
+          isLoading = false
+          isSuggestionsLoading = false
+      }
       do {
+          async let fetchPartner = expensesService.getHouseholdPartner()
           async let fetchSnapshots = expensesService.getSnapshots(year: nil, month: nil)
           async let fetchItems = expensesService.getAllPlanItems()
           async let fetchExpenses = expensesService.getExpenses(from: nil, to: nil)
           async let fetchMonthlyReports = expensesService.getMonthlyExpenseReports(from: nil, to: nil)
           async let fetchYearlyReports = expensesService.getYearlyExpenseReports(from: nil, to: nil)
           
-          let (fetchedSnapshots, fetchedItems, fetchedExpenses, fetchedMonthlyReports, fetchedYearlyReports) = try await (fetchSnapshots, fetchItems, fetchExpenses, fetchMonthlyReports, fetchYearlyReports)
+          let (partner, fetchedSnapshots, fetchedItems, fetchedExpenses, fetchedMonthlyReports, fetchedYearlyReports) = try await (fetchPartner, fetchSnapshots, fetchItems, fetchExpenses, fetchMonthlyReports, fetchYearlyReports)
+          self.partnerDisplayName = partner.displayName ?? "Partner"
           
           let itemsBySnapshotId = Dictionary(grouping: fetchedItems, by: \.snapshotId)
           
@@ -55,7 +91,14 @@ final class BudgetPlannerViewModel: ObservableObject {
               
               let mappedItems = (itemsBySnapshotId[snap.id] ?? []).compactMap { item -> BudgetPlanItem? in
                   guard let itemId = UUID(uuidString: item.id) else { return nil }
-                  return BudgetPlanItem(id: itemId, title: item.title, plannedAmount: item.plannedAmount, pillar: item.pillar)
+                  return BudgetPlanItem(
+                    id: itemId,
+                    title: item.title,
+                    plannedAmount: item.plannedAmount,
+                    pillar: item.pillar,
+                    splitMode: item.splitMode,
+                    userSharePercent: item.userSharePercent
+                  )
               }
               
               return MonthlyBudgetSnapshot(
@@ -80,52 +123,71 @@ final class BudgetPlannerViewModel: ObservableObject {
               guard let id = UUID(uuidString: exp.id),
                     let date = dateFormatter.date(from: exp.occurredOn) else { return nil }
               let linkedId = exp.linkedPlanItemId.flatMap { UUID(uuidString: $0) }
-              return BudgetActivity(id: id, title: exp.title, amount: exp.amount, pillar: exp.pillar, occurredOn: date, linkedPlanItemID: linkedId)
+              return BudgetActivity(
+                id: id,
+                title: exp.title,
+                amount: exp.amount,
+                pillar: exp.pillar,
+                occurredOn: date,
+                linkedPlanItemID: linkedId,
+                splitMode: exp.splitMode,
+                userSharePercent: exp.userSharePercent
+              )
           }
           
           newSnapshots.sort { $0.monthStart < $1.monthStart }
           self.monthlySnapshots = newSnapshots
           self.activities = newActivities.sorted { $0.occurredOn > $1.occurredOn }
           
-          self.monthlySummaries = fetchedMonthlyReports.compactMap { report -> BudgetMonthSummary? in
-              guard let monthStart = dateFormatter.date(from: report.monthStart) else { return nil }
-              
-              var mappedActuals: [BudgetPillar: Double] = [:]
-              for (key, value) in report.pillarActuals {
-                  if let pillar = BudgetPillar(rawValue: key) { mappedActuals[pillar] = value }
-              }
-              
-              var mappedPlans: [BudgetPillar: Double] = [:]
-              for (key, value) in report.pillarPlans {
-                  if let pillar = BudgetPillar(rawValue: key) { mappedPlans[pillar] = value }
-              }
-              
-              return BudgetMonthSummary(
-                  monthStart: monthStart,
-                  planned: report.planned,
-                  actual: report.actual,
-                  salary: report.salary,
-                  pillarActuals: mappedActuals,
-                  pillarPlans: mappedPlans
-              )
-          }
+          self.monthlySummaries = fetchedMonthlyReports.compactMap(mapMonthSummary)
           
           self.yearlySummaries = fetchedYearlyReports.map { report in
               BudgetYearSummary(
                   year: report.year,
                   planned: report.planned,
                   actual: report.actual,
-                  salary: report.salary
+                  salary: report.salary,
+                  myPlanned: report.myPlanned,
+                  partnerPlanned: report.partnerPlanned,
+                  myActual: report.myActual,
+                  partnerActual: report.partnerActual
               )
           }
           
           if let last = newSnapshots.last, !newSnapshots.contains(where: { calendar.isDate($0.monthStart, equalTo: selectedMonthStart, toGranularity: .month) }) {
               self.selectedMonthStart = last.monthStart
           }
+
+          do {
+              let suggestionsResponse = try await expensesService.getReportSuggestions(from: nil, to: nil)
+              self.reportSuggestions = suggestionsResponse.suggestions
+              self.suggestionsUnavailable = false
+          } catch {
+              self.reportSuggestions = []
+              self.suggestionsUnavailable = true
+          }
+
+          hasLoadedOnce = true
       } catch {
           self.errorMessage = error.localizedDescription
       }
-      isLoading = false
+  }
+
+  var topReportSuggestion: ReportSuggestionResponse? {
+    reportSuggestions.first
+  }
+
+  func dismissSuggestion(_ suggestion: ReportSuggestionResponse) {
+      let previous = reportSuggestions
+      reportSuggestions.removeAll { $0.id == suggestion.id }
+      Task {
+          do {
+              try await expensesService.dismissReportSuggestion(id: suggestion.id)
+          } catch {
+              self.reportSuggestions = previous
+              self.suggestionsUnavailable = true
+          }
+      }
   }
 
   var availableMonths: [Date] {
@@ -215,6 +277,22 @@ final class BudgetPlannerViewModel: ObservableObject {
     actualTotal(for: selectedMonthStart)
   }
 
+  var selectedMonthMyPlannedTotal: Double {
+    selectedMonthSnapshot?.items.reduce(0) { $0 + myPortion(of: $1.plannedAmount, splitMode: $1.splitMode, userSharePercent: $1.userSharePercent) } ?? 0
+  }
+
+  var selectedMonthPartnerPlannedTotal: Double {
+    selectedMonthSnapshot?.items.reduce(0) { $0 + partnerPortion(of: $1.plannedAmount, splitMode: $1.splitMode, userSharePercent: $1.userSharePercent) } ?? 0
+  }
+
+  var selectedMonthMyActualTotal: Double {
+    selectedMonthActivities.reduce(0) { $0 + myPortion(of: $1.amount, splitMode: $1.splitMode, userSharePercent: $1.userSharePercent) }
+  }
+
+  var selectedMonthPartnerActualTotal: Double {
+    selectedMonthActivities.reduce(0) { $0 + partnerPortion(of: $1.amount, splitMode: $1.splitMode, userSharePercent: $1.userSharePercent) }
+  }
+
   var selectedMonthRemainingToAllocate: Double {
     (selectedMonthSnapshot?.netSalary ?? 0) - selectedMonthPlannedTotal
   }
@@ -257,7 +335,14 @@ final class BudgetPlannerViewModel: ObservableObject {
       netSalary: template.netSalary,
       targetShares: template.targetShares,
       items: template.items.map {
-        BudgetPlanItem(id: UUID(), title: $0.title, plannedAmount: $0.plannedAmount, pillar: $0.pillar)
+        BudgetPlanItem(
+          id: UUID(),
+          title: $0.title,
+          plannedAmount: $0.plannedAmount,
+          pillar: $0.pillar,
+          splitMode: $0.splitMode,
+          userSharePercent: $0.userSharePercent
+        )
       }
     )
     
@@ -274,13 +359,20 @@ final class BudgetPlannerViewModel: ObservableObject {
             let createdSnap = try await expensesService.createBudgetSnapshot(request: req)
             
             for item in template.items {
-                let itemReq = BudgetPlanItemRequest(snapshotId: createdSnap.id, title: item.title, plannedAmount: item.plannedAmount, pillar: item.pillar)
+                let itemReq = BudgetPlanItemRequest(
+                  snapshotId: createdSnap.id,
+                  title: item.title,
+                  plannedAmount: item.plannedAmount,
+                  pillar: item.pillar,
+                  splitMode: item.splitMode,
+                  userSharePercent: item.userSharePercent
+                )
                 _ = try await expensesService.createPlanItem(payload: itemReq)
             }
-            await load()
+            await load(force: true)
         } catch {
             self.errorMessage = error.localizedDescription
-            await load()
+            await load(force: true)
         }
     }
   }
@@ -302,7 +394,7 @@ final class BudgetPlannerViewModel: ObservableObject {
               try await expensesService.deleteSnapshot(snapshotId: snapshotId.uuidString)
           } catch {
               self.errorMessage = error.localizedDescription
-              await load()
+              await load(force: true)
           }
       }
   }
@@ -320,7 +412,7 @@ final class BudgetPlannerViewModel: ObservableObject {
             _ = try await expensesService.updateSnapshot(snapshotId: snapshot.id.uuidString, payload: req)
         } catch {
             self.errorMessage = error.localizedDescription
-            await load()
+            await load(force: true)
         }
     }
   }
@@ -338,8 +430,22 @@ final class BudgetPlannerViewModel: ObservableObject {
             _ = try await expensesService.updateSnapshot(snapshotId: snapshot.id.uuidString, payload: req)
         } catch {
             self.errorMessage = error.localizedDescription
-            await load()
+            await load(force: true)
         }
+    }
+  }
+
+  func updatePartnerDisplayName(_ name: String?) {
+    Task {
+      do {
+        let partner = try await expensesService.updateHouseholdPartner(
+          payload: HouseholdPartnerProfileRequest(displayName: name)
+        )
+        self.partnerDisplayName = partner.displayName ?? "Partner"
+      } catch {
+        self.errorMessage = error.localizedDescription
+        await load(force: true)
+      }
     }
   }
 
@@ -355,14 +461,23 @@ final class BudgetPlannerViewModel: ObservableObject {
       monthlySnapshots[selectedMonthIndex].items[existingIndex].title = title
       monthlySnapshots[selectedMonthIndex].items[existingIndex].plannedAmount = max(draft.plannedAmount, 0)
       monthlySnapshots[selectedMonthIndex].items[existingIndex].pillar = draft.pillar
+      monthlySnapshots[selectedMonthIndex].items[existingIndex].splitMode = draft.splitMode
+      monthlySnapshots[selectedMonthIndex].items[existingIndex].userSharePercent = draft.userSharePercent
       
       Task {
           do {
-              let req = BudgetPlanItemRequest(snapshotId: snapshotId.uuidString, title: title, plannedAmount: max(draft.plannedAmount, 0), pillar: draft.pillar)
+              let req = BudgetPlanItemRequest(
+                snapshotId: snapshotId.uuidString,
+                title: title,
+                plannedAmount: max(draft.plannedAmount, 0),
+                pillar: draft.pillar,
+                splitMode: draft.splitMode,
+                userSharePercent: draft.userSharePercent
+              )
               _ = try await expensesService.updatePlanItem(itemId: itemID.uuidString, payload: req)
           } catch {
               self.errorMessage = error.localizedDescription
-              await load()
+              await load(force: true)
           }
       }
     } else {
@@ -372,18 +487,27 @@ final class BudgetPlannerViewModel: ObservableObject {
           id: tempId,
           title: title,
           plannedAmount: max(draft.plannedAmount, 0),
-          pillar: draft.pillar
+          pillar: draft.pillar,
+          splitMode: draft.splitMode,
+          userSharePercent: draft.userSharePercent
         )
       )
       
       Task {
           do {
-              let req = BudgetPlanItemRequest(snapshotId: snapshotId.uuidString, title: title, plannedAmount: max(draft.plannedAmount, 0), pillar: draft.pillar)
+              let req = BudgetPlanItemRequest(
+                snapshotId: snapshotId.uuidString,
+                title: title,
+                plannedAmount: max(draft.plannedAmount, 0),
+                pillar: draft.pillar,
+                splitMode: draft.splitMode,
+                userSharePercent: draft.userSharePercent
+              )
               _ = try await expensesService.createPlanItem(payload: req)
-              await load()
+              await load(force: true)
           } catch {
               self.errorMessage = error.localizedDescription
-              await load()
+              await load(force: true)
           }
       }
     }
@@ -403,7 +527,7 @@ final class BudgetPlannerViewModel: ObservableObject {
             try await expensesService.deletePlanItem(itemId: itemID.uuidString)
         } catch {
             self.errorMessage = error.localizedDescription
-            await load()
+            await load(force: true)
         }
     }
   }
@@ -422,7 +546,9 @@ final class BudgetPlannerViewModel: ObservableObject {
         amount: max(draft.amount, 0),
         pillar: draft.pillar,
         occurredOn: draft.occurredOn,
-        linkedPlanItemID: draft.linkedPlanItemID
+        linkedPlanItemID: draft.linkedPlanItemID,
+        splitMode: draft.splitMode,
+        userSharePercent: draft.userSharePercent
       ),
       at: 0
     )
@@ -439,13 +565,15 @@ final class BudgetPlannerViewModel: ObservableObject {
                 amount: max(draft.amount, 0),
                 pillar: draft.pillar,
                 occurredOn: dateFormatter.string(from: draft.occurredOn),
-                linkedPlanItemId: draft.linkedPlanItemID?.uuidString
+                linkedPlanItemId: draft.linkedPlanItemID?.uuidString,
+                splitMode: draft.splitMode,
+                userSharePercent: draft.userSharePercent
             )
             _ = try await expensesService.createExpense(request: req)
-            await load()
+            await load(force: true)
         } catch {
             self.errorMessage = error.localizedDescription
-            await load()
+            await load(force: true)
         }
     }
   }
@@ -548,7 +676,13 @@ final class BudgetPlannerViewModel: ObservableObject {
         netSalary: template.netSalary,
         targetShares: template.targetShares,
         items: template.items.map {
-          BudgetPlanItem(title: $0.title, plannedAmount: $0.plannedAmount, pillar: $0.pillar)
+          BudgetPlanItem(
+            title: $0.title,
+            plannedAmount: $0.plannedAmount,
+            pillar: $0.pillar,
+            splitMode: $0.splitMode,
+            userSharePercent: $0.userSharePercent
+          )
         }
       )
     )
@@ -574,6 +708,155 @@ final class BudgetPlannerViewModel: ObservableObject {
         calendar.component(.year, from: summary.monthStart) == year
       }
       .sorted { $0.monthStart < $1.monthStart }
+  }
+
+  private func mapMonthSummary(_ report: BudgetMonthSummaryResponse) -> BudgetMonthSummary? {
+    guard let monthStart = dateFormatter.date(from: report.monthStart) else { return nil }
+
+    return BudgetMonthSummary(
+      monthStart: monthStart,
+      planned: report.planned,
+      actual: report.actual,
+      salary: report.salary,
+      myPlanned: report.myPlanned,
+      partnerPlanned: report.partnerPlanned,
+      myActual: report.myActual,
+      partnerActual: report.partnerActual,
+      pillarActuals: mapPillarValues(report.pillarActuals),
+      pillarPlans: mapPillarValues(report.pillarPlans),
+      myPillarActuals: mapPillarValues(report.myPillarActuals),
+      partnerPillarActuals: mapPillarValues(report.partnerPillarActuals),
+      myPillarPlans: mapPillarValues(report.myPillarPlans),
+      partnerPillarPlans: mapPillarValues(report.partnerPillarPlans)
+    )
+  }
+
+  private func mapPillarValues(_ values: [String: Double]) -> [BudgetPillar: Double] {
+    var mapped: [BudgetPillar: Double] = [:]
+    for (key, value) in values {
+      if let pillar = BudgetPillar(rawValue: key) {
+        mapped[pillar] = value
+      }
+    }
+    return mapped
+  }
+
+  private func myPortion(of amount: Double, splitMode: ExpenseSplitMode, userSharePercent: Double) -> Double {
+    switch splitMode {
+    case .personal:
+      return amount
+    case .shared:
+      return amount * (userSharePercent / 100)
+    }
+  }
+
+  private func partnerPortion(of amount: Double, splitMode: ExpenseSplitMode, userSharePercent: Double) -> Double {
+    amount - myPortion(of: amount, splitMode: splitMode, userSharePercent: userSharePercent)
+  }
+
+  private static func myPortion(of amount: Double, splitMode: ExpenseSplitMode, userSharePercent: Double) -> Double {
+    switch splitMode {
+    case .personal:
+      return amount
+    case .shared:
+      return amount * (userSharePercent / 100)
+    }
+  }
+
+  private static func partnerPortion(of amount: Double, splitMode: ExpenseSplitMode, userSharePercent: Double) -> Double {
+    amount - myPortion(of: amount, splitMode: splitMode, userSharePercent: userSharePercent)
+  }
+
+  private static func makeLocalMonthlySummaries(
+    snapshots: [MonthlyBudgetSnapshot],
+    activities: [BudgetActivity],
+    calendar: Calendar
+  ) -> [BudgetMonthSummary] {
+    snapshots.sorted { $0.monthStart < $1.monthStart }.map { snapshot in
+      let monthActivities = activities.filter {
+        calendar.isDate($0.occurredOn, equalTo: snapshot.monthStart, toGranularity: .month)
+      }
+
+      let planned = snapshot.items.reduce(0) { $0 + $1.plannedAmount }
+      let actual = monthActivities.reduce(0) { $0 + $1.amount }
+      let myPlanned = snapshot.items.reduce(0) {
+        $0 + myPortion(of: $1.plannedAmount, splitMode: $1.splitMode, userSharePercent: $1.userSharePercent)
+      }
+      let partnerPlanned = planned - myPlanned
+      let myActual = monthActivities.reduce(0) {
+        $0 + myPortion(of: $1.amount, splitMode: $1.splitMode, userSharePercent: $1.userSharePercent)
+      }
+      let partnerActual = actual - myActual
+
+      var pillarPlans: [BudgetPillar: Double] = [:]
+      var myPillarPlans: [BudgetPillar: Double] = [:]
+      var partnerPillarPlans: [BudgetPillar: Double] = [:]
+      for pillar in BudgetPillar.allCases {
+        let pillarItems = snapshot.items.filter { $0.pillar == pillar }
+        let pillarPlanned = pillarItems.reduce(0) { $0 + $1.plannedAmount }
+        let myPillarPlanned = pillarItems.reduce(0) {
+          $0 + myPortion(of: $1.plannedAmount, splitMode: $1.splitMode, userSharePercent: $1.userSharePercent)
+        }
+        pillarPlans[pillar] = pillarPlanned
+        myPillarPlans[pillar] = myPillarPlanned
+        partnerPillarPlans[pillar] = pillarPlanned - myPillarPlanned
+      }
+
+      var pillarActuals: [BudgetPillar: Double] = [:]
+      var myPillarActuals: [BudgetPillar: Double] = [:]
+      var partnerPillarActuals: [BudgetPillar: Double] = [:]
+      for pillar in BudgetPillar.allCases {
+        let pillarActivities = monthActivities.filter { $0.pillar == pillar }
+        let pillarActual = pillarActivities.reduce(0) { $0 + $1.amount }
+        let myPillarActual = pillarActivities.reduce(0) {
+          $0 + myPortion(of: $1.amount, splitMode: $1.splitMode, userSharePercent: $1.userSharePercent)
+        }
+        pillarActuals[pillar] = pillarActual
+        myPillarActuals[pillar] = myPillarActual
+        partnerPillarActuals[pillar] = pillarActual - myPillarActual
+      }
+
+      return BudgetMonthSummary(
+        monthStart: snapshot.monthStart,
+        planned: planned,
+        actual: actual,
+        salary: snapshot.netSalary,
+        myPlanned: myPlanned,
+        partnerPlanned: partnerPlanned,
+        myActual: myActual,
+        partnerActual: partnerActual,
+        pillarActuals: pillarActuals,
+        pillarPlans: pillarPlans,
+        myPillarActuals: myPillarActuals,
+        partnerPillarActuals: partnerPillarActuals,
+        myPillarPlans: myPillarPlans,
+        partnerPillarPlans: partnerPillarPlans
+      )
+    }
+  }
+
+  private static func makeLocalYearlySummaries(
+    from monthlySummaries: [BudgetMonthSummary],
+    calendar: Calendar
+  ) -> [BudgetYearSummary] {
+    let grouped = Dictionary(grouping: monthlySummaries) {
+      calendar.component(.year, from: $0.monthStart)
+    }
+
+    return grouped
+      .map { year, summaries in
+        BudgetYearSummary(
+          year: year,
+          planned: summaries.reduce(0) { $0 + $1.planned },
+          actual: summaries.reduce(0) { $0 + $1.actual },
+          salary: summaries.reduce(0) { $0 + $1.salary },
+          myPlanned: summaries.reduce(0) { $0 + $1.myPlanned },
+          partnerPlanned: summaries.reduce(0) { $0 + $1.partnerPlanned },
+          myActual: summaries.reduce(0) { $0 + $1.myActual },
+          partnerActual: summaries.reduce(0) { $0 + $1.partnerActual }
+        )
+      }
+      .sorted { $0.year > $1.year }
   }
 
   // to fill from endpoint later

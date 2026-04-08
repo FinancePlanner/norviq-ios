@@ -14,30 +14,43 @@ struct ExpensesComparisonScreen: View {
         
         ScrollView {
           VStack(spacing: 24) {
-            if reportsViewModel.isLoading && reportsViewModel.statistics == nil {
+            if reportsViewModel.isLoading && reportsViewModel.portfolioStatistics == nil && reportsViewModel.latestMonthSummary == nil {
               ProgressView()
                 .padding(.top, 40)
             } else {
               // 1. Net Worth Snapshot
-              NetWorthHeroCard(stats: reportsViewModel.statistics?.importedStocks)
+              NetWorthHeroCard(stats: reportsViewModel.portfolioStatistics)
               
               // 2. Portfolio Performance Breakdown
-              PerformanceBreakdownCard(stats: reportsViewModel.statistics?.importedStocks)
+              PerformanceBreakdownCard(stats: reportsViewModel.portfolioStatistics)
               
               // 3. Personal Spending Analysis
-              SpendingInsightsSection(summaries: reportsViewModel.monthlySummaries)
+              SpendingInsightsSection(
+                monthSummary: reportsViewModel.latestMonthSummary,
+                pillarSummaries: reportsViewModel.latestPillarSummaries,
+                partnerName: reportsViewModel.partnerDisplayName
+              )
               
-              // 4. Budget Tracking
-              BudgetTrackingCard(summaries: reportsViewModel.monthlySummaries)
+              // 4. Household Comparison
+              HouseholdSplitComparisonCard(
+                summaries: reportsViewModel.monthlySummaries,
+                partnerName: reportsViewModel.partnerDisplayName
+              )
+
+              // 5. Budget Tracking
+              BudgetTrackingCard(
+                summary: reportsViewModel.latestMonthSummary,
+                partnerName: reportsViewModel.partnerDisplayName
+              )
               
-              // 5. Portfolio Allocation
-              AllocationInsightsSection(stats: reportsViewModel.statistics?.importedStocks)
+              // 6. Portfolio Allocation
+              AllocationInsightsSection(stats: reportsViewModel.portfolioStatistics)
               
-              // 6. Savings Rate
-              SavingsRateCard(summaries: reportsViewModel.monthlySummaries)
+              // 7. Savings Rate
+              SavingsRateCard(summary: reportsViewModel.latestMonthSummary)
               
-              // 7. Monthly Cash Flow
-              CashFlowAnalysisCard(summaries: reportsViewModel.monthlySummaries)
+              // 8. Monthly Cash Flow
+              CashFlowAnalysisCard(points: reportsViewModel.cashFlow)
             }
           }
           .padding(.horizontal, 16)
@@ -47,7 +60,7 @@ struct ExpensesComparisonScreen: View {
       .navigationTitle("Reports")
       .navigationBarTitleDisplayMode(.large)
       .refreshable {
-        await reportsViewModel.load()
+        await reportsViewModel.load(force: true)
       }
       .task {
         await reportsViewModel.load()
@@ -110,15 +123,17 @@ private struct NetWorthHeroCard: View {
 // MARK: - Spending Insights
 
 private struct SpendingInsightsSection: View {
-  let summaries: [BudgetMonthSummary]
+  let monthSummary: BudgetMonthSummary?
+  let pillarSummaries: [PillarPlanningSummaryResponse]
+  let partnerName: String
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      Text("Personal Spending")
+      Text("Household Spending")
         .font(.title3.bold())
       
-      if let latest = summaries.first {
+      if let latest = monthSummary, !pillarSummaries.isEmpty {
         GlassCard(cornerRadius: 20) {
           VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -133,19 +148,19 @@ private struct SpendingInsightsSection: View {
             }
             
             Chart {
-              ForEach(latest.pillarActuals.sorted(by: { $0.value > $1.value }), id: \.key) { pillar, value in
+              ForEach(pillarSummaries.sorted(by: { $0.actualAmount > $1.actualAmount }), id: \.pillar) { summary in
                 if #available(iOS 17.0, *) {
                   SectorMark(
-                    angle: .value("Amount", value),
+                    angle: .value("Amount", summary.actualAmount),
                     angularInset: 1
                   )
-                  .foregroundStyle(pillar.color(for: colorScheme))
+                  .foregroundStyle(summary.pillar.color(for: colorScheme))
                   .annotation(position: .overlay) {
                       let total = latest.actual
-                      let percent = total > 0 ? (value / total) * 100 : 0
+                      let percent = total > 0 ? (summary.actualAmount / total) * 100 : 0
                       if percent > 5 {
                           VStack {
-                              Text(pillar.title)
+                              Text(summary.pillar.title)
                                   .font(.system(size: 10, weight: .bold))
                               Text("\(Int(percent))%")
                                   .font(.system(size: 10))
@@ -161,27 +176,32 @@ private struct SpendingInsightsSection: View {
             .frame(height: 220)
             
             VStack(spacing: 16) {
+              HStack(spacing: 12) {
+                personMetric(title: "Total", value: latest.actual)
+                personMetric(title: "Me", value: latest.myActual)
+                personMetric(title: partnerName, value: latest.partnerActual)
+              }
+
               Text("Top Spending Categories")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 8)
                 
-              ForEach(latest.pillarActuals.sorted(by: { $0.value > $1.value }), id: \.key) { pillar, value in
-                let planned = latest.pillarPlans[pillar] ?? 0
-                let percentage = planned > 0 ? (value / planned) * 100 : 0
+              ForEach(pillarSummaries.sorted(by: { $0.actualAmount > $1.actualAmount }), id: \.pillar) { summary in
+                let percentage = summary.plannedAmount > 0 ? (summary.actualAmount / summary.plannedAmount) * 100 : 0
                 
                 HStack(spacing: 16) {
                   Circle()
-                    .fill(pillar.color(for: colorScheme).opacity(0.2))
+                    .fill(summary.pillar.color(for: colorScheme).opacity(0.2))
                     .frame(width: 40, height: 40)
                     .overlay {
-                        Image(systemName: icon(for: pillar))
-                            .foregroundStyle(pillar.color(for: colorScheme))
+                        Image(systemName: icon(for: summary.pillar))
+                            .foregroundStyle(summary.pillar.color(for: colorScheme))
                     }
                   
                   VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text(pillar.title)
+                        Text(summary.pillar.title)
                           .font(.subheadline.bold())
                         Spacer()
                         Text("\(Int(percentage))% of Budget")
@@ -190,7 +210,7 @@ private struct SpendingInsightsSection: View {
                     }
                     
                     HStack {
-                        Text(value.formatted(.currency(code: "USD")))
+                        Text(summary.actualAmount.formatted(.currency(code: "USD")))
                           .font(.subheadline)
                           .foregroundStyle(.secondary)
                         
@@ -202,7 +222,7 @@ private struct SpendingInsightsSection: View {
                                     .fill(Color.white.opacity(0.05))
                                     .frame(height: 6)
                                 RoundedRectangle(cornerRadius: 4)
-                                    .fill(pillar.color(for: colorScheme))
+                                    .fill(summary.pillar.color(for: colorScheme))
                                     .frame(width: geo.size.width * CGFloat(min(percentage / 100, 1.0)), height: 6)
                             }
                         }
@@ -227,6 +247,85 @@ private struct SpendingInsightsSection: View {
       case .futureYou: return "leaf.fill"
       case .fun: return "popcorn.fill"
       }
+  }
+
+  @ViewBuilder
+  private func personMetric(title: String, value: Double) -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Text(title)
+        .font(.caption)
+        .foregroundStyle(.secondary)
+      Text(value.formatted(.currency(code: "USD")))
+        .font(.subheadline.bold())
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(12)
+    .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+  }
+}
+
+private struct HouseholdSplitComparisonCard: View {
+  let summaries: [BudgetMonthSummary]
+  let partnerName: String
+  @Environment(\.colorScheme) private var colorScheme
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 16) {
+      Text("Monthly Split Comparison")
+        .font(.title3.bold())
+
+      GlassCard(cornerRadius: 20) {
+        if summaries.isEmpty {
+          ResearchPlaceholderCard(title: "No household data", bodyText: "Log shared expenses to compare your share with \(partnerName).")
+        } else {
+          VStack(alignment: .leading, spacing: 16) {
+            Text("TOTAL VS ME VS \(partnerName.uppercased())")
+              .font(.system(size: 10, weight: .bold))
+              .tracking(1.2)
+              .foregroundStyle(.secondary)
+
+            Chart {
+              ForEach(summaries.prefix(6).reversed()) { summary in
+                BarMark(
+                  x: .value("Month", summary.shortLabel),
+                  y: .value("Total", summary.actual)
+                )
+                .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme).opacity(0.35))
+                .position(by: .value("Series", "Total"))
+
+                BarMark(
+                  x: .value("Month", summary.shortLabel),
+                  y: .value("Me", summary.myActual)
+                )
+                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                .position(by: .value("Series", "Me"))
+
+                BarMark(
+                  x: .value("Month", summary.shortLabel),
+                  y: .value("Partner", summary.partnerActual)
+                )
+                .foregroundStyle(.green.opacity(0.85))
+                .position(by: .value("Series", partnerName))
+              }
+            }
+            .frame(height: 220)
+
+            HStack(spacing: 20) {
+              legend(title: "Total", color: AppTheme.Colors.secondaryTint(for: colorScheme))
+              legend(title: "Me", color: AppTheme.Colors.tint(for: colorScheme))
+              legend(title: partnerName, color: .green)
+            }
+            .font(.caption2.bold())
+          }
+          .padding(20)
+        }
+      }
+    }
+  }
+
+  private func legend(title: String, color: Color) -> some View {
+    Label(title, systemImage: "square.fill")
+      .foregroundStyle(color)
   }
 }
 
@@ -474,15 +573,16 @@ private struct PerformanceBreakdownCard: View {
 // MARK: - Budget Tracking
 
 private struct BudgetTrackingCard: View {
-  let summaries: [BudgetMonthSummary]
+  let summary: BudgetMonthSummary?
+  let partnerName: String
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      Text("Budget Tracking")
+      Text("Household Budget Tracking")
         .font(.title3.bold())
       
-      if let latest = summaries.first {
+      if let latest = summary {
         GlassCard(cornerRadius: 20) {
           VStack(alignment: .leading, spacing: 20) {
             HStack {
@@ -560,6 +660,13 @@ private struct BudgetTrackingCard: View {
                   .foregroundStyle(remaining >= 0 ? .green : .red)
               }
             }
+
+            Divider().opacity(0.1)
+
+            HStack(spacing: 20) {
+              personColumn(title: "Me", planned: latest.myPlanned, actual: latest.myActual)
+              personColumn(title: partnerName, planned: latest.partnerPlanned, actual: latest.partnerActual)
+            }
           }
           .padding(20)
         }
@@ -568,12 +675,26 @@ private struct BudgetTrackingCard: View {
       }
     }
   }
+
+  private func personColumn(title: String, planned: Double, actual: Double) -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Text(title.uppercased())
+        .font(.system(size: 9, weight: .bold))
+        .foregroundStyle(.secondary)
+      Text("Plan \(planned.formatted(.currency(code: "USD")))")
+        .font(.caption)
+      Text("Actual \(actual.formatted(.currency(code: "USD")))")
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
 }
 
 // MARK: - Savings Rate
 
 private struct SavingsRateCard: View {
-  let summaries: [BudgetMonthSummary]
+  let summary: BudgetMonthSummary?
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
@@ -581,7 +702,7 @@ private struct SavingsRateCard: View {
       Text("Savings Rate")
         .font(.title3.bold())
       
-      if let latest = summaries.first {
+      if let latest = summary {
         let savingsAmount = latest.salary - latest.actual
         let savingsRate = latest.salary > 0 ? (savingsAmount / latest.salary) * 100 : 0
         let spendingRate = latest.salary > 0 ? (latest.actual / latest.salary) * 100 : 0
@@ -694,7 +815,7 @@ private struct SavingsRateCard: View {
 // MARK: - Cash Flow Analysis
 
 private struct CashFlowAnalysisCard: View {
-  let summaries: [BudgetMonthSummary]
+  let points: [ReportsCashFlowPointResponse]
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
@@ -704,36 +825,46 @@ private struct CashFlowAnalysisCard: View {
       
       GlassCard(cornerRadius: 20) {
         VStack(alignment: .leading, spacing: 16) {
-          Chart {
-            ForEach(summaries.reversed()) { item in
-              let totalIncome = item.pillarActuals[.fundamentals] ?? 0 // Placeholder logic for income
-              let totalExpenses = item.actual
-              
-              BarMark(
-                x: .value("Month", item.shortLabel),
-                y: .value("Amount", totalIncome)
-              )
-              .foregroundStyle(.green.opacity(0.8))
-              .position(by: .value("Type", "Income"))
-              
-              BarMark(
-                x: .value("Month", item.shortLabel),
-                y: .value("Amount", totalExpenses)
-              )
-              .foregroundStyle(.red.opacity(0.8))
-              .position(by: .value("Type", "Expenses"))
+          if points.isEmpty {
+            ResearchPlaceholderCard(title: "No cash flow data", bodyText: "Add salary and expense data to see monthly cash flow.")
+          } else {
+            Chart {
+              ForEach(points) { point in
+                BarMark(
+                  x: .value("Month", monthLabel(for: point.monthStart)),
+                  y: .value("Amount", point.income)
+                )
+                .foregroundStyle(.green.opacity(0.8))
+                .position(by: .value("Type", "Income"))
+
+                BarMark(
+                  x: .value("Month", monthLabel(for: point.monthStart)),
+                  y: .value("Amount", point.expenses)
+                )
+                .foregroundStyle(.red.opacity(0.8))
+                .position(by: .value("Type", "Expenses"))
+              }
             }
+            .frame(height: 200)
+
+            HStack(spacing: 20) {
+              Label("Income", systemImage: "square.fill").foregroundStyle(.green)
+              Label("Expenses", systemImage: "square.fill").foregroundStyle(.red)
+            }
+            .font(.caption2.bold())
           }
-          .frame(height: 200)
-          
-          HStack(spacing: 20) {
-            Label("Income", systemImage: "square.fill").foregroundStyle(.green)
-            Label("Expenses", systemImage: "square.fill").foregroundStyle(.red)
-          }
-          .font(.caption2.bold())
         }
         .padding(20)
       }
     }
+  }
+
+  private func monthLabel(for monthStart: String) -> String {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd"
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    guard let date = formatter.date(from: monthStart) else { return monthStart }
+    return date.formatted(.dateTime.month(.abbreviated))
   }
 }

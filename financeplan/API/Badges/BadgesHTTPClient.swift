@@ -3,12 +3,12 @@ import Foundation
 import OSLog
 import StockPlanShared
 
-private let goalsHTTPLogger = Logger(
+private let badgesHTTPLogger = Logger(
     subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
-    category: "GoalsHTTPClient"
+    category: "BadgesHTTPClient"
 )
 
-struct GoalsHTTPClient {
+struct BadgesHTTPClient {
     let baseURL: URL
     let session: URLSession
     let authTokenProvider: () -> String?
@@ -19,24 +19,8 @@ struct GoalsHTTPClient {
         self.authTokenProvider = authTokenProvider
     }
 
-    func getGoals() async throws -> [GoalResponse] {
-        try await call(GetGoalsEndpoint())
-    }
-
-    func createGoal(_ payload: GoalRequest) async throws -> GoalResponse {
-        try await call(CreateGoalEndpoint(payload: payload))
-    }
-
-    func updateGoal(id: String, payload: GoalRequest) async throws -> GoalResponse {
-        try await call(UpdateGoalEndpoint(id: id, payload: payload))
-    }
-
-    func updateGoalStatus(id: String, payload: GoalStatusUpdateRequest) async throws -> GoalResponse {
-        try await call(UpdateGoalStatusEndpoint(id: id, payload: payload))
-    }
-
-    func deleteGoal(id: String) async throws {
-        _ = try await call(DeleteGoalEndpoint(id: id))
+    func getBadges() async throws -> BadgesListResponse {
+        try await call(GetBadgesEndpoint())
     }
 
     private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
@@ -47,7 +31,7 @@ struct GoalsHTTPClient {
             throw DashboardHTTPClient.Error.invalidResponse
         }
 
-        goalsHTTPLogger.debug("Goals response [\(endpoint.path)] status=\(httpResponse.statusCode)")
+        badgesHTTPLogger.debug("Badges response [\(endpoint.path)] status=\(httpResponse.statusCode)")
 
         guard (200..<300).contains(httpResponse.statusCode) else {
             let decoder = JSONDecoder.stockPlanShared
@@ -72,13 +56,13 @@ struct GoalsHTTPClient {
         let normalizedPath = endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         let base = baseURL.appendingPathComponent(normalizedPath)
         let parameters = try endpoint.asParameters()
-        
+
         var urlComponents = URLComponents(url: base, resolvingAgainstBaseURL: false)
         if endpoint.method == .get, !parameters.isEmpty {
             urlComponents?.queryItems = parameters.map { URLQueryItem(name: $0.key, value: String(describing: $0.value)) }
         }
         guard let url = urlComponents?.url else { throw DashboardHTTPClient.Error.invalidResponse }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = endpoint.method.rawValue
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

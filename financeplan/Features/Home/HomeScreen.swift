@@ -1,10 +1,16 @@
 import Charts
 import Combine
 import Foundation
+import OSLog
 import StoreKit
 import SwiftUI
 import StockPlanShared
 import Factory
+
+private let homePerformanceLogger = Logger(
+  subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
+  category: "HomePerformance"
+)
 
 @MainActor
 final class ActivityViewModel: ObservableObject {
@@ -15,15 +21,91 @@ final class ActivityViewModel: ObservableObject {
     @Injected(\.activityService) private var activityService
     
     func loadActivities() async {
+        let start = ContinuousClock.now
         isLoading = true
         errorMessage = nil
         do {
             activities = try await activityService.fetchActivities(limit: 5)
         } catch {
-            print("Failed to load activities: \(error)")
+            homePerformanceLogger.error("Activity feed load failed: \(error.localizedDescription, privacy: .public)")
             errorMessage = error.localizedDescription
         }
         isLoading = false
+        homePerformanceLogger.debug(
+            "Activity feed load duration_ms=\(Self.durationInMilliseconds(from: start.duration(to: .now)), privacy: .public)"
+        )
+    }
+
+    private static func durationInMilliseconds(from duration: Duration) -> Double {
+        let components = duration.components
+        let millisecondsFromSeconds = Double(components.seconds) * 1_000
+        let millisecondsFromAttoseconds = Double(components.attoseconds) / 1_000_000_000_000_000
+        return millisecondsFromSeconds + millisecondsFromAttoseconds
+    }
+}
+
+@MainActor
+final class FocusPointsViewModel: ObservableObject {
+    @Published var points: [GoalResponse] = []
+    @Published var draftTitle = ""
+    @Published var isLoading = false
+    @Published var isSubmitting = false
+    @Published var pendingStatusUpdates: Set<String> = []
+    @Published var errorMessage: String?
+
+    @Injected(\.goalsService) private var goalsService
+
+    func load() async {
+        guard !isLoading else { return }
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            points = try await goalsService.getGoals()
+        } catch {
+            homePerformanceLogger.error("Focus points load failed: \(error.localizedDescription, privacy: .public)")
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func createFromDraft() async {
+        let title = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty, !isSubmitting else { return }
+
+        isSubmitting = true
+        errorMessage = nil
+        defer { isSubmitting = false }
+
+        do {
+            let created = try await goalsService.createGoal(payload: GoalRequest(title: title))
+            points.insert(created, at: 0)
+            draftTitle = ""
+        } catch {
+            homePerformanceLogger.error("Focus point create failed: \(error.localizedDescription, privacy: .public)")
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func toggleStatus(for point: GoalResponse) async {
+        guard !pendingStatusUpdates.contains(point.id) else { return }
+        pendingStatusUpdates.insert(point.id)
+        errorMessage = nil
+        defer { pendingStatusUpdates.remove(point.id) }
+
+        let nextStatus: GoalStatus = point.status == .completed ? .pending : .completed
+        do {
+            let updated = try await goalsService.updateGoalStatus(
+                id: point.id,
+                payload: GoalStatusUpdateRequest(status: nextStatus, source: .manual)
+            )
+
+            guard let index = points.firstIndex(where: { $0.id == updated.id }) else { return }
+            points[index] = updated
+        } catch {
+            homePerformanceLogger.error("Focus point status update failed: \(error.localizedDescription, privacy: .public)")
+            errorMessage = error.localizedDescription
+        }
     }
 }
 
@@ -113,44 +195,54 @@ private struct DashboardRoot: View {
   @Environment(\.colorScheme) private var colorScheme
   @StateObject private var searchViewModel = AssetSearchViewModel()
   @StateObject private var activityViewModel = ActivityViewModel()
+  @StateObject private var focusPointsViewModel = FocusPointsViewModel()
   @State private var isProfilePresented = false
   @State private var dashboardData: DashboardResponse?
+  @State private var dashboardInsights: DashboardInsightsResponse?
+  @State private var isInsightsLoading = false
+  @State private var insightsLoadFailed = false
+  @State private var portfolioChartPoints: [ChartDataPoint] = []
+  @State private var spendingChartPoints: [ChartDataPoint] = []
+  @State private var hasLoadedContent = false
   
   private let dashboardService: any DashboardServicing = Container.shared.dashboardService()
-
-  // to fill from endpoint later
-  private let trendPoints = PortfolioTrendPoint.mock
   
-  private var portfolioPoints: [ChartDataPoint] {
-      let calendar = Calendar.current
-      let today = Date()
-      let baseValue = (dashboardData?.totalValue ?? 0) == 0 ? 100000.0 : (dashboardData?.totalValue ?? 0)
-      
-      return (0..<30).map { i in
-          let date = calendar.date(byAdding: .day, value: -(29 - i), to: today)!
-          let noise = sin(Double(i) * 0.5) * 5000.0 + Double.random(in: -1000...1000)
-          let trend = Double(i) * 300.0
-          return ChartDataPoint(date: date, value: max(0, baseValue * 0.8 + noise + trend))
-      }
+  private var insightCards: [InsightCard] {
+    guard let insights = dashboardInsights else {
+        return InsightCard.mock
+    }
+    
+    return [
+        .init(
+            title: "Savings rate",
+            value: "\(Int(insights.savingsRate))%",
+            detail: "Based on monthly planned vs actuals.",
+            symbol: "arrow.down.circle",
+            tint: AppTheme.Colors.success
+        ),
+        .init(
+            title: "Budget streak",
+            value: "\(insights.budgetStreak) months",
+            detail: "Staying under your spending plan.",
+            symbol: "flame",
+            tint: .orange
+        ),
+        .init(
+            title: "Watchlist",
+            value: "\(insights.watchlistCount) names",
+            detail: "Review candidates before earnings.",
+            symbol: "star",
+            tint: .indigo
+        ),
+        .init(
+            title: "Cash buffer",
+            value: insights.cashBuffer.formatted(.currency(code: "USD").presentation(.narrow)),
+            detail: "Enough for short-term volatility.",
+            symbol: "shield",
+            tint: AppTheme.Colors.tint(for: .light)
+        ),
+    ]
   }
-  
-  private var spendingPointsData: [ChartDataPoint] {
-      let calendar = Calendar.current
-      let today = Date()
-      let baseValue = 3500.0
-      
-      return (0..<30).map { i in
-          let date = calendar.date(byAdding: .day, value: -(29 - i), to: today)!
-          let noise = sin(Double(i) * 0.8) * 500.0 + Double.random(in: -200...200)
-          let trend = Double(i) * 15.0
-          return ChartDataPoint(date: date, value: max(0, baseValue * 0.5 + noise + trend))
-      }
-  }
-
-  // to fill from endpoint later
-  private let spendingPoints = SpendingPoint.mock
-  // to fill from endpoint later
-  private let insightCards = InsightCard.mock
 
   private var greetingText: String {
     let hour = Calendar.current.component(.hour, from: Date())
@@ -170,8 +262,8 @@ private struct DashboardRoot: View {
                 DashboardHeroCard(
                     totalValue: dashboard.totalValue,
                     totalSpending: 3250.45,
-                    portfolioPoints: portfolioPoints,
-                    spendingPoints: spendingPointsData,
+                    portfolioPoints: portfolioChartPoints,
+                    spendingPoints: spendingChartPoints,
                     onPortfolioTap: { selectedTab = .portfolio },
                     onExpensesTap: { selectedTab = .expenses },
                     onReportsTap: { selectedTab = .reports }
@@ -196,7 +288,12 @@ private struct DashboardRoot: View {
               .transition(.opacity.combined(with: .move(edge: .top)))
           }
 
-          UnifiedActivityFeed(viewModel: activityViewModel)
+          UnifiedActivityFeed(
+            viewModel: activityViewModel,
+            financialHealth: dashboardInsights?.financialHealth,
+            isFinancialHealthLoading: isInsightsLoading,
+            financialHealthUnavailable: insightsLoadFailed
+          )
 
           Button(action: {
               // Action for adding entry
@@ -218,7 +315,7 @@ private struct DashboardRoot: View {
               VStack(spacing: 20) {
                   HomeExpensesInteractiveChartCard()
                   InsightsGrid(cards: insightCards)
-                  FocusListCard()
+                  FocusListCard(viewModel: focusPointsViewModel)
               }
               .padding(.top, 16)
           }
@@ -231,14 +328,7 @@ private struct DashboardRoot: View {
       .navigationTitle(greetingText)
       .navigationBarTitleDisplayMode(.large)
       .task {
-          do {
-              self.dashboardData = try await dashboardService.getDashboard()
-          } catch {
-              // Handle error
-          }
-      }
-      .task {
-          await activityViewModel.loadActivities()
+          await loadContent()
       }
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
@@ -269,6 +359,89 @@ private struct DashboardRoot: View {
         UserProfileView()
       }
     }
+  }
+
+  private func loadContent(force: Bool = false) async {
+      guard force || !hasLoadedContent else { return }
+      if spendingChartPoints.isEmpty {
+          spendingChartPoints = Self.makeSpendingPoints()
+      }
+
+      async let dashboardLoad: Void = loadDashboard()
+      async let insightsLoad: Void = loadInsights()
+      async let activityLoad: Void = activityViewModel.loadActivities()
+      async let focusPointsLoad: Void = focusPointsViewModel.load()
+      _ = await (dashboardLoad, insightsLoad, activityLoad, focusPointsLoad)
+      hasLoadedContent = true
+  }
+
+  private func loadDashboard() async {
+      let start = ContinuousClock.now
+      do {
+          let dashboard = try await dashboardService.getDashboard()
+          dashboardData = dashboard
+          portfolioChartPoints = Self.makePortfolioPoints(totalValue: dashboard.totalValue)
+      } catch {
+          homePerformanceLogger.error("Dashboard load failed: \(error.localizedDescription, privacy: .public)")
+      }
+
+      homePerformanceLogger.info(
+          "Dashboard load duration_ms=\(Self.durationInMilliseconds(from: start.duration(to: .now)), privacy: .public)"
+      )
+  }
+
+  private func loadInsights() async {
+      isInsightsLoading = true
+      insightsLoadFailed = false
+
+      do {
+          dashboardInsights = try await dashboardService.getInsights()
+      } catch {
+          dashboardInsights = nil
+          insightsLoadFailed = true
+          homePerformanceLogger.error("Dashboard insights load failed: \(error.localizedDescription, privacy: .public)")
+      }
+
+      isInsightsLoading = false
+  }
+
+  private static func makePortfolioPoints(totalValue: Double, days: Int = 30) -> [ChartDataPoint] {
+      let calendar = Calendar.current
+      let today = Date()
+      let base = totalValue > 0 ? totalValue : 100_000
+
+      return (0..<days).compactMap { index in
+          guard let date = calendar.date(byAdding: .day, value: -(days - 1 - index), to: today) else {
+              return nil
+          }
+          let seasonal = sin(Double(index) * 0.45) * base * 0.025
+          let trend = Double(index) * (base * 0.0015)
+          let value = max(0, base * 0.78 + seasonal + trend)
+          return ChartDataPoint(date: date, value: value)
+      }
+  }
+
+  private static func makeSpendingPoints(days: Int = 30) -> [ChartDataPoint] {
+      let calendar = Calendar.current
+      let today = Date()
+      let base = 3_500.0
+
+      return (0..<days).compactMap { index in
+          guard let date = calendar.date(byAdding: .day, value: -(days - 1 - index), to: today) else {
+              return nil
+          }
+          let seasonal = sin(Double(index) * 0.8) * 450
+          let trend = Double(index) * 14
+          let value = max(0, base * 0.55 + seasonal + trend)
+          return ChartDataPoint(date: date, value: value)
+      }
+  }
+
+  private static func durationInMilliseconds(from duration: Duration) -> Double {
+      let components = duration.components
+      let millisecondsFromSeconds = Double(components.seconds) * 1_000
+      let millisecondsFromAttoseconds = Double(components.attoseconds) / 1_000_000_000_000_000
+      return millisecondsFromSeconds + millisecondsFromAttoseconds
   }
 }
 
@@ -312,9 +485,6 @@ private struct PortfolioRoot: View {
       .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
       .navigationTitle("Portfolio")
       .navigationBarTitleDisplayMode(.large)
-      .task {
-        await portfolioViewModel.load()
-      }
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
           Button {
@@ -598,8 +768,104 @@ struct ActivityFeedItem: Identifiable {
     let time: String
 }
 
+enum FinancialHealthCardTone: Equatable {
+    case success
+    case warning
+    case critical
+    case neutral
+}
+
+struct FinancialHealthCardState: Equatable {
+    let scoreText: String
+    let summaryText: String
+    let tone: FinancialHealthCardTone
+    let ringProgress: Double
+
+    init(
+        health: DashboardFinancialHealthDTO?,
+        isLoading: Bool,
+        isUnavailable: Bool
+    ) {
+        if isLoading {
+            self.scoreText = "--"
+            self.summaryText = "--/100"
+            self.tone = .neutral
+            self.ringProgress = 0
+            return
+        }
+
+        if isUnavailable || health == nil {
+            self.scoreText = "--"
+            self.summaryText = "--/100 - Unavailable"
+            self.tone = .neutral
+            self.ringProgress = 0
+            return
+        }
+
+        guard let health else {
+            self.scoreText = "--"
+            self.summaryText = "--/100 - Unavailable"
+            self.tone = .neutral
+            self.ringProgress = 0
+            return
+        }
+
+        self.scoreText = "\(health.score)"
+        self.summaryText = "\(health.score)/\(health.maxScore) - \(Self.statusTitle(health.status))"
+        self.ringProgress = health.maxScore > 0
+            ? min(max(Double(health.score) / Double(health.maxScore), 0), 1)
+            : 0
+
+        switch health.status {
+        case .healthy, .excellent:
+            self.tone = .success
+        case .needsAttention:
+            self.tone = .warning
+        case .atRisk:
+            self.tone = .critical
+        }
+    }
+
+    private static func statusTitle(_ status: FinancialHealthStatus) -> String {
+        switch status {
+        case .atRisk:
+            return "At Risk"
+        case .needsAttention:
+            return "Needs Attention"
+        case .healthy:
+            return "Healthy"
+        case .excellent:
+            return "Excellent"
+        }
+    }
+}
+
 private struct UnifiedActivityFeed: View {
     @ObservedObject var viewModel: ActivityViewModel
+    let financialHealth: DashboardFinancialHealthDTO?
+    let isFinancialHealthLoading: Bool
+    let financialHealthUnavailable: Bool
+
+    private var financialHealthCardState: FinancialHealthCardState {
+        FinancialHealthCardState(
+            health: financialHealth,
+            isLoading: isFinancialHealthLoading,
+            isUnavailable: financialHealthUnavailable
+        )
+    }
+
+    private var healthTint: Color {
+        switch financialHealthCardState.tone {
+        case .success:
+            return .green
+        case .warning:
+            return .orange
+        case .critical:
+            return .red
+        case .neutral:
+            return .secondary
+        }
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -668,18 +934,19 @@ private struct UnifiedActivityFeed: View {
                         Circle()
                             .stroke(Color.gray.opacity(0.2), lineWidth: 6)
                         Circle()
-                            .trim(from: 0, to: 0.85)
-                            .stroke(Color.green, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                            .trim(from: 0, to: financialHealthCardState.ringProgress)
+                            .stroke(healthTint, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                             .rotationEffect(.degrees(-90))
-                        Text("85")
+                            .animation(.easeInOut(duration: 0.35), value: financialHealthCardState.ringProgress)
+                        Text(financialHealthCardState.scoreText)
                             .font(.headline)
                     }
                     .frame(width: 50, height: 50)
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("85/100 - Healthy")
+                        Text(financialHealthCardState.summaryText)
                             .font(.headline)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(healthTint)
                         Text("Financial Health")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -688,23 +955,30 @@ private struct UnifiedActivityFeed: View {
                 }
                 .padding(.vertical, 4)
             }
+            .redacted(reason: isFinancialHealthLoading ? .placeholder : [])
+            .scaleEffect(isFinancialHealthLoading ? 0.99 : 1)
+            .opacity(isFinancialHealthLoading ? 0.9 : 1)
+            .animation(.easeOut(duration: 0.25), value: isFinancialHealthLoading)
         }
     }
 }
 
 private struct HomeExpensesInteractiveChartCard: View {
-  private var mockExpensesChartData: [ChartDataPoint] {
+  private static let mockExpensesChartData: [ChartDataPoint] = {
       let calendar = Calendar.current
       let today = Date()
       let baseValue = 3500.0
-      
-      return (0..<30).map { i in
-          let date = calendar.date(byAdding: .day, value: -(29 - i), to: today)!
-          let noise = sin(Double(i) * 0.8) * 500.0 + Double.random(in: -200...200)
+
+      return (0..<30).compactMap { i in
+          guard let date = calendar.date(byAdding: .day, value: -(29 - i), to: today) else {
+              return nil
+          }
+          let wave = sin(Double(i) * 0.8) * 500.0
+          let secondaryWave = cos(Double(i) * 0.35) * 140.0
           let trend = Double(i) * 15.0
-          return ChartDataPoint(date: date, value: max(0, baseValue * 0.5 + noise + trend))
+          return ChartDataPoint(date: date, value: max(0, baseValue * 0.5 + wave + secondaryWave + trend))
       }
-  }
+  }()
 
   var body: some View {
     GlassCard(cornerRadius: 22) {
@@ -732,7 +1006,7 @@ private struct HomeExpensesInteractiveChartCard: View {
         }
         .padding(.horizontal, 4)
         
-        InteractiveLineChart(data: mockExpensesChartData, color: .purple)
+        InteractiveLineChart(data: Self.mockExpensesChartData, color: .purple)
           .frame(height: 160)
           .padding(.horizontal, -12) // Bleed to edges of card padding
       }
@@ -775,12 +1049,17 @@ private struct InsightsGrid: View {
 }
 
 private struct FocusListCard: View {
-  // to fill from endpoint later
-  private let items = [
-    "Review watchlist names before next earnings window.",
-    "Keep discretionary spend below 12% of take-home this month.",
-    "Prioritize high-conviction holdings over fragmented small positions.",
-  ]
+  @ObservedObject var viewModel: FocusPointsViewModel
+  @Environment(\.colorScheme) private var colorScheme
+
+  private var orderedPoints: [GoalResponse] {
+    viewModel.points.sorted { lhs, rhs in
+      if lhs.status == rhs.status {
+        return (lhs.createdAt ?? "") > (rhs.createdAt ?? "")
+      }
+      return lhs.status == .pending
+    }
+  }
 
   var body: some View {
     GlassCard {
@@ -788,13 +1067,75 @@ private struct FocusListCard: View {
         Text("Focus this week")
           .typography(.small, weight: .semibold)
 
-        ForEach(items, id: \.self) { item in
-          HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "checkmark.circle.fill")
-              .foregroundStyle(AppTheme.Colors.success)
-            Text(item)
-              .typography(.small)
-              .frame(maxWidth: .infinity, alignment: .leading)
+        HStack(spacing: 8) {
+          TextField("Add a focus point", text: $viewModel.draftTitle)
+            .textInputAutocapitalization(.sentences)
+            .autocorrectionDisabled(false)
+            .submitLabel(.done)
+            .onSubmit {
+              Task { await viewModel.createFromDraft() }
+            }
+
+          Button {
+            Task { await viewModel.createFromDraft() }
+          } label: {
+            if viewModel.isSubmitting {
+              ProgressView()
+            } else {
+              Image(systemName: "plus.circle.fill")
+                .font(.title3)
+                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+            }
+          }
+          .buttonStyle(.plain)
+          .disabled(viewModel.isSubmitting || viewModel.draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .appGlassEffect(.rect(cornerRadius: 12))
+
+        if let errorMessage = viewModel.errorMessage {
+          Text(errorMessage)
+            .typography(.nano)
+            .foregroundStyle(AppTheme.Colors.danger)
+        }
+
+        if viewModel.isLoading && orderedPoints.isEmpty {
+          ProgressView("Loading focus points...")
+        } else if orderedPoints.isEmpty {
+          Text("No focus points yet. Add one to start tracking this week.")
+            .typography(.small)
+            .foregroundStyle(.secondary)
+        } else {
+          ForEach(orderedPoints) { item in
+            Button {
+              if item.statusUpdatedBy != .system {
+                Task { await viewModel.toggleStatus(for: item) }
+              }
+            } label: {
+              HStack(alignment: .top, spacing: 10) {
+                if item.statusUpdatedBy == .system {
+                    Image(systemName: item.status == .completed ? "checkmark.seal.fill" : "seal")
+                      .foregroundStyle(item.status == .completed ? AppTheme.Colors.success : .indigo)
+                } else {
+                    Image(systemName: item.status == .completed ? "checkmark.circle.fill" : "circle")
+                      .foregroundStyle(item.status == .completed ? AppTheme.Colors.success : .secondary)
+                }
+
+                Text(item.title)
+                  .typography(.small)
+                  .strikethrough(item.status == .completed && item.statusUpdatedBy != .system)
+                  .foregroundStyle(item.status == .completed ? .secondary : .primary)
+                  .frame(maxWidth: .infinity, alignment: .leading)
+
+                if viewModel.pendingStatusUpdates.contains(item.id) {
+                  ProgressView()
+                    .controlSize(.small)
+                }
+              }
+            }
+            .buttonStyle(.plain)
+            .disabled(item.statusUpdatedBy == .system && item.status == .completed)
           }
         }
       }

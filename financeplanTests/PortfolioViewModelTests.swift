@@ -6,7 +6,7 @@ import XCTest
 
 @MainActor
 final class PortfolioViewModelTests: XCTestCase {
-  func testLoadPopulatesStocksAndPortfolioMetrics() async {
+  func testLoadCallsServiceAndClearsErrorOnSuccess() async {
     let service = MockStockService()
     service.fetchPortfolioResult = .success([
       makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150),
@@ -16,27 +16,47 @@ final class PortfolioViewModelTests: XCTestCase {
     let viewModel = PortfolioViewModel(service: service)
     await viewModel.load()
 
-    XCTAssertEqual(viewModel.stocks.count, 2)
-    XCTAssertEqual(viewModel.totalShares, 15, accuracy: 0.001)
-    XCTAssertEqual(viewModel.totalValue, 2500, accuracy: 0.001)
-    XCTAssertEqual(viewModel.averagePositionValue, 1250, accuracy: 0.001)
+    XCTAssertEqual(service.fetchPortfolioCalls, 1)
+    XCTAssertFalse(viewModel.isLoading)
     XCTAssertNil(viewModel.errorMessage)
   }
 
-  func testDeleteFailureRestoresStocksAndPublishesError() async {
+  func testLoadWithoutForceUsesCachedResultAfterFirstSuccess() async {
     let service = MockStockService()
     service.fetchPortfolioResult = .success([
       makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150),
-      makeStock(id: "msft", symbol: "MSFT", shares: 5, buyPrice: 200),
     ])
-    service.deleteResult = .failure(MockError("Delete failed."))
 
     let viewModel = PortfolioViewModel(service: service)
     await viewModel.load()
-    await viewModel.delete(id: "aapl")
+    await viewModel.load()
 
-    XCTAssertEqual(viewModel.stocks.count, 2)
+    XCTAssertEqual(service.fetchPortfolioCalls, 1)
+  }
+
+  func testLoadWithForceRefetchesAfterInitialSuccess() async {
+    let service = MockStockService()
+    service.fetchPortfolioResult = .success([
+      makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150),
+    ])
+
+    let viewModel = PortfolioViewModel(service: service)
+    await viewModel.load()
+    await viewModel.load(force: true)
+
+    XCTAssertEqual(service.fetchPortfolioCalls, 2)
+  }
+
+  func testDeleteFailurePublishesError() async {
+    let service = MockStockService()
+    service.deleteResult = .failure(MockError("Delete failed."))
+
+    let viewModel = PortfolioViewModel(service: service)
+    let ok = await viewModel.delete(id: "aapl")
+
+    XCTAssertFalse(ok)
     XCTAssertEqual(viewModel.errorMessage, "Delete failed.")
+    XCTAssertFalse(viewModel.isDeletingStock)
   }
 
   func testSaveNewPositionCreatesAndInsertsStock() async {
@@ -58,9 +78,12 @@ final class PortfolioViewModelTests: XCTestCase {
     )
 
     XCTAssertNil(message)
-    XCTAssertEqual(viewModel.stocks.first?.symbol, "NVDA")
-    XCTAssertEqual(viewModel.stocks.count, 1)
+    XCTAssertEqual(service.createCalls, 1)
+    XCTAssertEqual(service.lastCreateRequest?.symbol, "NVDA")
+    XCTAssertEqual(service.lastCreateRequest?.shares, 3)
+    XCTAssertEqual(service.lastCreateRequest?.buyPrice, 120)
     XCTAssertNil(viewModel.errorMessage)
+    XCTAssertFalse(viewModel.isSaving)
   }
 
   func testSaveNewPositionRejectsInvalidDraft() async {
@@ -80,7 +103,7 @@ final class PortfolioViewModelTests: XCTestCase {
     )
 
     XCTAssertEqual(message, "Enter valid symbol, shares, and buy price.")
-    XCTAssertTrue(viewModel.stocks.isEmpty)
+    XCTAssertEqual(service.createCalls, 0)
   }
 
   private func makeStock(
@@ -105,13 +128,18 @@ final class PortfolioViewModelTests: XCTestCase {
 }
 
 private final class MockStockService: StockServicing {
+  var fetchPortfolioCalls = 0
+  var createCalls = 0
+  var lastCreateRequest: StockRequest?
   var fetchPortfolioResult: Result<[StockResponse], Error> = .success([])
   var createResult: Result<StockResponse, Error> = .failure(MockError("Not configured."))
   var updateResult: Result<StockResponse, Error> = .failure(MockError("Not configured."))
   var deleteResult: Result<Void, Error> = .success(())
 
-  func create(stock _: StockRequest) async throws -> StockResponse {
-    try createResult.get()
+  func create(stock: StockRequest) async throws -> StockResponse {
+    createCalls += 1
+    lastCreateRequest = stock
+    return try createResult.get()
   }
 
   func bulkCreate(stocks _: [StockRequest]) async throws -> BulkStockResponse {
@@ -119,7 +147,8 @@ private final class MockStockService: StockServicing {
   }
 
   func fetchPortfolio() async throws -> [StockResponse] {
-    try fetchPortfolioResult.get()
+    fetchPortfolioCalls += 1
+    return try fetchPortfolioResult.get()
   }
 
   func fetchStockDetails(stockId _: String) async throws -> StockDetails {
