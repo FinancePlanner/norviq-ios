@@ -33,17 +33,24 @@ final class CryptoViewModel: ObservableObject {
         let color: Color
     }
     
-    private let cryptoService: any CryptoServicing = Container.shared.cryptoService()
-    private let marketDataService: any MarketDataServicing = Container.shared.marketDataService()
-    
-    init() {
-        // Initial load will be handled by .task or onAppear in view
+    private let cryptoService: any CryptoServicing
+    private let marketDataService: any MarketDataServicing
+    private var hasLoadedOnce = false
+
+    init(
+        cryptoService: any CryptoServicing = Container.shared.cryptoService(),
+        marketDataService: any MarketDataServicing = Container.shared.marketDataService()
+    ) {
+        self.cryptoService = cryptoService
+        self.marketDataService = marketDataService
     }
-    
-    func load() async {
+
+    func load(force: Bool = false) async {
+        if !force, hasLoadedOnce { return }
         guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
+        defer { isLoading = false }
         
         do {
             async let fetchHoldings = cryptoService.fetchPortfolio()
@@ -86,12 +93,11 @@ final class CryptoViewModel: ObservableObject {
             self.sentimentValue = 72
             self.sentimentLabel = "Greed"
             self.ethGasGwei = 24
+            hasLoadedOnce = true
             
         } catch {
             self.errorMessage = error.localizedDescription
         }
-        
-        isLoading = false
     }
     
     func addHolding(symbol: String, name: String, quantity: Double, price: Double) async -> Bool {
@@ -104,7 +110,7 @@ final class CryptoViewModel: ObservableObject {
                 averageBuyPrice: price
             )
             _ = try await cryptoService.addToPortfolio(payload: payload)
-            await load() // Refresh
+            await load(force: true)
             return true
         } catch {
             self.errorMessage = error.localizedDescription
@@ -116,7 +122,7 @@ final class CryptoViewModel: ObservableObject {
         errorMessage = nil
         do {
             try await cryptoService.removeFromPortfolio(itemId: itemId)
-            await load() // Refresh
+            await load(force: true)
             return true
         } catch {
             self.errorMessage = error.localizedDescription
@@ -134,7 +140,7 @@ final class CryptoViewModel: ObservableObject {
                 averageBuyPrice: price
             )
             _ = try await cryptoService.updatePortfolioItem(itemId: itemId, payload: payload)
-            await load() // Refresh
+            await load(force: true)
             return true
         } catch {
             self.errorMessage = error.localizedDescription

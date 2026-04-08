@@ -10,15 +10,17 @@ final class SDPortfolioStock {
     var buyPrice: Double
     var buyDate: String
     var notes: String?
+    var category: String?
     var lastSyncedAt: Date?
 
-    init(id: String, symbol: String, shares: Double, buyPrice: Double, buyDate: String, notes: String? = nil) {
+    init(id: String, symbol: String, shares: Double, buyPrice: Double, buyDate: String, notes: String? = nil, category: String? = "stock") {
         self.id = id
         self.symbol = symbol
         self.shares = shares
         self.buyPrice = buyPrice
         self.buyDate = buyDate
         self.notes = notes
+        self.category = category
         self.lastSyncedAt = Date()
     }
 
@@ -29,6 +31,7 @@ final class SDPortfolioStock {
         self.buyPrice = response.buyPrice
         self.buyDate = response.buyDate
         self.notes = response.notes
+        self.category = response.category.rawValue
         self.lastSyncedAt = Date()
     }
 
@@ -38,6 +41,7 @@ final class SDPortfolioStock {
         self.buyPrice = response.buyPrice
         self.buyDate = response.buyDate
         self.notes = response.notes
+        self.category = response.category.rawValue
         self.lastSyncedAt = Date()
     }
 }

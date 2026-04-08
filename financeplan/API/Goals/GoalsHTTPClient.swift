@@ -31,6 +31,10 @@ struct GoalsHTTPClient {
         try await call(UpdateGoalEndpoint(id: id, payload: payload))
     }
 
+    func updateGoalStatus(id: String, payload: GoalStatusUpdateRequest) async throws -> GoalResponse {
+        try await call(UpdateGoalStatusEndpoint(id: id, payload: payload))
+    }
+
     func deleteGoal(id: String) async throws {
         _ = try await call(DeleteGoalEndpoint(id: id))
     }

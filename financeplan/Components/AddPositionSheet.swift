@@ -1,4 +1,5 @@
 import SwiftUI
+import StockPlanShared
 
 struct AddPositionDraft: Equatable {
   var symbol: String
@@ -7,6 +8,7 @@ struct AddPositionDraft: Equatable {
   var buyPrice: String = ""
   var buyDate: Date = .now
   var notes: String = ""
+  var category: AssetCategory = .stock
   var symbolLocked: Bool = false
 }
 
@@ -51,6 +53,17 @@ struct AddPositionSheet: View {
 
           // MARK: - Position section
           FormCard(title: "Position") {
+            FormRow(icon: "tag", iconColor: .purple, label: "Category") {
+              Picker("", selection: $draft.category) {
+                ForEach(AssetCategory.allCases, id: \.self) { category in
+                  Text(category.rawValue.capitalized).tag(category)
+                }
+              }
+              .labelsHidden()
+            }
+
+            FormDivider()
+
             FormTextField(
               icon: "number",
               placeholder: "Shares",

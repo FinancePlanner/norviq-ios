@@ -48,8 +48,6 @@ final class AuthSessionStoreTests: XCTestCase {
         refreshExpiresIn: 86_400,
         username: "valid_user",
         email: "user@example.com",
-        firstName: "Jane",
-        lastName: "Doe",
         dateOfBirth: Date(timeIntervalSince1970: 946684800)
       )
     )
@@ -81,8 +79,6 @@ final class AuthSessionStoreTests: XCTestCase {
         refreshExpiresIn: 86_400,
         username: "valid_user",
         email: "user@example.com",
-        firstName: "Jane",
-        lastName: "Doe",
         dateOfBirth: Date(timeIntervalSince1970: 946684800)
       )
     )
@@ -111,8 +107,6 @@ final class AuthSessionStoreTests: XCTestCase {
         refreshExpiresIn: 86_400,
         username: "valid_user",
         email: "user@example.com",
-        firstName: "Jane",
-        lastName: "Doe",
         dateOfBirth: Date(timeIntervalSince1970: 946684800)
       )
     )

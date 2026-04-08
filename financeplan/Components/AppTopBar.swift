@@ -106,31 +106,31 @@ private struct AppTopBarSearchField: View {
   }
 }
 
-struct AppTopBarProfileButton: View {
-  let isUserMenuPresented: Bool
-  let onTap: () -> Void
-
-  @Environment(\.colorScheme) private var colorScheme
-
-  var body: some View {
-    Button(action: onTap) {
-      RoundedRectangle(cornerRadius: 8, style: .continuous)
-        .fill(
-          isUserMenuPresented
-          ? AppTheme.Colors.tint(for: colorScheme).opacity(colorScheme == .dark ? 0.22 : 0.14)
-          : AppTheme.Colors.tint(for: colorScheme).opacity(0.12)
-        )
-        .frame(width: 28, height: 28)
-        .overlay(
-          Image(systemName: "person.fill")
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-        )
-        .appGlassEffect(.rect(cornerRadius: 8))
-    }
-    .buttonStyle(.plain)
-  }
-}
+//struct AppTopBarProfileButton: View {
+//  let isUserMenuPresented: Bool
+//  let onTap: () -> Void
+//
+//  @Environment(\.colorScheme) private var colorScheme
+//
+//  var body: some View {
+//    Button(action: onTap) {
+//      RoundedRectangle(cornerRadius: 8, style: .continuous)
+//        .fill(
+//          isUserMenuPresented
+//          ? AppTheme.Colors.tint(for: colorScheme).opacity(colorScheme == .dark ? 0.22 : 0.14)
+//          : AppTheme.Colors.tint(for: colorScheme).opacity(0.12)
+//        )
+//        .frame(width: 28, height: 28)
+//        .overlay(
+//          Image(systemName: "person.fill")
+//            .font(.system(size: 11, weight: .semibold))
+//            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+//        )
+//        .appGlassEffect(.rect(cornerRadius: 8))
+//    }
+//    .buttonStyle(.plain)
+//  }
+//}
 
 struct AppTopBarChromeModifier: ViewModifier {
   let title: String

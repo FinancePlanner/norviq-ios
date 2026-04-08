@@ -18,6 +18,7 @@ struct CreateStockEndpoint: Endpoint {
   let buyPrice: Double
   let buyDate: String?
   let notes: String?
+  let category: AssetCategory
 
   var method: HTTPMethod { .post }
   var path: String { "/v1/stocks" }
@@ -28,6 +29,7 @@ struct CreateStockEndpoint: Endpoint {
     params["symbol"] = symbol
     params["shares"] = shares
     params["buyPrice"] = buyPrice
+    params["category"] = category.rawValue
     if let buyDate { params["buyDate"] = buyDate }
     if let notes, !notes.isEmpty { params["notes"] = notes }
     return params

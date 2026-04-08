@@ -1,6 +1,12 @@
 import SwiftUI
 import StockPlanShared
 import Factory
+import OSLog
+
+private let cryptoHomeLogger = Logger(
+    subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
+    category: "CryptoHome"
+)
 
 struct CryptoHomeView: View {
     @Binding var isSettingsPresented: Bool
@@ -67,7 +73,7 @@ struct CryptoHomeView: View {
             }
             .navigationTitle("Crypto")
             .refreshable {
-                await viewModel.load()
+                await viewModel.load(force: true)
             }
             .task {
                 await viewModel.load()
@@ -96,12 +102,6 @@ struct CryptoHomeView: View {
                             .appGlassEffect(.capsule)
                     }
                     .accessibilityLabel("Open settings")
-
-                    AppTopBarProfileButton(
-                        isUserMenuPresented: isProfilePresented,
-                        onTap: { isProfilePresented = true }
-                    )
-                    .accessibilityLabel("Open profile")
                 }
             }
             .sheet(isPresented: $isProfilePresented) {
@@ -810,7 +810,7 @@ struct AddCryptoHoldingSheet: View {
                 do {
                     allAssets = try await cryptoService.fetchCryptoList()
                 } catch {
-                    print("Failed to fetch crypto list: \(error)")
+                    cryptoHomeLogger.error("Failed to fetch crypto list: \(error.localizedDescription, privacy: .public)")
                 }
                 isLoadingAssets = false
             }

@@ -20,8 +20,6 @@ final class AuthSessionManagerTests: XCTestCase {
       username: String,
       email: String,
       password: String,
-      firstName: String,
-      lastName: String,
       dateOfBirth: Date
     ) async throws {
       throw MockError.notConfigured
@@ -161,8 +159,6 @@ final class AuthSessionManagerTests: XCTestCase {
         refreshExpiresIn: 86_400,
         username: "valid_user",
         email: "user@example.com",
-        firstName: "Jane",
-        lastName: "Doe",
         dateOfBirth: Date(timeIntervalSince1970: 946684800)
       )
     )

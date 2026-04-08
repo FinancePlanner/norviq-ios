@@ -1,5 +1,4 @@
 import Charts
-import Factory
 import StockPlanShared
 import SwiftUI
 
@@ -631,11 +630,9 @@ private struct NewsFeedRow: View {
 
 struct StockEarningsTab: View {
     let symbol: String
-    @Environment(\.colorScheme) private var colorScheme
-    private var marketDataService: any MarketDataServicing { Container.shared.marketDataService() }
-    @State private var earnings: [EarningsEvent] = []
-    @State private var isLoading = false
-    @State private var errorMessage: String?
+    let earnings: [EarningsEvent]
+    let isLoading: Bool
+    let errorMessage: String?
 
     var body: some View {
         VStack(spacing: 24) {
@@ -679,22 +676,6 @@ struct StockEarningsTab: View {
                 }
             }
         }
-        .task {
-            await loadEarnings()
-        }
-    }
-
-    private func loadEarnings() async {
-        isLoading = true
-        errorMessage = nil
-        do {
-            let results = try await marketDataService.fetchStockEarnings(symbol: symbol, limit: 8)
-            // Sort by date descending
-            self.earnings = results.sorted { $0.date > $1.date }
-        } catch {
-            self.errorMessage = error.localizedDescription
-        }
-        isLoading = false
     }
 }
 
@@ -2423,25 +2404,6 @@ private struct NewsRow: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private struct ResearchPlaceholderCard: View {
-    let title: String
-    let bodyText: String
-
-    var body: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(title)
-                    .typography(.small, weight: .semibold)
-
-                Text(bodyText)
-                    .typography(.small)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
     }
 }
 

@@ -8,10 +8,16 @@
 import Combine
 import Factory
 import Foundation
+import OSLog
 import StockPlanShared
 
 @MainActor
 final class StockDetailsViewModel: ObservableObject {
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
+        category: "StockDetailsPerformance"
+    )
+
     private struct AnalystConsensusLoadResult {
         let consensus: StockAnalystConsensus?
         let message: String?
@@ -42,6 +48,9 @@ final class StockDetailsViewModel: ObservableObject {
     @Published private(set) var analystConsensus: StockAnalystConsensus?
     @Published private(set) var analystConsensusMessage: String?
     @Published private(set) var basicFinancials: StockBasicFinancials?
+    @Published private(set) var stockEarnings: [EarningsEvent] = []
+    @Published private(set) var stockEarningsMessage: String?
+    @Published private(set) var isEarningsLoading = false
     @Published private(set) var analysisMetrics: StockAnalysisMetrics?
     @Published private(set) var analysisMetricsMessage: String?
     @Published private(set) var financialStatements: StockFinancialStatements?
@@ -56,6 +65,10 @@ final class StockDetailsViewModel: ObservableObject {
 
     private let service: StockServicing
     private let marketDataService: MarketDataServicing
+    private var loadedTabs: Set<StockDetailTab> = []
+    private var loadingTabs: Set<StockDetailTab> = []
+    private var comparisonRefreshTask: Task<Void, Never>?
+    private var loadedStockID: String?
 
     var shareSnapshot: StockShareSnapshot? {
         guard let details else { return nil }
@@ -131,6 +144,9 @@ final class StockDetailsViewModel: ObservableObject {
             analystConsensus = nil
             analystConsensusMessage = nil
             basicFinancials = nil
+            stockEarnings = []
+            stockEarningsMessage = nil
+            isEarningsLoading = false
             analysisMetrics = nil
             analysisMetricsMessage = nil
             financialStatements = nil
@@ -138,6 +154,11 @@ final class StockDetailsViewModel: ObservableObject {
             primaryComparisonProfile = nil
             comparisonUniverse = []
             selectedPeerSymbols = []
+            comparisonRefreshTask?.cancel()
+            comparisonRefreshTask = nil
+            loadedTabs = []
+            loadingTabs = []
+            loadedStockID = nil
             return true
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
@@ -151,18 +172,6 @@ final class StockDetailsViewModel: ObservableObject {
         guard let symbol = details?.symbol ?? valuation?.symbol else {
             return "Unable to resolve the stock symbol for this valuation."
         }
-
-        print(
-            """
-            StockDetailsViewModel.saveValuation \
-            symbol=\(symbol) \
-            bearLow=\(draft.bearLow) bearHigh=\(draft.bearHigh) \
-            baseLow=\(draft.baseLow) baseHigh=\(draft.baseHigh) \
-            bullLow=\(draft.bullLow) bullHigh=\(draft.bullHigh) \
-            rationale=\(draft.rationale ?? "<nil>") \
-            targetDate=\(draft.targetDate ?? "<nil>")
-            """
-        )
 
         isLoading = true
         errorMessage = nil
@@ -182,12 +191,21 @@ final class StockDetailsViewModel: ObservableObject {
         }
     }
 
-    func load(stockId: String) async {
+    func load(stockId: String, force: Bool = false) async {
+        if !force, loadedStockID == stockId, details != nil { return }
         guard !isLoading else { return }
 
+        let start = ContinuousClock.now
         isLoading = true
         errorMessage = nil
-        defer { isLoading = false }
+        comparisonRefreshTask?.cancel()
+        comparisonRefreshTask = nil
+        defer {
+            isLoading = false
+            Self.logger.info(
+                "Stock details load stock_id=\(stockId, privacy: .public) duration_ms=\(Self.durationInMilliseconds(from: start.duration(to: .now)), privacy: .public)"
+            )
+        }
 
         do {
             let details = try await service.fetchStockDetails(stockId: stockId)
@@ -200,8 +218,6 @@ final class StockDetailsViewModel: ObservableObject {
             async let quoteTask = loadQuote(symbol: symbol)
             async let analystConsensusTask = loadAnalystConsensus(symbol: symbol)
             async let basicFinancialsTask = loadBasicFinancials(symbol: symbol)
-            async let analysisMetricsTask = loadAnalysisMetrics(symbol: symbol)
-            async let financialStatementsTask = loadFinancialStatements(symbol: symbol)
 
             self.details = details
             seedMockInsights(for: symbol)
@@ -214,13 +230,18 @@ final class StockDetailsViewModel: ObservableObject {
             self.analystConsensus = analystConsensusResult.consensus
             self.analystConsensusMessage = analystConsensusResult.message
             self.basicFinancials = await basicFinancialsTask
-            let analysisMetricsResult = await analysisMetricsTask
-            self.analysisMetrics = analysisMetricsResult.metrics
-            self.analysisMetricsMessage = analysisMetricsResult.message
-            applyAnalysisMetrics(analysisMetricsResult.metrics, to: symbol)
-            let financialStatementsResult = await financialStatementsTask
-            self.financialStatements = financialStatementsResult.statements
-            self.financialStatementsMessage = financialStatementsResult.message
+            self.stockEarnings = []
+            self.stockEarningsMessage = nil
+            self.isEarningsLoading = false
+
+            // Heavy sections are loaded lazily when their tabs are selected.
+            self.analysisMetrics = nil
+            self.analysisMetricsMessage = nil
+            self.financialStatements = nil
+            self.financialStatementsMessage = nil
+            loadedTabs = [.overview, .news]
+            loadingTabs = []
+            loadedStockID = stockId
         } catch {
             details = nil
             history = []
@@ -231,6 +252,9 @@ final class StockDetailsViewModel: ObservableObject {
             analystConsensus = nil
             analystConsensusMessage = nil
             basicFinancials = nil
+            stockEarnings = []
+            stockEarningsMessage = nil
+            isEarningsLoading = false
             analysisMetrics = nil
             analysisMetricsMessage = nil
             financialStatements = nil
@@ -238,7 +262,51 @@ final class StockDetailsViewModel: ObservableObject {
             primaryComparisonProfile = nil
             comparisonUniverse = []
             selectedPeerSymbols = []
+            comparisonRefreshTask?.cancel()
+            comparisonRefreshTask = nil
+            loadedTabs = []
+            loadingTabs = []
+            loadedStockID = nil
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            Self.logger.error(
+                "Stock details load failed stock_id=\(stockId, privacy: .public) error=\(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
+    func loadSupplementaryDataIfNeeded(for tab: StockDetailTab) async {
+        guard let symbol = details?.symbol else { return }
+
+        switch tab {
+        case .analysis, .forecast, .compare:
+            guard !loadedTabs.contains(.analysis), !loadingTabs.contains(.analysis) else { return }
+            loadingTabs.insert(.analysis)
+            let result = await loadAnalysisMetrics(symbol: symbol)
+            analysisMetrics = result.metrics
+            analysisMetricsMessage = result.message
+            applyAnalysisMetrics(result.metrics, to: symbol)
+            loadedTabs.insert(.analysis)
+            loadingTabs.remove(.analysis)
+        case .statements:
+            guard !loadedTabs.contains(.statements), !loadingTabs.contains(.statements) else { return }
+            loadingTabs.insert(.statements)
+            let result = await loadFinancialStatements(symbol: symbol)
+            financialStatements = result.statements
+            financialStatementsMessage = result.message
+            loadedTabs.insert(.statements)
+            loadingTabs.remove(.statements)
+        case .earnings:
+            guard !loadedTabs.contains(.earnings), !loadingTabs.contains(.earnings) else { return }
+            loadingTabs.insert(.earnings)
+            isEarningsLoading = true
+            let result = await loadStockEarnings(symbol: symbol)
+            stockEarnings = result.events
+            stockEarningsMessage = result.message
+            isEarningsLoading = false
+            loadedTabs.insert(.earnings)
+            loadingTabs.remove(.earnings)
+        case .overview, .news:
+            return
         }
     }
 
@@ -417,6 +485,16 @@ final class StockDetailsViewModel: ObservableObject {
             return try await marketDataService.fetchBasicFinancials(symbol: symbol)
         } catch {
             return nil
+        }
+    }
+
+    private func loadStockEarnings(symbol: String) async -> (events: [EarningsEvent], message: String?) {
+        do {
+            let events = try await marketDataService.fetchStockEarnings(symbol: symbol, limit: 8)
+                .sorted { $0.date > $1.date }
+            return (events, nil)
+        } catch {
+            return ([], error.localizedDescription)
         }
     }
 
@@ -727,23 +805,40 @@ final class StockDetailsViewModel: ObservableObject {
 
         resolved.append(contentsOf: defaults.prefix(max(0, 2 - resolved.count)))
         selectedPeerSymbols = Array(resolved.prefix(2))
-        
-        Task {
-            await refreshComparisonMetrics()
+
+        comparisonRefreshTask?.cancel()
+        comparisonRefreshTask = Task { [weak self] in
+            await self?.refreshComparisonMetrics()
         }
     }
 
     private func refreshComparisonMetrics() async {
         guard !selectedPeerSymbols.isEmpty else { return }
+        let symbols = selectedPeerSymbols
+        let start = ContinuousClock.now
         
         do {
-            let metricsList = try await marketDataService.fetchMarketCompare(symbols: selectedPeerSymbols)
+            let metricsList = try await marketDataService.fetchMarketCompare(symbols: symbols)
+            guard !Task.isCancelled else { return }
             for metrics in metricsList {
                 updateUniverseProfile(with: metrics)
             }
+            Self.logger.debug(
+                "Comparison metrics refresh symbols=\(symbols.joined(separator: ","), privacy: .public) duration_ms=\(Self.durationInMilliseconds(from: start.duration(to: .now)), privacy: .public)"
+            )
         } catch {
-            print("Failed to fetch comparison metrics: \(error)")
+            guard !Task.isCancelled else { return }
+            Self.logger.error(
+                "Comparison metrics refresh failed symbols=\(symbols.joined(separator: ","), privacy: .public) error=\(error.localizedDescription, privacy: .public)"
+            )
         }
+    }
+
+    private static func durationInMilliseconds(from duration: Duration) -> Double {
+        let components = duration.components
+        let millisecondsFromSeconds = Double(components.seconds) * 1_000
+        let millisecondsFromAttoseconds = Double(components.attoseconds) / 1_000_000_000_000_000
+        return millisecondsFromSeconds + millisecondsFromAttoseconds
     }
 
     private func updateUniverseProfile(with metrics: StockAnalysisMetrics) {

@@ -49,8 +49,8 @@ struct ExpensesHTTPClient {
         try await call(GetSnapshotsEndpoint(year: year, month: month))
     }
 
-    func createSnapshot(payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
-        try await call(CreateSnapshotEndpoint(payload: payload))
+    func createBudgetSnapshot(request: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
+        try await call(CreateSnapshotEndpoint(payload: request))
     }
 
     func updateSnapshot(snapshotId: String, payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
@@ -85,12 +85,20 @@ struct ExpensesHTTPClient {
 
     // MARK: - Expenses
 
+    func getHouseholdPartner() async throws -> HouseholdPartnerProfileResponse {
+        try await call(GetHouseholdPartnerEndpoint())
+    }
+
+    func updateHouseholdPartner(payload: HouseholdPartnerProfileRequest) async throws -> HouseholdPartnerProfileResponse {
+        try await call(UpdateHouseholdPartnerEndpoint(payload: payload))
+    }
+
     func getExpenses(from: String? = nil, to: String? = nil) async throws -> [ExpenseResponse] {
         try await call(GetExpensesEndpoint(from: from, to: to))
     }
 
-    func createExpense(payload: ExpenseRequest) async throws -> ExpenseResponse {
-        try await call(CreateExpenseEndpoint(payload: payload))
+    func createExpense(request: ExpenseRequest) async throws -> ExpenseResponse {
+        try await call(CreateExpenseEndpoint(payload: request))
     }
 
     func updateExpense(expenseId: String, payload: ExpenseRequest) async throws -> ExpenseResponse {
@@ -103,12 +111,24 @@ struct ExpensesHTTPClient {
 
     // MARK: - Reports
 
+    func getReportsOverview(from: String? = nil, to: String? = nil) async throws -> ReportsOverviewResponse {
+        try await call(GetReportsOverviewEndpoint(from: from, to: to))
+    }
+
     func getMonthlyExpenseReports(from: String? = nil, to: String? = nil) async throws -> [BudgetMonthSummaryResponse] {
         try await call(GetMonthlyExpenseReportsEndpoint(from: from, to: to))
     }
 
     func getYearlyExpenseReports(from: String? = nil, to: String? = nil) async throws -> [BudgetYearSummaryResponse] {
         try await call(GetYearlyExpenseReportsEndpoint(from: from, to: to))
+    }
+
+    func getReportSuggestions(from: String? = nil, to: String? = nil) async throws -> ReportSuggestionsResponse {
+        try await call(GetReportSuggestionsEndpoint(from: from, to: to))
+    }
+
+    func dismissReportSuggestion(id: String) async throws -> APISuccess {
+        try await call(DismissReportSuggestionEndpoint(suggestionId: id))
     }
 
     // MARK: - Core Logic

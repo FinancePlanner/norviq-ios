@@ -28,19 +28,4 @@ final class UIComponentsTests: XCTestCase {
         let hostingController = UIHostingController(rootView: background)
         XCTAssertNotNil(hostingController.view)
     }
-
-    func testAppTopBar_canBeCompiled() {
-        let topBar = AppTopBar(
-            title: "Norviqa",
-            trailingAccessory: AnyView(
-                AppTopBarProfileButton(
-                    isUserMenuPresented: false,
-                    onTap: {}
-                )
-            )
-        )
-
-        let hostingController = UIHostingController(rootView: topBar)
-        XCTAssertNotNil(hostingController.view)
-    }
 }

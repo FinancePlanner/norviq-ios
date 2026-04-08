@@ -11,6 +11,7 @@ struct ExpensesPlannerScreen: View {
   @State private var isSalaryEditorPresented = false
   @State private var isTargetEditorPresented = false
   @State private var isActivitySheetPresented = false
+  @State private var isPartnerEditorPresented = false
   @State private var itemDraft: BudgetPlanItemDraft?
   @State private var itemToDelete: BudgetPlanItem?
   @State private var destructiveFeedbackTrigger = 0
@@ -18,7 +19,39 @@ struct ExpensesPlannerScreen: View {
   var body: some View {
     NavigationStack {
       ScrollView {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
+          ExpensesCircularOverviewCard(
+            leftAmount: viewModel.selectedMonthLeftAfterSpending,
+            totalAmount: viewModel.selectedMonthSnapshot?.netSalary ?? 0
+          )
+          .padding(.top, 10)
+
+          if (viewModel.selectedMonthSnapshot?.netSalary ?? 0) <= 0 {
+            GlassCard(cornerRadius: 18) {
+              HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                  .foregroundStyle(AppTheme.Colors.warning)
+
+                VStack(alignment: .leading, spacing: 6) {
+                  Text("Set your monthly budget")
+                    .typography(.small, weight: .semibold)
+                  Text("Your monthly budget is currently 0. Add salary and side income so spending insights can calculate correctly.")
+                    .typography(.nano)
+                    .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button("Set") {
+                  isSalaryEditorPresented = true
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+              }
+            }
+            .padding(.horizontal, 16)
+          }
+
           ExpensesYearOverviewCard(
             selectedYear: selectedYearBinding,
             availableYears: viewModel.availableYears,
@@ -27,76 +60,89 @@ struct ExpensesPlannerScreen: View {
             lastMonthLabel: viewModel.selectedYearLastMonthLabel,
             chartPoints: viewModel.selectedYearChartPoints
           )
-
-          ExpensesMonthDetailListCard(
-            selectedMonthStart: selectedMonthBinding,
-            summaries: viewModel.selectedYearSummaries
-          )
-
-          SelectedMonthPlannerCard(
-            monthTitle: viewModel.selectedMonthDisplayTitle,
-            onPlanNextMonth: viewModel.createNextMonthPlan
-          )
+          .padding(.horizontal, 16)
 
           PlannerSalaryCard(
             monthTitle: viewModel.selectedMonthDisplayTitle,
             netSalary: viewModel.selectedMonthSnapshot?.netSalary ?? 0,
             allocated: viewModel.selectedMonthPlannedTotal,
             spent: viewModel.selectedMonthActualTotal,
+            myPlanned: viewModel.selectedMonthMyPlannedTotal,
+            partnerPlanned: viewModel.selectedMonthPartnerPlannedTotal,
+            mySpent: viewModel.selectedMonthMyActualTotal,
+            partnerSpent: viewModel.selectedMonthPartnerActualTotal,
+            partnerName: viewModel.partnerDisplayName,
             leftToAllocate: viewModel.selectedMonthAvailableAfterPillarPlan,
-            leftAfterSpending: viewModel.selectedMonthLeftAfterSpending
+            leftAfterSpending: viewModel.selectedMonthLeftAfterSpending,
+            onEditMonthlyBudget: { isSalaryEditorPresented = true }
           )
+          .padding(.horizontal, 16)
 
           PillarAllocationTableCard(
             monthTitle: viewModel.selectedMonthDisplayTitle,
             summaries: viewModel.selectedMonthSummaries
           )
+          .padding(.horizontal, 16)
 
-          ForEach(BudgetPillar.allCases) { pillar in
-            PillarPlannerCard(
-              pillar: pillar,
-              items: viewModel.items(for: pillar),
-              summary: viewModel.selectedMonthSummaries.first { $0.pillar == pillar }
-                ?? PillarPlanningSummary(
-                  pillar: pillar,
-                  targetAmount: 0,
-                  plannedAmount: 0,
-                  actualAmount: 0,
-                  unplannedActualAmount: 0
-                ),
-              actualAmount: { item in
-                viewModel.actualAmount(for: item)
-              },
-              onEdit: { item in
-                itemDraft = BudgetPlanItemDraft(
-                  itemID: item.id,
-                  title: item.title,
-                  plannedAmount: item.plannedAmount,
-                  pillar: item.pillar
-                )
-              },
-              onAdd: {
-                itemDraft = BudgetPlanItemDraft(
-                  itemID: nil,
-                  title: "",
-                  plannedAmount: 0,
-                  pillar: pillar
-                )
-              },
-              onDelete: { item in
-                itemToDelete = item
-              }
+          SmartSuggestionsCard(
+            suggestion: viewModel.topReportSuggestion,
+            isLoading: viewModel.isSuggestionsLoading,
+            isUnavailable: viewModel.suggestionsUnavailable,
+            onDismiss: { suggestion in
+              viewModel.dismissSuggestion(suggestion)
+            }
+          )
+            .padding(.horizontal, 16)
+
+          RecentTransactionsList(activities: viewModel.selectedMonthActivities)
+            .padding(.horizontal, 16)
+            
+          NavigationLink {
+            BudgetCategoryDetailsScreen(
+              viewModel: viewModel,
+              isProfilePresented: $isProfilePresented,
+              isActivitySheetPresented: $isActivitySheetPresented,
+              itemDraft: $itemDraft
+            )
+          } label: {
+            HStack {
+              Image(systemName: "square.grid.2x2.fill")
+                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+              Text("Budget Category Details")
+                .font(.headline)
+                .foregroundStyle(.primary)
+              Spacer()
+              Image(systemName: "chevron.right")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+            }
+            .padding()
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(16)
+            .overlay(
+              RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.05), lineWidth: 1)
             )
           }
-
-          RecentActivityCard(activities: viewModel.selectedMonthActivities)
+          .padding(.horizontal, 16)
+          .padding(.bottom, 40)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 20)
+        .padding(.vertical, 10)
       }
       .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
-      .navigationTitle("Expenses")
-      .navigationBarTitleDisplayMode(.large)
+      .navigationTitle("Expenses and Budgeting")
+      .navigationBarTitleDisplayMode(.inline)
+      .overlay(alignment: .top) {
+        if let errorMessage = viewModel.errorMessage {
+          Text(errorMessage)
+            .font(.caption)
+            .foregroundStyle(.white)
+            .padding()
+            .background(Color.red)
+            .cornerRadius(8)
+            .padding()
+        }
+      }
       .task {
         await viewModel.load()
       }
@@ -127,7 +173,7 @@ struct ExpensesPlannerScreen: View {
                 viewModel.createNextMonthPlan()
               }
 
-              Button("Adjust net salary", systemImage: "eurosign.circle") {
+              Button("Adjust monthly budget", systemImage: "eurosign.circle") {
                 isSalaryEditorPresented = true
               }
 
@@ -140,12 +186,18 @@ struct ExpensesPlannerScreen: View {
                   itemID: nil,
                   title: "",
                   plannedAmount: 0,
-                  pillar: .fundamentals
+                  pillar: .fundamentals,
+                  splitMode: .personal,
+                  userSharePercent: 100
                 )
               }
 
               Button("Record spend", systemImage: "plus.circle") {
                 isActivitySheetPresented = true
+              }
+
+              Button("Household partner", systemImage: "person.2") {
+                isPartnerEditorPresented = true
               }
               
               Divider()
@@ -172,12 +224,6 @@ struct ExpensesPlannerScreen: View {
                 .appGlassEffect(.capsule)
             }
             .accessibilityLabel("Open settings")
-
-            AppTopBarProfileButton(
-              isUserMenuPresented: isProfilePresented,
-              onTap: { isProfilePresented = true }
-            )
-            .accessibilityLabel("Open profile")
           }
         }
       }
@@ -209,6 +255,13 @@ struct ExpensesPlannerScreen: View {
           availableItems: viewModel.selectedMonthSnapshot?.items ?? []
         ) { draft in
           viewModel.recordExpense(draft)
+        }
+      }
+      .sheet(isPresented: $isPartnerEditorPresented) {
+        HouseholdPartnerEditorSheet(
+          currentName: viewModel.partnerDisplayName == "Partner" ? "" : viewModel.partnerDisplayName
+        ) { name in
+          viewModel.updatePartnerDisplayName(name)
         }
       }
       .confirmationDialog(
@@ -424,46 +477,79 @@ private struct PlannerSalaryCard: View {
   let netSalary: Double
   let allocated: Double
   let spent: Double
+  let myPlanned: Double
+  let partnerPlanned: Double
+  let mySpent: Double
+  let partnerSpent: Double
+  let partnerName: String
   let leftToAllocate: Double
   let leftAfterSpending: Double
+  let onEditMonthlyBudget: () -> Void
 
   var body: some View {
-    GlassCard {
-      VStack(alignment: .leading, spacing: 16) {
-        Text("Net salary plan")
-          .typography(.small, weight: .semibold)
-
-        Text(monthTitle)
-          .typography(.nano)
-          .foregroundStyle(.secondary)
-
-        HStack(alignment: .lastTextBaseline, spacing: 8) {
-          Text(netSalary.currency)
-            .typography(.hero, weight: .bold)
-            .contentTransition(.numericText())
-          Text("monthly take-home")
-            .typography(.small)
+    GlassCard(cornerRadius: 20) {
+      VStack(alignment: .center, spacing: 16) {
+        HStack {
+          Text("Monthly Budget Plan")
+            .font(.headline)
+          Spacer()
+          Text(monthTitle)
+            .font(.subheadline)
             .foregroundStyle(.secondary)
         }
+        
+        VStack(spacing: 4) {
+          Text(netSalary.currency)
+            .font(.system(size: 40, weight: .bold, design: .rounded))
+            .contentTransition(.numericText())
+          Text("salary + side income")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 8)
 
-        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
-          GridRow {
-            SummaryMetric(title: "Planned", value: allocated.currency)
-            SummaryMetric(title: "Spent", value: spent.currency)
-          }
+        Button("Edit monthly budget") {
+          onEditMonthlyBudget()
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.small)
+        
+        HStack(spacing: 0) {
+          MetricItem(title: "Planned", value: allocated.currency, color: .primary)
+          Divider().background(Color.white.opacity(0.1))
+          MetricItem(title: "Spent", value: spent.currency, color: .primary)
+        }
 
-          GridRow {
-            SummaryMetric(
-              title: "Available after plan",
-              value: leftToAllocate.currency,
-              accent: leftToAllocate >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger
-            )
-            SummaryMetric(
-              title: "Available after spend",
-              value: leftAfterSpending.currency,
-              accent: leftAfterSpending >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger
-            )
-          }
+        Divider().background(Color.white.opacity(0.1))
+
+        HStack(spacing: 0) {
+          MetricItem(title: "My plan", value: myPlanned.currency, color: .primary)
+          Divider().background(Color.white.opacity(0.1))
+          MetricItem(title: "\(partnerName) plan", value: partnerPlanned.currency, color: .primary)
+        }
+
+        Divider().background(Color.white.opacity(0.1))
+
+        HStack(spacing: 0) {
+          MetricItem(title: "My spend", value: mySpent.currency, color: .primary)
+          Divider().background(Color.white.opacity(0.1))
+          MetricItem(title: "\(partnerName) spend", value: partnerSpent.currency, color: .primary)
+        }
+        
+        Divider().background(Color.white.opacity(0.1))
+        
+        HStack(spacing: 0) {
+          MetricItem(
+            title: "Available after plan",
+            value: leftToAllocate.currency,
+            color: leftToAllocate >= 0 ? .green : .red
+          )
+          Divider().background(Color.white.opacity(0.1))
+          MetricItem(
+            title: "Available after spend",
+            value: leftAfterSpending.currency,
+            color: leftAfterSpending >= 0 ? .green : .red
+          )
         }
       }
     }
@@ -475,39 +561,44 @@ private struct PillarAllocationTableCard: View {
   let summaries: [PillarPlanningSummary]
 
   var body: some View {
-    GlassCard {
+    GlassCard(cornerRadius: 20) {
       VStack(alignment: .leading, spacing: 16) {
-        Text("Where your salary goes")
-          .typography(.small, weight: .semibold)
-
-        Text(monthTitle)
-          .typography(.nano)
-          .foregroundStyle(.secondary)
+        HStack {
+          Text("Where your salary goes")
+            .font(.headline)
+          Spacer()
+          Text(monthTitle)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
 
         Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 12) {
           GridRow {
-            PlannerTableHeader("Pillar")
-            PlannerTableHeader("Goal")
-            PlannerTableHeader("Plan")
-            PlannerTableHeader("Actual")
-            PlannerTableHeader("Left")
+            Text("Pillar").font(.subheadline).foregroundStyle(.secondary)
+            Text("Goal").font(.subheadline).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+            Text("Plan").font(.subheadline).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+            Text("Actual").font(.subheadline).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+            Text("Left").font(.subheadline).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
           }
+
+          Divider().background(Color.white.opacity(0.1))
 
           ForEach(summaries) { summary in
             GridRow {
               Text(summary.pillar.title)
-                .typography(.nano, weight: .semibold)
+                .font(.subheadline)
               Text(summary.targetAmount.currency)
-                .typography(.nano)
+                .font(.subheadline).foregroundStyle(.secondary)
               Text(summary.plannedAmount.currency)
-                .typography(.nano)
+                .font(.subheadline).foregroundStyle(.secondary)
               Text(summary.actualAmount.currency)
-                .typography(.nano)
+                .font(.subheadline).foregroundStyle(.secondary)
               Text(summary.availableToPlan.currency)
-                .typography(.nano, weight: .semibold)
-                .foregroundStyle(
-                  summary.availableToPlan >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger
-                )
+                .font(.subheadline)
+                .foregroundStyle(summary.availableToPlan >= 0 ? .green : .red)
+            }
+            if summary.id != summaries.last?.id {
+              Divider().background(Color.white.opacity(0.1))
             }
           }
         }
@@ -607,6 +698,9 @@ private struct PlannerItemRow: View {
           Text(item.title)
             .typography(.small, weight: .semibold)
             .foregroundStyle(.primary)
+          Text(splitLabel)
+            .typography(.nano)
+            .foregroundStyle(.secondary)
           Text("Planned \(item.plannedAmount.currency) • Spent \(actualAmount.currency)")
             .typography(.nano)
             .foregroundStyle(.secondary)
@@ -639,6 +733,15 @@ private struct PlannerItemRow: View {
     .accessibilityLabel(Text(item.title))
     .accessibilityValue(Text("Planned \(item.plannedAmount.currency), Spent \(actualAmount.currency)"))
   }
+
+  private var splitLabel: String {
+    switch item.splitMode {
+    case .personal:
+      return "Personal"
+    case .shared:
+      return "Shared \(Int(item.userSharePercent.rounded()))/\(Int((100 - item.userSharePercent).rounded()))"
+    }
+  }
 }
 
 private struct RecentActivityCard: View {
@@ -663,6 +766,9 @@ private struct RecentActivityCard: View {
                 Text(activity.occurredOn.formatted(date: .abbreviated, time: .omitted))
                   .typography(.nano)
                   .foregroundStyle(.secondary)
+                Text(splitLabel(for: activity))
+                  .typography(.nano)
+                  .foregroundStyle(.secondary)
               }
 
               Spacer()
@@ -677,6 +783,15 @@ private struct RecentActivityCard: View {
           }
         }
       }
+    }
+  }
+
+  private func splitLabel(for activity: BudgetActivity) -> String {
+    switch activity.splitMode {
+    case .personal:
+      return "Personal"
+    case .shared:
+      return "Shared \(Int(activity.userSharePercent.rounded()))/\(Int((100 - activity.userSharePercent).rounded()))"
     }
   }
 }
@@ -746,17 +861,21 @@ private struct NetSalaryEditorSheet: View {
   var body: some View {
     NavigationStack {
       Form {
-        Section("Net Salary") {
+        Section("Monthly Budget") {
           Text(monthTitle)
             .foregroundStyle(.secondary)
 
-          TextField("Net salary", text: $value)
+          TextField("Monthly budget", text: $value)
             .keyboardType(.decimalPad)
             .focused($isValueFocused)
+
+          Text("You can include take-home salary and extra monthly income sources.")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
         }
       }
       .listStyle(.insetGrouped)
-      .navigationTitle("Adjust Salary")
+      .navigationTitle("Adjust Monthly Budget")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
@@ -765,7 +884,7 @@ private struct NetSalaryEditorSheet: View {
 
         ToolbarItem(placement: .confirmationAction) {
           Button("Save") {
-            guard let parsed = Double(value.replacingOccurrences(of: ",", with: ".")) else { return }
+            guard let parsed = parseMonetaryValue(value), parsed >= 0 else { return }
             onSave(parsed)
             successFeedbackTrigger += 1
             dismiss()
@@ -778,6 +897,55 @@ private struct NetSalaryEditorSheet: View {
       }
     }
     .appSensoryFeedback(success: successFeedbackTrigger)
+  }
+
+  private func parseMonetaryValue(_ raw: String) -> Double? {
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return nil }
+
+    let filtered = trimmed.filter { $0.isNumber || $0 == "," || $0 == "." }
+    guard !filtered.isEmpty else { return nil }
+
+    let characters = Array(filtered)
+    let separatorIndexes = characters.indices.filter { characters[$0] == "," || characters[$0] == "." }
+
+    if separatorIndexes.isEmpty {
+      return Double(filtered)
+    }
+
+    if separatorIndexes.count == 1 {
+      let separatorIndex = separatorIndexes[0]
+      let leadingDigits = separatorIndex
+      let trailingDigits = characters.count - separatorIndex - 1
+      if leadingDigits > 0 && trailingDigits == 3 {
+        let normalized = filtered
+          .replacingOccurrences(of: ",", with: "")
+          .replacingOccurrences(of: ".", with: "")
+        return Double(normalized)
+      }
+    }
+
+    let decimalSeparator = characters[separatorIndexes.last!]
+    var normalized = ""
+    var consumedDecimal = false
+
+    for character in characters {
+      if character.isNumber {
+        normalized.append(character)
+        continue
+      }
+
+      if (character == "," || character == ".")
+        && character == decimalSeparator
+        && !consumedDecimal
+      {
+        normalized.append(".")
+        consumedDecimal = true
+      }
+    }
+
+    guard normalized != "." else { return nil }
+    return Double(normalized)
   }
 }
 
@@ -875,6 +1043,8 @@ private struct PlanItemEditorSheet: View {
   @State private var title: String
   @State private var plannedAmount: String
   @State private var pillar: BudgetPillar
+  @State private var splitMode: ExpenseSplitMode
+  @State private var userSharePercent: Double
   @FocusState private var isAmountFocused: Bool
   @State private var successFeedbackTrigger = 0
 
@@ -889,6 +1059,8 @@ private struct PlanItemEditorSheet: View {
         : draft.plannedAmount.formatted(.number.precision(.fractionLength(2)))
     )
     _pillar = State(initialValue: draft.pillar)
+    _splitMode = State(initialValue: draft.splitMode)
+    _userSharePercent = State(initialValue: draft.userSharePercent)
     self.itemID = draft.itemID
     self.onSave = onSave
   }
@@ -934,6 +1106,29 @@ private struct PlanItemEditorSheet: View {
             }
           }
 
+          FormCard(title: "Split") {
+            FormRow(icon: "person.2", iconColor: .green, label: "Mode") {
+              Picker("Mode", selection: $splitMode) {
+                Text("Personal").tag(ExpenseSplitMode.personal)
+                Text("Shared").tag(ExpenseSplitMode.shared)
+              }
+              .labelsHidden()
+            }
+
+            if splitMode == .shared {
+              FormDivider()
+              VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                  Text("My share")
+                  Spacer()
+                  Text("\(Int(userSharePercent.rounded()))%")
+                    .foregroundStyle(.secondary)
+                }
+                Slider(value: $userSharePercent, in: 0...100, step: 1)
+              }
+            }
+          }
+
           Spacer(minLength: 80)
         }
         .padding(.horizontal, 20)
@@ -953,7 +1148,9 @@ private struct PlanItemEditorSheet: View {
             itemID: itemID,
             title: title,
             plannedAmount: amount,
-            pillar: pillar
+            pillar: pillar,
+            splitMode: splitMode,
+            userSharePercent: splitMode == .personal ? 100 : userSharePercent
           )
         )
         successFeedbackTrigger += 1
@@ -979,6 +1176,8 @@ private struct RecordSpendSheet: View {
   @State private var pillar: BudgetPillar = .fundamentals
   @State private var occurredOn = Date()
   @State private var linkedPlanItemID: UUID?
+  @State private var splitMode: ExpenseSplitMode = .personal
+  @State private var userSharePercent: Double = 100
   @FocusState private var isAmountFocused: Bool
   @State private var successFeedbackTrigger = 0
 
@@ -1050,6 +1249,29 @@ private struct RecordSpendSheet: View {
             }
           }
 
+          FormCard(title: "Split") {
+            FormRow(icon: "person.2", iconColor: .green, label: "Mode") {
+              Picker("Mode", selection: $splitMode) {
+                Text("Personal").tag(ExpenseSplitMode.personal)
+                Text("Shared").tag(ExpenseSplitMode.shared)
+              }
+              .labelsHidden()
+            }
+
+            if splitMode == .shared {
+              FormDivider()
+              VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                  Text("My share")
+                  Spacer()
+                  Text("\(Int(userSharePercent.rounded()))%")
+                    .foregroundStyle(.secondary)
+                }
+                Slider(value: $userSharePercent, in: 0...100, step: 1)
+              }
+            }
+          }
+
           Spacer(minLength: 80)
         }
         .padding(.horizontal, 20)
@@ -1080,7 +1302,9 @@ private struct RecordSpendSheet: View {
             amount: parsedAmount,
             pillar: pillar,
             occurredOn: occurredOn,
-            linkedPlanItemID: linkedPlanItemID
+            linkedPlanItemID: linkedPlanItemID,
+            splitMode: splitMode,
+            userSharePercent: splitMode == .personal ? 100 : userSharePercent
           )
         )
         successFeedbackTrigger += 1
@@ -1090,6 +1314,11 @@ private struct RecordSpendSheet: View {
     .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
     .presentationDragIndicator(.visible)
     .appSensoryFeedback(success: successFeedbackTrigger)
+    .onChange(of: linkedPlanItemID) { newValue in
+      guard let newValue, let item = availableItems.first(where: { $0.id == newValue }) else { return }
+      splitMode = item.splitMode
+      userSharePercent = item.userSharePercent
+    }
   }
 
   private var filteredItems: [BudgetPlanItem] {
@@ -1097,3 +1326,336 @@ private struct RecordSpendSheet: View {
   }
 }
 
+private struct HouseholdPartnerEditorSheet: View {
+  @Environment(\.dismiss) private var dismiss
+  @State private var name: String
+
+  let onSave: (String?) -> Void
+
+  init(currentName: String, onSave: @escaping (String?) -> Void) {
+    _name = State(initialValue: currentName)
+    self.onSave = onSave
+  }
+
+  var body: some View {
+    NavigationStack {
+      Form {
+        Section("Partner") {
+          TextField("Name", text: $name)
+        }
+      }
+      .navigationTitle("Household Partner")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("Cancel") { dismiss() }
+        }
+        ToolbarItem(placement: .confirmationAction) {
+          Button("Save") {
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            onSave(trimmed.isEmpty ? nil : trimmed)
+            dismiss()
+          }
+        }
+      }
+    }
+  }
+}
+
+// MARK: - Native Feel Components
+
+struct ExpensesCircularOverviewCard: View {
+  let leftAmount: Double
+  let totalAmount: Double
+  @State private var progress: Double = 0
+  
+  var body: some View {
+    VStack {
+      ZStack {
+        Circle()
+          .stroke(Color.white.opacity(0.1), lineWidth: 20)
+        
+        Circle()
+          .trim(from: 0, to: progress)
+          .stroke(
+            AngularGradient(
+              gradient: Gradient(colors: [
+                Color(red: 0.7, green: 0.3, blue: 1.0), // Purple at top
+                Color(red: 0.9, green: 0.4, blue: 0.8), // Pink at right
+                Color(red: 0.5, green: 0.3, blue: 1.0), // Purple at bottom
+                Color(red: 0.2, green: 0.6, blue: 1.0), // Blue at left
+                Color(red: 0.7, green: 0.3, blue: 1.0)  // Purple at top
+              ]),
+              center: .center,
+              startAngle: .degrees(-90),
+              endAngle: .degrees(270)
+            ),
+            style: StrokeStyle(lineWidth: 20, lineCap: .round)
+          )
+          .rotationEffect(.degrees(-90))
+        
+        VStack(spacing: 8) {
+          Text("Monthly Budget")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+          
+          HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text(leftAmount.currency)
+              .font(.system(size: 40, weight: .bold, design: .rounded))
+            Text("Left")
+              .font(.title2)
+          }
+          
+          Text("of \(totalAmount.currency)")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+      }
+      .frame(height: 260)
+      .padding(.horizontal, 40)
+      .padding(.vertical, 20)
+    }
+    .onAppear {
+      withAnimation(.spring(response: 1.5, dampingFraction: 0.8).delay(0.2)) {
+        progress = totalAmount > 0 ? max(0, min(1, leftAmount / totalAmount)) : 0
+      }
+    }
+  }
+}
+
+struct SmartSuggestionsCard: View {
+  let suggestion: ReportSuggestionResponse?
+  let isLoading: Bool
+  let isUnavailable: Bool
+  let onDismiss: (ReportSuggestionResponse) -> Void
+
+  @State private var selectedSuggestion: ReportSuggestionResponse?
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 16) {
+      HStack(spacing: 8) {
+        Image(systemName: "lightbulb.fill")
+          .foregroundStyle(.yellow)
+          .font(.title3)
+        Text("Smart Suggestions")
+          .font(.headline)
+      }
+
+      if isLoading {
+        VStack(alignment: .leading, spacing: 12) {
+          Text("Loading suggestion")
+            .font(.subheadline)
+          RoundedRectangle(cornerRadius: 10)
+            .fill(Color.white.opacity(0.18))
+            .frame(height: 12)
+          RoundedRectangle(cornerRadius: 10)
+            .fill(Color.white.opacity(0.18))
+            .frame(height: 12)
+          RoundedRectangle(cornerRadius: 12)
+            .fill(Color.white.opacity(0.14))
+            .frame(height: 42)
+        }
+        .redacted(reason: .placeholder)
+        .shimmer()
+      } else if let suggestion {
+        VStack(alignment: .leading, spacing: 12) {
+          HStack(spacing: 8) {
+            Text(suggestion.severity.rawValue.capitalized)
+              .font(.caption.weight(.semibold))
+              .foregroundStyle(.white)
+              .padding(.horizontal, 8)
+              .padding(.vertical, 4)
+              .background(severityColor(suggestion.severity), in: Capsule())
+            Text(suggestion.monthStart)
+              .font(.caption)
+              .foregroundStyle(.secondary)
+          }
+
+          Text(suggestion.title)
+            .font(.headline)
+            .foregroundStyle(.primary)
+
+          Text(suggestion.message)
+            .font(.subheadline)
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
+
+          Text("Potential savings: \(suggestion.recommendedSavings.currency)")
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(severityColor(suggestion.severity))
+        }
+        .transition(.asymmetric(insertion: .scale(scale: 0.98).combined(with: .opacity), removal: .opacity))
+
+        HStack(spacing: 12) {
+          Button {
+            selectedSuggestion = suggestion
+          } label: {
+            Text("View Details")
+              .font(.subheadline.weight(.semibold))
+              .frame(maxWidth: .infinity)
+              .padding(.vertical, 12)
+              .background(Color.white.opacity(0.1))
+              .cornerRadius(12)
+              .foregroundStyle(.white)
+          }
+
+          Button {
+            onDismiss(suggestion)
+          } label: {
+            Text("Dismiss")
+              .font(.subheadline.weight(.semibold))
+              .frame(maxWidth: .infinity)
+              .padding(.vertical, 12)
+              .background(Color.white.opacity(0.1))
+              .cornerRadius(12)
+              .foregroundStyle(.white)
+          }
+        }
+      } else {
+        VStack(alignment: .leading, spacing: 8) {
+          Text(isUnavailable ? "Unavailable" : "No suggestions right now")
+            .font(.subheadline.weight(.semibold))
+          Text(isUnavailable ? "-- / no data" : "You're all caught up for this period.")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+      }
+    }
+    .padding(20)
+    .background(Color(uiColor: .secondarySystemGroupedBackground))
+    .cornerRadius(20)
+    .animation(.easeOut(duration: 0.25), value: isLoading)
+    .sheet(item: $selectedSuggestion) { suggestion in
+      SuggestionDetailSheet(suggestion: suggestion)
+    }
+  }
+
+  private func severityColor(_ severity: ReportSuggestionSeverity) -> Color {
+    switch severity {
+    case .high:
+      return .red
+    case .medium:
+      return .orange
+    case .low:
+      return .green
+    }
+  }
+}
+
+private struct SuggestionDetailSheet: View {
+  @Environment(\.dismiss) private var dismiss
+  let suggestion: ReportSuggestionResponse
+
+  var body: some View {
+    NavigationStack {
+      List {
+        Section("Summary") {
+          LabeledContent("Category", value: suggestion.category.rawValue)
+          LabeledContent("Month", value: suggestion.monthStart)
+          LabeledContent("Recommended savings", value: suggestion.recommendedSavings.currency)
+        }
+        if suggestion.detailPayload.isEmpty == false {
+          Section("Details") {
+            ForEach(suggestion.detailPayload.keys.sorted(), id: \.self) { key in
+              LabeledContent(key, value: suggestion.detailPayload[key] ?? "")
+            }
+          }
+        }
+      }
+      .navigationTitle(suggestion.title)
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .confirmationAction) {
+          Button("Done") { dismiss() }
+        }
+      }
+    }
+  }
+}
+
+struct RecentTransactionsList: View {
+  let activities: [BudgetActivity]
+  
+  private func relativeDateString(from date: Date) -> String {
+      let calendar = Calendar.current
+      if calendar.isDateInToday(date) { return "Today" }
+      if calendar.isDateInYesterday(date) { return "Yesterday" }
+      let formatter = DateFormatter()
+      formatter.dateFormat = "MMM d"
+      return formatter.string(from: date)
+  }
+  
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("Recent Transactions")
+        .font(.title2.bold())
+        .padding(.horizontal, 4)
+      
+      VStack(spacing: 0) {
+        if activities.isEmpty {
+          Text("No recent transactions.")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .padding()
+        } else {
+          ForEach(activities.prefix(5)) { activity in
+            HStack(spacing: 16) {
+              Circle()
+                .fill(activity.pillar.color(for: .dark))
+                .frame(width: 48, height: 48)
+                .overlay(
+                  Image(systemName: activity.pillar.symbol)
+                    .foregroundStyle(.white)
+                    .font(.title3)
+                )
+              
+              VStack(alignment: .leading, spacing: 4) {
+                Text(activity.pillar.title)
+                  .font(.headline)
+                Text(activity.title)
+                  .font(.subheadline)
+                  .foregroundStyle(.secondary)
+                Text(relativeDateString(from: activity.occurredOn))
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+              }
+              
+              Spacer()
+              
+              Text("-\(activity.amount.currency)")
+                .font(.headline)
+            }
+            .padding(.vertical, 14)
+            .padding(.horizontal, 16)
+            
+            if activity.id != activities.prefix(5).last?.id {
+              Divider()
+                .background(Color.white.opacity(0.1))
+                .padding(.leading, 80)
+            }
+          }
+        }
+      }
+      .background(Color(uiColor: .secondarySystemGroupedBackground))
+      .cornerRadius(20)
+    }
+  }
+}
+
+private struct MetricItem: View {
+  let title: String
+  let value: String
+  let color: Color
+
+  var body: some View {
+    VStack(spacing: 4) {
+      Text(title)
+        .font(.caption)
+        .foregroundStyle(.secondary)
+      Text(value)
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(color)
+    }
+    .frame(maxWidth: .infinity)
+  }
+}

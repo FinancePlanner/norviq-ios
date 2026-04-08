@@ -121,7 +121,7 @@ struct MarketDataHTTPClient {
     try await call(GetGeneralMarketNewsEndpoint(limit: limit))
   }
 
-  private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
+  func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
     let data = try await perform(endpoint)
     do {
       return try endpoint.decode(data)
