@@ -1384,7 +1384,9 @@ final class ExpenseBudgetSetupViewModel: ObservableObject {
         amount: amount,
         pillar: expense.pillar,
         occurredOn: dateFormatter.string(from: now),
-        linkedPlanItemId: nil
+        linkedPlanItemId: nil,
+        splitMode: .personal,
+        userSharePercent: 100
       )
       
       try await expensesService.createExpense(request: expenseRequest)

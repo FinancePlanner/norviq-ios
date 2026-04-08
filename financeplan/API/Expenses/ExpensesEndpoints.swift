@@ -26,8 +26,11 @@ struct CreateSnapshotEndpoint: Endpoint {
     var path: String { "/v1/budget/snapshots" }
     var decoder: JSONDecoder { .stockPlanShared }
     func asParameters() throws -> Parameters {
-        let data = try JSONEncoder.stockPlanShared.encode(payload)
-        return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+        [
+            "monthStart": payload.monthStart,
+            "netSalary": payload.netSalary,
+            "targetShares": payload.targetShares
+        ]
     }
 }
 
@@ -39,8 +42,11 @@ struct UpdateSnapshotEndpoint: Endpoint {
     var path: String { "/v1/budget/snapshots/\(snapshotId)" }
     var decoder: JSONDecoder { .stockPlanShared }
     func asParameters() throws -> Parameters {
-        let data = try JSONEncoder.stockPlanShared.encode(payload)
-        return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+        [
+            "monthStart": payload.monthStart,
+            "netSalary": payload.netSalary,
+            "targetShares": payload.targetShares
+        ]
     }
 }
 

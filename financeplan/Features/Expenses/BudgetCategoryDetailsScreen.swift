@@ -5,7 +5,8 @@ struct BudgetCategoryDetailsScreen: View {
   @ObservedObject var viewModel: BudgetPlannerViewModel
   @Binding var isProfilePresented: Bool
   @Binding var isActivitySheetPresented: Bool
-  @Binding var itemDraft: BudgetPlanItemDraft?
+  let onAddPlannedItem: (BudgetPillar) -> Void
+  let onRecordExpense: (BudgetPillar) -> Void
 
   @Environment(\.colorScheme) private var colorScheme
 
@@ -25,15 +26,11 @@ struct BudgetCategoryDetailsScreen: View {
           BudgetCategoryCard(
             pillar: pillar,
             summary: summary,
-            onAdd: {
-              itemDraft = BudgetPlanItemDraft(
-                itemID: nil,
-                title: "",
-                plannedAmount: 0,
-                pillar: pillar,
-                splitMode: .personal,
-                userSharePercent: 100
-              )
+            onAddPlanItem: {
+              onAddPlannedItem(pillar)
+            },
+            onRecordExpense: {
+              onRecordExpense(pillar)
             }
           )
         }
@@ -57,12 +54,13 @@ struct BudgetCategoryDetailsScreen: View {
 private struct BudgetCategoryCard: View {
   let pillar: BudgetPillar
   let summary: PillarPlanningSummary
-  let onAdd: () -> Void
+  let onAddPlanItem: () -> Void
+  let onRecordExpense: () -> Void
 
   @Environment(\.colorScheme) private var colorScheme
 
   private var leftAmount: Double {
-    summary.plannedAmount - summary.actualAmount
+    summary.targetAmount - summary.actualAmount
   }
 
   var body: some View {
@@ -83,7 +81,14 @@ private struct BudgetCategoryCard: View {
           }
         }
         Spacer()
-        Button(action: onAdd) {
+        Menu {
+          Button("Plan item", systemImage: "plus.rectangle.on.folder") {
+            onAddPlanItem()
+          }
+          Button("Record expense", systemImage: "plus.circle") {
+            onRecordExpense()
+          }
+        } label: {
           HStack(spacing: 4) {
             Image(systemName: "plus")
             Text("Add")

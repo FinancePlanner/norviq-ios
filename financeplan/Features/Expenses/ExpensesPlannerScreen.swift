@@ -13,7 +13,10 @@ struct ExpensesPlannerScreen: View {
   @State private var isActivitySheetPresented = false
   @State private var isPartnerEditorPresented = false
   @State private var itemDraft: BudgetPlanItemDraft?
+  @State private var presentedPlanItemDraft: BudgetPlanItemDraft?
+  @State private var didSavePresentedPlanItemDraft = false
   @State private var itemToDelete: BudgetPlanItem?
+  @State private var recordSpendInitialPillar: BudgetPillar = .fundamentals
   @State private var destructiveFeedbackTrigger = 0
 
   var body: some View {
@@ -102,7 +105,13 @@ struct ExpensesPlannerScreen: View {
               viewModel: viewModel,
               isProfilePresented: $isProfilePresented,
               isActivitySheetPresented: $isActivitySheetPresented,
-              itemDraft: $itemDraft
+              onAddPlannedItem: { pillar in
+                presentNewPlanItemDraft(pillar: pillar)
+              },
+              onRecordExpense: { pillar in
+                recordSpendInitialPillar = pillar
+                isActivitySheetPresented = true
+              }
             )
           } label: {
             HStack {
@@ -158,6 +167,7 @@ struct ExpensesPlannerScreen: View {
         ToolbarItem(placement: .topBarTrailing) {
           HStack(spacing: 8) {
             Button {
+              recordSpendInitialPillar = .fundamentals
               isActivitySheetPresented = true
             } label: {
               Image(systemName: "plus.circle")
@@ -182,17 +192,11 @@ struct ExpensesPlannerScreen: View {
               }
 
               Button("Add planned item", systemImage: "plus.rectangle.on.folder") {
-                itemDraft = BudgetPlanItemDraft(
-                  itemID: nil,
-                  title: "",
-                  plannedAmount: 0,
-                  pillar: .fundamentals,
-                  splitMode: .personal,
-                  userSharePercent: 100
-                )
+                presentNewPlanItemDraft(pillar: .fundamentals)
               }
 
               Button("Record spend", systemImage: "plus.circle") {
+                recordSpendInitialPillar = .fundamentals
                 isActivitySheetPresented = true
               }
 
@@ -244,14 +248,28 @@ struct ExpensesPlannerScreen: View {
           onSave: viewModel.updateTargetShares
         )
       }
-      .sheet(item: $itemDraft) { draft in
+      .sheet(
+        item: $itemDraft,
+        onDismiss: {
+          if !didSavePresentedPlanItemDraft, let draft = presentedPlanItemDraft {
+            viewModel.cancelPlanItemDraft(draft)
+          }
+          didSavePresentedPlanItemDraft = false
+          presentedPlanItemDraft = nil
+        }
+      ) { draft in
         PlanItemEditorSheet(draft: draft) { updatedDraft in
+          didSavePresentedPlanItemDraft = true
           viewModel.addOrUpdatePlanItem(updatedDraft)
         }
       }
-      .sheet(isPresented: $isActivitySheetPresented) {
+      .sheet(isPresented: $isActivitySheetPresented, onDismiss: {
+        recordSpendInitialPillar = .fundamentals
+      }) {
         RecordSpendSheet(
           monthTitle: viewModel.selectedMonthDisplayTitle,
+          selectedMonthStart: viewModel.selectedMonthStart,
+          initialPillar: recordSpendInitialPillar,
           availableItems: viewModel.selectedMonthSnapshot?.items ?? []
         ) { draft in
           viewModel.recordExpense(draft)
@@ -288,6 +306,16 @@ struct ExpensesPlannerScreen: View {
       get: { viewModel.selectedMonthStart },
       set: { viewModel.selectMonth($0) }
     )
+  }
+
+  private func presentNewPlanItemDraft(pillar: BudgetPillar) {
+    Task {
+      if let draft = await viewModel.beginPlannedItemDraft(pillar: pillar) {
+        presentedPlanItemDraft = draft
+        didSavePresentedPlanItemDraft = false
+        itemDraft = draft
+      }
+    }
   }
 
   private var selectedYearBinding: Binding<Int> {
@@ -1046,9 +1074,11 @@ private struct PlanItemEditorSheet: View {
   @State private var splitMode: ExpenseSplitMode
   @State private var userSharePercent: Double
   @FocusState private var isAmountFocused: Bool
+  @State private var validationMessage: String?
   @State private var successFeedbackTrigger = 0
 
   let itemID: UUID?
+  let placeholderItemID: UUID?
   let onSave: (BudgetPlanItemDraft) -> Void
 
   init(draft: BudgetPlanItemDraft, onSave: @escaping (BudgetPlanItemDraft) -> Void) {
@@ -1062,6 +1092,7 @@ private struct PlanItemEditorSheet: View {
     _splitMode = State(initialValue: draft.splitMode)
     _userSharePercent = State(initialValue: draft.userSharePercent)
     self.itemID = draft.itemID
+    self.placeholderItemID = draft.placeholderItemID
     self.onSave = onSave
   }
 
@@ -1093,6 +1124,12 @@ private struct PlanItemEditorSheet: View {
               keyboardType: .decimalPad
             )
             .focused($isAmountFocused)
+
+            if let validationMessage {
+              Text(validationMessage)
+                .font(.caption)
+                .foregroundStyle(.red)
+            }
           }
 
           FormCard(title: "Category") {
@@ -1140,12 +1177,21 @@ private struct PlanItemEditorSheet: View {
         primaryLabel: "Save",
         isDisabled: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
       ) {
-        guard let amount = Double(plannedAmount.replacingOccurrences(of: ",", with: ".")) else {
+        let normalizedAmount = plannedAmount.trimmingCharacters(in: .whitespacesAndNewlines)
+        let amount: Double
+        if normalizedAmount.isEmpty {
+          amount = 0
+        } else if let parsed = Double(normalizedAmount.replacingOccurrences(of: ",", with: ".")) {
+          amount = parsed
+        } else {
+          validationMessage = "Enter a valid amount (for example: 120 or 120.50)."
           return
         }
+        validationMessage = nil
         onSave(
           BudgetPlanItemDraft(
             itemID: itemID,
+            placeholderItemID: placeholderItemID,
             title: title,
             plannedAmount: amount,
             pillar: pillar,
@@ -1168,18 +1214,34 @@ private struct RecordSpendSheet: View {
   @Environment(\.colorScheme) private var colorScheme
 
   let monthTitle: String
+  let initialPillar: BudgetPillar
   let availableItems: [BudgetPlanItem]
   let onSave: (BudgetActivityDraft) -> Void
 
   @State private var title = ""
   @State private var amount = ""
-  @State private var pillar: BudgetPillar = .fundamentals
-  @State private var occurredOn = Date()
+  @State private var pillar: BudgetPillar
+  @State private var occurredOn: Date
   @State private var linkedPlanItemID: UUID?
   @State private var splitMode: ExpenseSplitMode = .personal
   @State private var userSharePercent: Double = 100
   @FocusState private var isAmountFocused: Bool
   @State private var successFeedbackTrigger = 0
+
+  init(
+    monthTitle: String,
+    selectedMonthStart: Date,
+    initialPillar: BudgetPillar = .fundamentals,
+    availableItems: [BudgetPlanItem],
+    onSave: @escaping (BudgetActivityDraft) -> Void
+  ) {
+    self.monthTitle = monthTitle
+    self.initialPillar = initialPillar
+    self.availableItems = availableItems
+    self.onSave = onSave
+    _pillar = State(initialValue: initialPillar)
+    _occurredOn = State(initialValue: Self.defaultDate(for: selectedMonthStart))
+  }
 
   var body: some View {
     VStack(spacing: 0) {
@@ -1281,13 +1343,13 @@ private struct RecordSpendSheet: View {
 
       FormActionBar(
         primaryLabel: "Save",
-        isDisabled: Double(amount.replacingOccurrences(of: ",", with: ".")) == nil
+        isDisabled: parseMonetaryValue(amount) == nil
           || (
             title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
               && linkedPlanItemID == nil
           )
       ) {
-        guard let parsedAmount = Double(amount.replacingOccurrences(of: ",", with: ".")) else {
+        guard let parsedAmount = parseMonetaryValue(amount) else {
           return
         }
 
@@ -1323,6 +1385,67 @@ private struct RecordSpendSheet: View {
 
   private var filteredItems: [BudgetPlanItem] {
     availableItems.filter { $0.pillar == pillar }
+  }
+
+  private static func defaultDate(for monthStart: Date) -> Date {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone.current
+    let today = Date()
+    let day = calendar.component(.day, from: today)
+    let monthRange = calendar.range(of: .day, in: .month, for: monthStart)
+    let maxDay = monthRange?.count ?? 28
+    let clampedDay = min(day, maxDay)
+    let comps = calendar.dateComponents([.year, .month], from: monthStart)
+    return calendar.date(from: DateComponents(year: comps.year, month: comps.month, day: clampedDay)) ?? monthStart
+  }
+
+  private func parseMonetaryValue(_ raw: String) -> Double? {
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return nil }
+
+    let filtered = trimmed.filter { $0.isNumber || $0 == "," || $0 == "." }
+    guard !filtered.isEmpty else { return nil }
+
+    let characters = Array(filtered)
+    let separatorIndexes = characters.indices.filter { characters[$0] == "," || characters[$0] == "." }
+
+    if separatorIndexes.isEmpty {
+      return Double(filtered)
+    }
+
+    if separatorIndexes.count == 1 {
+      let separatorIndex = separatorIndexes[0]
+      let leadingDigits = separatorIndex
+      let trailingDigits = characters.count - separatorIndex - 1
+      if leadingDigits > 0 && trailingDigits == 3 {
+        let normalized = filtered
+          .replacingOccurrences(of: ",", with: "")
+          .replacingOccurrences(of: ".", with: "")
+        return Double(normalized)
+      }
+    }
+
+    let decimalSeparator = characters[separatorIndexes.last!]
+    var normalized = ""
+    var consumedDecimal = false
+
+    for character in characters {
+      if character.isNumber {
+        normalized.append(character)
+        continue
+      }
+
+      if (character == "," || character == ".")
+          && character == decimalSeparator
+          && !consumedDecimal
+      {
+        normalized.append(".")
+        consumedDecimal = true
+      }
+    }
+
+    guard normalized != "." else { return nil }
+    return Double(normalized)
   }
 }
 
