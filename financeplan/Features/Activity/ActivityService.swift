@@ -46,7 +46,7 @@ struct ActivityHTTPService: ActivityServicing {
 
 extension Container {
     var activityService: Factory<ActivityServicing> {
-        self {
+        self { @MainActor in
             ActivityHTTPService(
                 environmentManager: self.appEnvironment(),
                 authSessionManager: self.authSessionManager()

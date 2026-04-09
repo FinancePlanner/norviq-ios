@@ -117,7 +117,7 @@ struct EditProfileView: View {
             // 3. Update Password if provided
             if success && !newPassword.isEmpty {
                 if currentPassword.isEmpty {
-                    viewModel.save(profile: originalProfile) // Trigger an error if needed or manual setting
+                    _ = await viewModel.save(profile: originalProfile) // Trigger an error if needed or manual setting
                     // Custom error handling would be better here
                     success = false
                 } else {

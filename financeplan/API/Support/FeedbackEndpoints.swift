@@ -10,7 +10,7 @@ struct SubmitFeedbackEndpoint: Endpoint {
     var decoder: JSONDecoder { .stockPlanShared }
 
     func asParameters() throws -> Parameters {
-      let data = try JSONEncoder.default.encode(payload)
+      let data = try JSONEncoder.stockPlanShared.encode(payload)
       return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
     }
   }

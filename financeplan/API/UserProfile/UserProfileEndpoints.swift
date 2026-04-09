@@ -29,11 +29,8 @@ struct UpdateUserProfileEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    let data = try JSONEncoder.default.encode(request)
-    let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-    var params: Parameters = [:]
-    for (key, value) in json { params[key] = value }
-    return params
+    let data = try JSONEncoder.stockPlanShared.encode(request)
+    return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
   }
 }
 

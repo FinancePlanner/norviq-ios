@@ -1,5 +1,5 @@
 {
-  "originHash" : "40fbeb8e8c6eb475ec993426aadbf3c613718a4dc47985115a38ed55d46af6aa",
+  "originHash" : "aee1f2de51ad07d767af3597cb7c3090975041b54c3b3cac3a820f95cc8e114d",
   "pins" : [
     {
       "identity" : "alamofire",
@@ -60,8 +60,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FinancePlanner/FinanceShared.git",
       "state" : {
-        "revision" : "cf84daa28dfc7afb156b30ca84ab7538ddb5c1d3",
-        "version" : "0.7.4"
+        "revision" : "449604f8ec3acb3743db74cbe000bba7243864c4",
+        "version" : "0.7.6"
       }
     },
     {

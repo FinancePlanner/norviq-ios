@@ -89,7 +89,7 @@ private struct NetWorthHeroCard: View {
               .font(.system(size: 36, weight: .bold, design: .rounded))
           }
           Spacer()
-          Image(systemName: "vault.fill")
+          Image(systemName: "dollarsign.circle.fill")
             .font(.title)
             .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
         }

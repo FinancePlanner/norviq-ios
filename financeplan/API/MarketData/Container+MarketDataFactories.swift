@@ -3,7 +3,7 @@ import Foundation
 
 extension Container {
   var marketDataHTTPClient: Factory<MarketDataHTTPClient> {
-    self { [unowned self] in
+    self { @MainActor [unowned self] in
       let env = self.appEnvironment()
       let store = self.authSessionStore()
       return MarketDataHTTPClient(
@@ -15,7 +15,7 @@ extension Container {
   }
 
   var marketDataService: Factory<MarketDataServicing> {
-    self { [unowned self] in
+    self { @MainActor [unowned self] in
       MarketDataHTTPService(
         environmentManager: self.appEnvironment(),
         authSessionManager: self.authSessionManager()
@@ -24,7 +24,7 @@ extension Container {
   }
 
   var cryptoService: Factory<CryptoServicing> {
-    self { [unowned self] in
+    self { @MainActor [unowned self] in
       CryptoHTTPService(
         environmentManager: self.appEnvironment(),
         authSessionManager: self.authSessionManager()

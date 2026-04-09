@@ -3,7 +3,7 @@ import Foundation
 
 extension Container {
   var expensesHTTPClient: Factory<ExpensesHTTPClient> {
-    self { [unowned self] in
+    self { @MainActor [unowned self] in
       let env = self.appEnvironment()
       let store = self.authSessionStore()
       return ExpensesHTTPClient(
@@ -15,7 +15,7 @@ extension Container {
   }
 
   var expensesService: Factory<ExpensesServicing> {
-    self { [unowned self] in
+    self { @MainActor [unowned self] in
       ExpensesHTTPService(
         environmentManager: self.appEnvironment(),
         authSessionManager: self.authSessionManager()

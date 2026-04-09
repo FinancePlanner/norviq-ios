@@ -72,8 +72,6 @@ private struct SocialAuthButton: View {
 
                 Text(provider.title)
                     .font(.system(size: 15, weight: .semibold))
-
-                Spacer()
             }
             .foregroundStyle(foregroundColor)
             .padding(.horizontal, 16)

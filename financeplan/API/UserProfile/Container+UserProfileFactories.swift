@@ -3,7 +3,7 @@ import Factory
 
 extension Container {
   var userProfileHTTPClient: Factory<UserProfileHTTPClient> {
-    self { [unowned self] in
+    self { @MainActor [unowned self] in
       let env = self.appEnvironment()
       let store = self.authSessionStore()
       return UserProfileHTTPClient(
@@ -15,7 +15,7 @@ extension Container {
   }
 
   var userProfileService: Factory<UserProfileServiceProtocol> {
-    self { [unowned self] in
+    self { @MainActor [unowned self] in
       UserProfileHTTPService(
         environmentManager: self.appEnvironment(),
         authSessionManager: self.authSessionManager()

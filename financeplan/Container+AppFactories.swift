@@ -22,7 +22,7 @@ final class WindowSize: ObservableObject {
 
 extension Container {
   var appEnvironment: Factory<AppEnvironmentManager> {
-    self { AppEnvironmentManager() }.singleton
+    self { @MainActor in AppEnvironmentManager() }.singleton
   }
 
   var windowSize: Factory<WindowSize> {
@@ -30,7 +30,7 @@ extension Container {
   }
 
   var authService: Factory<AuthServicing> {
-    self { AuthService(environmentManager: self.appEnvironment()) }.singleton
+    self { @MainActor in AuthService(environmentManager: self.appEnvironment()) }.singleton
   }
 
   var authSessionStore: Factory<AuthSessionStoring> {
@@ -38,7 +38,7 @@ extension Container {
   }
 
   var authSessionManager: Factory<AuthSessionManaging> {
-    self {
+    self { @MainActor in
       AuthSessionManager(
         authService: self.authService(),
         sessionStore: self.authSessionStore()
@@ -47,7 +47,7 @@ extension Container {
   }
 
   var stockService: Factory<StockService> {
-    self {
+    self { @MainActor in
       StockService(
         environmentManager: self.appEnvironment(),
         authSessionManager: self.authSessionManager()
@@ -56,7 +56,7 @@ extension Container {
   }
 
   var feedbackService: Factory<FeedbackService> {
-    self {
+    self { @MainActor in
       FeedbackService(
         environmentManager: self.appEnvironment(),
         authSessionManager: self.authSessionManager()
