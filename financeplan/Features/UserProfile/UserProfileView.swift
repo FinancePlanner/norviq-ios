@@ -26,6 +26,7 @@ public struct UserProfileView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dismiss) private var dismiss
     @State private var path: [UserProfileDestination] = []
+    @State private var isEditPresented = false
 
     // Appearance State
     @AppStorage("appAppearance") private var appAppearance: String = "System"
@@ -61,6 +62,11 @@ public struct UserProfileView: View {
                 }
             }
             .task { await viewModel.load() }
+            .sheet(isPresented: $isEditPresented) {
+                if let profile = viewModel.profile {
+                    EditProfileView(viewModel: viewModel, profile: profile)
+                }
+            }
             .navigationDestination(for: UserProfileDestination.self) { destination in
                 switch destination {
                 case .profileDetail:
@@ -88,7 +94,9 @@ public struct UserProfileView: View {
         List {
             // Profile Card
             Section {
-                NavigationLink(value: UserProfileDestination.profileDetail) {
+                Button {
+                    isEditPresented = true
+                } label: {
                     HStack(spacing: 16) {
                         avatarView(profile)
                         
@@ -100,9 +108,16 @@ public struct UserProfileView: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 4)
                 }
+                .buttonStyle(.plain)
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
             
