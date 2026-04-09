@@ -70,7 +70,7 @@ struct UpdateStockEndpoint: Endpoint {
   let payload: StockRequest
 
   var method: HTTPMethod { .put }
-  var path: String { "/v1/stocks/\(stockId)" }
+  var path: String { "/v1/stocks/id/\(stockId)" }
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
@@ -86,7 +86,7 @@ struct DeleteStockEndpoint: Endpoint {
   let stockId: String
 
   var method: HTTPMethod { .delete }
-  var path: String { "/v1/stocks/\(stockId)" }
+  var path: String { "/v1/stocks/id/\(stockId)" }
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters { [:] }
@@ -96,7 +96,7 @@ struct GetStockDetailsEndpoint: Endpoint {
   let stockId: String
 
   var method: HTTPMethod { .get }
-  var path: String { "/v1/stocks/\(stockId)" }
+  var path: String { "/v1/stocks/id/\(stockId)" }
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters { [:] }
@@ -107,7 +107,7 @@ struct GetStockInsightsEndpoint: Endpoint {
   let symbol: String
 
   var method: HTTPMethod { .get }
-  var path: String { "/v1/stocks/\(symbol)/insights" }
+  var path: String { "/v1/stocks/symbol/\(symbol)/insights" }
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters { [:] }
