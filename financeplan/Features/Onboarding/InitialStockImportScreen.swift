@@ -77,60 +77,56 @@ struct InitialStockImportScreen: View {
   @State private var headerVisible = false
 
   var body: some View {
-    VStack(spacing: 0) {
-      HStack {
-        Button(action: onBack) {
-          HStack(spacing: 4) {
-            Image(systemName: "chevron.left")
-              .font(.body.weight(.semibold))
-            Text("Back")
-              .typography(.label)
-          }
-          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+    OnboardingStepScaffold(
+      config: OnboardingStepScaffoldConfig(
+        title: "Stock Import",
+        icon: "chart.line.uptrend.xyaxis",
+        namespace: headerNamespace,
+        primaryActionTitle: buttonTitle,
+        primaryActionAccessibilityIdentifier: "stockImportContinueButton",
+        isPrimaryActionEnabled: selectedMethod != nil && !isSubmitting,
+        isPrimaryActionLoading: isSubmitting,
+        showsPrimaryActionArrow: selectedMethod != nil && !isSubmitting,
+        contentHorizontalPadding: 24,
+        contentMaxWidth: 520
+      ),
+      onBack: onBack,
+      onPrimaryAction: {
+        Task { await completeImport() }
+      },
+      banner: nil,
+      scrollDismissesKeyboard: .never
+    ) {
+      topActions
+        .padding(.top, 12)
+        .padding(.bottom, 20)
+    } content: {
+      VStack(spacing: 0) {
+        Spacer(minLength: 12)
+
+        // MARK: - Hero header
+        heroHeader
+          .padding(.bottom, 32)
+
+        // MARK: - Method cards
+        methodSelectionList
+          .padding(.bottom, 24)
+
+        // MARK: - Info message
+        if let message {
+          Text(message)
+            .typography(.small)
+            .foregroundStyle(AppTheme.Colors.success)
+            .padding(.bottom, 12)
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
         }
-        Spacer()
+
+        Spacer(minLength: 20)
       }
-      .padding(.horizontal, 20)
-      .padding(.top, 12)
-
-      ScrollView {
-        VStack(spacing: 0) {
-          topActions
-            .padding(.bottom, 20)
-
-          Spacer(minLength: 12)
-
-          // MARK: - Hero header
-          heroHeader
-            .padding(.bottom, 32)
-
-          // MARK: - Method cards
-          methodSelectionList
-            .padding(.bottom, 24)
-
-          // MARK: - Info message
-          if let message {
-            Text(message)
-              .typography(.small)
-              .foregroundStyle(AppTheme.Colors.success)
-              .padding(.bottom, 12)
-              .transition(.opacity.combined(with: .move(edge: .bottom)))
-          }
-
-          // MARK: - CTA
-          continueButton
-            .padding(.bottom, 40)
-
-          Spacer(minLength: 20)
-        }
-        .padding(.horizontal, 24)
-        .frame(maxWidth: 520)
-        .frame(maxWidth: .infinity)
-      }
-      .scrollBounceBehavior(.basedOnSize)
-      .accessibilityIdentifier("initialStockImportScreen")
+    } footer: {
+      EmptyView()
     }
-    .background(MeshGradientBackground().ignoresSafeArea())
+    .accessibilityIdentifier("initialStockImportScreen")
   }
 
   private var topActions: some View {
@@ -164,7 +160,6 @@ struct InitialStockImportScreen: View {
       .accessibilityIdentifier("stockImportSignOutButton")
       .disabled(isSigningOut)
     }
-    .padding(.top, 12)
   }
 
   // MARK: - Hero Header
@@ -263,7 +258,8 @@ struct InitialStockImportScreen: View {
         message = nil
         tappedMethod = method
       }
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+      Task { @MainActor in
+        try? await Task.sleep(for: .milliseconds(200))
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
           tappedMethod = nil
         }
@@ -280,35 +276,6 @@ struct InitialStockImportScreen: View {
     .animation(.spring(response: 0.25, dampingFraction: 0.8), value: tappedMethod)
   }
 
-  // MARK: - Continue Button
-
-  private var continueButton: some View {
-    Button {
-      Task { await completeImport() }
-    } label: {
-      HStack(spacing: 8) {
-        if isSubmitting {
-          ProgressView()
-            .tint(.white)
-        }
-        Text(buttonTitle)
-          .font(.headline)
-          .fontWeight(.bold)
-
-        if selectedMethod != nil && !isSubmitting {
-          Image(systemName: "arrow.right")
-            .font(.subheadline.weight(.bold))
-            .transition(.scale.combined(with: .opacity))
-        }
-      }
-    }
-    .buttonStyle(GlowingButtonStyle())
-    .disabled(selectedMethod == nil || isSubmitting)
-    .accessibilityIdentifier("stockImportContinueButton")
-    .opacity(animatedIndices.count == StockImportMethod.allCases.count ? 1 : 0)
-    .animation(.easeIn(duration: 0.4), value: animatedIndices.count)
-  }
-
   private var buttonTitle: String {
     guard let selectedMethod else {
       return "Select a Method"
@@ -320,7 +287,8 @@ struct InitialStockImportScreen: View {
 
   private func animateMethodOptions() {
     for (index, _) in StockImportMethod.allCases.enumerated() {
-      DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.12 + 0.35) {
+      Task { @MainActor in
+        try? await Task.sleep(for: .seconds(Double(index) * 0.12 + 0.35))
         withAnimation(.spring(response: 0.5, dampingFraction: 0.75)) {
           _ = animatedIndices.insert(index)
         }
@@ -337,9 +305,7 @@ struct InitialStockImportScreen: View {
     isSubmitting = true
     defer { isSubmitting = false }
 
-    // to fill from endpoint later
-    try? await Task.sleep(nanoseconds: 300_000_000)
-    message = "\(selectedMethod.title) selected."
+    message = nil
     onImportCompleted(selectedMethod)
   }
 }

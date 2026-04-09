@@ -14,6 +14,8 @@ protocol StockServicing {
   func bulkCreate(stocks: [StockRequest]) async throws -> BulkStockResponse
   func fetchPortfolio() async throws -> [StockResponse]
   func fetchStockDetails(stockId: String) async throws -> StockDetails
+  func fetchStockInsights(symbol: String) async throws -> StockInsightsResponse
+  func fetchPortfolioPerformance() async throws -> PortfolioPerformanceResponse
   func fetchStockHistory(symbol: String) async throws -> [StockHistory]
   func fetchStockNews(symbol: String) async throws -> [StockNews]
   func updateStock(_ stock: StockResponse) async throws -> StockResponse
@@ -58,6 +60,16 @@ protocol StockServicing {
     request: WatchlistItemUpdateRequest
   ) async throws -> WatchlistItemResponse
   func deleteWatchlistItem(id: String) async throws
+}
+
+extension StockServicing {
+  func fetchStockInsights(symbol _: String) async throws -> StockInsightsResponse {
+    throw StockHTTPClient.Error.api("Stock insights endpoint is unavailable.")
+  }
+
+  func fetchPortfolioPerformance() async throws -> PortfolioPerformanceResponse {
+    throw StockHTTPClient.Error.api("Portfolio performance endpoint is unavailable.")
+  }
 }
 
 final class StockService: StockServicing {
@@ -115,6 +127,19 @@ final class StockService: StockServicing {
     try await performAuthenticated { client in
       let endpoint = GetStockDetailsEndpoint(stockId: stockId)
       return try await client.call(endpoint)
+    }
+  }
+
+  func fetchStockInsights(symbol: String) async throws -> StockInsightsResponse {
+    try await performAuthenticated { client in
+      let endpoint = GetStockInsightsEndpoint(symbol: symbol)
+      return try await client.call(endpoint)
+    }
+  }
+
+  func fetchPortfolioPerformance() async throws -> PortfolioPerformanceResponse {
+    try await performAuthenticated { client in
+      return try await client.call(GetPortfolioPerformanceEndpoint())
     }
   }
 

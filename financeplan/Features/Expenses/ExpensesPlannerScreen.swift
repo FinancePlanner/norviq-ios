@@ -127,7 +127,7 @@ struct ExpensesPlannerScreen: View {
             }
             .padding()
             .background(Color(uiColor: .secondarySystemGroupedBackground))
-            .cornerRadius(16)
+            .clipShape(.rect(cornerRadius: 16))
             .overlay(
               RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.white.opacity(0.05), lineWidth: 1)
@@ -148,7 +148,7 @@ struct ExpensesPlannerScreen: View {
             .foregroundStyle(.white)
             .padding()
             .background(Color.red)
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .padding()
         }
       }
@@ -272,7 +272,7 @@ struct ExpensesPlannerScreen: View {
           initialPillar: recordSpendInitialPillar,
           availableItems: viewModel.selectedMonthSnapshot?.items ?? []
         ) { draft in
-          viewModel.recordExpense(draft)
+          await viewModel.recordExpenseAndWait(draft)
         }
       }
       .sheet(isPresented: $isPartnerEditorPresented) {
@@ -381,7 +381,7 @@ private struct ExpensesYearOverviewCard: View {
                 y: .value("Spent", point.actual * chartProgress)
               )
               .foregroundStyle(AppTheme.Colors.tint(for: colorScheme).gradient)
-              .cornerRadius(6)
+              .clipShape(.rect(cornerRadius: 6))
             }
             .frame(height: 180)
             .chartYAxis {
@@ -928,52 +928,7 @@ private struct NetSalaryEditorSheet: View {
   }
 
   private func parseMonetaryValue(_ raw: String) -> Double? {
-    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return nil }
-
-    let filtered = trimmed.filter { $0.isNumber || $0 == "," || $0 == "." }
-    guard !filtered.isEmpty else { return nil }
-
-    let characters = Array(filtered)
-    let separatorIndexes = characters.indices.filter { characters[$0] == "," || characters[$0] == "." }
-
-    if separatorIndexes.isEmpty {
-      return Double(filtered)
-    }
-
-    if separatorIndexes.count == 1 {
-      let separatorIndex = separatorIndexes[0]
-      let leadingDigits = separatorIndex
-      let trailingDigits = characters.count - separatorIndex - 1
-      if leadingDigits > 0 && trailingDigits == 3 {
-        let normalized = filtered
-          .replacingOccurrences(of: ",", with: "")
-          .replacingOccurrences(of: ".", with: "")
-        return Double(normalized)
-      }
-    }
-
-    let decimalSeparator = characters[separatorIndexes.last!]
-    var normalized = ""
-    var consumedDecimal = false
-
-    for character in characters {
-      if character.isNumber {
-        normalized.append(character)
-        continue
-      }
-
-      if (character == "," || character == ".")
-        && character == decimalSeparator
-        && !consumedDecimal
-      {
-        normalized.append(".")
-        consumedDecimal = true
-      }
-    }
-
-    guard normalized != "." else { return nil }
-    return Double(normalized)
+    MoneyInputParser.parse(raw)
   }
 }
 
@@ -1135,7 +1090,7 @@ private struct PlanItemEditorSheet: View {
           FormCard(title: "Category") {
             FormRow(icon: "square.stack.3d.up", iconColor: .orange, label: "Pillar") {
               Picker("Pillar", selection: $pillar) {
-                ForEach(BudgetPillar.allCases) { pillar in
+                ForEach(BudgetPillar.allCases, id: \.self) { pillar in
                   Text(pillar.title).tag(pillar)
                 }
               }
@@ -1181,7 +1136,7 @@ private struct PlanItemEditorSheet: View {
         let amount: Double
         if normalizedAmount.isEmpty {
           amount = 0
-        } else if let parsed = Double(normalizedAmount.replacingOccurrences(of: ",", with: ".")) {
+        } else if let parsed = MoneyInputParser.parse(normalizedAmount) {
           amount = parsed
         } else {
           validationMessage = "Enter a valid amount (for example: 120 or 120.50)."
@@ -1216,7 +1171,7 @@ private struct RecordSpendSheet: View {
   let monthTitle: String
   let initialPillar: BudgetPillar
   let availableItems: [BudgetPlanItem]
-  let onSave: (BudgetActivityDraft) -> Void
+  let onSave: @MainActor (BudgetActivityDraft) async -> Bool
 
   @State private var title = ""
   @State private var amount = ""
@@ -1226,6 +1181,8 @@ private struct RecordSpendSheet: View {
   @State private var splitMode: ExpenseSplitMode = .personal
   @State private var userSharePercent: Double = 100
   @FocusState private var isAmountFocused: Bool
+  @State private var isSaving = false
+  @State private var saveErrorMessage: String?
   @State private var successFeedbackTrigger = 0
 
   init(
@@ -1233,7 +1190,7 @@ private struct RecordSpendSheet: View {
     selectedMonthStart: Date,
     initialPillar: BudgetPillar = .fundamentals,
     availableItems: [BudgetPlanItem],
-    onSave: @escaping (BudgetActivityDraft) -> Void
+    onSave: @escaping @MainActor (BudgetActivityDraft) async -> Bool
   ) {
     self.monthTitle = monthTitle
     self.initialPillar = initialPillar
@@ -1280,6 +1237,13 @@ private struct RecordSpendSheet: View {
             )
             .focused($isAmountFocused)
 
+            if let saveErrorMessage {
+              FormDivider()
+              Text(saveErrorMessage)
+                .font(.caption)
+                .foregroundStyle(.red)
+            }
+
             FormDivider()
 
             FormRow(icon: "calendar", iconColor: .orange, label: "Date") {
@@ -1291,7 +1255,7 @@ private struct RecordSpendSheet: View {
           FormCard(title: "Category") {
             FormRow(icon: "square.stack.3d.up", iconColor: .purple, label: "Pillar") {
               Picker("Pillar", selection: $pillar) {
-                ForEach(BudgetPillar.allCases) { pillar in
+                ForEach(BudgetPillar.allCases, id: \.self) { pillar in
                   Text(pillar.title).tag(pillar)
                 }
               }
@@ -1343,40 +1307,46 @@ private struct RecordSpendSheet: View {
 
       FormActionBar(
         primaryLabel: "Save",
+        isLoading: isSaving,
         isDisabled: parseMonetaryValue(amount) == nil
           || (
             title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
               && linkedPlanItemID == nil
           )
       ) {
-        guard let parsedAmount = parseMonetaryValue(amount) else {
-          return
-        }
-
-        let resolvedTitle =
-          title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard !isSaving else { return }
+        guard let parsedAmount = parseMonetaryValue(amount) else { return }
+        let resolvedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
           ? filteredItems.first(where: { $0.id == linkedPlanItemID })?.title ?? ""
           : title
-
-        onSave(
-          BudgetActivityDraft(
-            title: resolvedTitle,
-            amount: parsedAmount,
-            pillar: pillar,
-            occurredOn: occurredOn,
-            linkedPlanItemID: linkedPlanItemID,
-            splitMode: splitMode,
-            userSharePercent: splitMode == .personal ? 100 : userSharePercent
-          )
+        let draft = BudgetActivityDraft(
+          title: resolvedTitle,
+          amount: parsedAmount,
+          pillar: pillar,
+          occurredOn: occurredOn,
+          linkedPlanItemID: linkedPlanItemID,
+          splitMode: splitMode,
+          userSharePercent: splitMode == .personal ? 100 : userSharePercent
         )
-        successFeedbackTrigger += 1
-        dismiss()
+
+        Task { @MainActor in
+          saveErrorMessage = nil
+          isSaving = true
+          let didSave = await onSave(draft)
+          isSaving = false
+          if didSave {
+            successFeedbackTrigger += 1
+            dismiss()
+          } else {
+            saveErrorMessage = "Could not save expense. Please try again."
+          }
+        }
       }
     }
     .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
     .presentationDragIndicator(.visible)
     .appSensoryFeedback(success: successFeedbackTrigger)
-    .onChange(of: linkedPlanItemID) { newValue in
+    .onChange(of: linkedPlanItemID) { _, newValue in
       guard let newValue, let item = availableItems.first(where: { $0.id == newValue }) else { return }
       splitMode = item.splitMode
       userSharePercent = item.userSharePercent
@@ -1400,52 +1370,7 @@ private struct RecordSpendSheet: View {
   }
 
   private func parseMonetaryValue(_ raw: String) -> Double? {
-    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return nil }
-
-    let filtered = trimmed.filter { $0.isNumber || $0 == "," || $0 == "." }
-    guard !filtered.isEmpty else { return nil }
-
-    let characters = Array(filtered)
-    let separatorIndexes = characters.indices.filter { characters[$0] == "," || characters[$0] == "." }
-
-    if separatorIndexes.isEmpty {
-      return Double(filtered)
-    }
-
-    if separatorIndexes.count == 1 {
-      let separatorIndex = separatorIndexes[0]
-      let leadingDigits = separatorIndex
-      let trailingDigits = characters.count - separatorIndex - 1
-      if leadingDigits > 0 && trailingDigits == 3 {
-        let normalized = filtered
-          .replacingOccurrences(of: ",", with: "")
-          .replacingOccurrences(of: ".", with: "")
-        return Double(normalized)
-      }
-    }
-
-    let decimalSeparator = characters[separatorIndexes.last!]
-    var normalized = ""
-    var consumedDecimal = false
-
-    for character in characters {
-      if character.isNumber {
-        normalized.append(character)
-        continue
-      }
-
-      if (character == "," || character == ".")
-          && character == decimalSeparator
-          && !consumedDecimal
-      {
-        normalized.append(".")
-        consumedDecimal = true
-      }
-    }
-
-    guard normalized != "." else { return nil }
-    return Double(normalized)
+    MoneyInputParser.parse(raw)
   }
 }
 
@@ -1618,7 +1543,7 @@ struct SmartSuggestionsCard: View {
               .frame(maxWidth: .infinity)
               .padding(.vertical, 12)
               .background(Color.white.opacity(0.1))
-              .cornerRadius(12)
+              .clipShape(.rect(cornerRadius: 12))
               .foregroundStyle(.white)
           }
 
@@ -1630,7 +1555,7 @@ struct SmartSuggestionsCard: View {
               .frame(maxWidth: .infinity)
               .padding(.vertical, 12)
               .background(Color.white.opacity(0.1))
-              .cornerRadius(12)
+              .clipShape(.rect(cornerRadius: 12))
               .foregroundStyle(.white)
           }
         }
@@ -1646,7 +1571,7 @@ struct SmartSuggestionsCard: View {
     }
     .padding(20)
     .background(Color(uiColor: .secondarySystemGroupedBackground))
-    .cornerRadius(20)
+    .clipShape(.rect(cornerRadius: 20))
     .animation(.easeOut(duration: 0.25), value: isLoading)
     .sheet(item: $selectedSuggestion) { suggestion in
       SuggestionDetailSheet(suggestion: suggestion)
@@ -1760,7 +1685,7 @@ struct RecentTransactionsList: View {
         }
       }
       .background(Color(uiColor: .secondarySystemGroupedBackground))
-      .cornerRadius(20)
+      .clipShape(.rect(cornerRadius: 20))
     }
   }
 }

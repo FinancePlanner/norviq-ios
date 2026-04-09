@@ -102,6 +102,27 @@ struct GetStockDetailsEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
+struct GetStockInsightsEndpoint: Endpoint {
+  typealias Response = StockInsightsResponse
+  let symbol: String
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/stocks/\(symbol)/insights" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+struct GetPortfolioPerformanceEndpoint: Endpoint {
+  typealias Response = PortfolioPerformanceResponse
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/portfolio/performance" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
 struct GetStockHistoryEndpoint: Endpoint {
   typealias Response = [StockHistory]
   let symbol: String

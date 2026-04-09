@@ -2,13 +2,17 @@ import Foundation
 import StockPlanShared
 import Factory
 
-protocol ExpensesServicing {
+protocol ExpenseBudgetSetupServicing {
+    func createBudgetSnapshot(request: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse
+    func createExpense(request: ExpenseRequest) async throws -> ExpenseResponse
+}
+
+protocol ExpensesServicing: ExpenseBudgetSetupServicing {
     func getHouseholdPartner() async throws -> HouseholdPartnerProfileResponse
     func updateHouseholdPartner(payload: HouseholdPartnerProfileRequest) async throws -> HouseholdPartnerProfileResponse
 
     // Snapshots
     func getSnapshots(year: Int?, month: Int?) async throws -> [BudgetSnapshotResponse]
-    func createBudgetSnapshot(request: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse
     func updateSnapshot(snapshotId: String, payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse
     func deleteSnapshot(snapshotId: String) async throws
     func getSnapshotItems(snapshotId: String) async throws -> [BudgetPlanItemResponse]
@@ -21,7 +25,6 @@ protocol ExpensesServicing {
     
     // Expenses
     func getExpenses(from: String?, to: String?) async throws -> [ExpenseResponse]
-    func createExpense(request: ExpenseRequest) async throws -> ExpenseResponse
     func updateExpense(expenseId: String, payload: ExpenseRequest) async throws -> ExpenseResponse
     func deleteExpense(expenseId: String) async throws
     

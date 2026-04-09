@@ -78,6 +78,20 @@ struct AuthHTTPClient {
     return try decodeAuthResponse(from: data)
   }
 
+  func oauthStart(provider: OAuthProviderKind, redirectURI: String) async throws -> OAuthStartResponsePayload {
+    let endpoint = OAuthStartEndpoint(provider: provider, redirectURI: redirectURI)
+    return try await call(endpoint)
+  }
+
+  func oauthExchange(
+    provider: OAuthProviderKind,
+    request: OAuthExchangeRequestPayload
+  ) async throws -> AuthResponse {
+    let endpoint = OAuthExchangeEndpoint(provider: provider, payload: request)
+    let data = try await perform(endpoint)
+    return try decodeAuthResponse(from: data)
+  }
+
   func logout(_ request: AuthRefreshRequest) async throws {
     let primary = LogoutEndpoint(refreshToken: request.refreshToken, endpointPath: "/v2/logout")
     do {
@@ -90,7 +104,7 @@ struct AuthHTTPClient {
   }
 
   private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response
-    where E.Response: Codable & Sendable
+    where E.Response: Codable
   {
     let data = try await perform(endpoint)
     do {

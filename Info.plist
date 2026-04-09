@@ -16,6 +16,17 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CFBundleDisplayName</key>
 	<string>Norviqa</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>norviqa</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -48,6 +59,8 @@
 	</dict>
 	<key>PexelsAPIKey</key>
 	<string>WVDa5RXl1hx8Xw70OH94iXkSKwRvsVeOUopxx8cvvLKVouilEMVMukf2</string>
+	<key>OAuthCallbackScheme</key>
+	<string>norviqa</string>
 	<key>UIUserInterfaceStyle</key>
 	<string>Dark</string>
 	<key>SENTRY_DSN</key>

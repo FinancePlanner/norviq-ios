@@ -8,14 +8,14 @@ public struct ContentView: View {
   @State private var launchStarted = false
   @State private var isAuthenticated: Bool
   @State private var requiresInitialStockImport: Bool
-  private let splashDelayNanoseconds: UInt64
+  private let splashDelay: Duration
   private let authSessionManager: AuthSessionManaging
   private let sessionStore: AuthSessionStoring
 
   public init() {
     let processInfo = ProcessInfo.processInfo
-    splashDelayNanoseconds =
-      processInfo.arguments.contains("-ui_test_skip_splash") ? 0 : 2_000_000_000
+    splashDelay =
+      processInfo.arguments.contains("-ui_test_skip_splash") ? .zero : .seconds(2)
 
     let store = Container.shared.authSessionStore()
 
@@ -102,8 +102,8 @@ public struct ContentView: View {
       }
 
       launchStarted = true
-      if splashDelayNanoseconds > 0 {
-        try? await Task.sleep(nanoseconds: splashDelayNanoseconds)
+      if splashDelay != .zero {
+        try? await Task.sleep(for: splashDelay)
       }
 
       if await authSessionManager.restoreSessionIfNeeded() {

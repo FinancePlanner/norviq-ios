@@ -12,7 +12,7 @@ struct InteractiveLineChart: View {
     let color: Color
     
     @State private var selectedDataPoint: ChartDataPoint?
-    @State private var dragLocation: CGPoint = .zero
+    @State private var selectionFeedbackTrigger = 0
     
     private var minDate: Date { data.first?.date ?? .now }
     private var maxDate: Date { data.last?.date ?? .now }
@@ -28,12 +28,12 @@ struct InteractiveLineChart: View {
                     
                     let points = data.enumerated().map { index, point -> CGPoint in
                         let x = geometry.size.width * CGFloat(index) / CGFloat(data.count - 1)
-                        let normalizedY = (point.value - minValue) / (maxValue - minValue)
-                        let y = geometry.size.height * (1.0 - CGFloat(normalizedY))
+                        let y = yPosition(for: point.value, in: geometry.size.height)
                         return CGPoint(x: x, y: y)
                     }
                     
-                    path.move(to: points.first!)
+                    guard let first = points.first else { return }
+                    path.move(to: first)
                     for point in points.dropFirst() {
                         path.addLine(to: point)
                     }
@@ -46,12 +46,12 @@ struct InteractiveLineChart: View {
                     
                     let points = data.enumerated().map { index, point -> CGPoint in
                         let x = geometry.size.width * CGFloat(index) / CGFloat(data.count - 1)
-                        let normalizedY = (point.value - minValue) / (maxValue - minValue)
-                        let y = geometry.size.height * (1.0 - CGFloat(normalizedY))
+                        let y = yPosition(for: point.value, in: geometry.size.height)
                         return CGPoint(x: x, y: y)
                     }
                     
-                    path.move(to: points.first!)
+                    guard let first = points.first else { return }
+                    path.move(to: first)
                     for point in points.dropFirst() {
                         path.addLine(to: point)
                     }
@@ -82,7 +82,7 @@ struct InteractiveLineChart: View {
                         .overlay(Circle().stroke(Color.white, lineWidth: 2))
                         .position(
                             x: xPos,
-                            y: geometry.size.height * (1.0 - CGFloat((selected.value - minValue) / (maxValue - minValue)))
+                            y: yPosition(for: selected.value, in: geometry.size.height)
                         )
                     
                     VStack(alignment: .center, spacing: 2) {
@@ -116,6 +116,7 @@ struct InteractiveLineChart: View {
                     )
             }
         }
+        .sensoryFeedback(.selection, trigger: selectionFeedbackTrigger)
     }
     
     private func updateSelectedPoint(at x: CGFloat, in width: CGFloat) {
@@ -125,8 +126,17 @@ struct InteractiveLineChart: View {
         let safeIndex = max(0, min(data.count - 1, index))
         
         if selectedDataPoint != data[safeIndex] {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            selectionFeedbackTrigger += 1
             selectedDataPoint = data[safeIndex]
         }
+    }
+
+    private func yPosition(for value: Double, in height: CGFloat) -> CGFloat {
+        let range = maxValue - minValue
+        guard range > 0 else {
+            return height * 0.5
+        }
+        let normalizedY = (value - minValue) / range
+        return height * (1.0 - CGFloat(normalizedY))
     }
 }

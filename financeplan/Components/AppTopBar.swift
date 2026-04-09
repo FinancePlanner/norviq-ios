@@ -1,12 +1,12 @@
 import SwiftUI
 
-struct AppTopBar: View {
+struct AppTopBar<LeadingAccessory: View, TrailingAccessory: View>: View {
   let title: String
   let searchText: Binding<String>?
   let searchPlaceholder: String
   let onSearchSubmit: (() -> Void)?
-  let leadingAccessory: AnyView?
-  let trailingAccessory: AnyView?
+  let leadingAccessory: LeadingAccessory
+  let trailingAccessory: TrailingAccessory
 
   @Environment(\.colorScheme) private var colorScheme
 
@@ -15,22 +15,20 @@ struct AppTopBar: View {
     searchText: Binding<String>? = nil,
     searchPlaceholder: String = "Search assets",
     onSearchSubmit: (() -> Void)? = nil,
-    leadingAccessory: AnyView? = nil,
-    trailingAccessory: AnyView? = nil
+    @ViewBuilder leadingAccessory: () -> LeadingAccessory,
+    @ViewBuilder trailingAccessory: () -> TrailingAccessory
   ) {
     self.title = title
     self.searchText = searchText
     self.searchPlaceholder = searchPlaceholder
     self.onSearchSubmit = onSearchSubmit
-    self.leadingAccessory = leadingAccessory
-    self.trailingAccessory = trailingAccessory
+    self.leadingAccessory = leadingAccessory()
+    self.trailingAccessory = trailingAccessory()
   }
 
   var body: some View {
     HStack(spacing: 12) {
-      if let leadingAccessory {
-        accessorySlot(leadingAccessory)
-      }
+      accessorySlot(leadingAccessory)
 
       Text(title)
         .font(.headline.bold())
@@ -51,9 +49,7 @@ struct AppTopBar: View {
         Spacer(minLength: 0)
       }
 
-      if let trailingAccessory {
-        accessorySlot(trailingAccessory)
-      }
+      accessorySlot(trailingAccessory)
     }
     .padding(.horizontal, 16)
     .padding(.top, 8)
@@ -67,9 +63,31 @@ struct AppTopBar: View {
   }
 
   @ViewBuilder
-  private func accessorySlot(_ accessory: AnyView) -> some View {
-    accessory
-      .frame(width: 40, height: 40)
+  private func accessorySlot<Accessory: View>(_ accessory: Accessory) -> some View {
+    if accessory is EmptyView {
+      EmptyView()
+    } else {
+      accessory
+        .frame(width: 40, height: 40)
+    }
+  }
+}
+
+extension AppTopBar where LeadingAccessory == EmptyView, TrailingAccessory == EmptyView {
+  init(
+    title: String,
+    searchText: Binding<String>? = nil,
+    searchPlaceholder: String = "Search assets",
+    onSearchSubmit: (() -> Void)? = nil
+  ) {
+    self.init(
+      title: title,
+      searchText: searchText,
+      searchPlaceholder: searchPlaceholder,
+      onSearchSubmit: onSearchSubmit,
+      leadingAccessory: { EmptyView() },
+      trailingAccessory: { EmptyView() }
+    )
   }
 }
 
@@ -106,39 +124,13 @@ private struct AppTopBarSearchField: View {
   }
 }
 
-//struct AppTopBarProfileButton: View {
-//  let isUserMenuPresented: Bool
-//  let onTap: () -> Void
-//
-//  @Environment(\.colorScheme) private var colorScheme
-//
-//  var body: some View {
-//    Button(action: onTap) {
-//      RoundedRectangle(cornerRadius: 8, style: .continuous)
-//        .fill(
-//          isUserMenuPresented
-//          ? AppTheme.Colors.tint(for: colorScheme).opacity(colorScheme == .dark ? 0.22 : 0.14)
-//          : AppTheme.Colors.tint(for: colorScheme).opacity(0.12)
-//        )
-//        .frame(width: 28, height: 28)
-//        .overlay(
-//          Image(systemName: "person.fill")
-//            .font(.system(size: 11, weight: .semibold))
-//            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-//        )
-//        .appGlassEffect(.rect(cornerRadius: 8))
-//    }
-//    .buttonStyle(.plain)
-//  }
-//}
-
-struct AppTopBarChromeModifier: ViewModifier {
+struct AppTopBarChromeModifier<LeadingAccessory: View, TrailingAccessory: View>: ViewModifier {
   let title: String
   let searchText: Binding<String>?
   let searchPlaceholder: String
   let onSearchSubmit: (() -> Void)?
-  let leadingAccessory: AnyView?
-  let trailingAccessory: AnyView?
+  let leadingAccessory: LeadingAccessory
+  let trailingAccessory: TrailingAccessory
 
   func body(content: Content) -> some View {
     content
@@ -149,8 +141,8 @@ struct AppTopBarChromeModifier: ViewModifier {
           searchText: searchText,
           searchPlaceholder: searchPlaceholder,
           onSearchSubmit: onSearchSubmit,
-          leadingAccessory: leadingAccessory,
-          trailingAccessory: trailingAccessory
+          leadingAccessory: { leadingAccessory },
+          trailingAccessory: { trailingAccessory }
         )
       }
   }
@@ -161,9 +153,7 @@ extension View {
     title: String,
     searchText: Binding<String>? = nil,
     searchPlaceholder: String = "Search assets",
-    onSearchSubmit: (() -> Void)? = nil,
-    leadingAccessory: AnyView? = nil,
-    trailingAccessory: AnyView? = nil
+    onSearchSubmit: (() -> Void)? = nil
   ) -> some View {
     modifier(
       AppTopBarChromeModifier(
@@ -171,8 +161,28 @@ extension View {
         searchText: searchText,
         searchPlaceholder: searchPlaceholder,
         onSearchSubmit: onSearchSubmit,
-        leadingAccessory: leadingAccessory,
-        trailingAccessory: trailingAccessory
+        leadingAccessory: EmptyView(),
+        trailingAccessory: EmptyView()
+      )
+    )
+  }
+
+  func appTopBarChrome<LeadingAccessory: View, TrailingAccessory: View>(
+    title: String,
+    searchText: Binding<String>? = nil,
+    searchPlaceholder: String = "Search assets",
+    onSearchSubmit: (() -> Void)? = nil,
+    @ViewBuilder leadingAccessory: () -> LeadingAccessory,
+    @ViewBuilder trailingAccessory: () -> TrailingAccessory
+  ) -> some View {
+    modifier(
+      AppTopBarChromeModifier(
+        title: title,
+        searchText: searchText,
+        searchPlaceholder: searchPlaceholder,
+        onSearchSubmit: onSearchSubmit,
+        leadingAccessory: leadingAccessory(),
+        trailingAccessory: trailingAccessory()
       )
     )
   }

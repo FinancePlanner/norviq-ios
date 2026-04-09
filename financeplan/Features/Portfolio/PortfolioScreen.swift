@@ -212,10 +212,10 @@ struct PortfolioScreen: View {
         Task { await viewModel.load() }
         rebuildChartData()
     }
-    .onChange(of: totalValue) { _ in
+    .onChange(of: totalValue) { _, _ in
       rebuildChartData()
     }
-    .onChange(of: selectedTimeRange) { _ in
+    .onChange(of: selectedTimeRange) { _, _ in
       rebuildChartData()
     }
     .refreshable { await viewModel.load(force: true) }
@@ -226,6 +226,7 @@ struct PortfolioScreen: View {
         } label: {
           Image(systemName: "plus")
         }
+        .accessibilityLabel("Add position")
       }
     }
     .sheet(

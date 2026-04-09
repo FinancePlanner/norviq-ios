@@ -39,6 +39,11 @@ final class AuthSessionManagerTests: XCTestCase {
       logoutCalls += 1
       lastLogoutRefreshToken = refreshToken
     }
+
+    @MainActor
+    func oauthSignIn(provider _: OAuthProviderKind) async throws -> AuthResponse {
+      throw MockError.notConfigured
+    }
   }
 
   private final class SessionStoreMock: AuthSessionStoring {

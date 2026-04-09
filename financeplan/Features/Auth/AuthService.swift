@@ -12,6 +12,8 @@ protocol AuthServicing {
   func forgotPassword(email: String) async throws -> AuthForgotPasswordResponse
   func refresh(refreshToken: String) async throws -> AuthResponse
   func logout(refreshToken: String) async
+  @MainActor
+  func oauthSignIn(provider: OAuthProviderKind) async throws -> AuthResponse
 }
 
 protocol AuthSessionStoring: AnyObject {
@@ -32,13 +34,16 @@ protocol AuthSessionStoring: AnyObject {
 final class AuthService: AuthServicing {
   private let environmentManager: AppEnvironmentManager
   private let session: AuthURLSessionProtocol
+  private let webAuthenticator: OAuthWebAuthenticating
 
   init(
     environmentManager: AppEnvironmentManager,
-    session: AuthURLSessionProtocol = URLSession.shared
+    session: AuthURLSessionProtocol = URLSession.shared,
+    webAuthenticator: OAuthWebAuthenticating = OAuthWebAuthenticator()
   ) {
     self.environmentManager = environmentManager
     self.session = session
+    self.webAuthenticator = webAuthenticator
   }
 
   func login(email: String, password: String) async throws -> AuthResponse {
@@ -76,8 +81,61 @@ final class AuthService: AuthServicing {
     try? await client().logout(AuthRefreshRequest(refreshToken: refreshToken))
   }
 
+  @MainActor
+  func oauthSignIn(provider: OAuthProviderKind) async throws -> AuthResponse {
+    let callbackScheme = oauthCallbackScheme()
+    let redirectURI = oauthRedirectURI(for: callbackScheme)
+
+    let startResponse = try await client().oauthStart(
+      provider: provider,
+      redirectURI: redirectURI
+    )
+
+    guard let authorizationURL = URL(string: startResponse.authorizationURL) else {
+      throw OAuthWebAuthenticationError.invalidAuthorizationURL
+    }
+
+    let callbackURL = try await webAuthenticator.authenticate(
+      url: authorizationURL,
+      callbackScheme: callbackScheme
+    )
+
+    let queryItems = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)?.queryItems ?? []
+    guard let code = queryItems.first(where: { $0.name == "code" })?.value,
+          !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+      throw OAuthWebAuthenticationError.missingCode
+    }
+    guard let state = queryItems.first(where: { $0.name == "state" })?.value,
+          !state.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+      throw OAuthWebAuthenticationError.missingState
+    }
+
+    return try await client().oauthExchange(
+      provider: provider,
+      request: OAuthExchangeRequestPayload(
+        flowId: startResponse.flowId,
+        code: code,
+        state: state,
+        redirectURI: redirectURI
+      )
+    )
+  }
+
   private func client() -> AuthHTTPClient {
     AuthHTTPClient(baseURL: environmentManager.current.apiBaseUrl, session: session)
+  }
+
+  private func oauthCallbackScheme() -> String {
+    let configured = (Bundle.main.object(forInfoDictionaryKey: "OAuthCallbackScheme") as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    if let configured, !configured.isEmpty {
+      return configured
+    }
+    return "norviqa"
+  }
+
+  private func oauthRedirectURI(for callbackScheme: String) -> String {
+    "\(callbackScheme)://oauth/callback"
   }
 }
 

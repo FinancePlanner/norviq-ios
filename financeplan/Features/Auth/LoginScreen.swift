@@ -7,6 +7,7 @@
 
 import Factory
 import SwiftUI
+import StockPlanShared
 
 // MARK: - Shared Colors & Styles
 private struct VaultColors {
@@ -46,6 +47,17 @@ private enum SocialAuthProvider: String, CaseIterable, Identifiable {
             return "X"
         }
     }
+
+    var oauthProvider: OAuthProviderKind? {
+        switch self {
+        case .apple:
+            return .apple
+        case .google:
+            return .google
+        case .x:
+            return .x
+        }
+    }
 }
 
 private struct SocialAuthButton: View {
@@ -63,7 +75,7 @@ private struct SocialAuthButton: View {
 
                 Spacer()
             }
-            .foregroundColor(foregroundColor)
+            .foregroundStyle(foregroundColor)
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity)
@@ -72,7 +84,7 @@ private struct SocialAuthButton: View {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(borderColor, lineWidth: 1)
             )
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
         }
         .buttonStyle(.plain)
     }
@@ -83,7 +95,7 @@ private struct SocialAuthButton: View {
         case .apple:
             Image(systemName: "apple.logo")
                 .font(.system(size: 17, weight: .semibold))
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
         case .google:
             Image("GoogleLogo")
                 .resizable()
@@ -140,7 +152,7 @@ private struct SocialAuthSection: View {
                 Text("OR")
                     .font(.system(size: 10, weight: .bold))
                     .tracking(1.2)
-                    .foregroundColor(VaultColors.textSecondary)
+                    .foregroundStyle(VaultColors.textSecondary)
                 Rectangle()
                     .fill(Color.white.opacity(0.08))
                     .frame(height: 1)
@@ -149,6 +161,11 @@ private struct SocialAuthSection: View {
             VStack(spacing: 10) {
                 ForEach(SocialAuthProvider.allCases) { provider in
                     SocialAuthButton(provider: provider) {
+                        if let oauthProvider = provider.oauthProvider {
+                            Task { await viewModel.signInWithOAuth(oauthProvider) }
+                            return
+                        }
+
                         withAnimation(.easeInOut(duration: 0.2)) {
                             viewModel.error = nil
                             viewModel.infoMessage = "\(provider.platformName) \(intentLabel) will be available soon."
@@ -174,14 +191,15 @@ private struct NorviqaLogo: View {
 }
 
 // MARK: - Custom Text Field
-private struct VaultTextField: View {
+private struct VaultTextField<RightAccessory: View>: View {
     let label: String
     let placeholder: String
     @Binding var text: String
     var icon: String? = nil
     var isSecure: Bool = false
     var isLight: Bool = false
-    var rightAccessory: AnyView? = nil
+    let rightAccessory: RightAccessory
+    var showsRightAccessory: Bool = true
     
     var keyboardType: UIKeyboardType = .default
     var textContentType: UITextContentType? = nil
@@ -193,13 +211,13 @@ private struct VaultTextField: View {
             Text(label.uppercased())
                 .font(.system(size: 10, weight: .bold, design: .default))
                 .tracking(1.2)
-                .foregroundColor(VaultColors.textSecondary)
+                .foregroundStyle(VaultColors.textSecondary)
             
             HStack(spacing: 12) {
                 if let icon = icon {
                     Image(systemName: icon)
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(VaultColors.textSecondary)
+                        .foregroundStyle(VaultColors.textSecondary)
                         .frame(width: 20)
                 }
                 
@@ -215,22 +233,46 @@ private struct VaultTextField: View {
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .focused($isFocused)
-                .foregroundColor(isLight ? .black : .white)
-                .accentColor(VaultColors.primaryBlue)
+                .foregroundStyle(isLight ? .black : .white)
+                .tint(VaultColors.primaryBlue)
                 
-                if let rightAccessory = rightAccessory {
+                if showsRightAccessory {
                     rightAccessory
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 16)
             .background(isLight ? VaultColors.fieldBackgroundLight : VaultColors.fieldBackgroundDark)
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(isFocused ? VaultColors.primaryBlue : Color.clear, lineWidth: 1)
             )
         }
+    }
+}
+
+private extension VaultTextField where RightAccessory == EmptyView {
+    init(
+        label: String,
+        placeholder: String,
+        text: Binding<String>,
+        icon: String? = nil,
+        isSecure: Bool = false,
+        isLight: Bool = false,
+        keyboardType: UIKeyboardType = .default,
+        textContentType: UITextContentType? = nil
+    ) {
+        self.label = label
+        self.placeholder = placeholder
+        self._text = text
+        self.icon = icon
+        self.isSecure = isSecure
+        self.isLight = isLight
+        self.rightAccessory = EmptyView()
+        self.showsRightAccessory = false
+        self.keyboardType = keyboardType
+        self.textContentType = textContentType
     }
 }
 
@@ -299,7 +341,7 @@ struct LoginScreen: View {
         }
         .task(id: viewModel.infoMessage) {
             guard let currentMessage = viewModel.infoMessage else { return }
-            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            try? await Task.sleep(for: .seconds(3))
             guard viewModel.infoMessage == currentMessage else { return }
             withAnimation(.easeInOut(duration: 0.2)) {
                 viewModel.infoMessage = nil
@@ -340,11 +382,11 @@ private struct SignInView: View {
                     VStack(spacing: 8) {
                         Text("Welcome back")
                             .font(.system(size: 34, weight: .bold, design: .default))
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                         
                         Text("Securely access your private financial\neditorial and curated portfolio.")
                             .font(.system(size: 15))
-                            .foregroundColor(VaultColors.textSecondary)
+                            .foregroundStyle(VaultColors.textSecondary)
                             .multilineTextAlignment(.center)
                             .lineSpacing(4)
                     }
@@ -372,12 +414,12 @@ private struct SignInView: View {
                                 icon: "lock.fill",
                                 isSecure: !isPasswordVisible,
                                 isLight: false,
-                                rightAccessory: AnyView(
+                                rightAccessory:
                                     Button(action: { isPasswordVisible.toggle() }) {
                                         Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
-                                            .foregroundColor(VaultColors.textSecondary)
+                                            .foregroundStyle(VaultColors.textSecondary)
                                     }
-                                ),
+                                    .accessibilityLabel(isPasswordVisible ? "Hide password" : "Show password"),
                                 textContentType: .password
                             )
                             
@@ -385,7 +427,7 @@ private struct SignInView: View {
                                 Text("FORGOT PASSWORD?")
                                     .font(.system(size: 10, weight: .bold, design: .default))
                                     .tracking(1.0)
-                                    .foregroundColor(VaultColors.primaryBlue)
+                                    .foregroundStyle(VaultColors.primaryBlue)
                             }
                             .offset(y: 2)
                         }
@@ -402,11 +444,11 @@ private struct SignInView: View {
                             Image(systemName: "arrow.right")
                                 .font(.system(size: 14, weight: .bold))
                         }
-                        .foregroundColor(Color(white: 0.1))
+                        .foregroundStyle(Color(white: 0.1))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(VaultColors.primaryBlue)
-                        .cornerRadius(12)
+                        .clipShape(.rect(cornerRadius: 12))
                     }
                     .disabled(viewModel.isSubmitting)
                     .padding(.top, 8)
@@ -416,7 +458,7 @@ private struct SignInView: View {
                 }
                 .padding(24)
                 .background(VaultColors.cardBackground)
-                .cornerRadius(24)
+                .clipShape(.rect(cornerRadius: 24))
                 .padding(.horizontal, 24)
                 
                 // Switch to Sign Up
@@ -424,7 +466,7 @@ private struct SignInView: View {
                     HStack(spacing: 8) {
                         Text("No account? Sign up instead")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(VaultColors.textSecondary)
+                            .foregroundStyle(VaultColors.textSecondary)
                         
                         Circle()
                             .fill(VaultColors.cardBackground)
@@ -432,7 +474,7 @@ private struct SignInView: View {
                             .overlay(
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(VaultColors.textSecondary)
+                                    .foregroundStyle(VaultColors.textSecondary)
                             )
                     }
                 }
@@ -452,11 +494,11 @@ private struct SignInView: View {
                     #endif
                 }
                 .font(.system(size: 12))
-                .foregroundColor(VaultColors.textSecondary)
+                .foregroundStyle(VaultColors.textSecondary)
                 
                 Text("© 2024 The Editorial Financial Experience. All rights reserved.")
                     .font(.system(size: 10))
-                    .foregroundColor(VaultColors.textSecondary.opacity(0.6))
+                    .foregroundStyle(VaultColors.textSecondary.opacity(0.6))
                     .padding(.top, 8)
                     .padding(.bottom, 40)
             }
@@ -479,13 +521,14 @@ private struct SignUpView: View {
                 HStack {
                     Text("Norviqa")
                         .font(.system(size: 20, weight: .bold, design: .default))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                     Spacer()
                     Button(action: { viewModel.hideSignup() }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(VaultColors.textSecondary)
+                            .foregroundStyle(VaultColors.textSecondary)
                     }
+                    .accessibilityLabel("Close sign up")
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
@@ -497,12 +540,12 @@ private struct SignUpView: View {
                     
                     Text("Create your\naccount")
                         .font(.system(size: 34, weight: .bold, design: .default))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
                     
                     Text("Join an elite community and experience\nthe future of editorial financial\nmanagement.")
                         .font(.system(size: 15))
-                        .foregroundColor(VaultColors.textSecondary)
+                        .foregroundStyle(VaultColors.textSecondary)
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)
                 }
@@ -535,12 +578,12 @@ private struct SignUpView: View {
                         text: $viewModel.password,
                         isSecure: !isPasswordVisible,
                         isLight: true,
-                        rightAccessory: AnyView(
+                        rightAccessory:
                             Button(action: { isPasswordVisible.toggle() }) {
                                 Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
-                                    .foregroundColor(Color(white: 0.8))
+                                    .foregroundStyle(Color(white: 0.8))
                             }
-                        ),
+                            .accessibilityLabel(isPasswordVisible ? "Hide password" : "Show password"),
                         textContentType: .newPassword
                     )
                     
@@ -549,14 +592,14 @@ private struct SignUpView: View {
                         Text("DATE OF BIRTH")
                             .font(.system(size: 10, weight: .bold, design: .default))
                             .tracking(1.2)
-                            .foregroundColor(VaultColors.textSecondary)
+                            .foregroundStyle(VaultColors.textSecondary)
                         
                         HStack {
                             Text(formatter.string(from: viewModel.dateOfBirth))
-                                .foregroundColor(.black)
+                                .foregroundStyle(.black)
                             Spacer()
                             Image(systemName: "calendar")
-                                .foregroundColor(Color(white: 0.6))
+                                .foregroundStyle(Color(white: 0.6))
                                 .overlay {
                                     DatePicker("", selection: $viewModel.dateOfBirth, in: ...eighteenYearsAgo, displayedComponents: .date)
                                         .blendMode(.destinationOver)
@@ -565,7 +608,7 @@ private struct SignUpView: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 16)
                         .background(VaultColors.fieldBackgroundLight)
-                        .cornerRadius(12)
+                        .clipShape(.rect(cornerRadius: 12))
                     }
                 }
                 .padding(.horizontal, 24)
@@ -583,11 +626,11 @@ private struct SignUpView: View {
                             Image(systemName: "arrow.right")
                                 .font(.system(size: 14, weight: .bold))
                         }
-                        .foregroundColor(Color(white: 0.1))
+                        .foregroundStyle(Color(white: 0.1))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(VaultColors.primaryBlue)
-                        .cornerRadius(12)
+                        .clipShape(.rect(cornerRadius: 12))
                     }
                     .disabled(viewModel.isSubmitting)
 
@@ -596,16 +639,16 @@ private struct SignUpView: View {
                     Button(action: { viewModel.hideSignup() }) {
                         HStack(spacing: 8) {
                             Text("Already have an account?")
-                                .foregroundColor(VaultColors.textSecondary)
+                                .foregroundStyle(VaultColors.textSecondary)
                             Text("Log in instead")
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .fontWeight(.semibold)
                         }
                         .font(.system(size: 14))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(VaultColors.cardBackground)
-                        .cornerRadius(12)
+                        .clipShape(.rect(cornerRadius: 12))
                     }
                 }
                 .padding(.horizontal, 24)
@@ -620,23 +663,21 @@ private struct SignUpView: View {
                 // Footer
                 VStack(spacing: 16) {
                     HStack(spacing: 24) {
-                        Text("PRIVACY\nPOLICY").multilineTextAlignment(.center)
-                        Text("TERMS OF\nSERVICE").multilineTextAlignment(.center)
-                        Text("HELP\nCENTER").multilineTextAlignment(.center)
+                        Text("Privacy Policy").multilineTextAlignment(.center)
+                        Text("Terms of Service").multilineTextAlignment(.center)
+                        Text("Help Center").multilineTextAlignment(.center)
                         #if DEBUG
                         Button(action: { isEnvironmentPresented = true }) {
-                            Text("DEV\nENV").multilineTextAlignment(.center)
+                            Text("Environment").multilineTextAlignment(.center)
                         }
                         #endif
                     }
-                    .font(.system(size: 10, weight: .bold))
-                    .tracking(1.0)
-                    .foregroundColor(VaultColors.textSecondary)
+                    .font(.system(size: 12))
+                    .foregroundStyle(VaultColors.textSecondary)
                     
-                    Text("© 2024 THE EDITORIAL FINANCIAL EXPERIENCE. ALL\nRIGHTS RESERVED.")
-                        .font(.system(size: 9, weight: .medium))
-                        .tracking(0.5)
-                        .foregroundColor(VaultColors.textSecondary.opacity(0.6))
+                    Text("© 2024 The Editorial Financial Experience. All rights reserved.")
+                        .font(.system(size: 10))
+                        .foregroundStyle(VaultColors.textSecondary.opacity(0.6))
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
@@ -674,16 +715,16 @@ private struct VaultPlatinumCard: View {
                 Text("NORDIQ")
                     .font(.system(size: 10, weight: .bold, design: .default))
                     .tracking(1.5)
-                    .foregroundColor(VaultColors.primaryBlue)
+                    .foregroundStyle(VaultColors.primaryBlue)
                 
                 Text("Your data forever yours only")
-                    .font(.system(size: 22, weight: .bold, design: .serif))
-                    .foregroundColor(.white)
+                    .font(.system(size: 22, weight: .bold, design: .default))
+                    .foregroundStyle(.white)
                     .padding(.top, 4)
                 
                 Text("EDIT THIS MUCH LATER")
                     .font(.system(size: 13))
-                    .foregroundColor(Color(white: 0.7))
+                    .foregroundStyle(Color(white: 0.7))
                     .lineSpacing(4)
                     .padding(.top, 8)
             }
@@ -713,12 +754,13 @@ private struct VaultForgotPasswordView: View {
                     Button(action: { dismiss() }) {
                         Image(systemName: "arrow.left")
                             .font(.system(size: 20, weight: .medium))
-                            .foregroundColor(VaultColors.primaryBlue)
+                            .foregroundStyle(VaultColors.primaryBlue)
                     }
+                    .accessibilityLabel("Back to sign in")
                     Spacer()
                     Text("Norviqa")
                         .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                     Spacer()
                     // Invisible placeholder to center the title
                     Image(systemName: "arrow.left")
@@ -740,11 +782,11 @@ private struct VaultForgotPasswordView: View {
                         VStack(spacing: 12) {
                             Text("Reset Password")
                                 .font(.system(size: 32, weight: .bold))
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                             
                             Text("Enter the email address associated with\nyour account and we'll send a code to\nreset your password.")
                                 .font(.system(size: 16))
-                                .foregroundColor(VaultColors.textSecondary)
+                                .foregroundStyle(VaultColors.textSecondary)
                                 .multilineTextAlignment(.center)
                                 .lineSpacing(4)
                         }
@@ -757,9 +799,9 @@ private struct VaultForgotPasswordView: View {
                                 .textInputAutocapitalization(.never)
                                 .autocorrectionDisabled()
                                 .padding()
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .background(VaultColors.cardBackground)
-                                .cornerRadius(12)
+                                .clipShape(.rect(cornerRadius: 12))
                             
                             if let message {
                                 HStack(spacing: 8) {
@@ -767,7 +809,7 @@ private struct VaultForgotPasswordView: View {
                                     Text(message)
                                 }
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.green)
+                                .foregroundStyle(.green)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             
@@ -777,7 +819,7 @@ private struct VaultForgotPasswordView: View {
                                     Text(errorMessage)
                                 }
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.red)
+                                .foregroundStyle(.red)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             
@@ -794,18 +836,18 @@ private struct VaultForgotPasswordView: View {
                                             .font(.system(size: 14, weight: .bold))
                                     }
                                 }
-                                .foregroundColor(Color(white: 0.1))
+                                .foregroundStyle(Color(white: 0.1))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
                                 .background(email.isEmpty ? VaultColors.primaryBlue.opacity(0.5) : VaultColors.primaryBlue)
-                                .cornerRadius(12)
+                                .clipShape(.rect(cornerRadius: 12))
                             }
                             .disabled(email.isEmpty || isSubmitting)
                             
                             Button(action: { dismiss() }) {
                                 Text("Back to Sign In")
                                     .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(VaultColors.primaryBlue)
+                                    .foregroundStyle(VaultColors.primaryBlue)
                             }
                             .padding(.top, 8)
                         }
@@ -821,7 +863,7 @@ private struct VaultForgotPasswordView: View {
                         }
                         .font(.system(size: 11, weight: .semibold))
                         .tracking(1.0)
-                        .foregroundColor(VaultColors.textSecondary)
+                        .foregroundStyle(VaultColors.textSecondary)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
                         .background(VaultColors.cardBackground)

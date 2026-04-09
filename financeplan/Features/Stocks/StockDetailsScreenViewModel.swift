@@ -214,16 +214,23 @@ final class StockDetailsViewModel: ObservableObject {
             async let historyTask = loadHistory(symbol: symbol)
             async let newsTask = loadNews(symbol: symbol)
             async let valuationTask = loadValuation(symbol: symbol)
+            async let insightsTask = loadInsights(symbol: symbol)
             async let companyProfileTask = loadCompanyProfile(symbol: symbol)
             async let quoteTask = loadQuote(symbol: symbol)
             async let analystConsensusTask = loadAnalystConsensus(symbol: symbol)
             async let basicFinancialsTask = loadBasicFinancials(symbol: symbol)
 
             self.details = details
-            seedMockInsights(for: symbol)
             self.history = await historyTask
             self.news = await newsTask
             self.valuation = await valuationTask
+            if let insights = await insightsTask {
+                applyInsights(insights)
+            } else {
+                self.primaryComparisonProfile = nil
+                self.comparisonUniverse = []
+                self.selectedPeerSymbols = []
+            }
             self.companyProfile = await companyProfileTask
             self.marketSnapshot = await quoteTask
             let analystConsensusResult = await analystConsensusTask
@@ -434,6 +441,17 @@ final class StockDetailsViewModel: ObservableObject {
             }
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            return nil
+        }
+    }
+
+    private func loadInsights(symbol: String) async -> StockInsightsResponse? {
+        do {
+            return try await service.fetchStockInsights(symbol: symbol)
+        } catch {
+            Self.logger.error(
+                "Stock insights load failed symbol=\(symbol, privacy: .public) error=\(error.localizedDescription, privacy: .public)"
+            )
             return nil
         }
     }
@@ -668,14 +686,97 @@ final class StockDetailsViewModel: ObservableObject {
         }
     }
 
-    private func seedMockInsights(for symbol: String) {
-        let normalizedSymbol = symbol.uppercased()
-        let universe = StockInsightsMockStore.universe(for: normalizedSymbol)
-        comparisonUniverse = universe
-        primaryComparisonProfile = universe.first { $0.symbol == normalizedSymbol }
-            ?? StockInsightsMockStore.profile(for: normalizedSymbol)
+    private func applyInsights(_ insights: StockInsightsResponse) {
+        let primary = makePrimaryComparisonProfile(from: insights)
+        let peers = insights.peers.map(makePeerComparisonProfile)
+
+        primaryComparisonProfile = primary
+        comparisonUniverse = [primary] + peers
         selectedPeerSymbols = []
         fillMissingPeers()
+    }
+
+    private func makePrimaryComparisonProfile(from insights: StockInsightsResponse) -> StockComparisonProfile {
+        let metrics = mapComparisonMetrics(insights.profile.metrics)
+        let scenarios = mapProjectionScenarios(
+            insights.projectionScenarios,
+            currentPrice: insights.profile.currentPrice,
+            marketCap: insights.profile.marketCap,
+            sharesOutstanding: insights.profile.sharesOutstanding
+        )
+
+        return StockComparisonProfile(
+            symbol: insights.profile.symbol.uppercased(),
+            companyName: insights.profile.companyName,
+            currentPrice: insights.profile.currentPrice,
+            marketCap: insights.profile.marketCap,
+            sharesOutstanding: insights.profile.sharesOutstanding,
+            metrics: metrics,
+            projectionScenarios: scenarios,
+            dcfBasePrice: insights.profile.dcfBasePrice,
+            dcfBearPrice: insights.profile.dcfBearPrice,
+            dcfBullPrice: insights.profile.dcfBullPrice
+        )
+    }
+
+    private func makePeerComparisonProfile(from peer: StockInsightPeerDTO) -> StockComparisonProfile {
+        StockComparisonProfile(
+            symbol: peer.symbol.uppercased(),
+            companyName: peer.companyName,
+            currentPrice: peer.currentPrice,
+            marketCap: peer.marketCap,
+            sharesOutstanding: peer.sharesOutstanding,
+            metrics: [:],
+            projectionScenarios: [:],
+            dcfBasePrice: nil,
+            dcfBearPrice: nil,
+            dcfBullPrice: nil
+        )
+    }
+
+    private func mapComparisonMetrics(_ raw: [String: Double]) -> [StockComparisonMetric: Double] {
+        var mapped: [StockComparisonMetric: Double] = [:]
+        for (key, value) in raw {
+            guard value.isFinite, let metric = StockComparisonMetric(rawValue: key) else { continue }
+            mapped[metric] = value
+        }
+        return mapped
+    }
+
+    private func mapProjectionScenarios(
+        _ scenarios: [StockInsightProjectionScenarioDTO],
+        currentPrice: Double,
+        marketCap: Double,
+        sharesOutstanding: Double
+    ) -> [StockProjectionScenarioKind: StockProjectionScenario] {
+        var mapped: [StockProjectionScenarioKind: StockProjectionScenario] = [:]
+        for scenario in scenarios {
+            guard let kind = StockProjectionScenarioKind(rawValue: scenario.kind.lowercased()) else { continue }
+            mapped[kind] = StockProjectionScenario(
+                kind: kind,
+                currentPrice: currentPrice,
+                marketCap: marketCap,
+                sharesOutstanding: sharesOutstanding,
+                years: scenario.years.map {
+                    StockProjectionYear(
+                        year: $0.year,
+                        revenue: $0.revenue,
+                        revenueGrowth: $0.revenueGrowth,
+                        netIncome: $0.netIncome,
+                        netIncomeGrowth: $0.netIncomeGrowth,
+                        netMargin: $0.netMargin,
+                        eps: $0.eps,
+                        peLowEstimate: $0.peLowEstimate,
+                        peHighEstimate: $0.peHighEstimate,
+                        sharePriceLow: $0.sharePriceLow,
+                        sharePriceHigh: $0.sharePriceHigh,
+                        cagrLow: $0.cagrLow,
+                        cagrHigh: $0.cagrHigh
+                    )
+                }
+            )
+        }
+        return mapped
     }
 
     private func applyAnalysisMetrics(_ metrics: StockAnalysisMetrics?, to symbol: String) {

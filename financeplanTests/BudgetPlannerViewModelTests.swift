@@ -6,11 +6,11 @@ import XCTest
 
 final class BudgetPlannerViewModelTests: XCTestCase {
   private let calendar = Calendar(identifier: .gregorian)
-  private let utcDateFormatter: DateFormatter = {
+  private let dayFormatter: DateFormatter = {
     let formatter = DateFormatter()
     formatter.dateFormat = "yyyy-MM-dd"
     formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    formatter.timeZone = TimeZone.current
     return formatter
   }()
 
@@ -52,27 +52,45 @@ final class BudgetPlannerViewModelTests: XCTestCase {
   }
 
   func testRecordExpenseUpdatesActualTotalsAndMoneyLeft() async {
+    let mock = BudgetPlannerServiceMock()
+    let month = makeMonth(2026, 3)
+    let occurredOn = makeDate(2026, 3, 2)
+    let rent = BudgetPlanItem(id: UUID(), title: "Rent", plannedAmount: 1100, pillar: .fundamentals)
+    let snapshot = MonthlyBudgetSnapshot(
+      monthStart: month,
+      netSalary: 3000,
+      items: [rent]
+    )
+    mock.createExpenseResult = .success(
+      ExpenseResponse(
+        id: UUID().uuidString,
+        title: "Rent",
+        amount: 980,
+        pillar: .fundamentals,
+        occurredOn: formattedDayString(occurredOn),
+        linkedPlanItemId: rent.id.uuidString,
+        splitMode: .personal,
+        userSharePercent: 100,
+        createdAt: nil,
+        updatedAt: nil
+      )
+    )
+
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(monthlySnapshots: [snapshot], activities: [], expensesService: mock)
+    }
+    let didSave = await viewModel.recordExpenseAndWait(
+      BudgetActivityDraft(
+        title: "Rent",
+        amount: 980,
+        pillar: .fundamentals,
+        occurredOn: occurredOn,
+        linkedPlanItemID: rent.id
+      )
+    )
+
     await MainActor.run {
-      let month = makeMonth(2026, 3)
-      let rent = BudgetPlanItem(id: UUID(), title: "Rent", plannedAmount: 1100, pillar: .fundamentals)
-      let snapshot = MonthlyBudgetSnapshot(
-        monthStart: month,
-        netSalary: 3000,
-        items: [rent]
-      )
-
-      let viewModel = BudgetPlannerViewModel(monthlySnapshots: [snapshot], activities: [])
-
-      viewModel.recordExpense(
-        BudgetActivityDraft(
-          title: "Rent",
-          amount: 980,
-          pillar: .fundamentals,
-          occurredOn: makeDate(2026, 3, 2),
-          linkedPlanItemID: rent.id
-        )
-      )
-
+      XCTAssertTrue(didSave)
       XCTAssertEqual(viewModel.actualAmount(for: rent), 980, accuracy: 0.001)
       XCTAssertEqual(viewModel.selectedMonthActualTotal, 980, accuracy: 0.001)
       XCTAssertEqual(viewModel.selectedMonthLeftAfterSpending, 2020, accuracy: 0.001)
@@ -200,29 +218,47 @@ final class BudgetPlannerViewModelTests: XCTestCase {
   }
 
   func testRecordSharedExpenseCorrectlySplitsAmounts() async {
+    let mock = BudgetPlannerServiceMock()
+    let month = makeMonth(2026, 3)
+    let occurredOn = makeDate(2026, 3, 1)
+    let rent = BudgetPlanItem(
+      id: UUID(), title: "Rent", plannedAmount: 1200,
+      pillar: .fundamentals, splitMode: .shared, userSharePercent: 60
+    )
+    let snapshot = MonthlyBudgetSnapshot(
+      monthStart: month, netSalary: 3000, items: [rent]
+    )
+    mock.createExpenseResult = .success(
+      ExpenseResponse(
+        id: UUID().uuidString,
+        title: "Rent",
+        amount: 1200,
+        pillar: .fundamentals,
+        occurredOn: formattedDayString(occurredOn),
+        linkedPlanItemId: rent.id.uuidString,
+        splitMode: .shared,
+        userSharePercent: 60,
+        createdAt: nil,
+        updatedAt: nil
+      )
+    )
+
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(monthlySnapshots: [snapshot], activities: [], expensesService: mock)
+    }
+    let didSave = await viewModel.recordExpenseAndWait(
+      BudgetActivityDraft(
+        title: "Rent", amount: 1200, pillar: .fundamentals,
+        occurredOn: occurredOn, linkedPlanItemID: rent.id,
+        splitMode: .shared, userSharePercent: 60
+      )
+    )
+
     await MainActor.run {
-      let month = makeMonth(2026, 3)
-      let rent = BudgetPlanItem(
-        id: UUID(), title: "Rent", plannedAmount: 1200,
-        pillar: .fundamentals, splitMode: .shared, userSharePercent: 60
-      )
-      let snapshot = MonthlyBudgetSnapshot(
-        monthStart: month, netSalary: 3000, items: [rent]
-      )
-
-      let viewModel = BudgetPlannerViewModel(monthlySnapshots: [snapshot], activities: [])
-
-      viewModel.recordExpense(
-        BudgetActivityDraft(
-          title: "Rent", amount: 1200, pillar: .fundamentals,
-          occurredOn: makeDate(2026, 3, 1), linkedPlanItemID: rent.id,
-          splitMode: .shared, userSharePercent: 60
-        )
-      )
-
+      XCTAssertTrue(didSave)
       XCTAssertEqual(viewModel.selectedMonthActualTotal, 1200, accuracy: 0.001)
-      XCTAssertEqual(viewModel.selectedMonthMyActualTotal, 720, accuracy: 0.001)  // 60%
-      XCTAssertEqual(viewModel.selectedMonthPartnerActualTotal, 480, accuracy: 0.001)  // 40%
+      XCTAssertEqual(viewModel.selectedMonthMyActualTotal, 720, accuracy: 0.001)
+      XCTAssertEqual(viewModel.selectedMonthPartnerActualTotal, 480, accuracy: 0.001)
       XCTAssertEqual(viewModel.selectedMonthLeftAfterSpending, 1800, accuracy: 0.001)
     }
   }
@@ -330,6 +366,115 @@ final class BudgetPlannerViewModelTests: XCTestCase {
       // Partner actual: Rent 900 (60%) = 900
       XCTAssertEqual(viewModel.selectedMonthPartnerActualTotal, 900, accuracy: 0.001)
     }
+  }
+
+  func testUpdateNetSalaryPropagatesToAvailableAfterPlanAndSpendImmediately() async {
+    let mock = BudgetPlannerServiceMock()
+    let month = makeMonth(2026, 4)
+    let snapshotID = UUID()
+    let snapshot = MonthlyBudgetSnapshot(
+      id: snapshotID,
+      monthStart: month,
+      netSalary: 2000,
+      targetShares: [.fundamentals: 0.5, .futureYou: 0.2, .fun: 0.3],
+      items: [
+        BudgetPlanItem(title: "Rent", plannedAmount: 700, pillar: .fundamentals),
+      ]
+    )
+    let activities = [
+      BudgetActivity(
+        title: "Rent",
+        amount: 650,
+        pillar: .fundamentals,
+        occurredOn: makeDate(2026, 4, 2)
+      )
+    ]
+    mock.updateSnapshotResult = .success(
+      BudgetSnapshotResponse(
+        id: snapshotID.uuidString,
+        monthStart: formattedDayString(month),
+        netSalary: 2600,
+        targetShares: [
+          BudgetPillar.fundamentals.rawValue: 0.5,
+          BudgetPillar.futureYou.rawValue: 0.2,
+          BudgetPillar.fun.rawValue: 0.3,
+        ],
+        createdAt: nil,
+        updatedAt: nil
+      )
+    )
+
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(monthlySnapshots: [snapshot], activities: activities, expensesService: mock)
+    }
+
+    await MainActor.run {
+      viewModel.updateNetSalary(2600)
+    }
+
+    for _ in 0..<60 where mock.updateSnapshotRequests.isEmpty {
+      try? await Task.sleep(for: .milliseconds(20))
+    }
+
+    await MainActor.run {
+      XCTAssertEqual(viewModel.selectedMonthSnapshot?.netSalary ?? -1, 2600, accuracy: 0.001)
+      XCTAssertEqual(viewModel.selectedMonthAvailableAfterPillarPlan, 1900, accuracy: 0.001)
+      XCTAssertEqual(viewModel.selectedMonthLeftAfterSpending, 1950, accuracy: 0.001)
+    }
+    XCTAssertEqual(mock.updateSnapshotRequests.count, 1)
+    XCTAssertEqual(mock.updateSnapshotRequests.first?.monthStart, formattedDayString(month))
+  }
+
+  func testUpdateTargetSharesPropagatesToPillarTargetsImmediately() async {
+    let mock = BudgetPlannerServiceMock()
+    let month = makeMonth(2026, 4)
+    let snapshotID = UUID()
+    let snapshot = MonthlyBudgetSnapshot(
+      id: snapshotID,
+      monthStart: month,
+      netSalary: 3000,
+      targetShares: [.fundamentals: 0.5, .futureYou: 0.2, .fun: 0.3],
+      items: []
+    )
+    mock.updateSnapshotResult = .success(
+      BudgetSnapshotResponse(
+        id: snapshotID.uuidString,
+        monthStart: formattedDayString(month),
+        netSalary: 3000,
+        targetShares: [
+          BudgetPillar.fundamentals.rawValue: 0.6,
+          BudgetPillar.futureYou.rawValue: 0.25,
+          BudgetPillar.fun.rawValue: 0.15,
+        ],
+        createdAt: nil,
+        updatedAt: nil
+      )
+    )
+
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(monthlySnapshots: [snapshot], activities: [], expensesService: mock)
+    }
+
+    await MainActor.run {
+      viewModel.updateTargetShares([
+        .fundamentals: 0.6,
+        .futureYou: 0.25,
+        .fun: 0.15,
+      ])
+    }
+
+    for _ in 0..<60 where mock.updateSnapshotRequests.isEmpty {
+      try? await Task.sleep(for: .milliseconds(20))
+    }
+
+    await MainActor.run {
+      let summaries = Dictionary(uniqueKeysWithValues: viewModel.selectedMonthSummaries.map { ($0.pillar, $0) })
+      XCTAssertEqual(summaries[.fundamentals]?.targetAmount ?? -1, 1800, accuracy: 0.001)
+      XCTAssertEqual(summaries[.futureYou]?.targetAmount ?? -1, 750, accuracy: 0.001)
+      XCTAssertEqual(summaries[.fun]?.targetAmount ?? -1, 450, accuracy: 0.001)
+    }
+    XCTAssertEqual(mock.updateSnapshotRequests.count, 1)
+    XCTAssertEqual(mock.updateSnapshotRequests.first?.monthStart, formattedDayString(month))
   }
 
   func testLoadShowsSuggestionsLoadingAndThenPopulatesSuggestion() async {
@@ -478,7 +623,7 @@ final class BudgetPlannerViewModelTests: XCTestCase {
       try? await Task.sleep(nanoseconds: 20_000_000)
     }
 
-    let expectedMonthStart = formattedUTCDate(makeMonth(2026, 6))
+    let expectedMonthStart = formattedDayString(makeMonth(2026, 6))
     XCTAssertEqual(mock.createBudgetSnapshotRequests.count, 1)
     XCTAssertEqual(mock.createBudgetSnapshotRequests.first?.monthStart, expectedMonthStart)
     XCTAssertEqual(mock.createPlanItemRequests.count, 1)
@@ -491,7 +636,7 @@ final class BudgetPlannerViewModelTests: XCTestCase {
     let mock = BudgetPlannerServiceMock()
     mock.createExpenseResult = .success(
       ExpenseResponse(
-        id: "exp-1",
+        id: "11111111-1111-4111-8111-111111111111",
         title: "Coffee",
         amount: 6,
         pillar: .fun,
@@ -514,24 +659,21 @@ final class BudgetPlannerViewModelTests: XCTestCase {
       )
     }
 
-    await MainActor.run {
-      viewModel.recordExpense(
-        BudgetActivityDraft(
-          title: "Coffee",
-          amount: 6,
-          pillar: .fun,
-          occurredOn: mayDate
-        )
+    let didSave = await viewModel.recordExpenseAndWait(
+      BudgetActivityDraft(
+        title: "Coffee",
+        amount: 6,
+        pillar: .fun,
+        occurredOn: mayDate
       )
+    )
+
+    await MainActor.run {
+      XCTAssertTrue(didSave)
       XCTAssertEqual(viewModel.selectedMonthStart, makeMonth(2026, 5))
     }
-
-    for _ in 0..<60 where mock.createExpenseRequests.isEmpty {
-      try? await Task.sleep(nanoseconds: 20_000_000)
-    }
-
     XCTAssertEqual(mock.createExpenseRequests.count, 1)
-    XCTAssertEqual(mock.createExpenseRequests.first?.occurredOn, formattedUTCDate(mayDate))
+    XCTAssertEqual(mock.createExpenseRequests.first?.occurredOn, formattedDayString(mayDate))
     XCTAssertEqual(mock.createExpenseRequests.first?.title, "Coffee")
   }
 
@@ -539,7 +681,7 @@ final class BudgetPlannerViewModelTests: XCTestCase {
     let mock = BudgetPlannerServiceMock()
     mock.createExpenseResult = .success(
       ExpenseResponse(
-        id: "exp-2",
+        id: "22222222-2222-4222-8222-222222222222",
         title: "Food",
         amount: 50,
         pillar: .fun,
@@ -554,7 +696,7 @@ final class BudgetPlannerViewModelTests: XCTestCase {
     mock.expensesResult = .success(
       [
         ExpenseResponse(
-          id: "exp-2",
+          id: "22222222-2222-4222-8222-222222222222",
           title: "Food",
           amount: 50,
           pillar: .fun,
@@ -578,16 +720,17 @@ final class BudgetPlannerViewModelTests: XCTestCase {
       )
     }
 
-    await MainActor.run {
-      viewModel.recordExpense(
-        BudgetActivityDraft(
-          title: "Food",
-          amount: 50,
-          pillar: .fun,
-          occurredOn: mayDate
-        )
+    let didSave = await viewModel.recordExpenseAndWait(
+      BudgetActivityDraft(
+        title: "Food",
+        amount: 50,
+        pillar: .fun,
+        occurredOn: mayDate
       )
+    )
 
+    await MainActor.run {
+      XCTAssertTrue(didSave)
       XCTAssertEqual(viewModel.selectedMonthStart, makeMonth(2026, 5))
       XCTAssertNil(viewModel.selectedMonthSnapshot)
       XCTAssertEqual(viewModel.selectedMonthActualTotal, 50, accuracy: 0.001)
@@ -691,8 +834,8 @@ final class BudgetPlannerViewModelTests: XCTestCase {
     calendar.date(from: DateComponents(year: year, month: month, day: day)) ?? .now
   }
 
-  private func formattedUTCDate(_ date: Date) -> String {
-    utcDateFormatter.string(from: date)
+  private func formattedDayString(_ date: Date) -> String {
+    dayFormatter.string(from: date)
   }
 }
 
@@ -729,6 +872,7 @@ private final class BudgetPlannerServiceMock: ExpensesServicing {
   )
   var yearlyReportsResult: Result<[BudgetYearSummaryResponse], Error> = .success([])
   var createSnapshotResult: Result<BudgetSnapshotResponse, Error> = .failure(MockPlannerError.notConfigured)
+  var updateSnapshotResult: Result<BudgetSnapshotResponse, Error> = .failure(MockPlannerError.notConfigured)
   var createPlanItemResult: Result<BudgetPlanItemResponse, Error> = .failure(MockPlannerError.notConfigured)
   var createExpenseResult: Result<ExpenseResponse, Error> = .failure(MockPlannerError.notConfigured)
 
@@ -739,6 +883,7 @@ private final class BudgetPlannerServiceMock: ExpensesServicing {
   var suggestionsDelayNanos: UInt64 = 0
   var getSnapshotsCallCount = 0
   var createBudgetSnapshotRequests: [BudgetSnapshotRequest] = []
+  var updateSnapshotRequests: [BudgetSnapshotRequest] = []
   var createPlanItemRequests: [BudgetPlanItemRequest] = []
   var createExpenseRequests: [ExpenseRequest] = []
   var dismissedSuggestionIds: [String] = []
@@ -764,8 +909,9 @@ private final class BudgetPlannerServiceMock: ExpensesServicing {
     return try createSnapshotResult.get()
   }
 
-  func updateSnapshot(snapshotId _: String, payload _: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
-    throw MockPlannerError.notConfigured
+  func updateSnapshot(snapshotId _: String, payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
+    updateSnapshotRequests.append(payload)
+    return try updateSnapshotResult.get()
   }
 
   func deleteSnapshot(snapshotId _: String) async throws {}

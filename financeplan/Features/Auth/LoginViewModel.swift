@@ -106,6 +106,25 @@ final class LoginViewModel: ObservableObject {
     return response.message
   }
 
+  func signInWithOAuth(_ provider: OAuthProviderKind) async {
+    guard !isSubmitting else {
+      return
+    }
+
+    error = nil
+    infoMessage = nil
+    isSubmitting = true
+    defer { isSubmitting = false }
+
+    do {
+      let auth = try await authService.oauthSignIn(provider: provider)
+      persistAuth(auth)
+      error = nil
+    } catch {
+      self.error = errorMessage(from: error, fallback: "Could not sign in with \(provider.rawValue.capitalized). Please try again.")
+    }
+  }
+
   private func login() async {
     hasAttemptedSubmission = true
     validateAllFields()

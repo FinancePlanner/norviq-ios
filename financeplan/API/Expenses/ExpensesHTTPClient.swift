@@ -154,6 +154,7 @@ struct ExpensesHTTPClient {
         let request = try makeURLRequest(for: endpoint)
         logRequest(request, endpoint: endpoint)
         logSnapshotRequestIfNeeded(request, endpointPath: endpoint.path)
+        logExpenseRequestIfNeeded(request, endpointPath: endpoint.path)
         let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -193,6 +194,21 @@ struct ExpensesHTTPClient {
         guard endpointPath == "/v1/budget/snapshots" || endpointPath.hasPrefix("/v1/budget/snapshots/") else {
             return
         }
+
+        let body = request.httpBody.flatMap {
+            String(data: $0, encoding: .utf8)
+        } ?? "<empty>"
+
+        expensesHTTPLogger.debug(
+            "Expenses request [\(endpointPath, privacy: .public)] body=\(body, privacy: .public)"
+        )
+    }
+
+    private func logExpenseRequestIfNeeded(_ request: URLRequest, endpointPath: String) {
+        guard endpointPath == "/v1/expenses" || endpointPath.hasPrefix("/v1/expenses/") else {
+            return
+        }
+        guard request.httpMethod != HTTPMethod.get.rawValue else { return }
 
         let body = request.httpBody.flatMap {
             String(data: $0, encoding: .utf8)
