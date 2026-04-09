@@ -121,13 +121,13 @@ final class AuthSessionStoreTests: XCTestCase {
     let header = ["alg": "none", "typ": "JWT"]
     let payload: [String: Any] = [
       "userId": userID.uuidString,
-      "exp": Int(expiresAt.timeIntervalSince1970),
+      "exp": Int(expiresAt.timeIntervalSince1970)
     ]
 
     return [
       encodeSegment(header),
       encodeSegment(payload),
-      "signature",
+      "signature"
     ].joined(separator: ".")
   }
 

@@ -339,15 +339,15 @@ final class StockDetailsViewModelTests: XCTestCase {
       tenDayAverageTradingVolume: 32.50147,
       salesPerShareAnnual: [
         StockBasicFinancialSeriesPoint(period: "2018-09-29", value: 53.1178),
-        StockBasicFinancialSeriesPoint(period: "2019-09-28", value: 55.9645),
+        StockBasicFinancialSeriesPoint(period: "2019-09-28", value: 55.9645)
       ],
       currentRatioAnnual: [
         StockBasicFinancialSeriesPoint(period: "2018-09-29", value: 1.1329),
-        StockBasicFinancialSeriesPoint(period: "2019-09-28", value: 1.5401),
+        StockBasicFinancialSeriesPoint(period: "2019-09-28", value: 1.5401)
       ],
       netMarginAnnual: [
         StockBasicFinancialSeriesPoint(period: "2018-09-29", value: 0.2241),
-        StockBasicFinancialSeriesPoint(period: "2019-09-28", value: 0.2124),
+        StockBasicFinancialSeriesPoint(period: "2019-09-28", value: 0.2124)
       ]
     )
   }
@@ -733,7 +733,7 @@ final class StockDetailsViewModelTests: XCTestCase {
         epsLow: nil,
         numAnalystsRevenue: 21,
         numAnalystsEps: 24
-      ),
+      )
     ]
   }
 
@@ -806,7 +806,7 @@ final class StockDetailsViewModelTests: XCTestCase {
     viewModel.history = [makeHistory()]
     viewModel.news = [
       makeNews(),
-      makeNews(title: "Analysts review iPhone demand", date: "2026-03-24"),
+      makeNews(title: "Analysts review iPhone demand", date: "2026-03-24")
     ]
 
     let snapshot = viewModel.shareSnapshot

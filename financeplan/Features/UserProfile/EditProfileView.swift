@@ -22,35 +22,60 @@ struct EditProfileView: View {
 
     // Local editable copy
     @State private var username: String
+    @State private var email: String
+    @State private var currentPassword = ""
+    @State private var newPassword = ""
     @State private var successFeedbackTrigger = 0
 
     @FocusState private var focusedField: Field?
 
     private let originalProfile: UserProfile
 
-    private enum Field { case username, bio }
+    private enum Field { case username, email, currentPassword, newPassword }
 
     init(viewModel: UserProfileViewModel, profile: UserProfile) {
         self.viewModel = viewModel
         self.originalProfile = profile
         _username = State(initialValue: profile.username ?? "")
+        _email = State(initialValue: profile.email)
     }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // MARK: - Banner + Avatar
-                    headerSection
+            List {
+                Section("Username") {
+                    TextField("Username", text: $username)
+                        .focused($focusedField, equals: .username)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
 
-                    // MARK: - Editable Fields
-                    fieldsSection
-                        .padding(.top, fieldsTopPadding)
+                Section("Email") {
+                    TextField("Email", text: $email)
+                        .focused($focusedField, equals: .email)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.emailAddress)
+                        .autocorrectionDisabled()
+                }
+
+                Section("Change Password") {
+                    SecureField("Current Password", text: $currentPassword)
+                        .focused($focusedField, equals: .currentPassword)
+                    SecureField("New Password", text: $newPassword)
+                        .focused($focusedField, equals: .newPassword)
+                }
+
+                if let errorMessage = viewModel.errorMessage {
+                    Section {
+                        Text(errorMessage)
+                            .foregroundStyle(.red)
+                            .font(.caption)
+                    }
                 }
             }
-            .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
+            .background(AppTheme.Colors.pageBackground(for: scheme))
             .navigationTitle("Edit profile")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -73,167 +98,34 @@ struct EditProfileView: View {
         .appSensoryFeedback(success: successFeedbackTrigger)
     }
 
-    // MARK: - Header (Banner + Avatar)
-
-    private var headerSection: some View {
-        ZStack(alignment: .bottomLeading) {
-            // Banner
-            bannerView
-                .frame(height: 150)
-                .clipped()
-                .overlay(alignment: .center) {
-                    // Camera icon on banner
-                    cameraOverlayButton
-                }
-
-            // Avatar
-            avatarView
-                .offset(x: 16, y: avatarOverhang)
-        }
-    }
-
-    private var bannerView: some View {
-        ZStack {
-            if let bannerURL = originalProfile.bannerAvatarURL {
-                AsyncImage(url: bannerURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    default:
-                        bannerPlaceholder
-                    }
-                }
-            } else {
-                bannerPlaceholder
-            }
-        }
-    }
-
-    private var bannerPlaceholder: some View {
-        LinearGradient(
-            colors: AppTheme.heroGradient(for: scheme),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-
-    private var avatarView: some View {
-        ZStack {
-            if let avatarURL = originalProfile.avatarURL {
-                AsyncImage(url: avatarURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    default:
-                        avatarPlaceholder
-                    }
-                }
-            } else {
-                avatarPlaceholder
-            }
-        }
-        .frame(width: avatarSize, height: avatarSize)
-        .clipShape(Circle())
-        .overlay(
-            Circle()
-                .stroke(AppTheme.Colors.pageBackground(for: scheme), lineWidth: 3)
-        )
-        .overlay(
-            // Camera icon on avatar
-            Image(systemName: "camera.fill")
-                .font(.system(size: 14))
-                .foregroundStyle(.white)
-                .padding(6)
-                .background(Color.black.opacity(0.5))
-                .clipShape(Circle())
-                .accessibilityLabel("Change profile photo")
-        )
-    }
-
-    private var avatarPlaceholder: some View {
-        LinearGradient(
-            colors: AppTheme.avatarGradient(for: scheme),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .overlay(
-            Text(avatarInitial)
-                .font(.title2.bold())
-                .foregroundStyle(.white)
-        )
-    }
-
-    private var avatarInitial: String {
-        let seed =
-            normalized(username)
-            ?? normalized(originalProfile.username)
-            ?? normalized(originalProfile.email)
-            ?? "?"
-
-        return String(seed.prefix(1)).uppercased()
-    }
-
-    private func normalized(_ value: String?) -> String? {
-        guard let value else { return nil }
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
-    }
-
-    private var cameraOverlayButton: some View {
-        Image(systemName: "camera.fill")
-            .font(.system(size: 18))
-            .foregroundStyle(.white)
-            .padding(10)
-            .background(Color.black.opacity(0.5))
-            .clipShape(Circle())
-            .accessibilityLabel("Change banner photo")
-    }
-
-    // MARK: - Fields
-
-    private var fieldsSection: some View {
-        VStack(spacing: 0) {
-            editableRow(label: "Username", text: $username)
-            divider
-        }
-        .padding(.horizontal, 16)
-    }
-
-    private func editableRow(label: String, text: Binding<String>) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            Text(label)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .frame(width: 90, alignment: .leading)
-
-            TextField(label, text: text)
-                .font(.body)
-                .foregroundStyle(.primary)
-                .focused($focusedField, equals: label == "Username" ? .username : label == "Bio" ? .bio : nil)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled(label == "Username")
-        }
-        .padding(.vertical, 14)
-    }
-
-    private var divider: some View {
-        Rectangle()
-            .fill(AppTheme.Colors.tertiaryFill(for: scheme))
-            .frame(height: 1)
-    }
-
     // MARK: - Actions
 
     private func saveProfile() {
-        var updated = originalProfile
-        updated.username = username.isEmpty ? nil : username
-
         Task {
-            if await viewModel.save(profile: updated) {
+            var success = true
+
+            // 1. Update Username if changed
+            if username != (originalProfile.username ?? "") {
+                success = await viewModel.updateUsername(username)
+            }
+
+            // 2. Update Email if changed
+            if success && email != originalProfile.email {
+                success = await viewModel.updateEmail(email)
+            }
+
+            // 3. Update Password if provided
+            if success && !newPassword.isEmpty {
+                if currentPassword.isEmpty {
+                    viewModel.save(profile: originalProfile) // Trigger an error if needed or manual setting
+                    // Custom error handling would be better here
+                    success = false
+                } else {
+                    success = await viewModel.updatePassword(current: currentPassword, new: newPassword)
+                }
+            }
+
+            if success {
                 successFeedbackTrigger += 1
                 dismiss()
             }

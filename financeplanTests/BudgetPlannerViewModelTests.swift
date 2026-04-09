@@ -23,12 +23,12 @@ final class BudgetPlannerViewModelTests: XCTestCase {
         targetShares: [
           .fundamentals: 0.5,
           .futureYou: 0.2,
-          .fun: 0.3,
+          .fun: 0.3
         ],
         items: [
           BudgetPlanItem(title: "Rent", plannedAmount: 1100, pillar: .fundamentals),
           BudgetPlanItem(title: "ETF", plannedAmount: 400, pillar: .futureYou),
-          BudgetPlanItem(title: "Dining", plannedAmount: 300, pillar: .fun),
+          BudgetPlanItem(title: "Dining", plannedAmount: 300, pillar: .fun)
         ]
       )
 
@@ -106,11 +106,11 @@ final class BudgetPlannerViewModelTests: XCTestCase {
         targetShares: [
           .fundamentals: 0.45,
           .futureYou: 0.30,
-          .fun: 0.25,
+          .fun: 0.25
         ],
         items: [
           BudgetPlanItem(title: "Rent", plannedAmount: 980, pillar: .fundamentals),
-          BudgetPlanItem(title: "ETF", plannedAmount: 350, pillar: .futureYou),
+          BudgetPlanItem(title: "ETF", plannedAmount: 350, pillar: .futureYou)
         ]
       )
 
@@ -145,13 +145,13 @@ final class BudgetPlannerViewModelTests: XCTestCase {
       let snapshots = [
         MonthlyBudgetSnapshot(monthStart: december2025, netSalary: 2600, items: []),
         MonthlyBudgetSnapshot(monthStart: january2026, netSalary: 2700, items: []),
-        MonthlyBudgetSnapshot(monthStart: march2026, netSalary: 2800, items: []),
+        MonthlyBudgetSnapshot(monthStart: march2026, netSalary: 2800, items: [])
       ]
 
       let activities = [
         BudgetActivity(title: "December spend", amount: 900, pillar: .fundamentals, occurredOn: makeDate(2025, 12, 5)),
         BudgetActivity(title: "January spend", amount: 1100, pillar: .fundamentals, occurredOn: makeDate(2026, 1, 5)),
-        BudgetActivity(title: "March spend", amount: 1300, pillar: .fun, occurredOn: makeDate(2026, 3, 6)),
+        BudgetActivity(title: "March spend", amount: 1300, pillar: .fun, occurredOn: makeDate(2026, 3, 6))
       ]
 
       let viewModel = BudgetPlannerViewModel(monthlySnapshots: snapshots, activities: activities)
@@ -307,14 +307,14 @@ final class BudgetPlannerViewModelTests: XCTestCase {
         items: [
           BudgetPlanItem(title: "Groceries", plannedAmount: 600, pillar: .fundamentals),
           BudgetPlanItem(title: "Savings", plannedAmount: 800, pillar: .futureYou),
-          BudgetPlanItem(title: "Dining", plannedAmount: 400, pillar: .fun),
+          BudgetPlanItem(title: "Dining", plannedAmount: 400, pillar: .fun)
         ]
       )
 
       let activities = [
         BudgetActivity(title: "Groceries", amount: 550, pillar: .fundamentals, occurredOn: makeDate(2026, 4, 3)),
         BudgetActivity(title: "Uber Eats", amount: 35, pillar: .fun, occurredOn: makeDate(2026, 4, 5)),
-        BudgetActivity(title: "Concert", amount: 120, pillar: .fun, occurredOn: makeDate(2026, 4, 8)),
+        BudgetActivity(title: "Concert", amount: 120, pillar: .fun, occurredOn: makeDate(2026, 4, 8))
       ]
 
       let viewModel = BudgetPlannerViewModel(monthlySnapshots: [snapshot], activities: activities)
@@ -341,13 +341,13 @@ final class BudgetPlannerViewModelTests: XCTestCase {
         monthStart: month, netSalary: 6000,
         items: [
           BudgetPlanItem(title: "Rent", plannedAmount: 1500, pillar: .fundamentals, splitMode: .shared, userSharePercent: 40),
-          BudgetPlanItem(title: "Gym", plannedAmount: 50, pillar: .fun),
+          BudgetPlanItem(title: "Gym", plannedAmount: 50, pillar: .fun)
         ]
       )
 
       let activities = [
         BudgetActivity(title: "Rent", amount: 1500, pillar: .fundamentals, occurredOn: makeDate(2026, 5, 1), splitMode: .shared, userSharePercent: 40),
-        BudgetActivity(title: "Gym", amount: 50, pillar: .fun, occurredOn: makeDate(2026, 5, 3)),
+        BudgetActivity(title: "Gym", amount: 50, pillar: .fun, occurredOn: makeDate(2026, 5, 3))
       ]
 
       let viewModel = BudgetPlannerViewModel(monthlySnapshots: [snapshot], activities: activities)
@@ -378,7 +378,7 @@ final class BudgetPlannerViewModelTests: XCTestCase {
       netSalary: 2000,
       targetShares: [.fundamentals: 0.5, .futureYou: 0.2, .fun: 0.3],
       items: [
-        BudgetPlanItem(title: "Rent", plannedAmount: 700, pillar: .fundamentals),
+        BudgetPlanItem(title: "Rent", plannedAmount: 700, pillar: .fundamentals)
       ]
     )
     let activities = [
@@ -397,7 +397,7 @@ final class BudgetPlannerViewModelTests: XCTestCase {
         targetShares: [
           BudgetPillar.fundamentals.rawValue: 0.5,
           BudgetPillar.futureYou.rawValue: 0.2,
-          BudgetPillar.fun.rawValue: 0.3,
+          BudgetPillar.fun.rawValue: 0.3
         ],
         createdAt: nil,
         updatedAt: nil
@@ -444,7 +444,7 @@ final class BudgetPlannerViewModelTests: XCTestCase {
         targetShares: [
           BudgetPillar.fundamentals.rawValue: 0.6,
           BudgetPillar.futureYou.rawValue: 0.25,
-          BudgetPillar.fun.rawValue: 0.15,
+          BudgetPillar.fun.rawValue: 0.15
         ],
         createdAt: nil,
         updatedAt: nil
@@ -459,7 +459,7 @@ final class BudgetPlannerViewModelTests: XCTestCase {
       viewModel.updateTargetShares([
         .fundamentals: 0.6,
         .futureYou: 0.25,
-        .fun: 0.15,
+        .fun: 0.15
       ])
     }
 
@@ -586,7 +586,7 @@ final class BudgetPlannerViewModelTests: XCTestCase {
         targetShares: [
           BudgetPillar.fundamentals.rawValue: 0.5,
           BudgetPillar.futureYou.rawValue: 0.2,
-          BudgetPillar.fun.rawValue: 0.3,
+          BudgetPillar.fun.rawValue: 0.3
         ]
       )
     )
@@ -800,7 +800,7 @@ final class BudgetPlannerViewModelTests: XCTestCase {
         targetShares: [
           BudgetPillar.fundamentals.rawValue: 0.5,
           BudgetPillar.futureYou.rawValue: 0.2,
-          BudgetPillar.fun.rawValue: 0.3,
+          BudgetPillar.fun.rawValue: 0.3
         ]
       )
     )
@@ -849,7 +849,7 @@ private final class BudgetPlannerServiceMock: ExpensesServicing {
         targetShares: [
           BudgetPillar.fundamentals.rawValue: 0.5,
           BudgetPillar.futureYou.rawValue: 0.2,
-          BudgetPillar.fun.rawValue: 0.3,
+          BudgetPillar.fun.rawValue: 0.3
         ],
         createdAt: nil,
         updatedAt: nil

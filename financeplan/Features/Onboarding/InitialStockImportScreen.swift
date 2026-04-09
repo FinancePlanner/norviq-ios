@@ -69,7 +69,7 @@ struct InitialStockImportScreen: View {
   let headerNamespace: Namespace.ID?
 
   @State private var selectedMethod: StockImportMethod?
-  @State private var tappedMethod: StockImportMethod? = nil
+  @State private var tappedMethod: StockImportMethod?
   @State private var isSubmitting = false
   @State private var isSigningOut = false
   @State private var message: String?
@@ -184,7 +184,7 @@ struct InitialStockImportScreen: View {
               colors: [
                 AppTheme.Colors.tint(for: colorScheme).opacity(0.18),
                 AppTheme.Colors.tint(for: colorScheme).opacity(0.04),
-                .clear,
+                .clear
               ],
               center: .center,
               startRadius: 5,

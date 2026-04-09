@@ -138,14 +138,14 @@ enum AppTheme {
   static func avatarGradient(for scheme: ColorScheme) -> [Color] {
     [
       Colors.tint(for: scheme).opacity(scheme == .dark ? 0.9 : 0.8),
-      Colors.secondaryTint(for: scheme).opacity(scheme == .dark ? 0.85 : 0.75),
+      Colors.secondaryTint(for: scheme).opacity(scheme == .dark ? 0.85 : 0.75)
     ]
   }
 
   static func heroGradient(for scheme: ColorScheme) -> [Color] {
     [
       Colors.tintSoft(for: scheme),
-      Colors.pageBackground(for: scheme),
+      Colors.pageBackground(for: scheme)
     ]
   }
 
@@ -154,17 +154,17 @@ enum AppTheme {
     case .dark:
       return [
         Color(red: 0.05, green: 0.08, blue: 0.14),
-        Color(red: 0.03, green: 0.04, blue: 0.08),
+        Color(red: 0.03, green: 0.04, blue: 0.08)
       ]
     case .light:
       return [
         Color(red: 0.95, green: 0.97, blue: 1.00),
-        Color(red: 0.88, green: 0.93, blue: 0.99),
+        Color(red: 0.88, green: 0.93, blue: 0.99)
       ]
     @unknown default:
       return [
         Color(red: 0.05, green: 0.08, blue: 0.14),
-        Color(red: 0.03, green: 0.04, blue: 0.08),
+        Color(red: 0.03, green: 0.04, blue: 0.08)
       ]
     }
   }

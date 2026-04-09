@@ -301,7 +301,7 @@ final class AuthHTTPClientTests: XCTestCase {
       requestedURLs,
       [
         "https://api.example.com/v2/logout",
-        "https://api.example.com/auth/logout",
+        "https://api.example.com/auth/logout"
       ]
     )
   }

@@ -50,11 +50,11 @@ struct GoalsServiceStub: GoalsServicing {
             GoalResponse(id: UUID().uuidString, title: "Save for European vacation", status: .completed)
         ]
     }
-    
+
     func createGoal(payload: GoalRequest) async throws -> GoalResponse {
         GoalResponse(id: UUID().uuidString, title: payload.title, status: .pending)
     }
-    
+
     func updateGoal(id: String, payload: GoalRequest) async throws -> GoalResponse {
         GoalResponse(id: id, title: payload.title, status: .pending)
     }
@@ -68,6 +68,6 @@ struct GoalsServiceStub: GoalsServicing {
             completedAt: payload.status == .completed ? ISO8601DateFormatter().string(from: Date()) : nil
         )
     }
-    
+
     func deleteGoal(id: String) async throws {}
 }

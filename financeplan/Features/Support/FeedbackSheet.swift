@@ -5,15 +5,15 @@ struct FeedbackSheet: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(\.colorScheme) private var colorScheme
   private var feedbackService: FeedbackService { Container.shared.feedbackService() }
-  
+
   @State private var topic = "Feature Request"
   @State private var message = ""
   @State private var isSubmitting = false
   @State private var errorMessage: String?
   @State private var showSuccessToast = false
-  
+
   let topics = ["Feature Request", "Bug Report", "UI/UX Feedback", "Other"]
-  
+
   var body: some View {
     NavigationStack {
       VStack(spacing: 0) {
@@ -27,7 +27,7 @@ struct FeedbackSheet: View {
           } header: {
             Text("What's on your mind?")
           }
-          
+
           Section {
             TextEditor(text: $message)
               .frame(minHeight: 150)
@@ -39,7 +39,7 @@ struct FeedbackSheet: View {
           }
         }
         .scrollContentBackground(.hidden)
-        
+
         Button {
           submitFeedback()
         } label: {
@@ -81,11 +81,11 @@ struct FeedbackSheet: View {
       }
     }
   }
-  
+
   private func submitFeedback() {
     isSubmitting = true
     errorMessage = nil
-    
+
     Task {
       do {
         _ = try await feedbackService.submitFeedback(topic: topic, message: message)

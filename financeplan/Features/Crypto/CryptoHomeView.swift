@@ -15,9 +15,9 @@ struct CryptoHomeView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var isProfilePresented = false
     @State private var isAddCryptoPresented = false
-    @State private var editingHolding: CryptoPortfolioItemResponse? = nil
+    @State private var editingHolding: CryptoPortfolioItemResponse?
     @Namespace private var segmentNamespace
-    
+
     private enum CryptoSegment: String, CaseIterable, Identifiable {
         case overview, portfolio, market, news
         var id: String { rawValue }
@@ -30,13 +30,13 @@ struct CryptoHomeView: View {
             }
         }
     }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
                 MeshGradientBackground()
                     .ignoresSafeArea()
-                
+
                 ScrollView {
                     VStack(spacing: 24) {
                         // Segmented Picker
@@ -47,7 +47,7 @@ struct CryptoHomeView: View {
                         }
                         .pickerStyle(.segmented)
                         .padding(.horizontal)
-                        
+
                         if viewModel.isLoading && viewModel.topAssets.isEmpty {
                             CryptoOverviewSkeleton()
                                 .transition(.opacity)
@@ -92,7 +92,7 @@ struct CryptoHomeView: View {
                         }
                         .accessibilityLabel("Add crypto holding")
                     }
-                    
+
                     Button {
                         isSettingsPresented = true
                     } label: {
@@ -121,7 +121,7 @@ struct CryptoHomeView: View {
 private struct CryptoOverviewSection: View {
     @ObservedObject var viewModel: CryptoViewModel
     @State private var appeared = false
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             // Market Quick Stats
@@ -130,34 +130,34 @@ private struct CryptoOverviewSection: View {
                 GasTrackerCard(gwei: viewModel.ethGasGwei)
             }
             .padding(.horizontal)
-            
+
             // Your Balance
             if !viewModel.userHoldings.isEmpty {
                 YourCryptoBalanceCard(holdings: viewModel.userHoldings, topAssets: viewModel.topAssets)
                     .padding(.horizontal)
             }
-            
+
             // Market Dominance
             MarketDominanceCard(data: viewModel.dominance)
                 .padding(.horizontal)
-            
+
             // Featured Card
             if let btc = viewModel.topAssets.first(where: { $0.symbol.contains("BTC") }) {
                 FeaturedCryptoCard(asset: btc)
                     .padding(.horizontal)
-                
+
                 MarketQuickStatsCard(asset: btc)
                     .padding(.horizontal)
             }
-            
+
             // Top Movers
             TopMoversSection(gainers: viewModel.topGainers, losers: viewModel.topLosers)
-            
+
             // Market Leaders
             if viewModel.topAssets.count > 1 {
                 VStack(alignment: .leading, spacing: 12) {
                     OverviewSectionLabel(title: "Market Leaders", color: .blue)
-                    
+
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 16) {
                             ForEach(viewModel.topAssets.prefix(10)) { asset in
@@ -168,12 +168,12 @@ private struct CryptoOverviewSection: View {
                     }
                 }
             }
-            
+
             // Latest News Preview
             if !viewModel.marketNews.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
                     OverviewSectionLabel(title: "Latest News", color: .purple)
-                    
+
                     ForEach(viewModel.marketNews.prefix(3)) { news in
                         CryptoNewsRow(news: news)
                             .padding(.horizontal)
@@ -194,7 +194,7 @@ private struct CryptoOverviewSection: View {
 private struct CryptoPortfolioSection: View {
     @ObservedObject var viewModel: CryptoViewModel
     @Binding var editingHolding: CryptoPortfolioItemResponse?
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             if viewModel.userHoldings.isEmpty {
@@ -215,11 +215,11 @@ private struct CryptoPortfolioSection: View {
             } else {
                 YourCryptoBalanceCard(holdings: viewModel.userHoldings, topAssets: viewModel.topAssets)
                     .padding(.horizontal)
-                
+
                 Text("Your Assets")
                     .font(.headline)
                     .padding(.horizontal)
-                
+
                 VStack(spacing: 12) {
                     ForEach(viewModel.userHoldings) { holding in
                         let currentPrice = viewModel.topAssets.first(where: { $0.symbol == holding.symbol })?.price
@@ -231,7 +231,7 @@ private struct CryptoPortfolioSection: View {
                                 } label: {
                                     Label("Edit", systemImage: "pencil")
                                 }
-                                
+
                                 Button(role: .destructive) {
                                     Task {
                                         await viewModel.removeHolding(itemId: holding.id)
@@ -249,7 +249,7 @@ private struct CryptoPortfolioSection: View {
 
 private struct CryptoMarketSection: View {
     @ObservedObject var viewModel: CryptoViewModel
-    
+
     var body: some View {
         VStack(spacing: 0) {
             ForEach(viewModel.topAssets) { asset in
@@ -265,7 +265,7 @@ private struct CryptoMarketSection: View {
 
 private struct CryptoNewsSection: View {
     @ObservedObject var viewModel: CryptoViewModel
-    
+
     var body: some View {
         VStack(spacing: 16) {
             ForEach(viewModel.marketNews) { news in
@@ -281,14 +281,14 @@ private struct CryptoNewsSection: View {
 struct YourCryptoBalanceCard: View {
     let holdings: [CryptoPortfolioItemResponse]
     let topAssets: [CryptoQuoteResponse]
-    
+
     var totalValue: Double {
         holdings.reduce(0) { total, holding in
             let currentPrice = topAssets.first(where: { $0.symbol == holding.symbol })?.price ?? holding.averageBuyPrice
             return total + (holding.quantity * currentPrice)
         }
     }
-    
+
     var totalProfit: Double {
         holdings.reduce(0) { total, holding in
             let currentPrice = topAssets.first(where: { $0.symbol == holding.symbol })?.price ?? holding.averageBuyPrice
@@ -297,7 +297,7 @@ struct YourCryptoBalanceCard: View {
             return total + (currentValue - costBasis)
         }
     }
-    
+
     var body: some View {
         GlassCard(cornerRadius: 16) {
             VStack(alignment: .leading, spacing: 12) {
@@ -319,7 +319,7 @@ struct YourCryptoBalanceCard: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                
+
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         ForEach(holdings) { holding in
@@ -346,27 +346,27 @@ struct YourCryptoBalanceCard: View {
 struct CryptoHoldingRow: View {
     let holding: CryptoPortfolioItemResponse
     let currentPrice: Double?
-    
+
     var value: Double {
         (currentPrice ?? holding.averageBuyPrice) * holding.quantity
     }
-    
+
     var profit: Double {
         let current = currentPrice ?? holding.averageBuyPrice
         return (current - holding.averageBuyPrice) * holding.quantity
     }
-    
+
     var profitPercent: Double {
         let current = currentPrice ?? holding.averageBuyPrice
         guard holding.averageBuyPrice != 0 else { return 0 }
         return (current - holding.averageBuyPrice) / holding.averageBuyPrice
     }
-    
+
     var body: some View {
         GlassCard(cornerRadius: 12) {
             HStack(spacing: 16) {
                 HoldingCircle(symbol: holding.symbol)
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(holding.name)
                         .font(.subheadline.bold())
@@ -374,9 +374,9 @@ struct CryptoHoldingRow: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(value.formatted(.currency(code: "USD")))
                         .font(.subheadline.bold())
@@ -394,7 +394,7 @@ struct CryptoHoldingRow: View {
 
 struct HoldingCircle: View {
     let symbol: String
-    
+
     var body: some View {
         Text(String(symbol.prefix(1)))
             .font(.caption2.bold())
@@ -409,12 +409,12 @@ struct HoldingCircle: View {
 
 struct SparklineShape: Shape {
     let values: [CGFloat]
-    
+
     func path(in rect: CGRect) -> Path {
         guard values.count >= 2 else { return Path() }
         var path = Path()
         let stepX = rect.width / CGFloat(values.count - 1)
-        
+
         for (i, value) in values.enumerated() {
             let x = CGFloat(i) * stepX
             let y = rect.height * (1 - value)
@@ -437,7 +437,7 @@ struct SparklineShape: Shape {
 
 struct SparklineAreaShape: Shape {
     let values: [CGFloat]
-    
+
     func path(in rect: CGRect) -> Path {
         guard values.count >= 2 else { return Path() }
         var path = SparklineShape(values: values).path(in: rect)
@@ -455,7 +455,7 @@ struct FeaturedCryptoCard: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var chartProgress: CGFloat = 0
     @State private var isPressed = false
-    
+
     private var sparklineValues: [CGFloat] {
         let points: [Double] = [
             asset.dayLow ?? asset.price * 0.97,
@@ -470,10 +470,10 @@ struct FeaturedCryptoCard: View {
         guard range > 0 else { return points.map { _ in CGFloat(0.5) } }
         return points.map { CGFloat(($0 - minVal) / range) }
     }
-    
+
     private var isPositive: Bool { asset.change >= 0 }
     private var accentColor: Color { isPositive ? .green : .red }
-    
+
     var body: some View {
         GlassCard(cornerRadius: 20) {
             VStack(alignment: .leading, spacing: 16) {
@@ -490,12 +490,12 @@ struct FeaturedCryptoCard: View {
                         .font(.system(size: 40))
                         .foregroundStyle(.orange)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(asset.price.formatted(.currency(code: "USD")))
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .contentTransition(.numericText())
-                    
+
                     HStack(spacing: 6) {
                         Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
                         Text("\(isPositive ? "+" : "")\(asset.change.formatted(.currency(code: "USD")))")
@@ -504,7 +504,7 @@ struct FeaturedCryptoCard: View {
                     .font(.callout.weight(.semibold))
                     .foregroundStyle(accentColor)
                 }
-                
+
                 // Animated sparkline
                 ZStack {
                     SparklineAreaShape(values: sparklineValues)
@@ -516,7 +516,7 @@ struct FeaturedCryptoCard: View {
                             )
                         )
                         .opacity(chartProgress)
-                    
+
                     SparklineShape(values: sparklineValues)
                         .trim(from: 0, to: chartProgress)
                         .stroke(
@@ -543,7 +543,7 @@ struct FeaturedCryptoCard: View {
 
 struct TrendingCryptoCard: View {
     let asset: CryptoQuoteResponse
-    
+
     var body: some View {
         GlassCard(cornerRadius: 16) {
             VStack(alignment: .leading, spacing: 12) {
@@ -557,7 +557,7 @@ struct TrendingCryptoCard: View {
                         .font(.caption2.bold())
                         .foregroundStyle(asset.changePercentage >= 0 ? .green : .red)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text(asset.name)
                         .font(.subheadline.bold())
@@ -573,7 +573,7 @@ struct TrendingCryptoCard: View {
 
 struct CryptoNewsRow: View {
     let news: StockNews
-    
+
     var body: some View {
         GlassCard(cornerRadius: 12) {
             HStack(spacing: 12) {
@@ -603,7 +603,7 @@ struct CryptoNewsRow: View {
             }
         }
     }
-    
+
     private func formatRelativeDate(_ dateString: String) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -617,7 +617,7 @@ struct CryptoNewsRow: View {
 
 struct CryptoNewsCard: View {
     let news: StockNews
-    
+
     var body: some View {
         GlassCard(cornerRadius: 16) {
             VStack(alignment: .leading, spacing: 12) {
@@ -635,17 +635,17 @@ struct CryptoNewsCard: View {
                         .fill(.gray.opacity(0.2))
                         .frame(height: 160)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 8) {
                     Text(news.title)
                         .font(.headline)
                         .lineLimit(2)
-                    
+
                     Text(news.summary ?? "")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .lineLimit(3)
-                    
+
                     HStack {
                         Text(news.source ?? "Crypto")
                             .font(.caption.bold())
@@ -662,7 +662,7 @@ struct CryptoNewsCard: View {
 
 struct CryptoListRow: View {
     let asset: CryptoQuoteResponse
-    
+
     var body: some View {
         HStack(spacing: 16) {
             Circle()
@@ -679,7 +679,7 @@ struct CryptoListRow: View {
                         .foregroundStyle(.white)
                         .bold()
                 )
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(asset.name)
                     .font(.headline)
@@ -687,9 +687,9 @@ struct CryptoListRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            
+
             Spacer()
-            
+
             VStack(alignment: .trailing, spacing: 4) {
                 Text(asset.price.formatted(.currency(code: "USD")))
                     .font(.subheadline.bold())
@@ -705,7 +705,7 @@ struct CryptoListRow: View {
 struct AddCryptoHoldingSheet: View {
     @ObservedObject var viewModel: CryptoViewModel
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var symbol = ""
     @State private var name = ""
     @State private var quantity = ""
@@ -714,32 +714,32 @@ struct AddCryptoHoldingSheet: View {
     @State private var searchText = ""
     @State private var allAssets: [CryptoAssetResponse] = []
     @State private var isLoadingAssets = false
-    
+
     private let cryptoService: any CryptoServicing = Container.shared.cryptoService()
-    
+
     var filteredAssets: [CryptoAssetResponse] {
         if searchText.isEmpty {
             return allAssets.prefix(20).map { $0 }
         }
-        return allAssets.filter { 
-            $0.symbol.localizedCaseInsensitiveContains(searchText) || 
+        return allAssets.filter {
+            $0.symbol.localizedCaseInsensitiveContains(searchText) ||
             $0.name.localizedCaseInsensitiveContains(searchText)
         }.prefix(50).map { $0 }
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
                 Section("Search Asset") {
                     ZStack(alignment: .trailing) {
                         TextField("Search by symbol or name", text: $searchText)
-                        
+
                         if isLoadingAssets {
                             ProgressView()
                                 .scaleEffect(0.8)
                         }
                     }
-                    
+
                     if !filteredAssets.isEmpty && symbol.isEmpty {
                         List {
                             ForEach(filteredAssets) { asset in
@@ -765,7 +765,7 @@ struct AddCryptoHoldingSheet: View {
                         .frame(minHeight: 200, maxHeight: 300)
                     }
                 }
-                
+
                 if !symbol.isEmpty {
                     Section("Selected Asset") {
                         HStack {
@@ -781,7 +781,7 @@ struct AddCryptoHoldingSheet: View {
                             .font(.caption)
                         }
                     }
-                    
+
                     Section("Position") {
                         TextField("Quantity", text: $quantity)
                             .keyboardType(.decimalPad)
@@ -822,7 +822,7 @@ struct AddCryptoHoldingSheet: View {
             }
         }
     }
-    
+
     private func save() {
         guard let qty = Double(quantity), let price = Double(buyPrice) else { return }
         isSaving = true
@@ -843,7 +843,7 @@ struct MarketSentimentCard: View {
     let label: String
     @State private var animatedValue: CGFloat = 0
     @State private var displayValue: Int = 0
-    
+
     var sentimentColor: Color {
         if value < 25 { return .red }
         if value < 45 { return .orange }
@@ -851,14 +851,14 @@ struct MarketSentimentCard: View {
         if value < 75 { return .green }
         return .cyan
     }
-    
+
     var body: some View {
         GlassCard(cornerRadius: 16) {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Fear & Greed")
                     .font(.caption.bold())
                     .foregroundStyle(.secondary)
-                
+
                 HStack(alignment: .bottom, spacing: 4) {
                     Text("\(displayValue)")
                         .font(.system(.title2, design: .rounded, weight: .bold))
@@ -868,13 +868,13 @@ struct MarketSentimentCard: View {
                         .foregroundStyle(sentimentColor)
                         .padding(.bottom, 4)
                 }
-                
+
                 // Animated gradient gauge
                 ZStack(alignment: .leading) {
                     Capsule()
                         .fill(.gray.opacity(0.15))
                         .frame(height: 8)
-                    
+
                     Capsule()
                         .fill(
                             LinearGradient(
@@ -890,7 +890,7 @@ struct MarketSentimentCard: View {
                                     .frame(width: geo.size.width * animatedValue)
                             }
                         }
-                    
+
                     GeometryReader { geo in
                         Circle()
                             .fill(.white)
@@ -910,7 +910,7 @@ struct MarketSentimentCard: View {
             animateCounter(to: value)
         }
     }
-    
+
     private func animateCounter(to end: Int) {
         let steps = max(1, end)
         let interval = 0.8 / Double(steps)
@@ -925,15 +925,15 @@ struct MarketSentimentCard: View {
 struct GasTrackerCard: View {
     let gwei: Int
     @State private var isPulsing = false
-    
+
     private var statusColor: Color {
         gwei < 20 ? .green : gwei < 40 ? .yellow : .orange
     }
-    
+
     private var statusText: String {
         gwei < 20 ? "Low · Cheap" : gwei < 40 ? "Normal" : "Congested"
     }
-    
+
     var body: some View {
         GlassCard(cornerRadius: 16) {
             VStack(alignment: .leading, spacing: 8) {
@@ -949,7 +949,7 @@ struct GasTrackerCard: View {
                         .opacity(isPulsing ? 0.5 : 1.0)
                         .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: isPulsing)
                 }
-                
+
                 HStack(alignment: .bottom, spacing: 4) {
                     Image(systemName: "fuelpump.fill")
                         .font(.caption)
@@ -962,7 +962,7 @@ struct GasTrackerCard: View {
                         .foregroundStyle(.secondary)
                         .padding(.bottom, 4)
                 }
-                
+
                 Text(statusText)
                     .font(.caption2.bold())
                     .foregroundStyle(statusColor)
@@ -980,14 +980,14 @@ struct GasTrackerCard: View {
 struct MarketDominanceCard: View {
     let data: [CryptoViewModel.DominanceData]
     @State private var barProgress: CGFloat = 0
-    
+
     var body: some View {
         GlassCard(cornerRadius: 16) {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Market Dominance")
                     .font(.caption.bold())
                     .foregroundStyle(.secondary)
-                
+
                 // Animated multi-colored bar
                 GeometryReader { geometry in
                     HStack(spacing: 2) {
@@ -1000,7 +1000,7 @@ struct MarketDominanceCard: View {
                     .clipShape(Capsule())
                 }
                 .frame(height: 12)
-                
+
                 // Legend
                 HStack(spacing: 16) {
                     ForEach(data) { item in
@@ -1030,7 +1030,7 @@ struct TopMoversSection: View {
     let gainers: [CryptoQuoteResponse]
     let losers: [CryptoQuoteResponse]
     @State private var showingGainers = true
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -1045,7 +1045,7 @@ struct TopMoversSection: View {
                 .frame(width: 140)
             }
             .padding(.horizontal)
-            
+
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(showingGainers ? gainers : losers) { asset in
@@ -1060,9 +1060,9 @@ struct TopMoversSection: View {
 
 struct MoverCard: View {
     let asset: CryptoQuoteResponse
-    
+
     private var isPositive: Bool { asset.changePercentage >= 0 }
-    
+
     var body: some View {
         GlassCard(cornerRadius: 14) {
             VStack(alignment: .leading, spacing: 8) {
@@ -1074,11 +1074,11 @@ struct MoverCard: View {
                         .font(.caption2)
                         .foregroundStyle(isPositive ? .green : .red)
                 }
-                
+
                 Text(asset.changePercentage.formatted(.percent.precision(.fractionLength(1))))
                     .font(.system(.headline, design: .rounded, weight: .bold))
                     .foregroundStyle(isPositive ? .green : .red)
-                
+
                 Text(asset.price.formatted(.currency(code: "USD")))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -1094,7 +1094,7 @@ struct MoverCard: View {
 struct OverviewSectionLabel: View {
     let title: String
     let color: Color
-    
+
     var body: some View {
         HStack(spacing: 6) {
             RoundedRectangle(cornerRadius: 2)
@@ -1109,7 +1109,7 @@ struct OverviewSectionLabel: View {
 
 struct MarketQuickStatsCard: View {
     let asset: CryptoQuoteResponse
-    
+
     var body: some View {
         GlassCard(cornerRadius: 16) {
             HStack(spacing: 0) {
@@ -1117,20 +1117,20 @@ struct MarketQuickStatsCard: View {
                     title: "24h Volume",
                     value: shortFormat(asset.volume ?? 0)
                 )
-                
+
                 Divider()
                     .frame(height: 36)
                     .padding(.horizontal, 8)
-                
+
                 QuickStatColumn(
                     title: "Market Cap",
                     value: shortFormat(asset.marketCap ?? 0)
                 )
-                
+
                 Divider()
                     .frame(height: 36)
                     .padding(.horizontal, 8)
-                
+
                 QuickStatColumn(
                     title: "24h Range",
                     value: "\(shortPrice(asset.dayLow)) – \(shortPrice(asset.dayHigh))"
@@ -1138,14 +1138,14 @@ struct MarketQuickStatsCard: View {
             }
         }
     }
-    
+
     private func shortFormat(_ value: Double) -> String {
         if value >= 1_000_000_000_000 { return String(format: "$%.1fT", value / 1_000_000_000_000) }
         if value >= 1_000_000_000 { return String(format: "$%.1fB", value / 1_000_000_000) }
         if value >= 1_000_000 { return String(format: "$%.1fM", value / 1_000_000) }
         return "$\(Int(value))"
     }
-    
+
     private func shortPrice(_ value: Double?) -> String {
         guard let v = value else { return "–" }
         if v >= 1000 { return "$\(Int(v).formatted())" }
@@ -1156,7 +1156,7 @@ struct MarketQuickStatsCard: View {
 private struct QuickStatColumn: View {
     let title: String
     let value: String
-    
+
     var body: some View {
         VStack(spacing: 4) {
             Text(title)
@@ -1187,19 +1187,19 @@ struct CryptoOverviewSkeleton: View {
                     .shimmer()
             }
             .padding(.horizontal)
-            
+
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(.gray.opacity(0.12))
                 .frame(height: 70)
                 .shimmer()
                 .padding(.horizontal)
-            
+
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.gray.opacity(0.12))
                 .frame(height: 200)
                 .shimmer()
                 .padding(.horizontal)
-            
+
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
                     ForEach(0..<4, id: \.self) { _ in
@@ -1219,18 +1219,18 @@ struct EditCryptoHoldingSheet: View {
     @ObservedObject var viewModel: CryptoViewModel
     let holding: CryptoPortfolioItemResponse
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var quantity = ""
     @State private var buyPrice = ""
     @State private var isSaving = false
-    
+
     init(viewModel: CryptoViewModel, holding: CryptoPortfolioItemResponse) {
         self.viewModel = viewModel
         self.holding = holding
         _quantity = State(initialValue: String(holding.quantity))
         _buyPrice = State(initialValue: String(holding.averageBuyPrice))
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -1246,7 +1246,7 @@ struct EditCryptoHoldingSheet: View {
                         Text(holding.name).foregroundStyle(.secondary)
                     }
                 }
-                
+
                 Section("Position") {
                     TextField("Quantity", text: $quantity)
                         .keyboardType(.decimalPad)
@@ -1277,7 +1277,7 @@ struct EditCryptoHoldingSheet: View {
             }
         }
     }
-    
+
     private func save() {
         guard let qty = Double(quantity), let price = Double(buyPrice) else { return }
         isSaving = true

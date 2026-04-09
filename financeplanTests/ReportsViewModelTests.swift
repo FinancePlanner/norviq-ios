@@ -40,7 +40,7 @@ final class ReportsViewModelTests: XCTestCase {
       makeReportsOverview(
         monthly: [
           makeMonthSummary(monthStart: "2026-01-01", planned: 1000, actual: 950),
-          makeMonthSummary(monthStart: "2026-03-01", planned: 1100, actual: 1050),
+          makeMonthSummary(monthStart: "2026-03-01", planned: 1100, actual: 1050)
         ],
         latest: makeMonthSummary(monthStart: "2026-03-01", planned: 1100, actual: 1050)
       )

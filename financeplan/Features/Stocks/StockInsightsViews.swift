@@ -482,14 +482,14 @@ private struct FeaturedNewsHero: View {
                     Text(news.source?.uppercased() ?? "LATEST NEWS")
                         .typography(.nano, weight: .bold)
                         .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme))
-                    
+
                     Spacer()
-                    
+
                     Image(systemName: "newspaper.fill")
                         .font(.caption)
                         .foregroundStyle(.secondary.opacity(0.5))
                 }
-                
+
                 Text(news.title)
                     .typography(.label, weight: .bold)
                     .foregroundStyle(.primary)
@@ -503,14 +503,14 @@ private struct FeaturedNewsHero: View {
                         .lineLimit(4)
                         .multilineTextAlignment(.leading)
                 }
-                
+
                 HStack {
                     Text(formatRelativeDate(news.date))
                         .typography(.nano)
                         .foregroundStyle(.secondary)
-                    
+
                     Spacer()
-                    
+
                     HStack(spacing: 4) {
                         Text("Read full article")
                             .typography(.nano, weight: .semibold)
@@ -531,10 +531,10 @@ private struct FeaturedNewsHero: View {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         guard let date = formatter.date(from: dateString) else { return dateString }
-        
+
         let now = Date()
         let diff = now.timeIntervalSince(date)
-        
+
         if diff < 60 {
             return "Just now"
         } else if diff < 3600 {
@@ -560,11 +560,11 @@ private struct NewsFeedRow: View {
                         Text(news.source ?? "Source")
                             .typography(.nano, weight: .bold)
                             .foregroundStyle(.secondary)
-                        
+
                         Circle()
                             .fill(.secondary.opacity(0.5))
                             .frame(width: 3, height: 3)
-                        
+
                         Text(formatRelativeDate(news.date))
                             .typography(.nano)
                             .foregroundStyle(.secondary)
@@ -609,10 +609,10 @@ private struct NewsFeedRow: View {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         guard let date = formatter.date(from: dateString) else { return dateString }
-        
+
         let now = Date()
         let diff = now.timeIntervalSince(date)
-        
+
         if diff < 60 {
             return "Just now"
         } else if diff < 3600 {
@@ -648,7 +648,7 @@ struct StockEarningsTab: View {
                     Text("EPS Surprise")
                         .typography(.label, weight: .bold)
                         .padding(.horizontal, 4)
-                    
+
                     EarningsSurpriseChart(earnings: earnings)
                         .frame(height: 200)
                         .padding()
@@ -660,7 +660,7 @@ struct StockEarningsTab: View {
                     Text("History")
                         .typography(.label, weight: .bold)
                         .padding(.horizontal, 4)
-                    
+
                     VStack(spacing: 0) {
                         ForEach(Array(earnings.enumerated()), id: \.element.id) { index, event in
                             EarningsTimelineRow(
@@ -746,7 +746,7 @@ private struct EarningsTimelineRow: View {
                     .fill(statusColor.gradient)
                     .frame(width: 12, height: 12)
                     .padding(.top, 4)
-                
+
                 if !isLast {
                     Rectangle()
                         .fill(.secondary.opacity(0.2))
@@ -764,9 +764,9 @@ private struct EarningsTimelineRow: View {
                             .typography(.nano)
                             .foregroundStyle(statusColor)
                     }
-                    
+
                     Spacer()
-                    
+
                     if let act = event.epsActual {
                         Text(act.formatted(.number.precision(.fractionLength(2))))
                             .typography(.label, weight: .bold)
@@ -777,7 +777,7 @@ private struct EarningsTimelineRow: View {
                     TimelineMetric(title: "EST EPS", value: event.epsEstimated?.formatted() ?? "—")
                     TimelineMetric(title: "REVENUE", value: event.revenueActual?.formatted(.number.notation(.compactName)) ?? "—")
                 }
-                
+
                 if !isLast {
                     Divider()
                         .padding(.top, 4)
@@ -804,7 +804,7 @@ private struct EarningsTimelineRow: View {
 private struct TimelineMetric: View {
     let title: String
     let value: String
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
@@ -1435,7 +1435,7 @@ private struct StockBasicFinancialsCard: View {
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
     ]
 
     var body: some View {
@@ -1707,7 +1707,7 @@ private struct StockCurrentMetricsCard: View {
             .nextYearRevenueGrowth,
             .grossMargin,
             .netMargin,
-            .ttmPEGRatio,
+            .ttmPEGRatio
         ]
     }
 
@@ -2067,7 +2067,7 @@ private struct ProjectionRangeChartCard: View {
                         LinearGradient(
                             colors: [
                                 AppTheme.Colors.secondaryTint(for: colorScheme).opacity(0.20),
-                                .clear,
+                                .clear
                             ],
                             startPoint: .top,
                             endPoint: .bottom
@@ -2453,7 +2453,7 @@ private struct ProjectionTableCard: View {
                     ProjectionTableRow(title: "Net Margins", values: scenario.years.map { percentText($0.netMargin) }),
                     ProjectionTableRow(title: "EPS", values: scenario.years.map { $0.eps.currency }),
                     ProjectionTableRow(title: "PE Low Est", values: scenario.years.map { multipleText($0.peLowEstimate) }),
-                    ProjectionTableRow(title: "PE High Est", values: scenario.years.map { multipleText($0.peHighEstimate) }),
+                    ProjectionTableRow(title: "PE High Est", values: scenario.years.map { multipleText($0.peHighEstimate) })
                 ]
             ),
             ProjectionTableGroup(
@@ -2478,9 +2478,9 @@ private struct ProjectionTableCard: View {
                         title: "CAGR High",
                         values: scenario.years.map { percentText($0.cagrHigh) },
                         isEmphasized: true
-                    ),
+                    )
                 ]
-            ),
+            )
         ]
     }
 }

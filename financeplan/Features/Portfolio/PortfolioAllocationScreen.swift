@@ -12,9 +12,9 @@ struct PortfolioAllocationScreen: View {
   @Environment(\.displayScale) private var displayScale
   @Environment(\.modelContext) private var modelContext
   @EnvironmentObject private var viewModel: PortfolioViewModel
-  
+
   @Query private var stocks: [SDPortfolioStock]
-  
+
   @State private var sharePayload: SharePayload?
   @State private var isShareRendering = false
 
@@ -204,7 +204,7 @@ struct PortfolioAllocationScreen: View {
 private struct AllocationDonutChart: View {
   let slices: [PortfolioAllocationSlice]
   let colorScheme: ColorScheme
-  
+
   @State private var animationProgress: Double = 0.0
 
   var body: some View {
@@ -240,7 +240,7 @@ private enum AllocationPalette {
       Color.pink,
       Color.mint,
       Color.cyan,
-      Color.purple,
+      Color.purple
     ]
     return palette[index % palette.count]
   }
@@ -345,7 +345,7 @@ private struct PortfolioAllocationSkeletonView: View {
           .fill(.gray.opacity(0.12))
           .frame(height: 110)
           .shimmer()
-        
+
         GlassCard {
           VStack(spacing: 20) {
             Circle()
@@ -353,7 +353,7 @@ private struct PortfolioAllocationSkeletonView: View {
               .frame(height: 200)
               .padding()
               .shimmer()
-            
+
             VStack(alignment: .leading, spacing: 16) {
               ForEach(0..<4, id: \.self) { _ in
                 RoundedRectangle(cornerRadius: 8, style: .continuous)

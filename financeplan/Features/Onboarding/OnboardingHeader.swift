@@ -12,7 +12,7 @@ struct OnboardingHeader: View {
   let title: String
   let subtitle: String?
   @Environment(\.colorScheme) private var colorScheme
-  var namespace: Namespace.ID? = nil
+  var namespace: Namespace.ID?
 
   var body: some View {
     VStack(spacing: 16) {
@@ -24,7 +24,7 @@ struct OnboardingHeader: View {
               colors: [
                 AppTheme.Colors.tint(for: colorScheme).opacity(0.15),
                 AppTheme.Colors.tint(for: colorScheme).opacity(0.03),
-                .clear,
+                .clear
               ],
               center: .center,
               startRadius: 5,

@@ -498,7 +498,7 @@ final class MarketDataServiceTests: XCTestCase {
     session.handler = { request in
       XCTAssertEqual(request.url?.path, "/v1/market/news/general")
       XCTAssertEqual(request.url?.query, "limit=10")
-      
+
       let payload = """
       [
         {
@@ -510,7 +510,7 @@ final class MarketDataServiceTests: XCTestCase {
         }
       ]
       """.data(using: .utf8) ?? Data()
-      
+
       let response = try XCTUnwrap(
         HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
       )

@@ -16,18 +16,18 @@ protocol ExpensesServicing: ExpenseBudgetSetupServicing {
     func updateSnapshot(snapshotId: String, payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse
     func deleteSnapshot(snapshotId: String) async throws
     func getSnapshotItems(snapshotId: String) async throws -> [BudgetPlanItemResponse]
-    
+
     // Items
     func getAllPlanItems() async throws -> [BudgetPlanItemResponse]
     func createPlanItem(payload: BudgetPlanItemRequest) async throws -> BudgetPlanItemResponse
     func updatePlanItem(itemId: String, payload: BudgetPlanItemRequest) async throws -> BudgetPlanItemResponse
     func deletePlanItem(itemId: String) async throws
-    
+
     // Expenses
     func getExpenses(from: String?, to: String?) async throws -> [ExpenseResponse]
     func updateExpense(expenseId: String, payload: ExpenseRequest) async throws -> ExpenseResponse
     func deleteExpense(expenseId: String) async throws
-    
+
     // Reports
     func getReportsOverview(from: String?, to: String?) async throws -> ReportsOverviewResponse
     func getMonthlyExpenseReports(from: String?, to: String?) async throws -> [BudgetMonthSummaryResponse]
@@ -137,17 +137,17 @@ struct ExpensesServiceStub: ExpensesServicing {
     func updateSnapshot(snapshotId: String, payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse { fatalError("Stub not implemented") }
     func deleteSnapshot(snapshotId: String) async throws {}
     func getSnapshotItems(snapshotId: String) async throws -> [BudgetPlanItemResponse] { [] }
-    
+
     func getAllPlanItems() async throws -> [BudgetPlanItemResponse] { [] }
     func createPlanItem(payload: BudgetPlanItemRequest) async throws -> BudgetPlanItemResponse { fatalError("Stub not implemented") }
     func updatePlanItem(itemId: String, payload: BudgetPlanItemRequest) async throws -> BudgetPlanItemResponse { fatalError("Stub not implemented") }
     func deletePlanItem(itemId: String) async throws {}
-    
+
     func getExpenses(from: String? = nil, to: String? = nil) async throws -> [ExpenseResponse] { [] }
     func createExpense(request: ExpenseRequest) async throws -> ExpenseResponse { fatalError("Stub not implemented") }
     func updateExpense(expenseId: String, payload: ExpenseRequest) async throws -> ExpenseResponse { fatalError("Stub not implemented") }
     func deleteExpense(expenseId: String) async throws {}
-    
+
     func getReportsOverview(from: String? = nil, to: String? = nil) async throws -> ReportsOverviewResponse {
         ReportsOverviewResponse(
             generatedAt: "",

@@ -133,7 +133,7 @@ struct OAuthExchangeEndpoint: Endpoint {
       "flowId": payload.flowId.uuidString,
       "code": payload.code,
       "state": payload.state,
-      "redirectURI": payload.redirectURI,
+      "redirectURI": payload.redirectURI
     ]
   }
 }

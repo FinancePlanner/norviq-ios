@@ -65,19 +65,19 @@ final class PortfolioViewModel: ObservableObject {
     // Simple sync: delete all and re-insert or update existing
     // For now, let's do a simple update/insert and delete others
     let remoteIds = Set(remoteStocks.map { $0.id })
-    
+
     do {
         let descriptor = FetchDescriptor<SDPortfolioStock>()
         let localStocks = try modelContext.fetch(descriptor)
         let localById = Dictionary(uniqueKeysWithValues: localStocks.map { ($0.id, $0) })
-        
+
         // Delete local stocks that are not in remote
         for local in localStocks {
             if !remoteIds.contains(local.id) {
                 modelContext.delete(local)
             }
         }
-        
+
         // Update or insert remote stocks
         for remote in remoteStocks {
             if let existing = localById[remote.id] {
@@ -86,7 +86,7 @@ final class PortfolioViewModel: ObservableObject {
                 modelContext.insert(SDPortfolioStock(from: remote))
             }
         }
-        
+
         try modelContext.save()
     } catch {
         portfolioViewModelLogger.error("SwiftData portfolio sync failed: \(error.localizedDescription, privacy: .public)")
@@ -102,7 +102,7 @@ final class PortfolioViewModel: ObservableObject {
 
     do {
       try await service.delete(id: id)
-      
+
       if let modelContext = modelContext {
           let descriptor = FetchDescriptor<SDPortfolioStock>(predicate: #Predicate { $0.id == id })
           if let local = try modelContext.fetch(descriptor).first {

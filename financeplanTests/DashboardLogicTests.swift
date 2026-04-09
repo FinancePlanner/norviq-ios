@@ -4,7 +4,7 @@ import Factory
 @testable import financeplan
 
 final class DashboardLogicTests: XCTestCase {
-    
+
     func testDashboardResponseMapping() {
         let response = DashboardResponse(
             totalValue: 10000.0,
@@ -14,12 +14,12 @@ final class DashboardLogicTests: XCTestCase {
             bottomPerformers: [],
             sectorAllocation: []
         )
-        
+
         XCTAssertEqual(response.totalValue, 10000.0)
         XCTAssertEqual(response.dailyChange, 500.0)
         XCTAssertEqual(response.dailyChangePercent, 5.0)
     }
-    
+
     func testDashboardInsightsMapping() {
         let insights = DashboardInsightsResponse(
             savingsRate: 20.0,
@@ -32,7 +32,7 @@ final class DashboardLogicTests: XCTestCase {
                 status: .healthy
             )
         )
-        
+
         XCTAssertEqual(insights.savingsRate, 20.0)
         XCTAssertEqual(insights.budgetStreak, 5)
         XCTAssertEqual(insights.watchlistCount, 10)
@@ -40,18 +40,18 @@ final class DashboardLogicTests: XCTestCase {
         XCTAssertEqual(insights.financialHealth.score, 88)
         XCTAssertEqual(insights.financialHealth.status, .healthy)
     }
-    
+
     @MainActor
     func testDashboardLoading() async throws {
         // Mock the service
         let stub = DashboardServiceStub()
         Container.shared.dashboardService.register { stub }
-        
+
         // This test would normally live in a ViewModel test
         // but here we are verifying the service stub returns expected data
         let data = try await stub.getDashboard()
         XCTAssertEqual(data.totalValue, 124830.42)
-        
+
         Container.shared.dashboardService.reset()
     }
 }

@@ -257,6 +257,7 @@
 				70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "FinanceShared" */,
 				60543D592F48C8B400B67ADA /* XCRemoteSwiftPackageReference "AnyAPI" */,
 				60543DE82F48D35700B67ADA /* XCRemoteSwiftPackageReference "EntityStore" */,
+				602AAA712F8810D2004485ED /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 60AFA7F92F3E406900FA3135 /* Products */;
@@ -653,6 +654,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		602AAA712F8810D2004485ED /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SimplyDanny/SwiftLintPlugins";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.63.2;
+			};
+		};
 		60543D592F48C8B400B67ADA /* XCRemoteSwiftPackageReference "AnyAPI" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/jpmcglone/AnyAPI";

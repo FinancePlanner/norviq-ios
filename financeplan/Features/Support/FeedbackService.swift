@@ -36,7 +36,7 @@ final class FeedbackService: FeedbackServicing {
       authTokenProvider: { token }
     )
   }
-  
+
   private func performAuthenticated<T>(
     _ operation: (StockHTTPClient) async throws -> T
   ) async throws -> T {

@@ -6,7 +6,7 @@ import SwiftUI
 /// Replaces the NavigationStack toolbar pattern for sheets.
 struct FormSheetHeader: View {
   let title: String
-  var subtitle: String? = nil
+  var subtitle: String?
   let onDismiss: () -> Void
 
   @Environment(\.colorScheme) private var colorScheme
@@ -52,7 +52,7 @@ struct FormSheetHeader: View {
 
 /// A rounded card container for grouping form fields.
 struct FormCard<Content: View>: View {
-  var title: String? = nil
+  var title: String?
   @ViewBuilder let content: () -> Content
 
   @Environment(\.colorScheme) private var colorScheme
@@ -193,7 +193,7 @@ struct FormDivider: View {
 /// A floating bottom bar with a primary capsule button.
 struct FormActionBar: View {
   let primaryLabel: String
-  var secondaryText: String? = nil
+  var secondaryText: String?
   var isLoading: Bool = false
   var isDisabled: Bool = false
   let onPrimary: () -> Void
@@ -262,7 +262,7 @@ struct FormActionBar: View {
 /// A non-editable display tag (pill) used for locked values like symbol or month.
 struct FormInfoTag: View {
   let text: String
-  var icon: String? = nil
+  var icon: String?
 
   @Environment(\.colorScheme) private var colorScheme
 

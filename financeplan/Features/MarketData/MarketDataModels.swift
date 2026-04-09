@@ -11,7 +11,7 @@ enum FMPFreeTierCoverage {
     "UAL", "AAL", "TSM", "SONY", "ET", "MRO", "COIN", "RIVN", "RIOT", "CPRX",
     "VWO", "SPYG", "NOK", "ROKU", "VIAC", "ATVI", "BIDU", "DOCU", "ZM", "PINS",
     "TLRY", "WBA", "MGM", "NIO", "C", "GS", "WFC", "ADBE", "PEP", "UNH",
-    "CARR", "HCA", "TWTR", "BILI", "SIRI", "FUBO", "RKT",
+    "CARR", "HCA", "TWTR", "BILI", "SIRI", "FUBO", "RKT"
   ]
 
   static func isSupportedTicker(_ symbol: String) -> Bool {
@@ -143,7 +143,7 @@ struct StockAnalystConsensus: Codable, Equatable {
       StockAnalystConsensusBucket(kind: .buy, count: buy),
       StockAnalystConsensusBucket(kind: .hold, count: hold),
       StockAnalystConsensusBucket(kind: .sell, count: sell),
-      StockAnalystConsensusBucket(kind: .strongSell, count: strongSell),
+      StockAnalystConsensusBucket(kind: .strongSell, count: strongSell)
     ]
   }
 }
@@ -244,7 +244,7 @@ struct StockBasicFinancials: Equatable {
         title: "10D avg volume",
         value: tenDayAverageTradingVolume,
         format: .volume
-      ),
+      )
     ]
     .compactMap { $0 }
   }
@@ -268,7 +268,7 @@ struct StockBasicFinancials: Equatable {
         title: "Net margin",
         points: netMarginAnnual,
         format: .percentFraction
-      ),
+      )
     ]
     .compactMap { $0 }
   }
@@ -713,7 +713,7 @@ extension StockFinancialStatements {
         fiscalYear: "2024",
         period: "Q4",
         entries: scaledEntries(balanceSheetEntries, multiplier: 1.0)
-      ),
+      )
     ]
 
     let cashFlows = [
@@ -745,7 +745,7 @@ extension StockFinancialStatements {
           overrides: [
             "cashAtBeginningOfPeriod": 29_800_000_000,
             "cashAtEndOfPeriod": 33_100_000_000,
-            "netChangeInCash": 3_300_000_000,
+            "netChangeInCash": 3_300_000_000
           ]
         )
       ),
@@ -761,7 +761,7 @@ extension StockFinancialStatements {
           overrides: [
             "cashAtBeginningOfPeriod": 33_100_000_000,
             "cashAtEndOfPeriod": 31_500_000_000,
-            "netChangeInCash": -1_600_000_000,
+            "netChangeInCash": -1_600_000_000
           ]
         )
       ),
@@ -777,7 +777,7 @@ extension StockFinancialStatements {
           overrides: [
             "cashAtBeginningOfPeriod": 31_500_000_000,
             "cashAtEndOfPeriod": 30_900_000_000,
-            "netChangeInCash": -600_000_000,
+            "netChangeInCash": -600_000_000
           ]
         )
       ),
@@ -793,10 +793,10 @@ extension StockFinancialStatements {
           overrides: [
             "cashAtBeginningOfPeriod": 30_900_000_000,
             "cashAtEndOfPeriod": 29_943_000_000,
-            "netChangeInCash": -957_000_000,
+            "netChangeInCash": -957_000_000
           ]
         )
-      ),
+      )
     ]
 
     let ratios = [
@@ -847,7 +847,7 @@ extension StockFinancialStatements {
         period: "Q4",
         reportedCurrency: "USD",
         entries: scaledMetricEntries(ratioEntries, multiplier: 1.0)
-      ),
+      )
     ]
 
     let growth = [
@@ -898,7 +898,7 @@ extension StockFinancialStatements {
         period: "Q4",
         reportedCurrency: "USD",
         entries: scaledMetricEntries(growthEntries, multiplier: 1.0)
-      ),
+      )
     ]
 
     let estimates = [
@@ -911,7 +911,7 @@ extension StockFinancialStatements {
           multiplier: 0.88,
           overrides: [
             "numAnalystsRevenue": 13,
-            "numAnalystsEps": 5,
+            "numAnalystsEps": 5
           ]
         )
       ),
@@ -924,7 +924,7 @@ extension StockFinancialStatements {
           multiplier: 0.94,
           overrides: [
             "numAnalystsRevenue": 15,
-            "numAnalystsEps": 6,
+            "numAnalystsEps": 6
           ]
         )
       ),
@@ -933,7 +933,7 @@ extension StockFinancialStatements {
         symbol: normalizedSymbol,
         reportedCurrency: "USD",
         entries: estimateEntries
-      ),
+      )
     ]
 
     return StockFinancialStatements(
@@ -1076,7 +1076,7 @@ private let balanceSheetEntries: [StockFinancialStatementEntry] = [
     "totalLiabilitiesAndStockholdersEquity",
     "Total liabilities + equity",
     352_436_000_000
-  ),
+  )
 ]
 
 private let cashFlowEntries: [StockFinancialStatementEntry] = [
@@ -1134,7 +1134,7 @@ private let cashFlowEntries: [StockFinancialStatementEntry] = [
   statementEntry("capitalExpenditure", "Capital expenditure", -9_447_000_000),
   statementEntry("freeCashFlow", "Free cash flow", 108_807_000_000),
   statementEntry("incomeTaxesPaid", "Income taxes paid", 26_102_000_000),
-  statementEntry("interestPaid", "Interest paid", 0),
+  statementEntry("interestPaid", "Interest paid", 0)
 ]
 
 private let ratioEntries: [StockFinancialMetricEntry] = [
@@ -1179,7 +1179,7 @@ private let ratioEntries: [StockFinancialMetricEntry] = [
   metricEntry("freeCashFlowToEquity", "Free cash flow to equity", 32_121_000_000, .currencyCompact),
   metricEntry("freeCashFlowToFirm", "Free cash flow to firm", 117_192_805_288.09166, .currencyCompact),
   metricEntry("tangibleAssetValue", "Tangible asset value", 56_950_000_000, .currencyCompact),
-  metricEntry("netCurrentAssetValue", "Net current asset value", -155_043_000_000, .currencyCompact),
+  metricEntry("netCurrentAssetValue", "Net current asset value", -155_043_000_000, .currencyCompact)
 ]
 
 private let growthEntries: [StockFinancialMetricEntry] = [
@@ -1221,7 +1221,7 @@ private let growthEntries: [StockFinancialMetricEntry] = [
   metricEntry("growthCapitalExpenditure", "Capex growth", nil, .percentFraction),
   metricEntry("tenYBottomLineNetIncomeGrowthPerShare", "10Y bottom-line/share growth", nil, .percentFraction),
   metricEntry("fiveYBottomLineNetIncomeGrowthPerShare", "5Y bottom-line/share growth", nil, .percentFraction),
-  metricEntry("threeYBottomLineNetIncomeGrowthPerShare", "3Y bottom-line/share growth", nil, .percentFraction),
+  metricEntry("threeYBottomLineNetIncomeGrowthPerShare", "3Y bottom-line/share growth", nil, .percentFraction)
 ]
 
 private let estimateEntries: [StockFinancialMetricEntry] = [
@@ -1244,7 +1244,7 @@ private let estimateEntries: [StockFinancialMetricEntry] = [
   metricEntry("epsHigh", "EPS high", 10.20148, .currency(decimals: 2)),
   metricEntry("epsLow", "EPS low", 9.05024, .currency(decimals: 2)),
   metricEntry("numAnalystsRevenue", "Revenue analysts", 16, .count),
-  metricEntry("numAnalystsEps", "EPS analysts", 6, .count),
+  metricEntry("numAnalystsEps", "EPS analysts", 6, .count)
 ]
 
 private func statement(

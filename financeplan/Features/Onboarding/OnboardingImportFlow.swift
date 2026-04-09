@@ -81,7 +81,7 @@ struct OnboardingImportFlow: View {
 struct OnboardingMainMenu: View {
   @Environment(\.requestReview) private var requestReview
   @Environment(\.colorScheme) private var colorScheme
-  
+
   let onSelectStocks: () -> Void
   let onSelectExpenses: () -> Void
   let onSignOut: () -> Void
@@ -92,7 +92,7 @@ struct OnboardingMainMenu: View {
       VStack(spacing: 12) {
         Text("Welcome to Norviqa")
           .typography(.hero, weight: .bold)
-        
+
         Text("How would you like to start building your workspace?")
           .typography(.label)
           .foregroundStyle(.secondary)
@@ -177,7 +177,7 @@ private struct OnboardingMenuButton: View {
           Circle()
             .fill(color.opacity(0.15))
             .frame(width: 48, height: 48)
-          
+
           Image(systemName: icon)
             .font(.title3.weight(.bold))
             .foregroundStyle(color)
@@ -188,7 +188,7 @@ private struct OnboardingMenuButton: View {
             Text(title)
               .typography(.label, weight: .bold)
               .foregroundStyle(isDisabled ? .secondary : .primary)
-            
+
             if showSoonBadge {
               Text("Soon")
                 .font(.system(size: 10, weight: .bold, design: .rounded))
@@ -198,7 +198,7 @@ private struct OnboardingMenuButton: View {
                 .background(Color.red, in: Capsule())
             }
           }
-          
+
           Text(subtitle)
             .typography(.nano)
             .foregroundStyle(.secondary)
@@ -302,7 +302,7 @@ struct SuccessImportScreen: View {
 struct APIKeyImportScreen: View {
   @Environment(\.colorScheme) private var colorScheme
   @StateObject private var viewModel = BrokerAPIImportViewModel()
-  var headerNamespace: Namespace.ID? = nil
+  var headerNamespace: Namespace.ID?
 
   let onBack: () -> Void
   let onDone: () -> Void
@@ -496,7 +496,7 @@ struct ManualImportScreen: View {
   @StateObject private var viewModel = ManualImportViewModel()
   @State private var errorMessage: String?
   @State private var entriesVisible = false
-  var headerNamespace: Namespace.ID? = nil
+  var headerNamespace: Namespace.ID?
 
   let onBack: () -> Void
   let onDone: ([ImportedPosition]) -> Void
@@ -665,7 +665,7 @@ struct CSVImportScreen: View {
   @Environment(\.colorScheme) private var colorScheme
   @State private var isImporterPresented = false
   @StateObject private var viewModel = CSVImportViewModel()
-  var headerNamespace: Namespace.ID? = nil
+  var headerNamespace: Namespace.ID?
 
   let onBack: () -> Void
   let onDone: ([ImportedPosition]) -> Void
@@ -951,7 +951,7 @@ struct ManualEntryCard: View {
 struct OnboardingNavBar: View {
   let title: String
   let icon: String
-  var namespace: Namespace.ID? = nil
+  var namespace: Namespace.ID?
   let onBack: () -> Void
 
   init(
@@ -965,7 +965,7 @@ struct OnboardingNavBar: View {
     self.namespace = namespace
     self.onBack = onBack
   }
-    
+
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
@@ -1028,14 +1028,14 @@ struct MatchedGeometryIfAvailable: ViewModifier {
 struct OnboardingStepScaffoldConfig {
   let title: String
   let icon: String
-  var namespace: Namespace.ID? = nil
-  var primaryActionTitle: String? = nil
-  var primaryActionAccessibilityIdentifier: String? = nil
+  var namespace: Namespace.ID?
+  var primaryActionTitle: String?
+  var primaryActionAccessibilityIdentifier: String?
   var isPrimaryActionEnabled: Bool = true
   var isPrimaryActionLoading: Bool = false
   var showsPrimaryActionArrow: Bool = false
   var contentHorizontalPadding: CGFloat = 20
-  var contentMaxWidth: CGFloat? = nil
+  var contentMaxWidth: CGFloat?
 }
 
 struct OnboardingStepBanner {
@@ -1173,7 +1173,7 @@ struct ExpenseBudgetSetupScreen: View {
   @Environment(\.colorScheme) private var colorScheme
   @StateObject private var viewModel = ExpenseBudgetSetupViewModel()
   @State private var errorMessage: String?
-  var headerNamespace: Namespace.ID? = nil
+  var headerNamespace: Namespace.ID?
 
   let onBack: () -> Void
   let onDone: () -> Void
@@ -1185,7 +1185,7 @@ struct ExpenseBudgetSetupScreen: View {
   private var isValid: Bool {
     viewModel.hasValidMonthlyIncome && abs(totalPercent - 100) < 0.001
   }
-    
+
   var body: some View {
     OnboardingStepScaffold(
       config: OnboardingStepScaffoldConfig(
@@ -1278,9 +1278,9 @@ struct ExpenseBudgetSetupScreen: View {
       HStack {
         Text("Budget Pillars")
           .typography(.label, weight: .semibold)
-        
+
         Spacer()
-        
+
         Text("\(Int(totalPercent))%")
           .typography(.label, weight: .bold)
           .foregroundStyle(totalPercent == 100 ? AppTheme.Colors.success : AppTheme.Colors.warning)
@@ -1307,9 +1307,9 @@ struct ExpenseBudgetSetupScreen: View {
       HStack {
         Text("Add Initial Expenses (Optional)")
           .typography(.label, weight: .semibold)
-        
+
         Spacer()
-        
+
         Button {
           withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
             viewModel.addExpense()
@@ -1434,7 +1434,7 @@ private struct PillarAllocationCard: View {
           VStack(alignment: .leading, spacing: 2) {
             Text(pillar.title)
               .typography(.label, weight: .semibold)
-            
+
             if monthlyIncome > 0 {
               Text(allocatedAmount.formatted(.currency(code: "USD")))
                 .typography(.nano)
@@ -1451,7 +1451,7 @@ private struct PillarAllocationCard: View {
             .multilineTextAlignment(.trailing)
             .typography(.label, weight: .bold)
             .frame(width: 40)
-          
+
           Text("%")
             .typography(.label)
             .foregroundStyle(.secondary)
@@ -1610,24 +1610,24 @@ final class ExpenseBudgetSetupViewModel: ObservableObject {
     dateFormatter.dateFormat = "yyyy-MM-dd"
     dateFormatter.locale = Locale(identifier: "en_US_POSIX")
     dateFormatter.timeZone = TimeZone.current
-    
+
     var targetShares: [String: Double] = [:]
     for (pillar, percentage) in pillars {
       targetShares[pillar.rawValue] = percentage / 100
     }
-    
+
     let snapshotRequest = BudgetSnapshotRequest(
       monthStart: dateFormatter.string(from: monthStart),
       netSalary: monthlyIncomeValue,
       targetShares: targetShares
     )
-    
+
     _ = try await expensesService.createBudgetSnapshot(request: snapshotRequest)
-    
+
     // Create expenses if any
     for expense in expenses where !expense.title.isEmpty {
       guard let amount = Self.parseMonetaryValue(expense.amount), amount > 0 else { continue }
-      
+
       let expenseRequest = ExpenseRequest(
         title: expense.title,
         amount: amount,
@@ -1637,7 +1637,7 @@ final class ExpenseBudgetSetupViewModel: ObservableObject {
         splitMode: .personal,
         userSharePercent: 100
       )
-      
+
       _ = try await expensesService.createExpense(request: expenseRequest)
     }
   }

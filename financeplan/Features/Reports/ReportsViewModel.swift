@@ -13,11 +13,11 @@ final class ReportsViewModel: ObservableObject {
   @Published var cashFlow: [ReportsCashFlowPointResponse] = []
   @Published var partnerDisplayName: String = "Partner"
   @Published var isLoading = false
-  @Published var errorMessage: String? = nil
+  @Published var errorMessage: String?
 
   private let expensesService: any ExpensesServicing
   private var hasLoadedOnce = false
-  
+
   private let dateFormatter: DateFormatter = {
       let formatter = DateFormatter()
       formatter.dateFormat = "yyyy-MM-dd"
@@ -35,7 +35,7 @@ final class ReportsViewModel: ObservableObject {
     guard !isLoading else { return }
     isLoading = true
     errorMessage = nil
-    
+
     do {
       async let partnerTask = expensesService.getHouseholdPartner()
       async let reportTask = expensesService.getReportsOverview(from: nil, to: nil)
@@ -52,7 +52,7 @@ final class ReportsViewModel: ObservableObject {
     } catch {
       self.errorMessage = error.localizedDescription
     }
-    
+
     isLoading = false
   }
 

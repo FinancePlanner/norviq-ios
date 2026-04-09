@@ -40,7 +40,7 @@ final class OnboardingImportViewModel: ObservableObject {
   func startStockImport() {
     step = .chooseStockMethod
   }
-  
+
   func startExpenseImport() {
     step = .expenseBudgetSetup
   }

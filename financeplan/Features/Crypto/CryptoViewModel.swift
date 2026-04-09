@@ -12,7 +12,7 @@ final class CryptoViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var selectedAsset: CryptoQuoteResponse?
-    
+
     // New Overview Metrics
     @Published var sentimentValue: Int = 72 // 0-100
     @Published var sentimentLabel: String = "Greed"
@@ -25,14 +25,14 @@ final class CryptoViewModel: ObservableObject {
     ]
     @Published var topGainers: [CryptoQuoteResponse] = []
     @Published var topLosers: [CryptoQuoteResponse] = []
-    
+
     struct DominanceData: Identifiable {
         let id = UUID()
         let symbol: String
         let percentage: Double
         let color: Color
     }
-    
+
     private let cryptoService: any CryptoServicing
     private let marketDataService: any MarketDataServicing
     private var hasLoadedOnce = false
@@ -51,14 +51,14 @@ final class CryptoViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
-        
+
         do {
             async let fetchHoldings = cryptoService.fetchPortfolio()
             async let fetchMarket = cryptoService.fetchCryptoList()
             async let fetchNews = cryptoService.fetchGeneralCryptoNews()
-            
+
             let (holdings, market, news) = try await (fetchHoldings, fetchMarket, fetchNews)
-            
+
             self.userHoldings = holdings
             self.marketNews = news.map { item in
                 StockNews(
@@ -70,17 +70,17 @@ final class CryptoViewModel: ObservableObject {
                     summary: item.summary
                 )
             }
-            
+
             // Collect all symbols that need full quotes
             var symbolsToFetch = Set<String>()
             market.prefix(15).forEach { symbolsToFetch.insert($0.symbol) }
             holdings.forEach { symbolsToFetch.insert($0.symbol) }
-            
+
             if !symbolsToFetch.isEmpty {
                 let commaSeparated = symbolsToFetch.joined(separator: ",")
                 let quotes = try await cryptoService.fetchCryptoQuote(symbols: commaSeparated)
                 self.topAssets = quotes
-                
+
                 // Sort for Gainers/Losers
                 let sorted = quotes.sorted { $0.changePercentage > $1.changePercentage }
                 self.topGainers = Array(sorted.prefix(5))
@@ -88,18 +88,18 @@ final class CryptoViewModel: ObservableObject {
             } else {
                 self.topAssets = []
             }
-            
+
             // Hardcoded refinements for demonstration
             self.sentimentValue = 72
             self.sentimentLabel = "Greed"
             self.ethGasGwei = 24
             hasLoadedOnce = true
-            
+
         } catch {
             self.errorMessage = error.localizedDescription
         }
     }
-    
+
     func addHolding(symbol: String, name: String, quantity: Double, price: Double) async -> Bool {
         errorMessage = nil
         do {
@@ -117,7 +117,7 @@ final class CryptoViewModel: ObservableObject {
             return false
         }
     }
-    
+
     func removeHolding(itemId: String) async -> Bool {
         errorMessage = nil
         do {
@@ -129,7 +129,7 @@ final class CryptoViewModel: ObservableObject {
             return false
         }
     }
-    
+
     func updateHolding(itemId: String, symbol: String, name: String, quantity: Double, price: Double) async -> Bool {
         errorMessage = nil
         do {

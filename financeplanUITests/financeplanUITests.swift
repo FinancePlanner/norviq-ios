@@ -8,7 +8,7 @@
 import Foundation
 import XCTest
 
-final class financeplanUITests: XCTestCase {
+final class FinanceplanUITests: XCTestCase {
   override func setUpWithError() throws {
     continueAfterFailure = false
   }
@@ -83,7 +83,7 @@ final class financeplanUITests: XCTestCase {
       "-ui_test_auth_token",
       "ui-test-token",
       "-ui_test_user_id",
-      userID,
+      userID
     ]
     if resetSession {
       launchArguments.append("-ui_test_reset_session")

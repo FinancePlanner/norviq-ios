@@ -11,7 +11,7 @@ struct ExpensesComparisonScreen: View {
       ZStack {
         MeshGradientBackground()
           .ignoresSafeArea()
-        
+
         ScrollView {
           VStack(spacing: 24) {
             if reportsViewModel.isLoading && reportsViewModel.portfolioStatistics == nil && reportsViewModel.latestMonthSummary == nil {
@@ -20,17 +20,17 @@ struct ExpensesComparisonScreen: View {
             } else {
               // 1. Net Worth Snapshot
               NetWorthHeroCard(stats: reportsViewModel.portfolioStatistics)
-              
+
               // 2. Portfolio Performance Breakdown
               PerformanceBreakdownCard(stats: reportsViewModel.portfolioStatistics)
-              
+
               // 3. Personal Spending Analysis
               SpendingInsightsSection(
                 monthSummary: reportsViewModel.latestMonthSummary,
                 pillarSummaries: reportsViewModel.latestPillarSummaries,
                 partnerName: reportsViewModel.partnerDisplayName
               )
-              
+
               // 4. Household Comparison
               HouseholdSplitComparisonCard(
                 summaries: reportsViewModel.monthlySummaries,
@@ -42,13 +42,13 @@ struct ExpensesComparisonScreen: View {
                 summary: reportsViewModel.latestMonthSummary,
                 partnerName: reportsViewModel.partnerDisplayName
               )
-              
+
               // 6. Portfolio Allocation
               AllocationInsightsSection(stats: reportsViewModel.portfolioStatistics)
-              
+
               // 7. Savings Rate
               SavingsRateCard(summary: reportsViewModel.latestMonthSummary)
-              
+
               // 8. Monthly Cash Flow
               CashFlowAnalysisCard(points: reportsViewModel.cashFlow)
             }
@@ -84,7 +84,7 @@ private struct NetWorthHeroCard: View {
               .font(.system(size: 10, weight: .bold))
               .tracking(1.5)
               .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme))
-            
+
             Text((stats?.totalMarketValue ?? 0).formatted(.currency(code: "USD")))
               .font(.system(size: 36, weight: .bold, design: .rounded))
           }
@@ -93,9 +93,9 @@ private struct NetWorthHeroCard: View {
             .font(.title)
             .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
         }
-        
+
         Divider().opacity(0.1)
-        
+
         HStack(spacing: 20) {
           VStack(alignment: .leading, spacing: 4) {
             Text("UNREALIZED P&L")
@@ -105,7 +105,7 @@ private struct NetWorthHeroCard: View {
               .font(.headline)
               .foregroundStyle((stats?.totalUnrealizedPnl ?? 0) >= 0 ? .green : .red)
           }
-          
+
           VStack(alignment: .leading, spacing: 4) {
             Text("POSITIONS")
               .font(.system(size: 9, weight: .bold))
@@ -132,7 +132,7 @@ private struct SpendingInsightsSection: View {
     VStack(alignment: .leading, spacing: 16) {
       Text("Household Spending")
         .font(.title3.bold())
-      
+
       if let latest = monthSummary, !pillarSummaries.isEmpty {
         GlassCard(cornerRadius: 20) {
           VStack(alignment: .leading, spacing: 16) {
@@ -146,7 +146,7 @@ private struct SpendingInsightsSection: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             }
-            
+
             Chart {
               ForEach(pillarSummaries.sorted(by: { $0.actualAmount > $1.actualAmount }), id: \.pillar) { summary in
                 if #available(iOS 17.0, *) {
@@ -174,7 +174,7 @@ private struct SpendingInsightsSection: View {
               }
             }
             .frame(height: 220)
-            
+
             VStack(spacing: 16) {
               HStack(spacing: 12) {
                 personMetric(title: "Total", value: latest.actual)
@@ -186,10 +186,10 @@ private struct SpendingInsightsSection: View {
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 8)
-                
+
               ForEach(pillarSummaries.sorted(by: { $0.actualAmount > $1.actualAmount }), id: \.pillar) { summary in
                 let percentage = summary.plannedAmount > 0 ? (summary.actualAmount / summary.plannedAmount) * 100 : 0
-                
+
                 HStack(spacing: 16) {
                   Circle()
                     .fill(summary.pillar.color(for: colorScheme).opacity(0.2))
@@ -198,7 +198,7 @@ private struct SpendingInsightsSection: View {
                         Image(systemName: icon(for: summary.pillar))
                             .foregroundStyle(summary.pillar.color(for: colorScheme))
                     }
-                  
+
                   VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(summary.pillar.title)
@@ -208,14 +208,14 @@ private struct SpendingInsightsSection: View {
                           .font(.caption)
                           .foregroundStyle(.secondary)
                     }
-                    
+
                     HStack {
                         Text(summary.actualAmount.formatted(.currency(code: "USD")))
                           .font(.subheadline)
                           .foregroundStyle(.secondary)
-                        
+
                         Spacer()
-                        
+
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
                                 RoundedRectangle(cornerRadius: 4)
@@ -240,7 +240,7 @@ private struct SpendingInsightsSection: View {
       }
     }
   }
-  
+
   private func icon(for pillar: BudgetPillar) -> String {
       switch pillar {
       case .fundamentals: return "house.fill"
@@ -339,14 +339,14 @@ private struct AllocationInsightsSection: View {
     VStack(alignment: .leading, spacing: 16) {
       Text("Portfolio Allocation")
         .font(.title3.bold())
-      
+
       GlassCard(cornerRadius: 20) {
         VStack(alignment: .leading, spacing: 20) {
           Text("SECTOR WEIGHTING")
             .font(.system(size: 10, weight: .bold))
             .tracking(1.2)
             .foregroundStyle(.secondary)
-          
+
           if let sectors = stats?.sectorAllocations, !sectors.isEmpty {
             ZStack {
                 Chart(sectors, id: \.sector) { item in
@@ -373,7 +373,7 @@ private struct AllocationInsightsSection: View {
                   }
                 }
                 .frame(height: 220)
-                
+
                 if #available(iOS 17.0, *) {
                     VStack {
                         Text("Total Value")
@@ -384,13 +384,13 @@ private struct AllocationInsightsSection: View {
                     }
                 }
             }
-            
+
             VStack(spacing: 16) {
               Text("Sector Weighting")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 8)
-                
+
               ForEach(sectors.sorted(by: { $0.weightPercent > $1.weightPercent }), id: \.sector) { item in
                 HStack(spacing: 16) {
                   RoundedRectangle(cornerRadius: 8)
@@ -400,12 +400,12 @@ private struct AllocationInsightsSection: View {
                         Image(systemName: icon(for: item.sector))
                             .foregroundStyle(color(for: item.sector, colorScheme: colorScheme))
                     }
-                  
+
                   Text(item.sector)
                     .font(.subheadline)
-                  
+
                   Spacer()
-                  
+
                   let value = (stats?.totalMarketValue ?? 0) * (item.weightPercent / 100.0)
                   Text("\(Int(item.weightPercent))% | \(value.formatted(.currency(code: "USD")))")
                     .font(.subheadline)
@@ -435,7 +435,7 @@ private struct AllocationInsightsSection: View {
       default: return "circle.grid.2x2.fill"
       }
   }
-  
+
   private func color(for sector: String, colorScheme: ColorScheme) -> Color {
       switch sector.lowercased() {
       case "technology": return .blue
@@ -458,15 +458,15 @@ private struct PerformanceBreakdownCard: View {
   private var winnersValue: Double {
     stats?.stockSummaries.filter { $0.unrealizedPnl > 0 }.reduce(0) { $0 + $1.unrealizedPnl } ?? 0
   }
-  
+
   private var losersValue: Double {
     abs(stats?.stockSummaries.filter { $0.unrealizedPnl < 0 }.reduce(0) { $0 + $1.unrealizedPnl } ?? 0)
   }
-  
+
   private var winnersCount: Int {
     stats?.stockSummaries.filter { $0.unrealizedPnl > 0 }.count ?? 0
   }
-  
+
   private var losersCount: Int {
     stats?.stockSummaries.filter { $0.unrealizedPnl < 0 }.count ?? 0
   }
@@ -475,7 +475,7 @@ private struct PerformanceBreakdownCard: View {
     VStack(alignment: .leading, spacing: 16) {
       Text("Portfolio Performance")
         .font(.title3.bold())
-      
+
       GlassCard(cornerRadius: 20) {
         VStack(alignment: .leading, spacing: 20) {
           HStack {
@@ -488,7 +488,7 @@ private struct PerformanceBreakdownCard: View {
               .font(.caption2)
               .foregroundStyle(.secondary)
           }
-          
+
           if winnersValue + losersValue > 0 {
             Chart {
               if #available(iOS 17.0, *) {
@@ -499,7 +499,7 @@ private struct PerformanceBreakdownCard: View {
                 )
                 .foregroundStyle(.green.gradient)
                 .cornerRadius(4)
-                
+
                 SectorMark(
                   angle: .value("Amount", losersValue),
                   innerRadius: .ratio(0.6),
@@ -520,7 +520,7 @@ private struct PerformanceBreakdownCard: View {
                   .foregroundStyle((stats?.totalUnrealizedPnl ?? 0) >= 0 ? .green : .red)
               }
             }
-            
+
             HStack(spacing: 40) {
               VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
@@ -538,7 +538,7 @@ private struct PerformanceBreakdownCard: View {
                   .font(.caption2)
                   .foregroundStyle(.secondary)
               }
-              
+
               VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
                   Circle()
@@ -581,7 +581,7 @@ private struct BudgetTrackingCard: View {
     VStack(alignment: .leading, spacing: 16) {
       Text("Household Budget Tracking")
         .font(.title3.bold())
-      
+
       if let latest = summary {
         GlassCard(cornerRadius: 20) {
           VStack(alignment: .leading, spacing: 20) {
@@ -595,7 +595,7 @@ private struct BudgetTrackingCard: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             }
-            
+
             Chart {
               if #available(iOS 17.0, *) {
                 SectorMark(
@@ -605,7 +605,7 @@ private struct BudgetTrackingCard: View {
                 )
                 .foregroundStyle(latest.actual > latest.planned ? Color.red.gradient : AppTheme.Colors.tint(for: colorScheme).gradient)
                 .cornerRadius(4)
-                
+
                 if latest.planned > latest.actual {
                   SectorMark(
                     angle: .value("Amount", latest.planned - latest.actual),
@@ -631,7 +631,7 @@ private struct BudgetTrackingCard: View {
                   .foregroundStyle(latest.actual > latest.planned ? .red : .secondary)
               }
             }
-            
+
             HStack(spacing: 40) {
               VStack(alignment: .leading, spacing: 4) {
                 Text("PLANNED")
@@ -640,7 +640,7 @@ private struct BudgetTrackingCard: View {
                 Text(latest.planned.formatted(.currency(code: "USD")))
                   .font(.headline.bold())
               }
-              
+
               VStack(alignment: .leading, spacing: 4) {
                 Text("ACTUAL")
                   .font(.system(size: 9, weight: .bold))
@@ -649,7 +649,7 @@ private struct BudgetTrackingCard: View {
                   .font(.headline.bold())
                   .foregroundStyle(latest.actual > latest.planned ? .red : .primary)
               }
-              
+
               VStack(alignment: .leading, spacing: 4) {
                 Text("REMAINING")
                   .font(.system(size: 9, weight: .bold))
@@ -701,12 +701,12 @@ private struct SavingsRateCard: View {
     VStack(alignment: .leading, spacing: 16) {
       Text("Savings Rate")
         .font(.title3.bold())
-      
+
       if let latest = summary {
         let savingsAmount = latest.salary - latest.actual
         let savingsRate = latest.salary > 0 ? (savingsAmount / latest.salary) * 100 : 0
         let spendingRate = latest.salary > 0 ? (latest.actual / latest.salary) * 100 : 0
-        
+
         GlassCard(cornerRadius: 20) {
           VStack(alignment: .leading, spacing: 20) {
             HStack {
@@ -719,7 +719,7 @@ private struct SavingsRateCard: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             }
-            
+
             Chart {
               if #available(iOS 17.0, *) {
                 SectorMark(
@@ -729,7 +729,7 @@ private struct SavingsRateCard: View {
                 )
                 .foregroundStyle(.green.gradient)
                 .cornerRadius(4)
-                
+
                 SectorMark(
                   angle: .value("Amount", latest.actual),
                   innerRadius: .ratio(0.6),
@@ -750,7 +750,7 @@ private struct SavingsRateCard: View {
                   .foregroundStyle(.green)
               }
             }
-            
+
             VStack(spacing: 12) {
               HStack {
                 HStack(spacing: 8) {
@@ -771,7 +771,7 @@ private struct SavingsRateCard: View {
                     .foregroundStyle(.secondary)
                 }
               }
-              
+
               HStack {
                 HStack(spacing: 8) {
                   Circle()
@@ -790,9 +790,9 @@ private struct SavingsRateCard: View {
                     .foregroundStyle(.secondary)
                 }
               }
-              
+
               Divider().opacity(0.1)
-              
+
               HStack {
                 Text("Total Income")
                   .font(.subheadline)
@@ -822,7 +822,7 @@ private struct CashFlowAnalysisCard: View {
     VStack(alignment: .leading, spacing: 16) {
       Text("Cash Flow History")
         .font(.title3.bold())
-      
+
       GlassCard(cornerRadius: 20) {
         VStack(alignment: .leading, spacing: 16) {
           if points.isEmpty {

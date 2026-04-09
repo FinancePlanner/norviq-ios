@@ -5,7 +5,7 @@ import StockPlanShared
 struct MarketNewsScreen: View {
     @Environment(\.colorScheme) private var colorScheme
     private var marketDataService: any MarketDataServicing { Container.shared.marketDataService() }
-    
+
     @State private var news: [StockNews] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -34,7 +34,7 @@ struct MarketNewsScreen: View {
                     StockNewsTab(news: news)
                         .padding(.horizontal, 16)
                 }
-                
+
                 Spacer(minLength: 40)
             }
             .padding(.vertical, 20)

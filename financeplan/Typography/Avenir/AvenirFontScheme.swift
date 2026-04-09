@@ -29,8 +29,7 @@ public struct AvenirFontScheme: FontScheme {
 
   // swiftlint:enable switch_case_on_newline
 
-  public init(_ weight: TypographyFontWeight = .regular, isItalic: Bool = false, size: CGFloat = 15)
-  {
+  public init(_ weight: TypographyFontWeight = .regular, isItalic: Bool = false, size: CGFloat = 15) {
     self.weight = weight
     self.isItalic = isItalic
     self.size = size

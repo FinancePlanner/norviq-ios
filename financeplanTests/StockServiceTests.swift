@@ -96,7 +96,7 @@ final class StockServiceTests: XCTestCase {
             notes: ""
           ),
           error: nil
-        ),
+        )
       ]
     )
 
@@ -136,7 +136,7 @@ final class StockServiceTests: XCTestCase {
           buyPrice: 123.45,
           buyDate: "2026-03-08",
           notes: ""
-        ),
+        )
       ]
     )
 
@@ -197,7 +197,7 @@ final class StockServiceTests: XCTestCase {
           buyPrice: 123.45,
           buyDate: "2026-03-08",
           notes: nil
-        ),
+        )
       ]
     )
 
@@ -243,7 +243,7 @@ final class StockServiceTests: XCTestCase {
             buyPrice: 123.45,
             buyDate: "2026-03-08",
             notes: nil
-          ),
+          )
         ]
       )
       XCTFail("Expected unauthorized error")
@@ -274,7 +274,7 @@ final class StockServiceTests: XCTestCase {
         buyPrice: 123.45,
         buyDate: "2026-03-08",
         notes: nil
-      ),
+      )
     ]
 
     session.handler = { request in
@@ -328,7 +328,7 @@ final class StockServiceTests: XCTestCase {
           currentPrice: 415.3,
           marketCap: 3_100_000_000_000,
           sharesOutstanding: 7_400_000_000
-        ),
+        )
       ],
       projectionScenarios: [
         StockInsightProjectionScenarioDTO(
@@ -348,9 +348,9 @@ final class StockServiceTests: XCTestCase {
               sharePriceHigh: 168,
               cagrLow: -0.1,
               cagrHigh: -0.05
-            ),
+            )
           ]
-        ),
+        )
       ]
     )
 

@@ -613,7 +613,7 @@ final class StockDetailsViewModel: ObservableObject {
             ratios.message,
             ratiosTTM.message,
             growth.message,
-            estimates.message,
+            estimates.message
         ].compactMap { $0 }.first
 
         if let firstErrorMessage {
@@ -681,7 +681,7 @@ final class StockDetailsViewModel: ObservableObject {
                 || message.localizedCaseInsensitiveContains("no data")
                 || message.localizedCaseInsensitiveContains("no financial")
                 || message.localizedCaseInsensitiveContains("no analyst estimates")
-        case .invalidResponse, .unauthorized(_):
+        case .invalidResponse, .unauthorized:
             return false
         }
     }
@@ -811,18 +811,18 @@ final class StockDetailsViewModel: ObservableObject {
               !baseProjections.isEmpty else {
             return fallback
         }
-        
+
         let peLow = max((metrics.forwardPE ?? 20) * 0.9, 8)
         let peHigh = max((metrics.ttmPE ?? peLow) * 1.05, peLow + 1)
         let terminalGrowthRate = metrics.terminalGrowthRate ?? 0.025
         let terminalMargin = metrics.terminalMargin ?? 0.22
-        
+
         let buildScenario = { (kind: StockProjectionScenarioKind, shift: Double, peLowShift: Double, peHighShift: Double) -> StockProjectionScenario in
             var years: [StockProjectionYear] = []
-            
+
             let ttmRev = baseProjections[0].revenue / (1 + baseProjections[0].revenueGrowth)
             let ttmNetInc = baseProjections[0].netIncome / (1 + baseProjections[0].netIncomeGrowth)
-            
+
             years.append(StockProjectionYear(
                 year: baseYear,
                 revenue: ttmRev,
@@ -846,18 +846,18 @@ final class StockDetailsViewModel: ObservableObject {
             for (i, proj) in baseProjections.enumerated() {
                 let revGrowth = max(proj.revenueGrowth + shift, terminalGrowthRate)
                 let niGrowth = max(proj.netIncomeGrowth + shift, terminalGrowthRate)
-                
-                currentRev = currentRev * (1 + revGrowth)
-                currentNetInc = currentNetInc * (1 + niGrowth)
+
+                currentRev *= (1 + revGrowth)
+                currentNetInc *= (1 + niGrowth)
                 let targetMargin = min(finalNetMargin + Double(i + 1) * 0.02, terminalMargin)
                 let actualNetInc = currentRev * targetMargin
                 let actualEps = actualNetInc / shares
-                
+
                 let currentPELow = peLow + peLowShift
                 let currentPEHigh = peHigh + peHighShift
                 let priceLow = actualEps * currentPELow
                 let priceHigh = actualEps * currentPEHigh
-                
+
                 let yearsForward = Double(i + 1)
                 let cagrLow = pow(priceLow / currentPrice, 1.0 / yearsForward) - 1
                 let cagrHigh = pow(priceHigh / currentPrice, 1.0 / yearsForward) - 1
@@ -895,7 +895,6 @@ final class StockDetailsViewModel: ObservableObject {
         ]
     }
 
-
     private func fillMissingPeers() {
         guard let primaryComparisonProfile else { return }
 
@@ -917,7 +916,7 @@ final class StockDetailsViewModel: ObservableObject {
         guard !selectedPeerSymbols.isEmpty else { return }
         let symbols = selectedPeerSymbols
         let start = ContinuousClock.now
-        
+
         do {
             let metricsList = try await marketDataService.fetchMarketCompare(symbols: symbols)
             guard !Task.isCancelled else { return }

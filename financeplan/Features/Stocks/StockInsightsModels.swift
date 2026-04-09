@@ -267,7 +267,6 @@ struct StockProjectionScenario: Equatable {
 
 public typealias StockMarketSnapshot = QuoteResponse
 
-
 struct StockComparisonProfile: Identifiable, Equatable {
     var id: String { symbol }
 
@@ -664,7 +663,7 @@ enum StockInsightsMockStore {
                     peHigh: [29, 29, 28, 28]
                 )
             )
-        ),
+        )
     ]
 
     private static func makeProfile(from seed: StockInsightSeed) -> StockComparisonProfile {
@@ -811,10 +810,11 @@ enum StockInsightsMockStore {
         [
             .bear: bear,
             .base: base,
-            .bull: bull,
+            .bull: bull
         ]
     }
 
+    // swiftlint:disable:next function_parameter_count
     private static func metrics(
         ttmPE: Double,
         forwardPE: Double,
@@ -857,7 +857,7 @@ enum StockInsightsMockStore {
             .lastYearRevenueGrowth: lastYearRevenueGrowth,
             .ttmVsNTMRevenueGrowth: ttmVsNTMRevenueGrowth,
             .currentQuarterRevenueGrowthVsPreviousYear: currentQuarterRevenueGrowthVsPreviousYear,
-            .twoYearStackExpectedRevenueGrowth: twoYearStackExpectedRevenueGrowth,
+            .twoYearStackExpectedRevenueGrowth: twoYearStackExpectedRevenueGrowth
         ]
     }
 }

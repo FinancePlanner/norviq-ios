@@ -95,7 +95,7 @@ final class WatchlistViewModel: ObservableObject {
           nextReviewAt: nil
         )
       )
-      
+
       if let modelContext = modelContext {
         modelContext.insert(SDWatchlistItem(from: created))
         try modelContext.save()
@@ -127,11 +127,11 @@ final class WatchlistViewModel: ObservableObject {
       )
 
       let saved = try await service.create(stock: request)
-      
+
       // Also update SwiftData for portfolio if possible, but the Portfolio screen will sync anyway.
       // However, we can be proactive.
       // For now, let's just make sure the watchlist item is updated if needed or wait for its sync.
-      
+
       return nil
     } catch {
       return error.localizedDescription
@@ -141,7 +141,7 @@ final class WatchlistViewModel: ObservableObject {
   func removeFromWatchlist(_ item: WatchlistItemResponse) async {
     do {
       try await service.deleteWatchlistItem(id: item.id)
-      
+
       if let modelContext = modelContext {
         let id = item.id
         let descriptor = FetchDescriptor<SDWatchlistItem>(predicate: #Predicate { $0.id == id })

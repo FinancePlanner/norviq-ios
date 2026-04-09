@@ -180,7 +180,7 @@ private struct SocialAuthSection: View {
 // MARK: - Logo Component
 private struct NorviqaLogo: View {
     var size: CGFloat = 64
-    
+
     var body: some View {
         Image("NorviqaLogoLight")
             .resizable()
@@ -195,24 +195,24 @@ private struct VaultTextField<RightAccessory: View>: View {
     let label: String
     let placeholder: String
     @Binding var text: String
-    var icon: String? = nil
+    var icon: String?
     var isSecure: Bool = false
     var isLight: Bool = false
     let rightAccessory: RightAccessory
     var showsRightAccessory: Bool = true
-    
+
     var keyboardType: UIKeyboardType = .default
-    var textContentType: UITextContentType? = nil
-    
+    var textContentType: UITextContentType?
+
     @FocusState private var isFocused: Bool
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(label.uppercased())
                 .font(.system(size: 10, weight: .bold, design: .default))
                 .tracking(1.2)
                 .foregroundStyle(VaultColors.textSecondary)
-            
+
             HStack(spacing: 12) {
                 if let icon = icon {
                     Image(systemName: icon)
@@ -220,7 +220,7 @@ private struct VaultTextField<RightAccessory: View>: View {
                         .foregroundStyle(VaultColors.textSecondary)
                         .frame(width: 20)
                 }
-                
+
                 Group {
                     if isSecure {
                         SecureField(placeholder, text: $text)
@@ -235,7 +235,7 @@ private struct VaultTextField<RightAccessory: View>: View {
                 .focused($isFocused)
                 .foregroundStyle(isLight ? .black : .white)
                 .tint(VaultColors.primaryBlue)
-                
+
                 if showsRightAccessory {
                     rightAccessory
                 }
@@ -304,7 +304,7 @@ struct LoginScreen: View {
     var body: some View {
         ZStack {
             VaultColors.background.ignoresSafeArea()
-            
+
             if viewModel.isSignup {
                 SignUpView(viewModel: viewModel, isEnvironmentPresented: $isEnvironmentPresented)
                     .transition(.opacity.combined(with: .move(edge: .trailing)))
@@ -312,7 +312,7 @@ struct LoginScreen: View {
                 SignInView(viewModel: viewModel, isEnvironmentPresented: $isEnvironmentPresented)
                     .transition(.opacity.combined(with: .move(edge: .leading)))
             }
-            
+
             if let error = viewModel.error {
                 VStack {
                     FormErrorBanner(message: error)
@@ -322,7 +322,7 @@ struct LoginScreen: View {
                 .zIndex(100)
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
-            
+
             if let info = viewModel.infoMessage {
                 VStack {
                     ToastBanner(message: info, style: .success)
@@ -369,21 +369,21 @@ private struct SignInView: View {
     @ObservedObject var viewModel: LoginViewModel
     @Binding var isEnvironmentPresented: Bool
     @State private var isPasswordVisible = false
-    
+
     var body: some View {
         ScrollView {
             VStack(spacing: 32) {
-                
+
                 // Header
                 VStack(spacing: 16) {
                     NorviqaLogo(size: 78)
                         .padding(.top, 60)
-                    
+
                     VStack(spacing: 8) {
                         Text("Welcome back")
                             .font(.system(size: 34, weight: .bold, design: .default))
                             .foregroundStyle(.white)
-                        
+
                         Text("Securely access your private financial\neditorial and curated portfolio.")
                             .font(.system(size: 15))
                             .foregroundStyle(VaultColors.textSecondary)
@@ -392,7 +392,7 @@ private struct SignInView: View {
                     }
                     .padding(.top, 8)
                 }
-                
+
                 // Form Card
                 VStack(spacing: 24) {
                     VaultTextField(
@@ -404,7 +404,7 @@ private struct SignInView: View {
                         keyboardType: .emailAddress,
                         textContentType: .emailAddress
                     )
-                    
+
                     VStack(alignment: .trailing, spacing: 8) {
                         ZStack(alignment: .topTrailing) {
                             VaultTextField(
@@ -422,7 +422,7 @@ private struct SignInView: View {
                                     .accessibilityLabel(isPasswordVisible ? "Hide password" : "Show password"),
                                 textContentType: .password
                             )
-                            
+
                             Button(action: { viewModel.isForgotPasswordPresented = true }) {
                                 Text("FORGOT PASSWORD?")
                                     .font(.system(size: 10, weight: .bold, design: .default))
@@ -432,7 +432,7 @@ private struct SignInView: View {
                             .offset(y: 2)
                         }
                     }
-                    
+
                     Button(action: { Task { await viewModel.submit() } }) {
                         HStack {
                             if viewModel.isSubmitting {
@@ -460,14 +460,14 @@ private struct SignInView: View {
                 .background(VaultColors.cardBackground)
                 .clipShape(.rect(cornerRadius: 24))
                 .padding(.horizontal, 24)
-                
+
                 // Switch to Sign Up
                 Button(action: { viewModel.showSignup() }) {
                     HStack(spacing: 8) {
                         Text("No account? Sign up instead")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(VaultColors.textSecondary)
-                        
+
                         Circle()
                             .fill(VaultColors.cardBackground)
                             .frame(width: 28, height: 28)
@@ -479,9 +479,9 @@ private struct SignInView: View {
                     }
                 }
                 .padding(.top, 8)
-                
+
                 Spacer(minLength: 40)
-                
+
                 // Footer
                 HStack(spacing: 24) {
                     Text("Privacy Policy")
@@ -495,7 +495,7 @@ private struct SignInView: View {
                 }
                 .font(.system(size: 12))
                 .foregroundStyle(VaultColors.textSecondary)
-                
+
                 Text("© 2024 The Editorial Financial Experience. All rights reserved.")
                     .font(.system(size: 10))
                     .foregroundStyle(VaultColors.textSecondary.opacity(0.6))
@@ -512,11 +512,11 @@ private struct SignUpView: View {
     @ObservedObject var viewModel: LoginViewModel
     @Binding var isEnvironmentPresented: Bool
     @State private var isPasswordVisible = false
-    
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                
+
                 // Header (Top Bar)
                 HStack {
                     Text("Norviqa")
@@ -532,17 +532,17 @@ private struct SignUpView: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
-                
+
                 // Hero
                 VStack(alignment: .center, spacing: 16) {
                     NorviqaLogo(size: 78)
                         .padding(.top, 60)
-                    
+
                     Text("Create your\naccount")
                         .font(.system(size: 34, weight: .bold, design: .default))
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
-                    
+
                     Text("Join an elite community and experience\nthe future of editorial financial\nmanagement.")
                         .font(.system(size: 15))
                         .foregroundStyle(VaultColors.textSecondary)
@@ -552,7 +552,7 @@ private struct SignUpView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 32)
                 .padding(.bottom, 40)
-                
+
                 // Form Fields
                 VStack(spacing: 20) {
                     VaultTextField(
@@ -562,7 +562,7 @@ private struct SignUpView: View {
                         isLight: true,
                         textContentType: .username
                     )
-                    
+
                     VaultTextField(
                         label: "Email Address",
                         placeholder: "john@example.com",
@@ -571,7 +571,7 @@ private struct SignUpView: View {
                         keyboardType: .emailAddress,
                         textContentType: .emailAddress
                     )
-                    
+
                     VaultTextField(
                         label: "Password",
                         placeholder: "••••••••",
@@ -586,14 +586,14 @@ private struct SignUpView: View {
                             .accessibilityLabel(isPasswordVisible ? "Hide password" : "Show password"),
                         textContentType: .newPassword
                     )
-                    
+
                     // Custom Date Picker mimicking text field
                     VStack(alignment: .leading, spacing: 8) {
                         Text("DATE OF BIRTH")
                             .font(.system(size: 10, weight: .bold, design: .default))
                             .tracking(1.2)
                             .foregroundStyle(VaultColors.textSecondary)
-                        
+
                         HStack {
                             Text(formatter.string(from: viewModel.dateOfBirth))
                                 .foregroundStyle(.black)
@@ -612,7 +612,7 @@ private struct SignUpView: View {
                     }
                 }
                 .padding(.horizontal, 24)
-                
+
                 // Actions
                 VStack(spacing: 16) {
                     Button(action: { Task { await viewModel.submit() } }) {
@@ -635,7 +635,7 @@ private struct SignUpView: View {
                     .disabled(viewModel.isSubmitting)
 
                     SocialAuthSection(viewModel: viewModel, intentLabel: "sign up")
-                    
+
                     Button(action: { viewModel.hideSignup() }) {
                         HStack(spacing: 8) {
                             Text("Already have an account?")
@@ -653,13 +653,13 @@ private struct SignUpView: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 32)
-                
+
                 // Promo Card
                 VaultPlatinumCard()
                     .padding(.horizontal, 24)
                     .padding(.top, 40)
                     .padding(.bottom, 40)
-                
+
                 // Footer
                 VStack(spacing: 16) {
                     HStack(spacing: 24) {
@@ -674,7 +674,7 @@ private struct SignUpView: View {
                     }
                     .font(.system(size: 12))
                     .foregroundStyle(VaultColors.textSecondary)
-                    
+
                     Text("© 2024 The Editorial Financial Experience. All rights reserved.")
                         .font(.system(size: 10))
                         .foregroundStyle(VaultColors.textSecondary.opacity(0.6))
@@ -686,15 +686,15 @@ private struct SignUpView: View {
         }
         .scrollDismissesKeyboard(.interactively)
     }
-    
+
     private var eighteenYearsAgo: Date {
         Calendar.current.date(byAdding: .year, value: -18, to: Date()) ?? Date()
     }
-    
+
     private var formatter: DateFormatter {
-        let df = DateFormatter()
-        df.dateStyle = .medium
-        return df
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .medium
+        return dateFormatter
     }
 }
 
@@ -710,18 +710,18 @@ private struct VaultPlatinumCard: View {
                         endPoint: .bottomTrailing
                     )
                 )
-            
+
             VStack(alignment: .leading, spacing: 8) {
                 Text("NORDIQ")
                     .font(.system(size: 10, weight: .bold, design: .default))
                     .tracking(1.5)
                     .foregroundStyle(VaultColors.primaryBlue)
-                
+
                 Text("Your data forever yours only")
                     .font(.system(size: 22, weight: .bold, design: .default))
                     .foregroundStyle(.white)
                     .padding(.top, 4)
-                
+
                 Text("EDIT THIS MUCH LATER")
                     .font(.system(size: 13))
                     .foregroundStyle(Color(white: 0.7))
@@ -738,16 +738,16 @@ private struct VaultPlatinumCard: View {
 private struct VaultForgotPasswordView: View {
     @ObservedObject var viewModel: LoginViewModel
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var email = ""
     @State private var isSubmitting = false
     @State private var message: String?
     @State private var errorMessage: String?
-    
+
     var body: some View {
         ZStack {
             VaultColors.background.ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
                 // Top Bar
                 HStack {
@@ -770,27 +770,27 @@ private struct VaultForgotPasswordView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
                 .padding(.bottom, 20)
-                
+
                 ScrollView {
                     VStack(spacing: 32) {
-                        
+
                         // Norviqa Logo
                         NorviqaLogo(size: 80)
                             .padding(.top, 40)
-                        
+
                         // Titles
                         VStack(spacing: 12) {
                             Text("Reset Password")
                                 .font(.system(size: 32, weight: .bold))
                                 .foregroundStyle(.white)
-                            
+
                             Text("Enter the email address associated with\nyour account and we'll send a code to\nreset your password.")
                                 .font(.system(size: 16))
                                 .foregroundStyle(VaultColors.textSecondary)
                                 .multilineTextAlignment(.center)
                                 .lineSpacing(4)
                         }
-                        
+
                         // Form
                         VStack(spacing: 24) {
                             TextField("Email Address", text: $email)
@@ -802,7 +802,7 @@ private struct VaultForgotPasswordView: View {
                                 .foregroundStyle(.white)
                                 .background(VaultColors.cardBackground)
                                 .clipShape(.rect(cornerRadius: 12))
-                            
+
                             if let message {
                                 HStack(spacing: 8) {
                                     Image(systemName: "checkmark.circle.fill")
@@ -812,7 +812,7 @@ private struct VaultForgotPasswordView: View {
                                 .foregroundStyle(.green)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                            
+
                             if let errorMessage {
                                 HStack(spacing: 8) {
                                     Image(systemName: "exclamationmark.circle.fill")
@@ -822,7 +822,7 @@ private struct VaultForgotPasswordView: View {
                                 .foregroundStyle(.red)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                            
+
                             Button(action: { Task { await submit() } }) {
                                 HStack {
                                     if isSubmitting {
@@ -843,7 +843,7 @@ private struct VaultForgotPasswordView: View {
                                 .clipShape(.rect(cornerRadius: 12))
                             }
                             .disabled(email.isEmpty || isSubmitting)
-                            
+
                             Button(action: { dismiss() }) {
                                 Text("Back to Sign In")
                                     .font(.system(size: 16, weight: .medium))
@@ -853,9 +853,9 @@ private struct VaultForgotPasswordView: View {
                         }
                         .padding(.horizontal, 24)
                         .padding(.top, 16)
-                        
+
                         Spacer(minLength: 60)
-                        
+
                         // Secure Vault Protection Badge
                         HStack(spacing: 8) {
                             Image(systemName: "shield.fill")
@@ -878,15 +878,15 @@ private struct VaultForgotPasswordView: View {
             }
         }
     }
-    
+
     @MainActor
     private func submit() async {
         let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        
+
         isSubmitting = true
         defer { isSubmitting = false }
-        
+
         do {
             try await viewModel.requestForgotPassword(for: trimmed)
             message = "Instructions sent successfully."

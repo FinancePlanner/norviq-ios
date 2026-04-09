@@ -32,7 +32,7 @@ struct UpdateUserProfileEndpoint: Endpoint {
     let data = try JSONEncoder.default.encode(request)
     let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
     var params: Parameters = [:]
-    for (k, v) in json { params[k] = v }
+    for (key, value) in json { params[key] = value }
     return params
   }
 }
@@ -45,4 +45,49 @@ struct DeleteUserProfileEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters { [:] }
+}
+
+struct UpdateUsernameEndpoint: Endpoint {
+  typealias Response = UpdateUserProfileResponse
+
+  let request: UpdateUsernameRequest
+
+  var method: HTTPMethod { .patch }
+  var path: String { "/v1/users/username" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    let data = try JSONEncoder.stockPlanShared.encode(request)
+    return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+  }
+}
+
+struct UpdateEmailEndpoint: Endpoint {
+  typealias Response = UpdateUserProfileResponse
+
+  let request: UpdateEmailRequest
+
+  var method: HTTPMethod { .patch }
+  var path: String { "/v1/users/email" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    let data = try JSONEncoder.stockPlanShared.encode(request)
+    return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+  }
+}
+
+struct UpdatePasswordEndpoint: Endpoint {
+  typealias Response = APIMessageResponse
+
+  let request: UpdatePasswordRequest
+
+  var method: HTTPMethod { .patch }
+  var path: String { "/v1/users/password" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    let data = try JSONEncoder.stockPlanShared.encode(request)
+    return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+  }
 }

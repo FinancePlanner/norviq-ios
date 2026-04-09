@@ -11,6 +11,9 @@ import StockPlanShared
 public protocol UserProfileServiceProtocol {
     func fetchProfile() async throws -> UserProfile
     func updateProfile(_ profile: UserProfile) async throws -> UserProfile
+    func updateUsername(_ username: String) async throws -> UserProfile
+    func updateEmail(_ email: String) async throws -> UserProfile
+    func updatePassword(current: String, new: String) async throws
 }
 
 final class UserProfileHTTPService: UserProfileServiceProtocol {
@@ -40,6 +43,26 @@ final class UserProfileHTTPService: UserProfileServiceProtocol {
             try await client.updateProfile(UpdateUserProfileRequest(userProfile: profile))
         }
         return response.userProfile
+    }
+
+    func updateUsername(_ username: String) async throws -> UserProfile {
+        let response: UpdateUserProfileResponse = try await performAuthenticated { client in
+            try await client.updateUsername(UpdateUsernameRequest(username: username))
+        }
+        return response.userProfile
+    }
+
+    func updateEmail(_ email: String) async throws -> UserProfile {
+        let response: UpdateUserProfileResponse = try await performAuthenticated { client in
+            try await client.updateEmail(UpdateEmailRequest(email: email))
+        }
+        return response.userProfile
+    }
+
+    func updatePassword(current: String, new: String) async throws {
+        _ = try await performAuthenticated { client in
+            try await client.updatePassword(UpdatePasswordRequest(currentPassword: current, newPassword: new))
+        }
     }
 
     private func makeClient(forceRefresh: Bool = false) async throws -> UserProfileHTTPClient {
@@ -101,5 +124,19 @@ public final class UserProfileServiceStub: UserProfileServiceProtocol {
         // Simulate a network delay and echo back the profile
         try await Task.sleep(nanoseconds: 200_000_000)
         return profile
+    }
+
+    public func updateUsername(_ username: String) async throws -> UserProfile {
+        try await Task.sleep(nanoseconds: 200_000_000)
+        return UserProfile(id: "demo-id", email: "demo@example.com", username: username)
+    }
+
+    public func updateEmail(_ email: String) async throws -> UserProfile {
+        try await Task.sleep(nanoseconds: 200_000_000)
+        return UserProfile(id: "demo-id", email: email, username: "Demo User")
+    }
+
+    public func updatePassword(current: String, new: String) async throws {
+        try await Task.sleep(nanoseconds: 200_000_000)
     }
 }

@@ -41,7 +41,7 @@ enum StockShareFormatter {
                 "Valuation",
                 "- Bear: \(formatted(range: valuation.bearCase))",
                 "- Base: \(formatted(range: valuation.baseCase))",
-                "- Bull: \(formatted(range: valuation.bullCase))",
+                "- Bull: \(formatted(range: valuation.bullCase))"
             ]
 
             if let targetDate = valuation.targetDate, !targetDate.isEmpty {
