@@ -298,10 +298,10 @@ struct SuccessImportScreen: View {
 }
 
 // MARK: - API KEY VIEW
-// to fill from endpoint later
 
 struct APIKeyImportScreen: View {
   @Environment(\.colorScheme) private var colorScheme
+  @StateObject private var viewModel = BrokerAPIImportViewModel()
   var headerNamespace: Namespace.ID? = nil
 
   let onBack: () -> Void
@@ -319,39 +319,76 @@ struct APIKeyImportScreen: View {
 
       ScrollView {
         VStack(spacing: 24) {
-          Spacer(minLength: 40)
+          if viewModel.isLoading {
+            ProgressView("Loading broker connections...")
+              .padding(.top, 30)
+          } else {
+            GlassCard(cornerRadius: 22) {
+              VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                  Image(systemName: "building.columns.fill")
+                    .foregroundStyle(.indigo)
+                  Text("Interactive Brokers")
+                    .typography(.label, weight: .semibold)
+                  Spacer()
+                  Text(viewModel.ibkrStatusTitle)
+                    .typography(.caption, weight: .semibold)
+                    .foregroundStyle(viewModel.ibkrStatusColor)
+                }
 
-          // Placeholder illustration
-          VStack(spacing: 20) {
-            ZStack {
-              Circle()
-                .fill(Color.indigo.opacity(colorScheme == .dark ? 0.12 : 0.08))
-                .frame(width: 100, height: 100)
+                Text(viewModel.ibkrStatusSubtitle)
+                  .typography(.small)
+                  .foregroundStyle(.secondary)
+                  .frame(maxWidth: .infinity, alignment: .leading)
 
-              Image(systemName: "key.fill")
-                .font(.system(size: 36, weight: .bold))
-                .foregroundStyle(.indigo)
+                if let syncMessage = viewModel.syncMessage {
+                  Text(syncMessage)
+                    .typography(.small)
+                    .foregroundStyle(AppTheme.Colors.success)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                if let errorMessage = viewModel.errorMessage {
+                  Text(errorMessage)
+                    .typography(.small)
+                    .foregroundStyle(AppTheme.Colors.danger)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+              }
             }
+            .padding(.top, 20)
 
-            Text("Coming Soon")
-              .typography(.title, weight: .bold)
-
-            Text(
-              "Broker API integration is on the roadmap.\nYou'll be able to sync positions automatically."
-            )
-            .typography(.small)
-            .foregroundStyle(.secondary)
-            .multilineTextAlignment(.center)
-            .lineSpacing(3)
+            Button {
+              Task { await viewModel.syncIBKRNow() }
+            } label: {
+              HStack(spacing: 8) {
+                if viewModel.isSyncing {
+                  ProgressView()
+                } else {
+                  Image(systemName: "arrow.triangle.2.circlepath")
+                }
+                Text(viewModel.isSyncing ? "Syncing..." : "Sync IBKR Now")
+                  .font(.headline)
+                  .fontWeight(.bold)
+              }
+            }
+            .buttonStyle(GlowingButtonStyle())
             .padding(.horizontal, 24)
-          }
+            .disabled(viewModel.isSyncing)
 
-          Spacer(minLength: 40)
+            Button {
+              Task { await viewModel.load(force: true) }
+            } label: {
+              Text("Refresh Connection State")
+                .typography(.small, weight: .semibold)
+                .foregroundStyle(.secondary)
+            }
+          }
 
           Button {
             onDone()
           } label: {
-            Text("Skip for Now")
+            Text("Continue")
               .font(.headline)
               .fontWeight(.bold)
           }
@@ -362,6 +399,93 @@ struct APIKeyImportScreen: View {
       }
     }
     .background(MeshGradientBackground().ignoresSafeArea())
+    .task {
+      await viewModel.loadIfNeeded()
+    }
+  }
+}
+
+@MainActor
+private final class BrokerAPIImportViewModel: ObservableObject {
+  @Published private(set) var connections: [BrokerConnectionResponse] = []
+  @Published private(set) var isLoading = false
+  @Published private(set) var isSyncing = false
+  @Published var errorMessage: String?
+  @Published var syncMessage: String?
+
+  private let brokerService: any BrokerServicing
+  private var hasLoaded = false
+
+  init(brokerService: any BrokerServicing = Container.shared.brokerService()) {
+    self.brokerService = brokerService
+  }
+
+  var ibkrConnection: BrokerConnectionResponse? {
+    connections.first { $0.provider.lowercased() == "ibkr" }
+  }
+
+  var ibkrStatusTitle: String {
+    if let connection = ibkrConnection {
+      return connection.status.uppercased()
+    }
+    return "NOT CONNECTED"
+  }
+
+  var ibkrStatusSubtitle: String {
+    if let connection = ibkrConnection {
+      return "Provider: \(connection.provider.uppercased()) • Status: \(connection.status)"
+    }
+    return "No broker connection yet. Trigger a sync run to start importing positions."
+  }
+
+  var ibkrStatusColor: Color {
+    guard let status = ibkrConnection?.status.lowercased() else { return .secondary }
+    if status == "active" || status == "connected" || status == "csv" {
+      return AppTheme.Colors.success
+    }
+    if status == "error" || status == "failed" {
+      return AppTheme.Colors.danger
+    }
+    return .orange
+  }
+
+  func loadIfNeeded() async {
+    guard !hasLoaded else { return }
+    await load(force: true)
+  }
+
+  func load(force: Bool = false) async {
+    if isLoading { return }
+    if !force, hasLoaded { return }
+
+    isLoading = true
+    errorMessage = nil
+    defer {
+      isLoading = false
+      hasLoaded = true
+    }
+
+    do {
+      connections = try await brokerService.listConnections()
+    } catch {
+      errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+    }
+  }
+
+  func syncIBKRNow() async {
+    guard !isSyncing else { return }
+    isSyncing = true
+    errorMessage = nil
+    defer { isSyncing = false }
+
+    do {
+      let response = try await brokerService.syncIBKR()
+      syncMessage = "Sync requested: \(response.status) (\(response.runId.prefix(8)))"
+      await load(force: true)
+    } catch {
+      syncMessage = nil
+      errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+    }
   }
 }
 
@@ -511,7 +635,7 @@ struct ManualImportScreen: View {
     }
     .task(id: errorMessage) {
       guard let current = errorMessage else { return }
-      try? await Task.sleep(nanoseconds: 3_000_000_000)
+      try? await Task.sleep(for: .seconds(3))
       guard errorMessage == current else { return }
       withAnimation(.easeInOut(duration: 0.2)) {
         errorMessage = nil
@@ -524,19 +648,7 @@ struct ManualImportScreen: View {
     let positions = viewModel.buildPositions()
     Task {
       do {
-        let today = DateFormatter.yyyyMMdd.string(from: Date())
-
-        let requests: [StockRequest] = positions.map { pos in
-          StockRequest(
-            symbol: pos.symbol,
-            shares: pos.quantity,
-            buyPrice: pos.price,
-            buyDate: today,
-            notes: ""
-          )
-        }
-        let service = Container.shared.stockService()
-        _ = try await service.bulkCreate(stocks: requests)
+        try await viewModel.importPositions(positions)
         onDone(positions)
       } catch {
         errorMessage =
@@ -913,6 +1025,148 @@ struct MatchedGeometryIfAvailable: ViewModifier {
   }
 }
 
+struct OnboardingStepScaffoldConfig {
+  let title: String
+  let icon: String
+  var namespace: Namespace.ID? = nil
+  var primaryActionTitle: String? = nil
+  var primaryActionAccessibilityIdentifier: String? = nil
+  var isPrimaryActionEnabled: Bool = true
+  var isPrimaryActionLoading: Bool = false
+  var showsPrimaryActionArrow: Bool = false
+  var contentHorizontalPadding: CGFloat = 20
+  var contentMaxWidth: CGFloat? = nil
+}
+
+struct OnboardingStepBanner {
+  let message: String
+  let style: ToastBanner.Style
+}
+
+struct OnboardingStepScaffold<TopAccessory: View, Content: View, Footer: View>: View {
+  @Environment(\.colorScheme) private var colorScheme
+
+  let config: OnboardingStepScaffoldConfig
+  let onBack: () -> Void
+  let onPrimaryAction: (() -> Void)?
+  let banner: OnboardingStepBanner?
+  let scrollDismissesKeyboard: ScrollDismissesKeyboardMode
+  @ViewBuilder let topAccessory: () -> TopAccessory
+  @ViewBuilder let content: () -> Content
+  @ViewBuilder let footer: () -> Footer
+
+  var body: some View {
+    VStack(spacing: 0) {
+      OnboardingNavBar(
+        title: config.title,
+        icon: config.icon,
+        namespace: config.namespace,
+        onBack: onBack
+      )
+
+      ScrollView(.vertical) {
+        VStack(spacing: 0) {
+          topAccessory()
+          content()
+        }
+        .padding(.horizontal, config.contentHorizontalPadding)
+        .modifier(MaxContentWidthModifier(maxWidth: config.contentMaxWidth))
+      }
+      .scrollDismissesKeyboard(scrollDismissesKeyboard)
+      .scrollBounceBehavior(.basedOnSize)
+
+      if let onPrimaryAction, let primaryActionTitle = config.primaryActionTitle {
+        defaultPrimaryActionFooter(
+          title: primaryActionTitle,
+          isEnabled: config.isPrimaryActionEnabled,
+          isLoading: config.isPrimaryActionLoading,
+          showsArrow: config.showsPrimaryActionArrow,
+          action: onPrimaryAction
+        )
+      } else {
+        footer()
+      }
+    }
+    .background(MeshGradientBackground().ignoresSafeArea())
+    .overlay(alignment: .top) {
+      if let banner {
+        ToastBanner(message: banner.message, style: banner.style)
+          .padding(.horizontal, 16)
+          .padding(.top, 60)
+          .transition(.move(edge: .top).combined(with: .opacity))
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func defaultPrimaryActionFooter(
+    title: String,
+    isEnabled: Bool,
+    isLoading: Bool,
+    showsArrow: Bool,
+    action: @escaping () -> Void
+  ) -> some View {
+    VStack(spacing: 0) {
+      Divider().opacity(0.3)
+
+      HStack(spacing: 12) {
+        Spacer()
+
+        Button(action: action) {
+          HStack(spacing: 8) {
+            if isLoading {
+              ProgressView()
+                .tint(.white)
+            }
+
+            Text(title)
+              .font(.headline)
+              .fontWeight(.bold)
+
+            if showsArrow && !isLoading {
+              Image(systemName: "arrow.right")
+                .font(.subheadline.weight(.bold))
+            }
+          }
+          .foregroundStyle(.white)
+          .padding(.horizontal, 24)
+          .padding(.vertical, 12)
+          .background(
+            Capsule()
+              .fill(AppTheme.Colors.tint(for: colorScheme))
+          )
+          .shadow(
+            color: AppTheme.Colors.tint(for: colorScheme).opacity(0.25),
+            radius: 8, x: 0, y: 4
+          )
+        }
+        .accessibilityIdentifier(
+          config.primaryActionAccessibilityIdentifier ?? "onboardingPrimaryActionButton")
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.5)
+      }
+      .padding(.horizontal, 20)
+      .padding(.vertical, 14)
+      .appGlassEffect(.rect(cornerRadius: 0))
+      .ignoresSafeArea(edges: .bottom)
+    }
+  }
+}
+
+private struct MaxContentWidthModifier: ViewModifier {
+  let maxWidth: CGFloat?
+
+  func body(content: Content) -> some View {
+    if let maxWidth {
+      content
+        .frame(maxWidth: maxWidth)
+        .frame(maxWidth: .infinity)
+    } else {
+      content
+    }
+  }
+}
+
 // MARK: - Expense Budget Setup
 
 struct ExpenseBudgetSetupScreen: View {
@@ -933,41 +1187,33 @@ struct ExpenseBudgetSetupScreen: View {
   }
     
   var body: some View {
-    VStack(spacing: 0) {
-      // Custom nav bar
-      OnboardingNavBar(
+    OnboardingStepScaffold(
+      config: OnboardingStepScaffoldConfig(
         title: "Budget Setup",
         icon: "dollarsign.circle.fill",
         namespace: headerNamespace,
-        onBack: onBack
-      )
-
-      ScrollView(.vertical) {
-        VStack(spacing: 24) {
-          instructionsSection
-          monthlyIncomeSection
-          budgetPillarsSection
-          initialExpensesSection
-          Spacer(minLength: 100)
-        }
+        contentHorizontalPadding: 0
+      ),
+      onBack: onBack,
+      onPrimaryAction: nil,
+      banner: errorMessage.map { OnboardingStepBanner(message: $0, style: .error) },
+      scrollDismissesKeyboard: .interactively
+    ) {
+      EmptyView()
+    } content: {
+      VStack(spacing: 24) {
+        instructionsSection
+        monthlyIncomeSection
+        budgetPillarsSection
+        initialExpensesSection
+        Spacer(minLength: 100)
       }
-      .scrollDismissesKeyboard(.interactively)
-
-      // Bottom bar
+    } footer: {
       bottomBarSection
-    }
-    .background(MeshGradientBackground().ignoresSafeArea())
-    .overlay(alignment: .top) {
-      if let errorMessage {
-        ToastBanner(message: errorMessage, style: .error)
-          .padding(.horizontal, 16)
-          .padding(.top, 60)
-          .transition(.move(edge: .top).combined(with: .opacity))
-      }
     }
     .task(id: errorMessage) {
       guard let current = errorMessage else { return }
-      try? await Task.sleep(nanoseconds: 3_000_000_000)
+      try? await Task.sleep(for: .seconds(3))
       guard errorMessage == current else { return }
       withAnimation(.easeInOut(duration: 0.2)) {
         errorMessage = nil
@@ -1333,6 +1579,11 @@ final class ExpenseBudgetSetupViewModel: ObservableObject {
     .fun: 20
   ]
   @Published var expenses: [ExpenseEntry] = []
+  private let expensesService: any ExpenseBudgetSetupServicing
+
+  init(expensesService: any ExpenseBudgetSetupServicing = Container.shared.expensesService()) {
+    self.expensesService = expensesService
+  }
 
   var parsedMonthlyIncome: Double? {
     Self.parseMonetaryValue(monthlyIncome)
@@ -1351,8 +1602,6 @@ final class ExpenseBudgetSetupViewModel: ObservableObject {
   }
 
   func createBudgetSnapshot() async throws {
-    let expensesService = Container.shared.expensesService()
-    
     // Create budget snapshot
     let calendar = Calendar.current
     let now = Date()
@@ -1389,57 +1638,12 @@ final class ExpenseBudgetSetupViewModel: ObservableObject {
         userSharePercent: 100
       )
       
-      try await expensesService.createExpense(request: expenseRequest)
+      _ = try await expensesService.createExpense(request: expenseRequest)
     }
   }
 
   private static func parseMonetaryValue(_ raw: String) -> Double? {
-    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return nil }
-
-    let filtered = trimmed.filter { $0.isNumber || $0 == "," || $0 == "." }
-    guard !filtered.isEmpty else { return nil }
-
-    let characters = Array(filtered)
-    let separatorIndexes = characters.indices.filter { characters[$0] == "," || characters[$0] == "." }
-
-    if separatorIndexes.isEmpty {
-      return Double(filtered)
-    }
-
-    if separatorIndexes.count == 1 {
-      let separatorIndex = separatorIndexes[0]
-      let leadingDigits = separatorIndex
-      let trailingDigits = characters.count - separatorIndex - 1
-      if leadingDigits > 0 && trailingDigits == 3 {
-        let normalized = filtered
-          .replacingOccurrences(of: ",", with: "")
-          .replacingOccurrences(of: ".", with: "")
-        return Double(normalized)
-      }
-    }
-
-    let decimalSeparator = characters[separatorIndexes.last!]
-    var normalized = ""
-    var consumedDecimal = false
-
-    for character in characters {
-      if character.isNumber {
-        normalized.append(character)
-        continue
-      }
-
-      if (character == "," || character == ".")
-        && character == decimalSeparator
-        && !consumedDecimal
-      {
-        normalized.append(".")
-        consumedDecimal = true
-      }
-    }
-
-    guard normalized != "." else { return nil }
-    return Double(normalized)
+    MoneyInputParser.parse(raw)
   }
 }
 

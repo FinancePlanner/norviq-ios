@@ -74,6 +74,7 @@ struct WatchlistTab: View {
         } label: {
           Image(systemName: "plus")
         }
+        .accessibilityLabel("Add watchlist item")
       }
     }
     .sheet(isPresented: $viewModel.isAddWatchlistPresented) {

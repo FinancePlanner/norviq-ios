@@ -253,8 +253,8 @@ struct StockFinancialStatementsTab: View {
                 )
             } else {
                 ResearchPlaceholderCard(
-                    title: "Financial statements (Soon)",
-                    bodyText: "Wire the statements, ratios, growth, and estimate endpoints here to review filings by Q1, Q2, Q3, Q4, FY, annual, or quarter."
+                    title: "Financial statements",
+                    bodyText: "Financial statement data is currently unavailable for this symbol."
                 )
             }
         }
@@ -275,19 +275,17 @@ struct StockAnalysisTab: View {
         }
 
         guard let analysisMetrics else { return nil }
-
-        let fallbackProfile = StockInsightsMockStore.profile(for: analysisMetrics.symbol)
         return StockComparisonProfile(
-            symbol: fallbackProfile.symbol,
-            companyName: fallbackProfile.companyName,
-            currentPrice: fallbackProfile.currentPrice,
-            marketCap: fallbackProfile.marketCap,
-            sharesOutstanding: fallbackProfile.sharesOutstanding,
+            symbol: analysisMetrics.symbol.uppercased(),
+            companyName: analysisMetrics.symbol.uppercased(),
+            currentPrice: analysisMetrics.currentPrice ?? 0,
+            marketCap: analysisMetrics.marketCap ?? 0,
+            sharesOutstanding: analysisMetrics.sharesOutstanding ?? 0,
             metrics: analysisMetrics.comparisonMetrics,
-            projectionScenarios: fallbackProfile.projectionScenarios,
-            dcfBasePrice: fallbackProfile.dcfBasePrice,
-            dcfBearPrice: fallbackProfile.dcfBearPrice,
-            dcfBullPrice: fallbackProfile.dcfBullPrice
+            projectionScenarios: [:],
+            dcfBasePrice: analysisMetrics.dcfBasePrice,
+            dcfBearPrice: analysisMetrics.dcfBearPrice,
+            dcfBullPrice: analysisMetrics.dcfBullPrice
         )
     }
 
@@ -353,7 +351,7 @@ struct StockForecastTab: View {
             }
         } else {
             GlassCard {
-                Text("Projection data will appear after the stock loads.")
+                Text("Projection data is unavailable for this symbol right now.")
                     .typography(.small)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -1767,7 +1765,7 @@ private struct StockAnalysisPlaceholderCard: View {
                     Text("Current metrics")
                         .typography(.small, weight: .semibold)
 
-                    Text("This section is ready for the wrapped analysis endpoint once data is available for this symbol.")
+                    Text("Current metrics are unavailable for this symbol right now.")
                         .typography(.small)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1787,7 +1785,7 @@ private struct StockFundamentalsCard: View {
                     Text("Fundamentals")
                         .typography(.small, weight: .semibold)
 
-                    Text("A compact read on growth and profitability while the dedicated fundamentals endpoint is still mocked on the client.")
+                    Text("A compact read on growth and profitability powered by live market analysis data.")
                         .typography(.nano)
                         .foregroundStyle(.secondary)
                 }

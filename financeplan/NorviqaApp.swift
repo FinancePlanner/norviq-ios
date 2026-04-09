@@ -5,6 +5,7 @@ import SwiftUI
 import SwiftData
 
 @main
+@MainActor
 struct NorviqaApp: App {
   @InjectedObservable(\Container.appEnvironment) var environmentManager
   @StateObject private var sessionManager = SessionManager()

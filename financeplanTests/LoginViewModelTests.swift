@@ -10,6 +10,7 @@ final class LoginViewModelTests: XCTestCase {
     var signupCalls = 0
     var forgotPasswordCalls = 0
     var refreshCalls = 0
+    var oauthSignInCalls = 0
 
     var lastLoginEmail: String?
     var lastSignupUsername: String?
@@ -17,6 +18,7 @@ final class LoginViewModelTests: XCTestCase {
     var lastSignupDateOfBirth: Date?
     var lastForgotPasswordEmail: String?
     var lastRefreshToken: String?
+    var lastOAuthProvider: OAuthProviderKind?
     var logoutCalls = 0
     var lastLogoutRefreshToken: String?
     var loginDelayNanoseconds: UInt64 = 0
@@ -25,6 +27,7 @@ final class LoginViewModelTests: XCTestCase {
     var signupResult: Result<Void, Error> = .failure(MockError.notConfigured)
     var forgotPasswordResult: Result<AuthForgotPasswordResponse, Error> = .failure(MockError.notConfigured)
     var refreshResult: Result<AuthResponse, Error> = .failure(MockError.notConfigured)
+    var oauthSignInResult: Result<AuthResponse, Error> = .failure(MockError.notConfigured)
 
     func login(email: String, password _: String) async throws -> AuthResponse {
       loginCalls += 1
@@ -63,6 +66,13 @@ final class LoginViewModelTests: XCTestCase {
     func logout(refreshToken: String) async {
       logoutCalls += 1
       lastLogoutRefreshToken = refreshToken
+    }
+
+    @MainActor
+    func oauthSignIn(provider: OAuthProviderKind) async throws -> AuthResponse {
+      oauthSignInCalls += 1
+      lastOAuthProvider = provider
+      return try oauthSignInResult.get()
     }
   }
 

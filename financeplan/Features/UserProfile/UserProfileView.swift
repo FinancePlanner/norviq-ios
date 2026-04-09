@@ -9,11 +9,23 @@ import StockPlanShared
 import SwiftUI
 import Factory
 
+private enum UserProfileDestination: Hashable {
+    case profileDetail
+    case securityCode
+    case badges
+    case helpSupport
+    case shareFeedback
+    case about
+    case dataHandling
+    case sensitiveActions
+}
+
 @MainActor
 public struct UserProfileView: View {
     @StateObject private var viewModel: UserProfileViewModel
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dismiss) private var dismiss
+    @State private var path: [UserProfileDestination] = []
 
     // Appearance State
     @AppStorage("appAppearance") private var appAppearance: String = "System"
@@ -21,12 +33,12 @@ public struct UserProfileView: View {
     // Security State
     @AppStorage("useFaceID") private var useFaceID: Bool = true
     
-    public init(viewModel: UserProfileViewModel = UserProfileViewModel()) {
-        _viewModel = StateObject(wrappedValue: viewModel)
+    public init(viewModel: UserProfileViewModel? = nil) {
+        _viewModel = StateObject(wrappedValue: viewModel ?? UserProfileViewModel())
     }
 
     public var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Group {
                 if viewModel.isLoading {
                     ProgressView("Loading...")
@@ -49,6 +61,26 @@ public struct UserProfileView: View {
                 }
             }
             .task { await viewModel.load() }
+            .navigationDestination(for: UserProfileDestination.self) { destination in
+                switch destination {
+                case .profileDetail:
+                    ProfileDetailView(viewModel: viewModel, profile: viewModel.profile)
+                case .securityCode:
+                    Text("Security Code")
+                case .badges:
+                    BadgesView()
+                case .helpSupport:
+                    Text("Help & Support")
+                case .shareFeedback:
+                    Text("Share Feedback")
+                case .about:
+                    Text("About Norviqa")
+                case .dataHandling:
+                    Text("Data handling")
+                case .sensitiveActions:
+                    Text("Sensitive actions")
+                }
+            }
         }
     }
 
@@ -56,7 +88,7 @@ public struct UserProfileView: View {
         List {
             // Profile Card
             Section {
-                NavigationLink(destination: ProfileDetailView(viewModel: viewModel, profile: profile)) {
+                NavigationLink(value: UserProfileDestination.profileDetail) {
                     HStack(spacing: 16) {
                         avatarView(profile)
                         
@@ -83,7 +115,7 @@ public struct UserProfileView: View {
                     }
                 }
                 
-                NavigationLink(destination: Text("Security Code")) {
+                NavigationLink(value: UserProfileDestination.securityCode) {
                     HStack(spacing: 12) {
                         iconView("lock.fill", backgroundColor: Color(red: 0.15, green: 0.25, blue: 0.35), foregroundColor: .blue)
                         Text("Security Code")
@@ -107,7 +139,7 @@ public struct UserProfileView: View {
             
             // Achievements
             Section("ACHIEVEMENTS") {
-                NavigationLink(destination: BadgesView()) {
+                NavigationLink(value: UserProfileDestination.badges) {
                     HStack(spacing: 12) {
                         iconView("trophy.fill", backgroundColor: Color(red: 0.35, green: 0.25, blue: 0.10), foregroundColor: .yellow)
                         Text("Badges")
@@ -124,7 +156,7 @@ public struct UserProfileView: View {
                             .font(.body)
                         Spacer()
                         Text("3 ACTIVE")
-                            .font(.caption2.bold())
+                            .font(.caption.bold())
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
@@ -144,14 +176,14 @@ public struct UserProfileView: View {
             
             // About
             Section("ABOUT") {
-                NavigationLink(destination: Text("Help & Support")) {
+                NavigationLink(value: UserProfileDestination.helpSupport) {
                     Text("Help & Support")
                 }
-                NavigationLink(destination: Text("Share Feedback")) {
+                NavigationLink(value: UserProfileDestination.shareFeedback) {
                     Text("Share Feedback")
                 }
-                NavigationLink(destination: Text("About Aurelius Finance")) {
-                    Text("About Aurelius Finance")
+                NavigationLink(value: UserProfileDestination.about) {
+                    Text("About Norviqa")
                 }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
@@ -173,7 +205,7 @@ public struct UserProfileView: View {
             
             // Footer
             Section {
-                Text("AURELIUS FINANCE V2.4.1 (BUILD 108)")
+                Text("NORVIQA V2.4.1 (BUILD 108)")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -308,7 +340,7 @@ public struct ProfileDetailView: View {
                     }
                 }
                 
-                NavigationLink(destination: Text("Data handling")) {
+                NavigationLink(value: UserProfileDestination.dataHandling) {
                     HStack(spacing: 12) {
                         iconView("shield.fill", backgroundColor: Color(red: 0.35, green: 0.15, blue: 0.15), foregroundColor: .orange)
                         VStack(alignment: .leading, spacing: 2) {
@@ -320,7 +352,7 @@ public struct ProfileDetailView: View {
                     }
                 }
                 
-                NavigationLink(destination: Text("Sensitive actions")) {
+                NavigationLink(value: UserProfileDestination.sensitiveActions) {
                     HStack(spacing: 12) {
                         iconView("lock.rotation", backgroundColor: Color(white: 0.25), foregroundColor: .white)
                         VStack(alignment: .leading, spacing: 2) {

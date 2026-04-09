@@ -156,8 +156,18 @@ struct CreateExpenseEndpoint: Endpoint {
     var path: String { "/v1/expenses" }
     var decoder: JSONDecoder { .stockPlanShared }
     func asParameters() throws -> Parameters {
-        let data = try JSONEncoder.stockPlanShared.encode(payload)
-        return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+        var params: Parameters = [
+            "title": payload.title,
+            "amount": payload.amount,
+            "pillar": payload.pillar.rawValue,
+            "occurred_on": payload.occurredOn,
+            "split_mode": payload.splitMode.rawValue,
+            "user_share_percent": payload.userSharePercent
+        ]
+        if let linkedPlanItemId = payload.linkedPlanItemId {
+            params["linked_plan_item_id"] = linkedPlanItemId
+        }
+        return params
     }
 }
 
@@ -169,8 +179,18 @@ struct UpdateExpenseEndpoint: Endpoint {
     var path: String { "/v1/expenses/\(expenseId)" }
     var decoder: JSONDecoder { .stockPlanShared }
     func asParameters() throws -> Parameters {
-        let data = try JSONEncoder.stockPlanShared.encode(payload)
-        return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+        var params: Parameters = [
+            "title": payload.title,
+            "amount": payload.amount,
+            "pillar": payload.pillar.rawValue,
+            "occurred_on": payload.occurredOn,
+            "split_mode": payload.splitMode.rawValue,
+            "user_share_percent": payload.userSharePercent
+        ]
+        if let linkedPlanItemId = payload.linkedPlanItemId {
+            params["linked_plan_item_id"] = linkedPlanItemId
+        }
+        return params
     }
 }
 

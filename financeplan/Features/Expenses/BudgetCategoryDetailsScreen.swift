@@ -13,7 +13,7 @@ struct BudgetCategoryDetailsScreen: View {
   var body: some View {
     ScrollView {
       VStack(spacing: 20) {
-        ForEach(BudgetPillar.allCases) { pillar in
+        ForEach(BudgetPillar.allCases, id: \.self) { pillar in
           let summary = viewModel.selectedMonthSummaries.first { $0.pillar == pillar }
             ?? PillarPlanningSummary(
               pillar: pillar,

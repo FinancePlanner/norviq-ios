@@ -152,7 +152,11 @@ struct HomeScreen: View {
 
   var body: some View {
     TabView(selection: $selectedTab) {
-      DashboardRoot(selectedTab: $selectedTab, isSettingsPresented: $isSettingsPresented)
+      DashboardRoot(
+        selectedTab: $selectedTab,
+        isSettingsPresented: $isSettingsPresented,
+        budgetStore: budgetPlannerViewModel
+      )
         .tabItem {
           Label("Home", systemImage: "house")
         }
@@ -192,20 +196,28 @@ struct HomeScreen: View {
 private struct DashboardRoot: View {
   @Binding var selectedTab: HomeTab
   @Binding var isSettingsPresented: Bool
+  @ObservedObject var budgetStore: BudgetPlannerViewModel
   @Environment(\.colorScheme) private var colorScheme
   @StateObject private var searchViewModel = AssetSearchViewModel()
   @StateObject private var activityViewModel = ActivityViewModel()
   @StateObject private var focusPointsViewModel = FocusPointsViewModel()
   @State private var isProfilePresented = false
-  @State private var dashboardData: DashboardResponse?
   @State private var dashboardInsights: DashboardInsightsResponse?
   @State private var isInsightsLoading = false
   @State private var insightsLoadFailed = false
+  @State private var isHomeMetricsLoading = false
+  @State private var portfolioTotalValue: Double = 0
+  @State private var spendingTotalValue: Double = 0
+  @State private var portfolioDeltaPercent: Double?
+  @State private var spendingDeltaPercent: Double?
   @State private var portfolioChartPoints: [ChartDataPoint] = []
   @State private var spendingChartPoints: [ChartDataPoint] = []
+  @State private var isQuickAddPresented = false
   @State private var hasLoadedContent = false
   
   private let dashboardService: any DashboardServicing = Container.shared.dashboardService()
+  private let expensesService: any ExpensesServicing = Container.shared.expensesService()
+  private let stockService: any StockServicing = Container.shared.stockService()
   
   private var insightCards: [InsightCard] {
     guard let insights = dashboardInsights else {
@@ -258,29 +270,18 @@ private struct DashboardRoot: View {
     NavigationStack {
       ScrollView {
         VStack(spacing: 20) {
-            if let dashboard = dashboardData {
-                DashboardHeroCard(
-                    totalValue: dashboard.totalValue,
-                    totalSpending: 3250.45,
-                    portfolioPoints: portfolioChartPoints,
-                    spendingPoints: spendingChartPoints,
-                    onPortfolioTap: { selectedTab = .portfolio },
-                    onExpensesTap: { selectedTab = .expenses },
-                    onReportsTap: { selectedTab = .reports }
-                )
-            } else {
-                // Loading / Error UI
-                DashboardHeroCard(
-                    totalValue: 0,
-                    totalSpending: 0,
-                    portfolioPoints: [],
-                    spendingPoints: [],
-                    onPortfolioTap: { selectedTab = .portfolio },
-                    onExpensesTap: { selectedTab = .expenses },
-                    onReportsTap: { selectedTab = .reports }
-                )
-                .redacted(reason: .placeholder)
-            }
+            DashboardHeroCard(
+                totalValue: portfolioTotalValue,
+                totalSpending: spendingTotalValue,
+                portfolioDeltaPercent: portfolioDeltaPercent,
+                spendingDeltaPercent: spendingDeltaPercent,
+                portfolioPoints: portfolioChartPoints,
+                spendingPoints: spendingChartPoints,
+                onPortfolioTap: { selectedTab = .portfolio },
+                onExpensesTap: { selectedTab = .expenses },
+                onReportsTap: { selectedTab = .reports }
+            )
+            .redacted(reason: isHomeMetricsLoading && !hasLoadedContent ? .placeholder : [])
           // ... rest of view
 
           if !searchViewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -290,13 +291,14 @@ private struct DashboardRoot: View {
 
           UnifiedActivityFeed(
             viewModel: activityViewModel,
+            recentExpenses: budgetStore.recentExpenseActivities,
             financialHealth: dashboardInsights?.financialHealth,
             isFinancialHealthLoading: isInsightsLoading,
             financialHealthUnavailable: insightsLoadFailed
           )
 
           Button(action: {
-              // Action for adding entry
+              isQuickAddPresented = true
           }) {
               HStack {
                   Image(systemName: "plus.circle.fill")
@@ -306,14 +308,13 @@ private struct DashboardRoot: View {
               .frame(maxWidth: .infinity)
               .padding()
               .background(Color.white.opacity(0.1))
-              .cornerRadius(16)
+              .clipShape(.rect(cornerRadius: 16))
               .foregroundStyle(.white)
           }
 
           // Keeping old cards hidden behind a disclosure group or just at the bottom for functionality
           DisclosureGroup("More Insights") {
               VStack(spacing: 20) {
-                  HomeExpensesInteractiveChartCard()
                   InsightsGrid(cards: insightCards)
                   FocusListCard(viewModel: focusPointsViewModel)
               }
@@ -330,7 +331,7 @@ private struct DashboardRoot: View {
       .task {
           await loadContent()
       }
-      .onChange(of: selectedTab) { tab in
+      .onChange(of: selectedTab) { _, tab in
         guard tab == .dashboard else { return }
         Task { await loadContent(force: true) }
       }
@@ -351,9 +352,9 @@ private struct DashboardRoot: View {
       .searchable(
         text: $searchViewModel.query,
         placement: .navigationBarDrawer(displayMode: .always),
-        prompt: "Search stocks or ETFs"
+        prompt: "Search stocks, ETFs, or owned assets"
       )
-      .onChange(of: searchViewModel.query) { _ in
+      .onChange(of: searchViewModel.query) { _, _ in
         searchViewModel.queryChanged()
       }
       .onSubmit(of: .search) {
@@ -362,36 +363,55 @@ private struct DashboardRoot: View {
       .sheet(isPresented: $isProfilePresented) {
         UserProfileView()
       }
+      .sheet(isPresented: $isQuickAddPresented) {
+        HomeQuickExpenseSheet { draft in
+          await saveQuickExpense(draft)
+        }
+      }
     }
   }
 
   private func loadContent(force: Bool = false) async {
       guard force || !hasLoadedContent else { return }
-      if spendingChartPoints.isEmpty {
-          spendingChartPoints = Self.makeSpendingPoints()
-      }
-
-      async let dashboardLoad: Void = loadDashboard()
+      async let metricsLoad: Void = loadHomeMetrics()
       async let insightsLoad: Void = loadInsights()
       async let activityLoad: Void = activityViewModel.loadActivities()
       async let focusPointsLoad: Void = focusPointsViewModel.load()
-      _ = await (dashboardLoad, insightsLoad, activityLoad, focusPointsLoad)
+      async let budgetLoad: Void = budgetStore.load(force: force)
+      _ = await (metricsLoad, insightsLoad, activityLoad, focusPointsLoad, budgetLoad)
       hasLoadedContent = true
   }
 
-  private func loadDashboard() async {
+  private func loadHomeMetrics() async {
       let start = ContinuousClock.now
-      do {
-          let dashboard = try await dashboardService.getDashboard()
-          dashboardData = dashboard
-          portfolioChartPoints = Self.makePortfolioPoints(totalValue: dashboard.totalValue)
-      } catch {
-          homePerformanceLogger.error("Dashboard load failed: \(error.localizedDescription, privacy: .public)")
+      isHomeMetricsLoading = true
+      defer {
+          isHomeMetricsLoading = false
+          homePerformanceLogger.info(
+              "Home metrics load duration_ms=\(Self.durationInMilliseconds(from: start.duration(to: .now)), privacy: .public)"
+          )
       }
 
-      homePerformanceLogger.info(
-          "Dashboard load duration_ms=\(Self.durationInMilliseconds(from: start.duration(to: .now)), privacy: .public)"
-      )
+      do {
+          async let performanceTask = stockService.fetchPortfolioPerformance()
+          async let reportsTask = expensesService.getReportsOverview(from: nil, to: nil)
+          let (performance, reports) = try await (performanceTask, reportsTask)
+
+          let portfolioPoints = Self.mapPortfolioPoints(from: performance.points)
+          let monthlySummaries = reports.monthlySummaries.sorted { $0.monthStart < $1.monthStart }
+          let spendingPoints = Self.mapSpendingPoints(from: monthlySummaries)
+
+          portfolioChartPoints = portfolioPoints
+          spendingChartPoints = spendingPoints
+          portfolioTotalValue = portfolioPoints.last?.value ?? 0
+          spendingTotalValue = max(0, monthlySummaries.last?.actual ?? reports.latestMonthSummary?.actual ?? 0)
+          portfolioDeltaPercent = Self.deltaPercent(from: portfolioPoints.map(\.value))
+          spendingDeltaPercent = Self.deltaPercent(
+              from: monthlySummaries.map { max(0, $0.actual) }
+          )
+      } catch {
+          homePerformanceLogger.error("Home metrics load failed: \(error.localizedDescription, privacy: .public)")
+      }
   }
 
   private func loadInsights() async {
@@ -409,36 +429,55 @@ private struct DashboardRoot: View {
       isInsightsLoading = false
   }
 
-  private static func makePortfolioPoints(totalValue: Double, days: Int = 30) -> [ChartDataPoint] {
-      let calendar = Calendar.current
-      let today = Date()
-      let base = totalValue > 0 ? totalValue : 100_000
+  private func saveQuickExpense(_ draft: HomeQuickExpenseDraft) async -> String? {
+      let didSave = await budgetStore.recordExpenseAndWait(
+          BudgetActivityDraft(
+              title: draft.title,
+              amount: draft.amount,
+              pillar: draft.pillar,
+              occurredOn: draft.occurredOn,
+              linkedPlanItemID: nil,
+              splitMode: draft.splitMode,
+              userSharePercent: draft.userSharePercent
+          )
+      )
+      guard didSave else {
+          return budgetStore.errorMessage ?? "Could not save expense. Please try again."
+      }
+      await loadHomeMetrics()
+      await activityViewModel.loadActivities()
+      return nil
+  }
 
-      return (0..<days).compactMap { index in
-          guard let date = calendar.date(byAdding: .day, value: -(days - 1 - index), to: today) else {
-              return nil
-          }
-          let seasonal = sin(Double(index) * 0.45) * base * 0.025
-          let trend = Double(index) * (base * 0.0015)
-          let value = max(0, base * 0.78 + seasonal + trend)
-          return ChartDataPoint(date: date, value: value)
+  private static let apiDateFormatter: DateFormatter = {
+      let formatter = DateFormatter()
+      formatter.calendar = Calendar(identifier: .gregorian)
+      formatter.locale = Locale(identifier: "en_US_POSIX")
+      formatter.timeZone = TimeZone(secondsFromGMT: 0)
+      formatter.dateFormat = "yyyy-MM-dd"
+      return formatter
+  }()
+
+  private static func mapPortfolioPoints(from points: [PerformancePoint]) -> [ChartDataPoint] {
+      points.compactMap { point in
+          guard let date = apiDateFormatter.date(from: point.date) else { return nil }
+          return ChartDataPoint(date: date, value: max(0, point.value))
       }
   }
 
-  private static func makeSpendingPoints(days: Int = 30) -> [ChartDataPoint] {
-      let calendar = Calendar.current
-      let today = Date()
-      let base = 3_500.0
-
-      return (0..<days).compactMap { index in
-          guard let date = calendar.date(byAdding: .day, value: -(days - 1 - index), to: today) else {
-              return nil
-          }
-          let seasonal = sin(Double(index) * 0.8) * 450
-          let trend = Double(index) * 14
-          let value = max(0, base * 0.55 + seasonal + trend)
-          return ChartDataPoint(date: date, value: value)
+  private static func mapSpendingPoints(from summaries: [BudgetMonthSummaryResponse]) -> [ChartDataPoint] {
+      summaries.compactMap { summary in
+          guard let date = apiDateFormatter.date(from: summary.monthStart) else { return nil }
+          return ChartDataPoint(date: date, value: max(0, summary.actual))
       }
+  }
+
+  private static func deltaPercent(from values: [Double]) -> Double? {
+      guard values.count >= 2 else { return nil }
+      let current = values[values.count - 1]
+      let previous = values[values.count - 2]
+      guard previous > 0 else { return nil }
+      return (current - previous) / previous
   }
 
   private static func durationInMilliseconds(from duration: Duration) -> Double {
@@ -619,20 +658,26 @@ private struct SettingsDetailView: View {
       }
 
       Section("Connect") {
-        Link(destination: URL(string: "mailto:support@norviqa.com")!) {
-          Label("Email Support", systemImage: "envelope")
+        if let emailSupportURL = URL(string: "mailto:support@norviqa.com") {
+          Link(destination: emailSupportURL) {
+            Label("Email Support", systemImage: "envelope")
+          }
+          .foregroundStyle(.primary)
         }
-        .foregroundStyle(.primary)
 
-        Link(destination: URL(string: "https://discord.gg/norviqa")!) {
-          Label("Join Discord", systemImage: "bubble.left.and.bubble.right")
+        if let discordURL = URL(string: "https://discord.gg/norviqa") {
+          Link(destination: discordURL) {
+            Label("Join Discord", systemImage: "bubble.left.and.bubble.right")
+          }
+          .foregroundStyle(.primary)
         }
-        .foregroundStyle(.primary)
 
-        Link(destination: URL(string: "https://x.com/norviqa")!) {
-          Label("Follow on X", systemImage: "x.circle")
+        if let xURL = URL(string: "https://x.com/norviqa") {
+          Link(destination: xURL) {
+            Label("Follow on X", systemImage: "x.circle")
+          }
+          .foregroundStyle(.primary)
         }
-        .foregroundStyle(.primary)
       }
 
       Section {
@@ -684,6 +729,8 @@ private struct SettingsDetailView: View {
 private struct DashboardHeroCard: View {
   let totalValue: Double
   let totalSpending: Double
+  let portfolioDeltaPercent: Double?
+  let spendingDeltaPercent: Double?
   let portfolioPoints: [ChartDataPoint]
   let spendingPoints: [ChartDataPoint]
   let onPortfolioTap: () -> Void
@@ -704,9 +751,36 @@ private struct DashboardHeroCard: View {
   private var currentPoints: [ChartDataPoint] {
     showingPortfolio ? portfolioPoints : spendingPoints
   }
+
+  private var currentDeltaPercent: Double? {
+    showingPortfolio ? portfolioDeltaPercent : spendingDeltaPercent
+  }
   
   private var currentColor: Color {
-    showingPortfolio ? .green : .purple
+    showingPortfolio ? .green : .orange
+  }
+
+  private var deltaSymbol: String {
+    guard let currentDeltaPercent else { return "minus" }
+    if showingPortfolio {
+      return currentDeltaPercent >= 0 ? "arrow.up.right" : "arrow.down.right"
+    }
+    return currentDeltaPercent <= 0 ? "arrow.down.right" : "arrow.up.right"
+  }
+
+  private var deltaColor: Color {
+    guard let currentDeltaPercent else { return .secondary }
+    if showingPortfolio {
+      return currentDeltaPercent >= 0 ? .green : .red
+    }
+    return currentDeltaPercent <= 0 ? .green : .red
+  }
+
+  private var deltaText: String {
+    guard let currentDeltaPercent else { return "No baseline for trend yet" }
+    let sign = currentDeltaPercent > 0 ? "+" : ""
+    let percent = (currentDeltaPercent * 100).formatted(.number.precision(.fractionLength(1)))
+    return "\(sign)\(percent)% vs last period"
   }
 
   var body: some View {
@@ -724,11 +798,11 @@ private struct DashboardHeroCard: View {
             .contentTransition(.numericText())
 
           HStack(spacing: 4) {
-            Image(systemName: showingPortfolio ? "arrow.up.right" : "arrow.down.right")
-            Text(showingPortfolio ? "+2.31% ($2,816.32)" : "-12.4% vs last month")
+            Image(systemName: deltaSymbol)
+            Text(deltaText)
           }
           .font(.subheadline.weight(.semibold))
-          .foregroundStyle(showingPortfolio ? .green : .green) // Green even for spending if it's down
+          .foregroundStyle(deltaColor)
         }
         
         InteractiveLineChart(data: currentPoints, color: currentColor)
@@ -756,263 +830,6 @@ private struct DashboardHeroCard: View {
             Spacer()
         }
         .padding(.top, 4)
-      }
-    }
-  }
-}
-
-// Activity Feed Item model for mock data
-struct ActivityFeedItem: Identifiable {
-    let id = UUID()
-    let title: String
-    let subtitle: String
-    let amount: Double
-    let isGrowth: Bool
-    let symbol: String
-    let time: String
-}
-
-enum FinancialHealthCardTone: Equatable {
-    case success
-    case warning
-    case critical
-    case neutral
-}
-
-struct FinancialHealthCardState: Equatable {
-    let scoreText: String
-    let summaryText: String
-    let tone: FinancialHealthCardTone
-    let ringProgress: Double
-
-    init(
-        health: DashboardFinancialHealthDTO?,
-        isLoading: Bool,
-        isUnavailable: Bool
-    ) {
-        if isLoading {
-            self.scoreText = "--"
-            self.summaryText = "--/100"
-            self.tone = .neutral
-            self.ringProgress = 0
-            return
-        }
-
-        if isUnavailable || health == nil {
-            self.scoreText = "--"
-            self.summaryText = "--/100 - Unavailable"
-            self.tone = .neutral
-            self.ringProgress = 0
-            return
-        }
-
-        guard let health else {
-            self.scoreText = "--"
-            self.summaryText = "--/100 - Unavailable"
-            self.tone = .neutral
-            self.ringProgress = 0
-            return
-        }
-
-        self.scoreText = "\(health.score)"
-        self.summaryText = "\(health.score)/\(health.maxScore) - \(Self.statusTitle(health.status))"
-        self.ringProgress = health.maxScore > 0
-            ? min(max(Double(health.score) / Double(health.maxScore), 0), 1)
-            : 0
-
-        switch health.status {
-        case .healthy, .excellent:
-            self.tone = .success
-        case .needsAttention:
-            self.tone = .warning
-        case .atRisk:
-            self.tone = .critical
-        }
-    }
-
-    private static func statusTitle(_ status: FinancialHealthStatus) -> String {
-        switch status {
-        case .atRisk:
-            return "At Risk"
-        case .needsAttention:
-            return "Needs Attention"
-        case .healthy:
-            return "Healthy"
-        case .excellent:
-            return "Excellent"
-        }
-    }
-}
-
-private struct UnifiedActivityFeed: View {
-    @ObservedObject var viewModel: ActivityViewModel
-    let financialHealth: DashboardFinancialHealthDTO?
-    let isFinancialHealthLoading: Bool
-    let financialHealthUnavailable: Bool
-
-    private var financialHealthCardState: FinancialHealthCardState {
-        FinancialHealthCardState(
-            health: financialHealth,
-            isLoading: isFinancialHealthLoading,
-            isUnavailable: financialHealthUnavailable
-        )
-    }
-
-    private var healthTint: Color {
-        switch financialHealthCardState.tone {
-        case .success:
-            return .green
-        case .warning:
-            return .orange
-        case .critical:
-            return .red
-        case .neutral:
-            return .secondary
-        }
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Activity Feed")
-                .font(.title2.bold())
-                .padding(.horizontal, 4)
-                
-            GlassCard(cornerRadius: 22) {
-                VStack(spacing: 0) {
-                    if viewModel.isLoading && viewModel.activities.isEmpty {
-                        ProgressView()
-                            .padding()
-                    } else if viewModel.activities.isEmpty {
-                        Text("No recent activity")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .padding()
-                    } else {
-                        ForEach(viewModel.activities) { activity in
-                            HStack(spacing: 16) {
-                                Circle()
-                                    .fill(activity.isGrowth ? Color.green.opacity(0.2) : Color.red.opacity(0.2))
-                                    .frame(width: 44, height: 44)
-                                    .overlay(
-                                        Image(systemName: activity.symbol)
-                                            .foregroundStyle(activity.isGrowth ? .green : .red)
-                                            .font(.title3)
-                                    )
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(activity.title)
-                                        .font(.headline)
-                                    Text(activity.subtitle)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-                                
-                                Spacer()
-                                
-                                VStack(alignment: .trailing, spacing: 4) {
-                                    if let amount = activity.amount {
-                                        Text(amount > 0 ? "+\(amount.currency)" : "-\(abs(amount).currency)")
-                                            .font(.headline)
-                                            .foregroundStyle(activity.isGrowth ? .green : .red)
-                                    }
-                                    Text(activity.createdAt.formatted(date: .abbreviated, time: .shortened))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            .padding(.vertical, 12)
-                            
-                            if activity.id != viewModel.activities.last?.id {
-                                Divider()
-                                    .padding(.leading, 60)
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Financial Health summary placeholder
-            GlassCard(cornerRadius: 22) {
-                HStack(spacing: 16) {
-                    ZStack {
-                        Circle()
-                            .stroke(Color.gray.opacity(0.2), lineWidth: 6)
-                        Circle()
-                            .trim(from: 0, to: financialHealthCardState.ringProgress)
-                            .stroke(healthTint, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                            .rotationEffect(.degrees(-90))
-                            .animation(.easeInOut(duration: 0.35), value: financialHealthCardState.ringProgress)
-                        Text(financialHealthCardState.scoreText)
-                            .font(.headline)
-                    }
-                    .frame(width: 50, height: 50)
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(financialHealthCardState.summaryText)
-                            .font(.headline)
-                            .foregroundStyle(healthTint)
-                        Text("Financial Health")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                }
-                .padding(.vertical, 4)
-            }
-            .redacted(reason: isFinancialHealthLoading ? .placeholder : [])
-            .scaleEffect(isFinancialHealthLoading ? 0.99 : 1)
-            .opacity(isFinancialHealthLoading ? 0.9 : 1)
-            .animation(.easeOut(duration: 0.25), value: isFinancialHealthLoading)
-        }
-    }
-}
-
-private struct HomeExpensesInteractiveChartCard: View {
-  private static let mockExpensesChartData: [ChartDataPoint] = {
-      let calendar = Calendar.current
-      let today = Date()
-      let baseValue = 3500.0
-
-      return (0..<30).compactMap { i in
-          guard let date = calendar.date(byAdding: .day, value: -(29 - i), to: today) else {
-              return nil
-          }
-          let wave = sin(Double(i) * 0.8) * 500.0
-          let secondaryWave = cos(Double(i) * 0.35) * 140.0
-          let trend = Double(i) * 15.0
-          return ChartDataPoint(date: date, value: max(0, baseValue * 0.5 + wave + secondaryWave + trend))
-      }
-  }()
-
-  var body: some View {
-    GlassCard(cornerRadius: 22) {
-      VStack(alignment: .leading, spacing: 16) {
-        VStack(alignment: .leading, spacing: 4) {
-          Text("Expenses trend")
-            .typography(.small, weight: .semibold)
-            .foregroundStyle(.secondary)
-          
-          HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(3250.45.currency)
-              .typography(.hero, weight: .bold)
-              .contentTransition(.numericText())
-            Text("this month")
-              .typography(.small)
-              .foregroundStyle(.secondary)
-          }
-          
-          HStack(spacing: 4) {
-            Image(systemName: "arrow.down.right")
-            Text("-12.4% vs last month")
-          }
-          .font(.subheadline.weight(.semibold))
-          .foregroundStyle(.green)
-        }
-        .padding(.horizontal, 4)
-        
-        InteractiveLineChart(data: Self.mockExpensesChartData, color: .purple)
-          .frame(height: 160)
-          .padding(.horizontal, -12) // Bleed to edges of card padding
       }
     }
   }
@@ -1164,7 +981,7 @@ private struct AssetSearchCard: View {
             .typography(.small)
             .foregroundStyle(AppTheme.Colors.danger)
         } else if viewModel.results.isEmpty {
-          Text("No connected asset search results yet.")
+          Text("No assets found for this query.")
             .typography(.small)
             .foregroundStyle(.secondary)
         } else {

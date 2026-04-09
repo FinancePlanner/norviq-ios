@@ -298,6 +298,82 @@ final class StockServiceTests: XCTestCase {
     XCTAssertEqual(response, expected)
   }
 
+  func testFetchStockInsights_UsesInsightsEndpointAndDecodesPayload() async throws {
+    let session = SessionMock()
+    let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+    let service = StockService(
+      environmentManager: AppEnvironmentManager(),
+      session: session,
+      authSessionManager: authSessionManager
+    )
+    let expected = StockInsightsResponse(
+      generatedAt: "2026-04-09T09:00:00Z",
+      symbol: "AAPL",
+      profile: StockInsightProfileDTO(
+        symbol: "AAPL",
+        companyName: "Apple Inc",
+        currentPrice: 187.42,
+        marketCap: 2_950_000_000_000,
+        sharesOutstanding: 15_700_000_000,
+        metrics: ["ttmPE": 29.1, "forwardPE": 27.4],
+        dcfBasePrice: 200,
+        dcfBearPrice: 160,
+        dcfBullPrice: 240
+      ),
+      peers: [
+        StockInsightPeerDTO(
+          symbol: "MSFT",
+          companyName: "Microsoft Corporation",
+          currentPrice: 415.3,
+          marketCap: 3_100_000_000_000,
+          sharesOutstanding: 7_400_000_000
+        ),
+      ],
+      projectionScenarios: [
+        StockInsightProjectionScenarioDTO(
+          kind: "base",
+          years: [
+            StockInsightProjectionYearDTO(
+              year: 2027,
+              revenue: 420_000_000_000,
+              revenueGrowth: 0.06,
+              netIncome: 110_000_000_000,
+              netIncomeGrowth: 0.07,
+              netMargin: 0.26,
+              eps: 7.0,
+              peLowEstimate: 18,
+              peHighEstimate: 24,
+              sharePriceLow: 126,
+              sharePriceHigh: 168,
+              cagrLow: -0.1,
+              cagrHigh: -0.05
+            ),
+          ]
+        ),
+      ]
+    )
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.path, "/v1/stocks/AAPL/insights")
+      XCTAssertEqual(request.httpMethod, "GET")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+
+      let response = try XCTUnwrap(
+        HTTPURLResponse(
+          url: try XCTUnwrap(request.url),
+          statusCode: 200,
+          httpVersion: nil,
+          headerFields: nil
+        )
+      )
+      return (try JSONEncoder().encode(expected), response)
+    }
+
+    let response = try await service.fetchStockInsights(symbol: "AAPL")
+    XCTAssertEqual(response, expected)
+  }
+
   func testGetStockValuationEndpoint_UsesSymbolPath() throws {
     let endpoint = GetStockValuationEndpoint(symbol: "AAPL")
 

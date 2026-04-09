@@ -1,9 +1,7 @@
 import SwiftUI
 import StockPlanShared
 
-extension BudgetPillar: Identifiable {
-  public var id: String { rawValue }
-
+extension BudgetPillar {
   public var title: String {
     switch self {
     case .fundamentals:
@@ -271,7 +269,7 @@ struct PillarPlanningSummary: Identifiable {
   }
 }
 
-struct BudgetPlanItemDraft: Identifiable {
+struct BudgetPlanItemDraft: Identifiable, Sendable {
   let id = UUID()
   var itemID: UUID?
   var placeholderItemID: UUID?
@@ -300,7 +298,7 @@ struct BudgetPlanItemDraft: Identifiable {
   }
 }
 
-struct BudgetActivityDraft {
+struct BudgetActivityDraft: Sendable {
   var title: String
   var amount: Double
   var pillar: BudgetPillar

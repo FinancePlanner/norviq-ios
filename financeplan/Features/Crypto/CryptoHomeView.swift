@@ -90,6 +90,7 @@ struct CryptoHomeView: View {
                                 .padding(6)
                                 .appGlassEffect(.capsule)
                         }
+                        .accessibilityLabel("Add crypto holding")
                     }
                     
                     Button {
@@ -732,9 +733,6 @@ struct AddCryptoHoldingSheet: View {
                 Section("Search Asset") {
                     ZStack(alignment: .trailing) {
                         TextField("Search by symbol or name", text: $searchText)
-                            .onChange(of: searchText) { _ in
-                                // Optional: logic to handle search
-                            }
                         
                         if isLoadingAssets {
                             ProgressView()
