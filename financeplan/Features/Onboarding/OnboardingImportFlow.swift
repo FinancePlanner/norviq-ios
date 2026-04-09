@@ -1404,7 +1404,7 @@ struct ExpenseBudgetSetupScreen: View {
       } catch {
         errorMessage =
           (error as? LocalizedError)?.errorDescription
-          ?? "Could not create budget. Please try again."
+          ?? "Could not create budget: \(error.localizedDescription)"
       }
     }
   }
@@ -1609,7 +1609,7 @@ final class ExpenseBudgetSetupViewModel: ObservableObject {
     let dateFormatter = DateFormatter()
     dateFormatter.dateFormat = "yyyy-MM-dd"
     dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-    dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+    dateFormatter.timeZone = TimeZone.current
     
     var targetShares: [String: Double] = [:]
     for (pillar, percentage) in pillars {

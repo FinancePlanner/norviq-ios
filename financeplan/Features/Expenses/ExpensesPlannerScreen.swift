@@ -38,14 +38,16 @@ struct ExpensesPlannerScreen: View {
                 VStack(alignment: .leading, spacing: 6) {
                   Text("Set your monthly budget")
                     .typography(.small, weight: .semibold)
-                  Text("Your monthly budget is currently 0. Add salary and side income so spending insights can calculate correctly.")
+                  Text(viewModel.selectedMonthSnapshot == nil 
+                    ? "No budget plan for \(viewModel.selectedMonthDisplayTitle). Create one or select a different month from the title menu."
+                    : "Your monthly budget is currently 0. Add salary and side income so spending insights can calculate correctly.")
                     .typography(.nano)
                     .foregroundStyle(.secondary)
                 }
 
                 Spacer()
 
-                Button("Set") {
+                Button(viewModel.selectedMonthSnapshot == nil ? "Create" : "Set") {
                   isSalaryEditorPresented = true
                 }
                 .buttonStyle(.borderedProminent)
