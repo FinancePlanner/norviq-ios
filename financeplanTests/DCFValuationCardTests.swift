@@ -17,7 +17,7 @@ final class DCFValuationCardTests: XCTestCase {
         let hostingController = UIHostingController(rootView: card)
         XCTAssertNotNil(hostingController.view)
     }
-    
+
     func testDCFValuationCard_withNegativeUpside() {
         let card = DCFValuationCard(
             basePrice: 50.0,

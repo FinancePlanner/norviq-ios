@@ -39,4 +39,3 @@ final class CSVImportViewModel: ObservableObject {
     return rows
   }
 }
-

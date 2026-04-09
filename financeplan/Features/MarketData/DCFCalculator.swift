@@ -18,7 +18,7 @@ enum DCFCalculator {
     shares: Double
   ) -> Double {
     var pvExplicit: Double = 0.0
-    let n = yearlyProjections.count
+    let numYears = yearlyProjections.count
 
     for (i, proj) in yearlyProjections.enumerated() {
       let year = Double(i + 1)
@@ -27,8 +27,8 @@ enum DCFCalculator {
     }
 
     let finalFCF = yearlyProjections.last?.fcf ?? 0
-    let tv = finalFCF * (1 + terminalGrowth) / (wacc - terminalGrowth)
-    let pvTerminal = tv / pow(1 + wacc, Double(n))
+    let terminalValue = finalFCF * (1 + terminalGrowth) / (wacc - terminalGrowth)
+    let pvTerminal = terminalValue / pow(1 + wacc, Double(numYears))
 
     let equityValue = pvExplicit + pvTerminal - netDebt
     return equityValue / shares

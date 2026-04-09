@@ -10,7 +10,7 @@ final class PortfolioViewModelTests: XCTestCase {
     let service = MockStockService()
     service.fetchPortfolioResult = .success([
       makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150),
-      makeStock(id: "msft", symbol: "MSFT", shares: 5, buyPrice: 200),
+      makeStock(id: "msft", symbol: "MSFT", shares: 5, buyPrice: 200)
     ])
 
     let viewModel = PortfolioViewModel(service: service)
@@ -24,7 +24,7 @@ final class PortfolioViewModelTests: XCTestCase {
   func testLoadWithoutForceUsesCachedResultAfterFirstSuccess() async {
     let service = MockStockService()
     service.fetchPortfolioResult = .success([
-      makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150),
+      makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150)
     ])
 
     let viewModel = PortfolioViewModel(service: service)
@@ -37,7 +37,7 @@ final class PortfolioViewModelTests: XCTestCase {
   func testLoadWithForceRefetchesAfterInitialSuccess() async {
     let service = MockStockService()
     service.fetchPortfolioResult = .success([
-      makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150),
+      makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150)
     ])
 
     let viewModel = PortfolioViewModel(service: service)

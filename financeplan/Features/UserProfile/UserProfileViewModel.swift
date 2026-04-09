@@ -50,4 +50,49 @@ public final class UserProfileViewModel: ObservableObject {
             return false
         }
     }
+
+    @discardableResult
+    public func updateUsername(_ username: String) async -> Bool {
+        guard !isLoading else { return false }
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        do {
+            self.profile = try await service.updateUsername(username)
+            return true
+        } catch {
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to update username."
+            return false
+        }
+    }
+
+    @discardableResult
+    public func updateEmail(_ email: String) async -> Bool {
+        guard !isLoading else { return false }
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        do {
+            self.profile = try await service.updateEmail(email)
+            return true
+        } catch {
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to update email."
+            return false
+        }
+    }
+
+    @discardableResult
+    public func updatePassword(current: String, new: String) async -> Bool {
+        guard !isLoading else { return false }
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        do {
+            try await service.updatePassword(current: current, new: new)
+            return true
+        } catch {
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to update password."
+            return false
+        }
+    }
 }

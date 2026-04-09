@@ -6,9 +6,9 @@ struct WatchlistTab: View {
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.modelContext) private var modelContext
   @StateObject private var viewModel = WatchlistViewModel()
-  
+
   @Query(sort: \SDWatchlistItem.symbol) private var items: [SDWatchlistItem]
-  
+
   @State private var convertingItem: SDWatchlistItem?
   @State private var removePromptItem: SDWatchlistItem?
   @State private var destructiveFeedbackTrigger = 0
@@ -47,14 +47,14 @@ struct WatchlistTab: View {
         .swipeActions {
           Button(role: .destructive) {
             destructiveFeedbackTrigger += 1
-            Task { 
+            Task {
               await viewModel.removeFromWatchlist(WatchlistItemResponse(
                 id: item.id,
                 symbol: item.symbol,
                 note: item.note,
                 status: WatchlistStatus(rawValue: item.status) ?? .active,
                 nextReviewAt: item.nextReviewAt
-              )) 
+              ))
             }
           } label: {
             Label("Delete", systemImage: "trash")
@@ -124,14 +124,14 @@ struct WatchlistTab: View {
     ) { item in
       Button("Remove", role: .destructive) {
         destructiveFeedbackTrigger += 1
-        Task { 
+        Task {
           await viewModel.removeFromWatchlist(WatchlistItemResponse(
             id: item.id,
             symbol: item.symbol,
             note: item.note,
             status: WatchlistStatus(rawValue: item.status) ?? .active,
             nextReviewAt: item.nextReviewAt
-          )) 
+          ))
         }
       }
       Button("Keep", role: .cancel) {

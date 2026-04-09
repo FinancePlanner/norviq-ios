@@ -15,10 +15,10 @@ struct SplashScreen: View {
         endPoint: .bottom
       )
       .ignoresSafeArea()
-      
+
       VStack(spacing: 0) {
         Spacer()
-        
+
         // Owl mascot with glow effect
         ZStack {
           // Outer glow ring
@@ -37,7 +37,7 @@ struct SplashScreen: View {
             .frame(width: 240, height: 240)
             .scaleEffect(pulseAnimation ? 1.1 : 0.9)
             .opacity(pulseAnimation ? 0.6 : 0.3)
-          
+
           // Inner glow
           Circle()
             .fill(
@@ -54,7 +54,7 @@ struct SplashScreen: View {
             .frame(width: 200, height: 200)
             .scaleEffect(pulseAnimation ? 0.95 : 1.05)
             .opacity(pulseAnimation ? 0.4 : 0.2)
-          
+
           // Owl image
           Image("FoxMascotTransparent")
             .resizable()
@@ -64,7 +64,7 @@ struct SplashScreen: View {
             .opacity(isAnimating ? 1.0 : 0.0)
         }
         .padding(.bottom, 40)
-        
+
         // App name
         Text("Norviqa")
           .font(.system(size: 48, weight: .bold, design: .rounded))
@@ -80,7 +80,7 @@ struct SplashScreen: View {
           )
           .opacity(isAnimating ? 1.0 : 0.0)
           .offset(y: isAnimating ? 0 : 20)
-        
+
         // Tagline
         Text("Your wealth, wisely managed")
           .font(.system(size: 16, weight: .medium))
@@ -88,9 +88,9 @@ struct SplashScreen: View {
           .opacity(isAnimating ? 0.8 : 0.0)
           .offset(y: isAnimating ? 0 : 20)
           .padding(.top, 8)
-        
+
         Spacer()
-        
+
         // Loading indicator
         VStack(spacing: 16) {
           // Animated dots
@@ -110,7 +110,7 @@ struct SplashScreen: View {
             }
           }
           .opacity(isAnimating ? 1.0 : 0.0)
-          
+
           Text("Loading your workspace")
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -124,11 +124,11 @@ struct SplashScreen: View {
       withAnimation(.easeOut(duration: 0.8)) {
         isAnimating = true
       }
-      
+
       withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
         pulseAnimation = true
       }
-      
+
       // Animate dots
       Timer.scheduledTimer(withTimeInterval: 0.6, repeats: true) { _ in
         dotsAnimation = (dotsAnimation + 1) % 3

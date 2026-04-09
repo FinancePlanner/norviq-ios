@@ -17,9 +17,9 @@ final class ActivityViewModel: ObservableObject {
     @Published var activities: [UserActivityResponse] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
-    
+
     @Injected(\.activityService) private var activityService
-    
+
     func loadActivities() async {
         let start = ContinuousClock.now
         isLoading = true
@@ -185,9 +185,7 @@ struct HomeScreen: View {
     .toolbarBackground(AppTheme.Colors.tabBarBackground(for: colorScheme), for: .tabBar)
     .animation(.snappy(duration: 0.28), value: selectedTab)
     .sheet(isPresented: $isSettingsPresented) {
-      NavigationStack {
-        SettingsDetailView(onLogout: onLogout)
-      }
+      UserProfileView()
     }
   }
 }
@@ -201,7 +199,6 @@ private struct DashboardRoot: View {
   @StateObject private var searchViewModel = AssetSearchViewModel()
   @StateObject private var activityViewModel = ActivityViewModel()
   @StateObject private var focusPointsViewModel = FocusPointsViewModel()
-  @State private var isProfilePresented = false
   @State private var dashboardInsights: DashboardInsightsResponse?
   @State private var isInsightsLoading = false
   @State private var insightsLoadFailed = false
@@ -214,16 +211,16 @@ private struct DashboardRoot: View {
   @State private var spendingChartPoints: [ChartDataPoint] = []
   @State private var isQuickAddPresented = false
   @State private var hasLoadedContent = false
-  
+
   private let dashboardService: any DashboardServicing = Container.shared.dashboardService()
   private let expensesService: any ExpensesServicing = Container.shared.expensesService()
   private let stockService: any StockServicing = Container.shared.stockService()
-  
+
   private var insightCards: [InsightCard] {
     guard let insights = dashboardInsights else {
         return InsightCard.mock
     }
-    
+
     return [
         .init(
             title: "Savings rate",
@@ -252,7 +249,7 @@ private struct DashboardRoot: View {
             detail: "Enough for short-term volatility.",
             symbol: "shield",
             tint: AppTheme.Colors.tint(for: .light)
-        ),
+        )
     ]
   }
 
@@ -359,9 +356,6 @@ private struct DashboardRoot: View {
       }
       .onSubmit(of: .search) {
         Task { await searchViewModel.searchNow() }
-      }
-      .sheet(isPresented: $isProfilePresented) {
-        UserProfileView()
       }
       .sheet(isPresented: $isQuickAddPresented) {
         HomeQuickExpenseSheet { draft in
@@ -493,7 +487,6 @@ private struct PortfolioRoot: View {
   @Environment(\.colorScheme) private var colorScheme
   @StateObject private var portfolioViewModel = PortfolioViewModel()
   @State private var selectedSegment: PortfolioSegment = .holdings
-  @State private var isProfilePresented = false
   @Namespace private var segmentContentNamespace
 
   var body: some View {
@@ -542,185 +535,7 @@ private struct PortfolioRoot: View {
           .accessibilityLabel("Open settings")
         }
       }
-      .sheet(isPresented: $isProfilePresented) {
-        UserProfileView()
-      }
     }
-  }
-}
-
-// MARK: - Settings
-
-private struct SettingsDetailView: View {
-  let onLogout: () async -> Void
-
-  @Environment(\.colorScheme) private var colorScheme
-  @Environment(\.requestReview) private var requestReview
-  @State private var isLoggingOut = false
-  @State private var isFeedbackPresented = false
-  @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system
-    .rawValue
-
-  var body: some View {
-    List {
-      // MARK: - User Card (Apple Settings style)
-      Section {
-        NavigationLink {
-          UserProfileView()
-        } label: {
-          HStack(spacing: 14) {
-            // Avatar
-            ZStack {
-              Circle()
-                .fill(
-                  LinearGradient(
-                    colors: AppTheme.avatarGradient(for: colorScheme),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                  )
-                )
-                .frame(width: 56, height: 56)
-
-              Image(systemName: "person.fill")
-                .font(.title2.weight(.semibold))
-                .foregroundStyle(.white)
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
-              Text("Your Profile")
-                .typography(.label, weight: .semibold)
-              Text("View and edit your account")
-                .typography(.caption)
-                .foregroundStyle(.secondary)
-            }
-          }
-          .padding(.vertical, 4)
-        }
-      }
-
-      Section("Security") {
-        Label("Face ID ready", systemImage: "faceid")
-          .foregroundStyle(.primary)
-      }
-
-      Section("Appearance") {
-        Picker("Appearance", selection: appAppearanceBinding) {
-          ForEach(AppAppearance.allCases, id: \.self) { appearance in
-            Text(appearance.title)
-              .tag(appearance)
-          }
-        }
-        .pickerStyle(.segmented)
-
-        Text(selectedAppearance.subtitle)
-          .typography(.caption)
-          .foregroundStyle(.secondary)
-      }
-
-      Section("Integrations") {
-        LabeledContent {
-           Text("Soon")
-               .typography(.caption, weight: .bold)
-               .foregroundStyle(.white)
-               .padding(.horizontal, 6)
-               .padding(.vertical, 2)
-               .background(Color.indigo, in: Capsule())
-        } label: {
-           Label("Claude, ChatGPT, Grok", systemImage: "sparkles")
-               .foregroundStyle(.primary)
-        }
-      }
-
-      Section("Privacy") {
-        LabeledContent("Data handling", value: "Local-first planning UI")
-        LabeledContent("Sensitive actions", value: "Biometric-friendly")
-        LabeledContent("Motion", value: "Reduced when accessibility requests it")
-      }
-
-      Section("Support") {
-        Label("Help & Support", systemImage: "questionmark.circle")
-
-        Button {
-          isFeedbackPresented = true
-        } label: {
-          Label("Share Feedback", systemImage: "quote.bubble")
-        }
-        .foregroundStyle(.primary)
-
-        Button {
-          requestReview()
-        } label: {
-          Label("Leave a review", systemImage: "star.fill")
-        }
-        .foregroundStyle(.primary)
-
-        Label("About Norviqa", systemImage: "info.circle")
-      }
-
-      Section("Connect") {
-        if let emailSupportURL = URL(string: "mailto:support@norviqa.com") {
-          Link(destination: emailSupportURL) {
-            Label("Email Support", systemImage: "envelope")
-          }
-          .foregroundStyle(.primary)
-        }
-
-        if let discordURL = URL(string: "https://discord.gg/norviqa") {
-          Link(destination: discordURL) {
-            Label("Join Discord", systemImage: "bubble.left.and.bubble.right")
-          }
-          .foregroundStyle(.primary)
-        }
-
-        if let xURL = URL(string: "https://x.com/norviqa") {
-          Link(destination: xURL) {
-            Label("Follow on X", systemImage: "x.circle")
-          }
-          .foregroundStyle(.primary)
-        }
-      }
-
-      Section {
-        Button(role: .destructive) {
-          Task {
-            guard !isLoggingOut else { return }
-            isLoggingOut = true
-            await onLogout()
-            isLoggingOut = false
-          }
-        } label: {
-          HStack(spacing: 8) {
-            if isLoggingOut {
-              ProgressView()
-            }
-            Text("Log out")
-              .typography(.button, weight: .semibold)
-          }
-          .frame(maxWidth: .infinity, alignment: .center)
-          .foregroundStyle(AppTheme.Colors.danger)
-        }
-        .disabled(isLoggingOut)
-      }
-    }
-    .scrollContentBackground(.hidden)
-    .listStyle(.insetGrouped)
-    .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
-    .navigationTitle("Settings")
-    .navigationBarTitleDisplayMode(.large)
-    .sheet(isPresented: $isFeedbackPresented) {
-      FeedbackSheet()
-    }
-  }
-
-  private var appAppearanceBinding: Binding<AppAppearance> {
-    Binding(
-      get: { AppAppearance.from(appAppearanceRawValue) },
-      set: { appAppearanceRawValue = $0.rawValue }
-    )
-  }
-
-  private var selectedAppearance: AppAppearance {
-    AppAppearance.from(appAppearanceRawValue)
   }
 }
 
@@ -739,15 +554,15 @@ private struct DashboardHeroCard: View {
 
   @Environment(\.colorScheme) private var colorScheme
   @State private var showingPortfolio = true
-  
+
   private var currentTitle: String {
     showingPortfolio ? "Total Wealth" : "Monthly Spending"
   }
-  
+
   private var currentValue: Double {
     showingPortfolio ? totalValue : totalSpending
   }
-  
+
   private var currentPoints: [ChartDataPoint] {
     showingPortfolio ? portfolioPoints : spendingPoints
   }
@@ -755,7 +570,7 @@ private struct DashboardHeroCard: View {
   private var currentDeltaPercent: Double? {
     showingPortfolio ? portfolioDeltaPercent : spendingDeltaPercent
   }
-  
+
   private var currentColor: Color {
     showingPortfolio ? .green : .orange
   }
@@ -804,11 +619,11 @@ private struct DashboardHeroCard: View {
           .font(.subheadline.weight(.semibold))
           .foregroundStyle(deltaColor)
         }
-        
+
         InteractiveLineChart(data: currentPoints, color: currentColor)
           .frame(height: 140)
           .padding(.horizontal, -12)
-          
+
         HStack {
             Spacer()
             // Custom segmented picker to look like standard Apple toggle
@@ -817,11 +632,11 @@ private struct DashboardHeroCard: View {
                     .font(.subheadline)
                     .foregroundStyle(showingPortfolio ? .primary : .secondary)
                     .padding(.trailing, 8)
-                
+
                 Toggle("", isOn: $showingPortfolio)
                     .labelsHidden()
                     .tint(.white.opacity(0.8))
-                
+
                 Text("Spending")
                     .font(.subheadline)
                     .foregroundStyle(!showingPortfolio ? .primary : .secondary)
@@ -840,7 +655,7 @@ private struct InsightsGrid: View {
 
   private let columns = [
     GridItem(.flexible(), spacing: 12),
-    GridItem(.flexible(), spacing: 12),
+    GridItem(.flexible(), spacing: 12)
   ]
 
   var body: some View {
@@ -1028,12 +843,12 @@ private struct DashboardActionButton: View {
         Image(systemName: symbol)
           .font(.headline.weight(.semibold))
           .foregroundStyle(isDisabled ? .secondary.opacity(0.8) : tint)
-          
+
         HStack(spacing: 4) {
           Text(title)
             .typography(.nano, weight: .semibold)
             .foregroundStyle(isDisabled ? .secondary : tint)
-            
+
           if isDisabled {
             Text("Soon")
               .font(.system(size: 8, weight: .bold, design: .rounded))
@@ -1070,7 +885,7 @@ private struct PortfolioTrendPoint: Identifiable {
     .init(label: "Thu", value: 114_680),
     .init(label: "Fri", value: 116_020),
     .init(label: "Sat", value: 118_920),
-    .init(label: "Sun", value: 124_830),
+    .init(label: "Sun", value: 124_830)
   ]
 }
 
@@ -1085,7 +900,7 @@ private struct SpendingPoint: Identifiable {
     .init(label: "Jan", value: 980),
     .init(label: "Feb", value: 860),
     .init(label: "Mar", value: 780),
-    .init(label: "Apr", value: 910),
+    .init(label: "Apr", value: 910)
   ]
 }
 
@@ -1127,6 +942,6 @@ private struct InsightCard: Identifiable {
       detail: "Enough for short-term volatility.",
       symbol: "shield",
       tint: AppTheme.Colors.tint(for: .light)
-    ),
+    )
   ]
 }

@@ -30,7 +30,7 @@ private enum EarningsDateFormatterCache {
 struct EarningsCalendarScreen: View {
   @Environment(\.colorScheme) private var colorScheme
   private var marketDataService: any MarketDataServicing { Container.shared.marketDataService() }
-  
+
   @State private var selectedDate = Date()
   @State private var earnings: [EarningsEvent] = []
   @State private var upcomingEarnings: [EarningsEvent] = []
@@ -101,13 +101,13 @@ struct EarningsCalendarScreen: View {
               }
             }
           }
-          
+
           // 4. "Earnings Transcripts" title + warning
           Section {
             VStack(alignment: .leading, spacing: 16) {
               Text("Earnings Transcripts")
                 .typography(.title, weight: .bold)
-              
+
               HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "info.circle.fill")
                   .foregroundStyle(Color.blue)
@@ -195,11 +195,11 @@ struct EarningsCalendarScreen: View {
   private func loadUpcomingEarnings() async {
     guard upcomingEarnings.isEmpty else { return }
     isLoadingUpcoming = true
-    
+
     let from = formatISODateOnly(Date())
     let toDate = Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date()
     let to = formatISODateOnly(toDate)
-    
+
     do {
       let results = try await marketDataService.fetchEarningsCalendar(from: from, to: to)
       // Sort by date soonest first
@@ -226,11 +226,11 @@ struct EarningsMarkedCalendar: UIViewRepresentable {
         calendarView.calendar = Calendar(identifier: .gregorian)
         calendarView.locale = .current
         calendarView.fontDesign = .rounded
-        
+
         let dateSelection = UICalendarSelectionSingleDate(delegate: context.coordinator)
         calendarView.selectionBehavior = dateSelection
         calendarView.delegate = context.coordinator
-        
+
         return calendarView
     }
 
@@ -239,7 +239,7 @@ struct EarningsMarkedCalendar: UIViewRepresentable {
         if let selection = uiView.selectionBehavior as? UICalendarSelectionSingleDate {
             selection.setSelected(components, animated: true)
         }
-        
+
         // Refresh decorations
         uiView.reloadDecorations(forDateComponents: Array(markedDates).compactMap { dateString -> DateComponents? in
             guard let date = EarningsDateFormatterCache.dateOnly.date(from: dateString) else { return nil }
@@ -266,7 +266,7 @@ struct EarningsMarkedCalendar: UIViewRepresentable {
         func calendarView(_ calendarView: UICalendarView, decorationFor dateComponents: DateComponents) -> UICalendarView.Decoration? {
             guard let date = dateComponents.date else { return nil }
             let dateString = EarningsDateFormatterCache.dateOnly.string(from: date)
-            
+
             if parent.markedDates.contains(dateString) {
                 // Use a star symbol for better visibility as requested
                 return .image(UIImage(systemName: "star.fill"), color: .systemOrange, size: .medium)
@@ -331,7 +331,7 @@ private struct DetailMetricCard: View {
     let title: String
     let value: String
     let tint: Color
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
@@ -411,5 +411,3 @@ struct EarningsMetricPill: View {
     .appGlassEffect(.rect(cornerRadius: 12), tint: tint.opacity(0.1))
   }
 }
-
-

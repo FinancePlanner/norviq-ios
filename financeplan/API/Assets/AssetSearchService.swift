@@ -27,7 +27,7 @@ private struct SearchAssetsEndpoint: Endpoint {
   func asParameters() throws -> Parameters {
     [
       "q": query,
-      "limit": limit,
+      "limit": limit
     ]
   }
 }

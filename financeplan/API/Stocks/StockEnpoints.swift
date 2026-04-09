@@ -79,7 +79,6 @@ struct UpdateStockEndpoint: Endpoint {
   }
 }
 
-
 struct DeleteStockEndpoint: Endpoint {
   typealias Response = EmptyAPIResponse
 
@@ -161,7 +160,6 @@ struct GetStockValuationEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-
 struct CreateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
   typealias Response = StockValuationRequest
 
@@ -183,7 +181,6 @@ struct CreateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
     )
     body = try JSONEncoder.default.encode(request)
   }
-
 
   init(
     symbol: String,
@@ -208,10 +205,8 @@ struct CreateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
     body = try JSONEncoder.default.encode(request)
   }
 
-
   var method: HTTPMethod { .post }
   var decoder: JSONDecoder { .stockPlanShared }
-
 
   func asParameters() throws -> Parameters {
     [:]
@@ -244,7 +239,6 @@ struct UpdateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
     body = try JSONEncoder.default.encode(request)
   }
 
-
   init(
     symbol: String,
     bearLow: Double,
@@ -271,7 +265,6 @@ struct UpdateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
   var method: HTTPMethod { .put }
   var decoder: JSONDecoder { .stockPlanShared }
 
-
   func asParameters() throws -> Parameters {
     [:]
   }
@@ -290,7 +283,6 @@ struct GetWatchlistEndpoint: Endpoint {
   var path: String { "/v1/watchlist" }
   var decoder: JSONDecoder { .stockPlanShared }
 
-
   func asParameters() throws -> Parameters { [:] }
 }
 
@@ -308,7 +300,6 @@ struct CreateWatchlistEndpoint: Endpoint {
   }
 }
 
-
 struct UpdateWatchlistEndpoint: Endpoint {
   typealias Response = WatchlistItemResponse
   let watchlistId: String
@@ -324,7 +315,6 @@ struct UpdateWatchlistEndpoint: Endpoint {
   }
 }
 
-
 struct DeleteWatchlistEndpoint: Endpoint {
   typealias Response = EmptyAPIResponse
   let watchlistId: String
@@ -332,7 +322,6 @@ struct DeleteWatchlistEndpoint: Endpoint {
   var method: HTTPMethod { .delete }
   var path: String { "/v1/watchlist/\(watchlistId)" }
   var decoder: JSONDecoder { .stockPlanShared }
-
 
   func asParameters() throws -> Parameters { [:] }
 }

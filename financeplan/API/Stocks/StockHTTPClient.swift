@@ -42,7 +42,7 @@ struct StockHTTPClient {
       return false
     }
   }
-  
+
   let baseURL: URL
   let session: StockURLSessionProtocol
   let authTokenProvider: () -> String?
@@ -125,7 +125,6 @@ struct StockHTTPClient {
         return message
       }
     }
-
 
     if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
       if let error = json["error"] as? String, !error.isEmpty {

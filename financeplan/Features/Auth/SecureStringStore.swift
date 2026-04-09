@@ -20,7 +20,7 @@ final class KeychainStringStore: SecureStringStoring {
       kSecAttrService: service,
       kSecAttrAccount: key,
       kSecReturnData: true,
-      kSecMatchLimit: kSecMatchLimitOne,
+      kSecMatchLimit: kSecMatchLimitOne
     ]
 
     var result: AnyObject?
@@ -39,12 +39,12 @@ final class KeychainStringStore: SecureStringStoring {
     let query: [CFString: Any] = [
       kSecClass: kSecClassGenericPassword,
       kSecAttrService: service,
-      kSecAttrAccount: key,
+      kSecAttrAccount: key
     ]
 
     let attributes: [CFString: Any] = [
       kSecValueData: data,
-      kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+      kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
     ]
 
     let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
@@ -65,7 +65,7 @@ final class KeychainStringStore: SecureStringStoring {
     let query: [CFString: Any] = [
       kSecClass: kSecClassGenericPassword,
       kSecAttrService: service,
-      kSecAttrAccount: key,
+      kSecAttrAccount: key
     ]
 
     SecItemDelete(query as CFDictionary)

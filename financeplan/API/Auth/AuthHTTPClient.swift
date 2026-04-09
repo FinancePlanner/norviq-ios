@@ -25,7 +25,6 @@ struct AuthHTTPClient {
     return formatter
   }()
 
-
   enum Error: LocalizedError, Equatable {
     case invalidResponse
     case invalidStatus(Int)
@@ -45,11 +44,6 @@ struct AuthHTTPClient {
 
   let baseURL: URL
   let session: AuthURLSessionProtocol
-
-  init(baseURL: URL, session: AuthURLSessionProtocol) {
-    self.baseURL = baseURL
-    self.session = session
-  }
 
   func login(_ request: AuthLoginRequest) async throws -> AuthResponse {
     let endpoint = LoginEndpoint(email: request.email, password: request.password)
@@ -104,8 +98,7 @@ struct AuthHTTPClient {
   }
 
   private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response
-    where E.Response: Codable
-  {
+    where E.Response: Codable {
     let data = try await perform(endpoint)
     do {
       return try endpoint.decode(data)

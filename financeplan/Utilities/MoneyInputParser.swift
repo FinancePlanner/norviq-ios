@@ -39,8 +39,7 @@ enum MoneyInputParser {
 
       if (character == "," || character == ".")
         && character == decimalSeparator
-        && !consumedDecimal
-      {
+        && !consumedDecimal {
         normalized.append(".")
         consumedDecimal = true
       }

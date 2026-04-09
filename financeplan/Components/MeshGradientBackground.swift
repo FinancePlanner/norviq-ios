@@ -20,7 +20,7 @@ public struct MeshGradientBackground: View {
                 colors: [
                   AppTheme.Colors.tint(for: colorScheme).opacity(colorScheme == .dark ? 0.16 : 0.10),
                   AppTheme.Colors.secondaryTint(for: colorScheme).opacity(colorScheme == .dark ? 0.10 : 0.07),
-                  .clear,
+                  .clear
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing

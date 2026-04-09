@@ -10,7 +10,6 @@ final class LoginViewModel: ObservableObject {
     case email
   }
 
-
   @Published var username = ""
   @Published var password = ""
   @Published var email = ""

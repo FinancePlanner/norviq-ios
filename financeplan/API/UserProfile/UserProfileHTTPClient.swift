@@ -74,6 +74,21 @@ struct UserProfileHTTPClient {
     return try await call(endpoint)
   }
 
+  func updateUsername(_ request: UpdateUsernameRequest) async throws -> UpdateUserProfileResponse {
+    let endpoint = UpdateUsernameEndpoint(request: request)
+    return try await call(endpoint)
+  }
+
+  func updateEmail(_ request: UpdateEmailRequest) async throws -> UpdateUserProfileResponse {
+    let endpoint = UpdateEmailEndpoint(request: request)
+    return try await call(endpoint)
+  }
+
+  func updatePassword(_ request: UpdatePasswordRequest) async throws -> APIMessageResponse {
+    let endpoint = UpdatePasswordEndpoint(request: request)
+    return try await call(endpoint)
+  }
+
   func deleteProfile(_ request: DeleteUserProfileRequest) async throws -> DeleteUserProfileResponse {
     _ = request
     let endpoint = DeleteUserProfileEndpoint()
@@ -144,7 +159,6 @@ struct UserProfileHTTPClient {
         return message
       }
     }
-
 
     if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
       if let error = json["error"] as? String, !error.isEmpty {

@@ -16,7 +16,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
   @Published private(set) var partnerDisplayName: String = "Partner"
   @Published var selectedMonthStart: Date = .now
   @Published var isLoading = false
-  @Published var errorMessage: String? = nil
+  @Published var errorMessage: String?
 
   private let calendar: Calendar
   private let expensesService: any ExpensesServicing
@@ -445,7 +445,6 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
     let nextMonth = calendar.date(byAdding: .month, value: 1, to: selectedMonthStart) ?? .now
     let nextMonthStart = calendar.startOfMonth(for: nextMonth)
 
-
     guard !monthlySnapshots.contains(where: { calendar.isDate($0.monthStart, equalTo: nextMonthStart, toGranularity: .month) }) else {
       selectedMonthStart = nextMonthStart
       return
@@ -473,19 +472,19 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
         )
       }
     )
-    
+
     monthlySnapshots.append(newSnapshot)
     monthlySnapshots.sort { $0.monthStart < $1.monthStart }
     selectedMonthStart = nextMonthStart
-    
+
     Task {
         do {
             var stringShares: [String: Double] = [:]
-            for (k,v) in template.targetShares { stringShares[k.rawValue] = v }
-            
+            for (k, v) in template.targetShares { stringShares[k.rawValue] = v }
+
             let req = BudgetSnapshotRequest(monthStart: self.dayString(from: nextMonthStart), netSalary: template.netSalary, targetShares: stringShares)
             let createdSnap = try await expensesService.createBudgetSnapshot(request: req)
-            
+
             for item in template.items {
                 let itemReq = BudgetPlanItemRequest(
                   snapshotId: createdSnap.id,
@@ -510,17 +509,17 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
           errorMessage = "No monthly plan exists for the selected month."
           return
       }
-      
+
       let snapshotId = monthlySnapshots[selectedMonthSnapshotIndex].id
       monthlySnapshots.remove(at: selectedMonthSnapshotIndex)
-      
+
       if monthlySnapshots.isEmpty {
           selectedMonthStart = calendar.startOfMonth(for: .now)
       } else {
           selectedMonthStart = monthlySnapshots.last?.monthStart ?? calendar.startOfMonth(for: .now)
       }
       refreshDerivedSummariesFromLocal()
-      
+
       Task {
           do {
               try await expensesService.deleteSnapshot(snapshotId: snapshotId.uuidString)
@@ -533,7 +532,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
 
   func updateNetSalary(_ amount: Double) {
     let newAmount = max(amount, 0)
-    
+
     Task {
         do {
             let currentSnapshot = try await ensureSnapshotExistsForSelectedMonth()
@@ -561,7 +560,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
 
   func updateTargetShares(_ shares: [BudgetPillar: Double]) {
     let normalized = normalizeShares(shares)
-    
+
     Task {
         do {
             let currentSnapshot = try await ensureSnapshotExistsForSelectedMonth()
@@ -638,8 +637,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
           )
           let updated = try await expensesService.updatePlanItem(itemId: itemID.uuidString, payload: req)
           if let mapped = mapPlanItemResponse(updated),
-             let existingIndex = monthlySnapshots[selectedMonthSnapshotIndex].items.firstIndex(where: { $0.id == itemID })
-          {
+             let existingIndex = monthlySnapshots[selectedMonthSnapshotIndex].items.firstIndex(where: { $0.id == itemID }) {
             monthlySnapshots[selectedMonthSnapshotIndex].items[existingIndex] = mapped
           }
           logger.debug("Plan item update succeeded id=\(itemID.uuidString, privacy: .public)")

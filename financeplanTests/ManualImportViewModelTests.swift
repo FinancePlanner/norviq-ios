@@ -69,12 +69,12 @@ final class ManualImportViewModelTests: XCTestCase {
         vm.pillars = [
             .fundamentals: 50,
             .futureYou: 30,
-            .fun: 20,
+            .fun: 20
         ]
         vm.expenses = [
             ExpenseEntry(title: "Rent", amount: "1200", pillar: .fundamentals),
             ExpenseEntry(title: "Coffee", amount: "", pillar: .fun), // ignored invalid amount
-            ExpenseEntry(title: "", amount: "300", pillar: .futureYou), // ignored blank title
+            ExpenseEntry(title: "", amount: "300", pillar: .futureYou) // ignored blank title
         ]
 
         try await vm.createBudgetSnapshot()

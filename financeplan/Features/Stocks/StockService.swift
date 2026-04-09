@@ -109,7 +109,7 @@ final class StockService: StockServicing {
       return try await client.call(endpoint)
     }
   }
-  
+
   func fetchPortfolio() async throws -> [StockResponse] {
     try await performAuthenticated { client in
       let endpoint = GetStocksEndpoint()
@@ -301,7 +301,7 @@ final class StockService: StockServicing {
       authTokenProvider: { token }
     )
   }
-  
+
   private func performAuthenticated<T>(
     _ operation: (StockHTTPClient) async throws -> T
   ) async throws -> T {

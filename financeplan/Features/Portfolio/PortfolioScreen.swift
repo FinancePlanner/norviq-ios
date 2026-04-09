@@ -84,7 +84,7 @@ struct PortfolioScreen: View {
                   Text("Portfolio value")
                     .typography(.small, weight: .semibold)
                     .foregroundStyle(.secondary)
-                  
+
                   HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(totalValue.currency)
                       .typography(.hero, weight: .bold)
@@ -93,7 +93,7 @@ struct PortfolioScreen: View {
                       .typography(.small)
                       .foregroundStyle(.secondary)
                   }
-                  
+
                   HStack(spacing: 4) {
                     Image(systemName: "arrow.up.right")
                     Text("+2.31% ($2,816.32)")
@@ -102,11 +102,11 @@ struct PortfolioScreen: View {
                   .foregroundStyle(.green)
                 }
                 .padding(.horizontal, 4)
-                
+
                 InteractiveLineChart(data: chartData, color: .green)
                   .frame(height: 160)
                   .padding(.horizontal, -12) // Bleed to edges of card padding
-                
+
                 // Time range picker
                 HStack(spacing: 0) {
                   ForEach(TimeRange.allCases) { range in
@@ -123,7 +123,7 @@ struct PortfolioScreen: View {
                     }
                   }
                 }
-                
+
                 HStack {
                   PortfolioMetricPill(
                     title: "Shares",
@@ -409,7 +409,7 @@ private struct PortfolioSkeletonView: View {
           .fill(.gray.opacity(0.12))
           .frame(height: 140)
           .shimmer()
-        
+
         ForEach(0..<4, id: \.self) { _ in
           RoundedRectangle(cornerRadius: 22, style: .continuous)
             .fill(.gray.opacity(0.12))

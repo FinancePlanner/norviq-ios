@@ -31,7 +31,7 @@ final class MarketDataModelsTests: XCTestCase {
         "52WeekHigh",
         "52WeekLow",
         "52WeekReturn",
-        "10DayAverageTradingVolume",
+        "10DayAverageTradingVolume"
       ]
     )
     let firstOverviewValue = try XCTUnwrap(financials.overviewItems.first?.value)
@@ -55,15 +55,15 @@ final class MarketDataModelsTests: XCTestCase {
       tenDayAverageTradingVolume: nil,
       salesPerShareAnnual: [
         StockBasicFinancialSeriesPoint(period: "2018-09-29", value: 53.1178),
-        StockBasicFinancialSeriesPoint(period: "2019-09-28", value: 55.9645),
+        StockBasicFinancialSeriesPoint(period: "2019-09-28", value: 55.9645)
       ],
       currentRatioAnnual: [
         StockBasicFinancialSeriesPoint(period: "2019-09-28", value: 1.5401),
-        StockBasicFinancialSeriesPoint(period: "2018-09-29", value: 1.1329),
+        StockBasicFinancialSeriesPoint(period: "2018-09-29", value: 1.1329)
       ],
       netMarginAnnual: [
         StockBasicFinancialSeriesPoint(period: "2018-09-29", value: 0.2241),
-        StockBasicFinancialSeriesPoint(period: "2019-09-28", value: 0.2124),
+        StockBasicFinancialSeriesPoint(period: "2019-09-28", value: 0.2124)
       ]
     )
 

@@ -38,7 +38,7 @@ struct ExpensesPlannerScreen: View {
                 VStack(alignment: .leading, spacing: 6) {
                   Text("Set your monthly budget")
                     .typography(.small, weight: .semibold)
-                  Text(viewModel.selectedMonthSnapshot == nil 
+                  Text(viewModel.selectedMonthSnapshot == nil
                     ? "No budget plan for \(viewModel.selectedMonthDisplayTitle). Create one or select a different month from the title menu."
                     : "Your monthly budget is currently 0. Add salary and side income so spending insights can calculate correctly.")
                     .typography(.nano)
@@ -101,7 +101,7 @@ struct ExpensesPlannerScreen: View {
 
           RecentTransactionsList(activities: viewModel.selectedMonthActivities)
             .padding(.horizontal, 16)
-            
+
           NavigationLink {
             BudgetCategoryDetailsScreen(
               viewModel: viewModel,
@@ -205,9 +205,9 @@ struct ExpensesPlannerScreen: View {
               Button("Household partner", systemImage: "person.2") {
                 isPartnerEditorPresented = true
               }
-              
+
               Divider()
-              
+
               Button("Delete this month plan", systemImage: "trash", role: .destructive) {
                 viewModel.deleteCurrentSnapshot()
               }
@@ -527,7 +527,7 @@ private struct PlannerSalaryCard: View {
             .font(.subheadline)
             .foregroundStyle(.secondary)
         }
-        
+
         VStack(spacing: 4) {
           Text(netSalary.currency)
             .font(.system(size: 40, weight: .bold, design: .rounded))
@@ -543,7 +543,7 @@ private struct PlannerSalaryCard: View {
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.small)
-        
+
         HStack(spacing: 0) {
           MetricItem(title: "Planned", value: allocated.currency, color: .primary)
           Divider().background(Color.white.opacity(0.1))
@@ -565,9 +565,9 @@ private struct PlannerSalaryCard: View {
           Divider().background(Color.white.opacity(0.1))
           MetricItem(title: "\(partnerName) spend", value: partnerSpent.currency, color: .primary)
         }
-        
+
         Divider().background(Color.white.opacity(0.1))
-        
+
         HStack(spacing: 0) {
           MetricItem(
             title: "Available after plan",
@@ -989,7 +989,7 @@ private struct PillarTargetsEditorSheet: View {
               [
                 .fundamentals: fundamentals / 100,
                 .futureYou: futureYou / 100,
-                .fun: fun / 100,
+                .fun: fun / 100
               ]
             )
             successFeedbackTrigger += 1
@@ -1418,13 +1418,13 @@ struct ExpensesCircularOverviewCard: View {
   let leftAmount: Double
   let totalAmount: Double
   @State private var progress: Double = 0
-  
+
   var body: some View {
     VStack {
       ZStack {
         Circle()
           .stroke(Color.white.opacity(0.1), lineWidth: 20)
-        
+
         Circle()
           .trim(from: 0, to: progress)
           .stroke(
@@ -1443,19 +1443,19 @@ struct ExpensesCircularOverviewCard: View {
             style: StrokeStyle(lineWidth: 20, lineCap: .round)
           )
           .rotationEffect(.degrees(-90))
-        
+
         VStack(spacing: 8) {
           Text("Monthly Budget")
             .font(.subheadline)
             .foregroundStyle(.secondary)
-          
+
           HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text(leftAmount.currency)
               .font(.system(size: 40, weight: .bold, design: .rounded))
             Text("Left")
               .font(.title2)
           }
-          
+
           Text("of \(totalAmount.currency)")
             .font(.subheadline)
             .foregroundStyle(.secondary)
@@ -1625,7 +1625,7 @@ private struct SuggestionDetailSheet: View {
 
 struct RecentTransactionsList: View {
   let activities: [BudgetActivity]
-  
+
   private func relativeDateString(from date: Date) -> String {
       let calendar = Calendar.current
       if calendar.isDateInToday(date) { return "Today" }
@@ -1634,13 +1634,13 @@ struct RecentTransactionsList: View {
       formatter.dateFormat = "MMM d"
       return formatter.string(from: date)
   }
-  
+
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
       Text("Recent Transactions")
         .font(.title2.bold())
         .padding(.horizontal, 4)
-      
+
       VStack(spacing: 0) {
         if activities.isEmpty {
           Text("No recent transactions.")
@@ -1658,7 +1658,7 @@ struct RecentTransactionsList: View {
                     .foregroundStyle(.white)
                     .font(.title3)
                 )
-              
+
               VStack(alignment: .leading, spacing: 4) {
                 Text(activity.pillar.title)
                   .font(.headline)
@@ -1669,15 +1669,15 @@ struct RecentTransactionsList: View {
                   .font(.caption)
                   .foregroundStyle(.secondary)
               }
-              
+
               Spacer()
-              
+
               Text("-\(activity.amount.currency)")
                 .font(.headline)
             }
             .padding(.vertical, 14)
             .padding(.horizontal, 16)
-            
+
             if activity.id != activities.prefix(5).last?.id {
               Divider()
                 .background(Color.white.opacity(0.1))

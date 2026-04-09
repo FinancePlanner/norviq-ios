@@ -45,7 +45,7 @@ extension Container {
       )
     }.singleton
   }
-  
+
   var stockService: Factory<StockService> {
     self {
       StockService(

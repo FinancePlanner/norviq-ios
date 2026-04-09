@@ -12,7 +12,7 @@ struct ActivityHTTPClient: ActivityURLSessionProtocol {
     enum Error: Swift.Error {
         case invalidResponse
         case api(String)
-        
+
         var isUnauthorized: Bool {
             if case .invalidResponse = self { return true }
             return false
@@ -22,7 +22,7 @@ struct ActivityHTTPClient: ActivityURLSessionProtocol {
     private let session: ActivityURLSessionProtocol
     private let baseURL: URL
     private let authTokenProvider: () -> String?
-    
+
     init(
         baseURL: URL,
         session: ActivityURLSessionProtocol = URLSession.shared,
@@ -32,23 +32,23 @@ struct ActivityHTTPClient: ActivityURLSessionProtocol {
         self.session = session
         self.authTokenProvider = authTokenProvider
     }
-    
+
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         try await session.data(for: request)
     }
-    
+
     func fetchActivities(limit: Int? = nil) async throws -> [UserActivityResponse] {
         try await call(GetActivitiesEndpoint(limit: limit))
     }
-    
+
     private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
         let request = try makeURLRequest(for: endpoint)
         let (data, response) = try await session.data(for: request)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw Error.invalidResponse
         }
-        
+
         if (200...299).contains(httpResponse.statusCode) {
             return try endpoint.decode(data)
         } else if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {

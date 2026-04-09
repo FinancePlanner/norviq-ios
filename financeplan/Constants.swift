@@ -49,8 +49,7 @@ final class AppEnvironmentManager {
     // 3. Check persisted user preference
     } else if
       let persistedEnvironment = UserDefaults.standard.string(forKey: "environment"),
-      let environment = AppEnvironments.from(key: persistedEnvironment)
-    {
+      let environment = AppEnvironments.from(key: persistedEnvironment) {
       schemeEnvironment = nil
       resolvedEnvironment = environment
     // 4. Default based on build type

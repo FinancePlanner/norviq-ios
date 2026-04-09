@@ -165,4 +165,3 @@ struct UserMenuDrawer: View {
     .buttonStyle(.plain)
   }
 }
-

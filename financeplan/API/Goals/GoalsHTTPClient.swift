@@ -72,13 +72,13 @@ struct GoalsHTTPClient {
         let normalizedPath = endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         let base = baseURL.appendingPathComponent(normalizedPath)
         let parameters = try endpoint.asParameters()
-        
+
         var urlComponents = URLComponents(url: base, resolvingAgainstBaseURL: false)
         if endpoint.method == .get, !parameters.isEmpty {
             urlComponents?.queryItems = parameters.map { URLQueryItem(name: $0.key, value: String(describing: $0.value)) }
         }
         guard let url = urlComponents?.url else { throw DashboardHTTPClient.Error.invalidResponse }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = endpoint.method.rawValue
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

@@ -10,7 +10,6 @@ import SwiftUI
 import Factory
 
 private enum UserProfileDestination: Hashable {
-    case profileDetail
     case securityCode
     case badges
     case helpSupport
@@ -27,13 +26,14 @@ public struct UserProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var path: [UserProfileDestination] = []
     @State private var isEditPresented = false
+    @State private var isLoggingOut = false
 
     // Appearance State
-    @AppStorage("appAppearance") private var appAppearance: String = "System"
-    
+    @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system.rawValue
+
     // Security State
     @AppStorage("useFaceID") private var useFaceID: Bool = true
-    
+
     public init(viewModel: UserProfileViewModel? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel ?? UserProfileViewModel())
     }
@@ -41,7 +41,7 @@ public struct UserProfileView: View {
     public var body: some View {
         NavigationStack(path: $path) {
             Group {
-                if viewModel.isLoading {
+                if viewModel.isLoading && viewModel.profile == nil {
                     ProgressView("Loading...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 } else {
@@ -50,15 +50,12 @@ public struct UserProfileView: View {
             }
             .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
             .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { dismiss() } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                    }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.Colors.tint(for: scheme))
                 }
             }
             .task { await viewModel.load() }
@@ -69,8 +66,6 @@ public struct UserProfileView: View {
             }
             .navigationDestination(for: UserProfileDestination.self) { destination in
                 switch destination {
-                case .profileDetail:
-                    ProfileDetailView(viewModel: viewModel, profile: viewModel.profile)
                 case .securityCode:
                     Text("Security Code")
                 case .badges:
@@ -97,20 +92,20 @@ public struct UserProfileView: View {
                 Button {
                     isEditPresented = true
                 } label: {
-                    HStack(spacing: 16) {
+                    HStack(spacing: 14) {
                         avatarView(profile)
-                        
-                        VStack(alignment: .leading, spacing: 4) {
+
+                        VStack(alignment: .leading, spacing: 3) {
                             Text(profile?.username ?? "Unknown User")
-                                .font(.title3.bold())
+                                .typography(.label, weight: .semibold)
                                 .foregroundStyle(.primary)
                             Text("View and edit your account")
-                                .font(.subheadline)
+                                .typography(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        
+
                         Spacer()
-                        
+
                         Image(systemName: "chevron.right")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(.secondary)
@@ -120,65 +115,61 @@ public struct UserProfileView: View {
                 .buttonStyle(.plain)
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-            
+
             // Security
-            Section("SECURITY") {
+            Section("Security") {
                 Toggle(isOn: $useFaceID) {
                     HStack(spacing: 12) {
-                        iconView("faceid", backgroundColor: Color(red: 0.15, green: 0.25, blue: 0.35), foregroundColor: .blue)
-                        Text("Face ID")
+                        Label("Face ID", systemImage: "faceid")
                     }
                 }
-                
+
                 NavigationLink(value: UserProfileDestination.securityCode) {
-                    HStack(spacing: 12) {
-                        iconView("lock.fill", backgroundColor: Color(red: 0.15, green: 0.25, blue: 0.35), foregroundColor: .blue)
-                        Text("Security Code")
-                    }
+                    Label("Security Code", systemImage: "lock.fill")
                 }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
             // Appearance
-            Section("APPEARANCE") {
-                Picker("Appearance", selection: $appAppearance) {
-                    Text("System").tag("System")
-                    Text("Light").tag("Light")
-                    Text("Dark").tag("Dark")
+            Section("Appearance") {
+                Picker("Appearance", selection: appAppearanceBinding) {
+                    ForEach(AppAppearance.allCases, id: \.self) { appearance in
+                        Text(appearance.title)
+                            .tag(appearance)
+                    }
                 }
                 .pickerStyle(.segmented)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .padding(.horizontal, 4)
+
+                Text(selectedAppearance.subtitle)
+                    .typography(.caption)
+                    .foregroundStyle(.secondary)
             }
-            
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
             // Achievements
-            Section("ACHIEVEMENTS") {
+            Section("Achievements") {
                 NavigationLink(value: UserProfileDestination.badges) {
-                    HStack(spacing: 12) {
-                        iconView("trophy.fill", backgroundColor: Color(red: 0.35, green: 0.25, blue: 0.10), foregroundColor: .yellow)
-                        Text("Badges")
-                    }
+                    Label("Badges", systemImage: "trophy.fill")
                 }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-            
+
             // Integrations
-            Section("INTEGRATIONS") {
+            Section("Integrations") {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
                         Text("Connected Models")
-                            .font(.body)
+                            .typography(.body)
                         Spacer()
                         Text("3 ACTIVE")
-                            .font(.caption.bold())
+                            .typography(.nano, weight: .bold)
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(Color(white: 0.2))
                             .clipShape(Capsule())
                     }
-                    
+
                     HStack(spacing: 12) {
                         integrationPill("Claude")
                         integrationPill("ChatGPT")
@@ -188,51 +179,97 @@ public struct UserProfileView: View {
                 .padding(.vertical, 4)
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-            
+
             // About
-            Section("ABOUT") {
+            Section("Support") {
                 NavigationLink(value: UserProfileDestination.helpSupport) {
-                    Text("Help & Support")
+                    Label("Help & Support", systemImage: "questionmark.circle")
                 }
                 NavigationLink(value: UserProfileDestination.shareFeedback) {
-                    Text("Share Feedback")
+                    Label("Share Feedback", systemImage: "quote.bubble")
                 }
                 NavigationLink(value: UserProfileDestination.about) {
-                    Text("About Norviqa")
+                    Label("About Norviqa", systemImage: "info.circle")
                 }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-            
+
+            // Connect
+            Section("Connect") {
+                if let discordURL = URL(string: "https://discord.gg/norviqa") {
+                    Link(destination: discordURL) {
+                        Label("Join Discord", systemImage: "bubble.left.and.bubble.right")
+                    }
+                    .foregroundStyle(.primary)
+                }
+
+                if let xURL = URL(string: "https://x.com/norviqa") {
+                    Link(destination: xURL) {
+                        Label("Follow on X", systemImage: "x.circle")
+                    }
+                    .foregroundStyle(.primary)
+                }
+
+                if let tiktokURL = URL(string: "https://tiktok.com/@norviqa") {
+                    Link(destination: tiktokURL) {
+                        Label("Follow on TikTok", systemImage: "music.note")
+                    }
+                    .foregroundStyle(.primary)
+                }
+            }
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
             // Log Out
             Section {
-                Button(action: {
+                Button(role: .destructive) {
                     Task {
+                        guard !isLoggingOut else { return }
+                        isLoggingOut = true
                         await Container.shared.authSessionManager().logout()
+                        isLoggingOut = false
                     }
-                }) {
-                    Text("Log out")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(Color(red: 0.8, green: 0.4, blue: 0.4))
-                        .frame(maxWidth: .infinity, alignment: .center)
+                } label: {
+                    HStack(spacing: 8) {
+                        if isLoggingOut {
+                            ProgressView()
+                        }
+                        Text("Log out")
+                            .typography(.button, weight: .semibold)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .foregroundStyle(AppTheme.Colors.danger)
                 }
+                .disabled(isLoggingOut)
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-            
+
             // Footer
             Section {
                 Text("NORVIQA V2.4.1 (BUILD 108)")
-                    .font(.caption2)
+                    .typography(.nano)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .listRowBackground(Color.clear)
             }
         }
         .scrollContentBackground(.hidden)
+        .listStyle(.insetGrouped)
         .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
     }
 
+    private var appAppearanceBinding: Binding<AppAppearance> {
+        Binding(
+            get: { AppAppearance.from(appAppearanceRawValue) },
+            set: { appAppearanceRawValue = $0.rawValue }
+        )
+    }
+
+    private var selectedAppearance: AppAppearance {
+        AppAppearance.from(appAppearanceRawValue)
+    }
+
     // MARK: - Components
-    
+
     private func iconView(_ systemName: String, backgroundColor: Color, foregroundColor: Color) -> some View {
         Image(systemName: systemName)
             .font(.system(size: 14, weight: .semibold))
@@ -241,7 +278,7 @@ public struct UserProfileView: View {
             .background(backgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: 6))
     }
-    
+
     private func integrationPill(_ name: String) -> some View {
         HStack(spacing: 6) {
             Circle()
@@ -275,7 +312,7 @@ public struct UserProfileView: View {
         .frame(width: 60, height: 60)
         .clipShape(Circle())
     }
-    
+
     private func avatarPlaceholder(_ profile: UserProfile?) -> some View {
         LinearGradient(
             colors: AppTheme.avatarGradient(for: scheme),
@@ -293,195 +330,6 @@ public struct UserProfileView: View {
         guard let value else { return nil }
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
-    }
-
-    private func placeholderInitial(for profile: UserProfile?) -> String {
-        guard let profile else { return "?" }
-        let seed =
-            normalized(profile.username)
-            ?? normalized(profile.email)
-            ?? "?"
-        return String(seed.prefix(1)).uppercased()
-    }
-}
-
-// MARK: - Profile Detail View
-
-public struct ProfileDetailView: View {
-    @ObservedObject var viewModel: UserProfileViewModel
-    let profile: UserProfile?
-    @Environment(\.colorScheme) private var scheme
-    
-    @State private var isEditPresented = false
-    @State private var biometricUnlock = true
-
-    public var body: some View {
-        List {
-            // Avatar Section
-            Section {
-                VStack(spacing: 12) {
-                    avatarView(profile)
-                    
-                    Button("Change Photo") {
-                        isEditPresented = true
-                    }
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(.blue)
-                }
-                .frame(maxWidth: .infinity)
-                .listRowBackground(Color.clear)
-            }
-            
-            // Profile Info Section
-            Section {
-                infoRow(title: "Username", value: formattedUsername(for: profile) ?? "")
-                infoRow(title: "Email", value: profile?.email ?? "")
-            } footer: {
-                Text("Your email is used for account security and transactional alerts.")
-            }
-            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-            
-            // Privacy & Protection
-            Section {
-                Toggle(isOn: $biometricUnlock) {
-                    HStack(spacing: 12) {
-                        iconView("faceid", backgroundColor: Color(red: 0.15, green: 0.25, blue: 0.35), foregroundColor: .blue)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Biometric Unlock")
-                            Text("FaceID active for all Norviqa access")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                
-                NavigationLink(value: UserProfileDestination.dataHandling) {
-                    HStack(spacing: 12) {
-                        iconView("shield.fill", backgroundColor: Color(red: 0.35, green: 0.15, blue: 0.15), foregroundColor: .orange)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Data handling")
-                            Text("Manage how your metadata is processed")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                
-                NavigationLink(value: UserProfileDestination.sensitiveActions) {
-                    HStack(spacing: 12) {
-                        iconView("lock.rotation", backgroundColor: Color(white: 0.25), foregroundColor: .white)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Sensitive actions")
-                            Text("Step-up authentication for large trades")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            } header: {
-                Text("PRIVACY & PROTECTION")
-            } footer: {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "checkmark.shield.fill")
-                        .foregroundStyle(.blue)
-                    Text("Your personal information is encrypted and stored in a decentralized hardware enclave. No one at Norviqa can access your private identifiers or transaction history.")
-                }
-                .padding(.top, 8)
-            }
-            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-            
-            // Close Account
-            Section {
-                Button(action: {
-                    // Close account action
-                }) {
-                    Text("Close Account")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(Color(red: 0.8, green: 0.4, blue: 0.4))
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
-            }
-            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-        }
-        .scrollContentBackground(.hidden)
-        .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-        .navigationTitle("Profile")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Edit") {
-                    isEditPresented = true
-                }
-            }
-        }
-        .sheet(isPresented: $isEditPresented) {
-            if let profile = profile {
-                EditProfileView(viewModel: viewModel, profile: profile)
-            }
-        }
-    }
-
-    private func infoRow(title: String, value: String) -> some View {
-        HStack {
-            Text(title)
-                .foregroundStyle(.secondary)
-            Spacer()
-            Text(value)
-                .foregroundStyle(.primary)
-        }
-    }
-
-    private func iconView(_ systemName: String, backgroundColor: Color, foregroundColor: Color) -> some View {
-        Image(systemName: systemName)
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(foregroundColor)
-            .frame(width: 28, height: 28)
-            .background(backgroundColor)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
-    }
-
-    private func avatarView(_ profile: UserProfile?) -> some View {
-        ZStack {
-            if let url = profile?.avatarURL {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    default:
-                        avatarPlaceholder(profile)
-                    }
-                }
-            } else {
-                avatarPlaceholder(profile)
-            }
-        }
-        .frame(width: 96, height: 96)
-        .clipShape(Circle())
-        .overlay(Circle().stroke(AppTheme.Colors.pageBackground(for: scheme), lineWidth: 4))
-    }
-    
-    private func avatarPlaceholder(_ profile: UserProfile?) -> some View {
-        LinearGradient(
-            colors: AppTheme.avatarGradient(for: scheme),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .overlay(
-            Text(placeholderInitial(for: profile))
-                .font(.system(size: 32, weight: .bold))
-                .foregroundStyle(.white)
-        )
-    }
-
-    private func normalized(_ value: String?) -> String? {
-        guard let value else { return nil }
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
-    }
-
-    private func formattedUsername(for profile: UserProfile?) -> String? {
-        guard let username = normalized(profile?.username) else { return nil }
-        return "@\(username)"
     }
 
     private func placeholderInitial(for profile: UserProfile?) -> String {

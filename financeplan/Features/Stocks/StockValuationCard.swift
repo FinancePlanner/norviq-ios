@@ -10,20 +10,20 @@ import StockPlanShared
 
 struct StockValuationCard: View {
     let valuation: StockValuationRequest?
-    
+
     let onEditTapped: () -> Void
-    
+
     var body: some View {
         Section("Valuation") {
             VStack(alignment: .leading, spacing: 12) {
                 valuationRow(title: "Bear", range: valuation?.bearCase)
                 valuationRow(title: "Bull", range: valuation?.bullCase)
                 valuationRow(title: "Base", range: valuation?.baseCase)
-                
+
                 if let targetDate = valuation?.targetDate, !targetDate.isEmpty {
                     LabeledContent("Target date", value: targetDate)
                 }
-                
+
                 if let rationale = valuation?.rationale, !rationale.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Rationale")
@@ -46,9 +46,9 @@ private func valuationRow(title: String, range: PriceRange?) -> some View {
     HStack {
         Text(title)
             .fontWeight(.semibold)
-        
+
         Spacer()
-        
+
         if let range {
             Text("$\(range.low, specifier: "%.2f") - $\(range.high, specifier: "%.2f")")
                             .monospacedDigit()
