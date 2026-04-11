@@ -25,8 +25,4 @@ class Debouncer<T>: ObservableObject {
   func update(_ value: T) {
     self.value = value
   }
-
-  deinit {
-    cancellable?.cancel()
-  }
 }

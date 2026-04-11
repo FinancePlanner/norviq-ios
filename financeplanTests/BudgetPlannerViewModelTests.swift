@@ -4,6 +4,7 @@ import XCTest
 
 @testable import financeplan
 
+@MainActor
 final class BudgetPlannerViewModelTests: XCTestCase {
   private let calendar = Calendar(identifier: .gregorian)
   private let dayFormatter: DateFormatter = {

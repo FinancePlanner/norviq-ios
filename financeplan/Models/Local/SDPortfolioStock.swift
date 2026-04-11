@@ -4,6 +4,8 @@ import StockPlanShared
 
 @Model
 final class SDPortfolioStock {
+    #Index<SDPortfolioStock>([\.symbol], [\.category], [\.portfolioListId])
+
     @Attribute(.unique) var id: String
     var symbol: String
     var shares: Double
@@ -11,9 +13,19 @@ final class SDPortfolioStock {
     var buyDate: String
     var notes: String?
     var category: String?
+    var portfolioListId: String?
     var lastSyncedAt: Date?
 
-    init(id: String, symbol: String, shares: Double, buyPrice: Double, buyDate: String, notes: String? = nil, category: String? = "stock") {
+    init(
+        id: String,
+        symbol: String,
+        shares: Double,
+        buyPrice: Double,
+        buyDate: String,
+        notes: String? = nil,
+        category: String? = "stock",
+        portfolioListId: String? = nil
+    ) {
         self.id = id
         self.symbol = symbol
         self.shares = shares
@@ -21,6 +33,7 @@ final class SDPortfolioStock {
         self.buyDate = buyDate
         self.notes = notes
         self.category = category
+        self.portfolioListId = portfolioListId
         self.lastSyncedAt = Date()
     }
 
@@ -32,6 +45,7 @@ final class SDPortfolioStock {
         self.buyDate = response.buyDate
         self.notes = response.notes
         self.category = response.category.rawValue
+        self.portfolioListId = nil
         self.lastSyncedAt = Date()
     }
 
@@ -42,6 +56,7 @@ final class SDPortfolioStock {
         self.buyDate = response.buyDate
         self.notes = response.notes
         self.category = response.category.rawValue
+        self.portfolioListId = nil
         self.lastSyncedAt = Date()
     }
 }

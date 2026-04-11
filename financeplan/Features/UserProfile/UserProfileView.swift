@@ -22,6 +22,7 @@ private enum UserProfileDestination: Hashable {
 @MainActor
 public struct UserProfileView: View {
     @StateObject private var viewModel: UserProfileViewModel
+    @StateObject private var pushNotificationsCoordinator: PushNotificationsCoordinator
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dismiss) private var dismiss
     @State private var path: [UserProfileDestination] = []
@@ -36,6 +37,9 @@ public struct UserProfileView: View {
 
     public init(viewModel: UserProfileViewModel? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel ?? UserProfileViewModel())
+        _pushNotificationsCoordinator = StateObject(
+            wrappedValue: Container.shared.pushNotificationsCoordinator()
+        )
     }
 
     public var body: some View {
@@ -58,7 +62,10 @@ public struct UserProfileView: View {
                         .foregroundStyle(AppTheme.Colors.tint(for: scheme))
                 }
             }
-            .task { await viewModel.load() }
+            .task {
+                await viewModel.load()
+                pushNotificationsCoordinator.handleAuthenticatedSessionBecameActive()
+            }
             .sheet(isPresented: $isEditPresented) {
                 if let profile = viewModel.profile {
                     EditProfileView(viewModel: viewModel, profile: profile)
@@ -126,6 +133,27 @@ public struct UserProfileView: View {
 
                 NavigationLink(value: UserProfileDestination.securityCode) {
                     Label("Security Code", systemImage: "lock.fill")
+                }
+            }
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
+            Section("Notifications") {
+                Toggle(isOn: notificationsToggleBinding) {
+                    Label("Price target alerts", systemImage: "bell.badge")
+                }
+
+                HStack {
+                    Label("Status", systemImage: "info.circle")
+                    Spacer()
+                    Text(pushNotificationsCoordinator.statusDescription)
+                        .typography(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                if let error = pushNotificationsCoordinator.lastErrorMessage, !error.isEmpty {
+                    Text(error)
+                        .typography(.caption)
+                        .foregroundStyle(AppTheme.Colors.danger)
                 }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
@@ -266,6 +294,17 @@ public struct UserProfileView: View {
 
     private var selectedAppearance: AppAppearance {
         AppAppearance.from(appAppearanceRawValue)
+    }
+
+    private var notificationsToggleBinding: Binding<Bool> {
+        Binding(
+            get: { pushNotificationsCoordinator.isOptedIn },
+            set: { enabled in
+                Task {
+                    await pushNotificationsCoordinator.setNotificationsEnabled(enabled)
+                }
+            }
+        )
     }
 
     // MARK: - Components

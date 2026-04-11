@@ -2,12 +2,12 @@ import Foundation
 import StockPlanShared
 import Factory
 
-protocol ExpenseBudgetSetupServicing {
+protocol ExpenseBudgetSetupServicing: Sendable {
     func createBudgetSnapshot(request: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse
     func createExpense(request: ExpenseRequest) async throws -> ExpenseResponse
 }
 
-protocol ExpensesServicing: ExpenseBudgetSetupServicing {
+protocol ExpensesServicing: ExpenseBudgetSetupServicing, Sendable {
     func getHouseholdPartner() async throws -> HouseholdPartnerProfileResponse
     func updateHouseholdPartner(payload: HouseholdPartnerProfileRequest) async throws -> HouseholdPartnerProfileResponse
 
@@ -36,7 +36,7 @@ protocol ExpensesServicing: ExpenseBudgetSetupServicing {
     func dismissReportSuggestion(id: String) async throws
 }
 
-struct ExpensesHTTPService: ExpensesServicing {
+struct ExpensesHTTPService: ExpensesServicing, @unchecked Sendable {
     let client: ExpensesHTTPClient
 
     init(environmentManager: AppEnvironmentManager, authSessionManager: any AuthSessionManaging) {

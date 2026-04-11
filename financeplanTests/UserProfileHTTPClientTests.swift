@@ -74,18 +74,18 @@ final class UserProfileHTTPClientTests: XCTestCase {
 
       let body = try XCTUnwrap(request.httpBody)
       let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
-      let userProfileJSON = try XCTUnwrap(json["userProfile"] as? [String: Any])
+      let userProfileJSON = try XCTUnwrap(json["user_profile"] as? [String: Any])
 
       XCTAssertEqual(userProfileJSON["id"] as? String, "user-123")
       XCTAssertEqual(userProfileJSON["email"] as? String, "user@example.com")
       XCTAssertEqual(userProfileJSON["username"] as? String, "updated_user")
-      XCTAssertNil(json["user_profile"])
+      XCTAssertNil(json["userProfile"])
       XCTAssertNil(userProfileJSON["first_name"])
       XCTAssertNil(userProfileJSON["last_name"])
       XCTAssertNil(userProfileJSON["firstName"])
       XCTAssertNil(userProfileJSON["lastName"])
 
-      let decoded = try JSONDecoder().decode(UpdateUserProfileRequest.self, from: body)
+      let decoded = try JSONDecoder.stockPlanShared.decode(UpdateUserProfileRequest.self, from: body)
       XCTAssertEqual(decoded, requestDTO)
 
       let data = try JSONEncoder().encode(

@@ -62,8 +62,11 @@ struct ExpensesComparisonScreen: View {
       .refreshable {
         await reportsViewModel.load(force: true)
       }
-      .task {
-        await reportsViewModel.load()
+      .onAppear {
+        Task { await reportsViewModel.load(force: true) }
+      }
+      .onReceive(NotificationCenter.default.publisher(for: .budgetPlannerDataDidChange)) { _ in
+        Task { await reportsViewModel.load(force: true) }
       }
     }
   }

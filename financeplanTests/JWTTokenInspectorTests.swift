@@ -2,6 +2,7 @@ import Foundation
 import XCTest
 @testable import financeplan
 
+@MainActor
 final class JWTTokenInspectorTests: XCTestCase {
   func testPayload_DecodesUserIDAndExpiration() throws {
     let userID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!

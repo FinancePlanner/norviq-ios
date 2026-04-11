@@ -3,6 +3,7 @@ import XCTest
 
 @testable import financeplan
 
+@MainActor
 final class UIComponentsTests: XCTestCase {
 
     func testGlowingButton_canBeCompiled() {

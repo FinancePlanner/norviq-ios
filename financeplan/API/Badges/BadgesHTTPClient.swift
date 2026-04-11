@@ -23,7 +23,7 @@ struct BadgesHTTPClient {
         try await call(GetBadgesEndpoint())
     }
 
-    private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
+    private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable & Sendable {
         let request = try makeURLRequest(for: endpoint)
         let (data, response) = try await session.data(for: request)
 

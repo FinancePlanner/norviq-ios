@@ -26,8 +26,11 @@ struct CreateSnapshotEndpoint: Endpoint {
     var path: String { "/v1/budget/snapshots" }
     var decoder: JSONDecoder { .stockPlanShared }
     func asParameters() throws -> Parameters {
-        let data = try JSONEncoder.stockPlanShared.encode(payload)
-        return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+        [
+            "month_start": payload.monthStart,
+            "net_salary": payload.netSalary,
+            "target_shares": payload.targetShares
+        ]
     }
 }
 
@@ -39,13 +42,16 @@ struct UpdateSnapshotEndpoint: Endpoint {
     var path: String { "/v1/budget/snapshots/\(snapshotId)" }
     var decoder: JSONDecoder { .stockPlanShared }
     func asParameters() throws -> Parameters {
-        let data = try JSONEncoder.stockPlanShared.encode(payload)
-        return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+        [
+            "month_start": payload.monthStart,
+            "net_salary": payload.netSalary,
+            "target_shares": payload.targetShares
+        ]
     }
 }
 
 struct DeleteSnapshotEndpoint: Endpoint {
-    typealias Response = EmptyResponse
+    typealias Response = EmptyAPIResponse
     let snapshotId: String
     var method: HTTPMethod { .delete }
     var path: String { "/v1/budget/snapshots/\(snapshotId)" }
@@ -79,8 +85,14 @@ struct CreatePlanItemEndpoint: Endpoint {
     var path: String { "/v1/budget/items" }
     var decoder: JSONDecoder { .stockPlanShared }
     func asParameters() throws -> Parameters {
-        let data = try JSONEncoder.stockPlanShared.encode(payload)
-        return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+        [
+            "snapshot_id": payload.snapshotId,
+            "title": payload.title,
+            "planned_amount": payload.plannedAmount,
+            "pillar": payload.pillar.rawValue,
+            "split_mode": payload.splitMode.rawValue,
+            "user_share_percent": payload.userSharePercent
+        ]
     }
 }
 
@@ -92,13 +104,19 @@ struct UpdatePlanItemEndpoint: Endpoint {
     var path: String { "/v1/budget/items/\(itemId)" }
     var decoder: JSONDecoder { .stockPlanShared }
     func asParameters() throws -> Parameters {
-        let data = try JSONEncoder.stockPlanShared.encode(payload)
-        return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+        [
+            "snapshot_id": payload.snapshotId,
+            "title": payload.title,
+            "planned_amount": payload.plannedAmount,
+            "pillar": payload.pillar.rawValue,
+            "split_mode": payload.splitMode.rawValue,
+            "user_share_percent": payload.userSharePercent
+        ]
     }
 }
 
 struct DeletePlanItemEndpoint: Endpoint {
-    typealias Response = EmptyResponse
+    typealias Response = EmptyAPIResponse
     let itemId: String
     var method: HTTPMethod { .delete }
     var path: String { "/v1/budget/items/\(itemId)" }
@@ -150,8 +168,18 @@ struct CreateExpenseEndpoint: Endpoint {
     var path: String { "/v1/expenses" }
     var decoder: JSONDecoder { .stockPlanShared }
     func asParameters() throws -> Parameters {
-        let data = try JSONEncoder.stockPlanShared.encode(payload)
-        return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+        var params: Parameters = [
+            "title": payload.title,
+            "amount": payload.amount,
+            "pillar": payload.pillar.rawValue,
+            "occurred_on": payload.occurredOn,
+            "split_mode": payload.splitMode.rawValue,
+            "user_share_percent": payload.userSharePercent
+        ]
+        if let linkedPlanItemId = payload.linkedPlanItemId {
+            params["linked_plan_item_id"] = linkedPlanItemId
+        }
+        return params
     }
 }
 
@@ -163,13 +191,23 @@ struct UpdateExpenseEndpoint: Endpoint {
     var path: String { "/v1/expenses/\(expenseId)" }
     var decoder: JSONDecoder { .stockPlanShared }
     func asParameters() throws -> Parameters {
-        let data = try JSONEncoder.stockPlanShared.encode(payload)
-        return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+        var params: Parameters = [
+            "title": payload.title,
+            "amount": payload.amount,
+            "pillar": payload.pillar.rawValue,
+            "occurred_on": payload.occurredOn,
+            "split_mode": payload.splitMode.rawValue,
+            "user_share_percent": payload.userSharePercent
+        ]
+        if let linkedPlanItemId = payload.linkedPlanItemId {
+            params["linked_plan_item_id"] = linkedPlanItemId
+        }
+        return params
     }
 }
 
 struct DeleteExpenseEndpoint: Endpoint {
-    typealias Response = EmptyResponse
+    typealias Response = EmptyAPIResponse
     let expenseId: String
     var method: HTTPMethod { .delete }
     var path: String { "/v1/expenses/\(expenseId)" }

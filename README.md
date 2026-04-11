@@ -15,7 +15,10 @@ SwiftUI client for portfolio planning, stock research UI, expenses/budget views,
 | **DI** | [Factory](https://github.com/hmlongco/Factory) — `Container+AppFactories.swift` registers singletons (`stockService`, `authSessionManager`, `appEnvironment`, `windowSize`, …). |
 | **Shared models** | **StockPlanShared** — Codable DTOs aligned with the backend (`StockResponse`, auth payloads, watchlist, etc.). |
 
-**UI pattern:** MVVM-style: views observe view models; view models depend on service protocols (easy to mock in tests).
+**UI pattern:** MV-first hybrid: default to SwiftUI-native MV orchestration in views; keep MVVM where complex async/domain coordination warrants it.
+
+- Refactor standard: `docs/engineering/swiftui-refactor-standard.md`
+- Wave tracking: `docs/engineering/swiftui-refactor-wave1.md`
 
 **Navigation:** `ContentView` gates **splash → login vs main**. After login, `HomeScreen` owns a `TabView` (Home, Portfolio, Expenses, Reports, Settings). Portfolio uses a nested segmented control (Holdings / Allocation / Watchlist). Stock detail is pushed via `NavigationStack` from portfolio rows.
 
@@ -228,5 +231,7 @@ financeplan/
 ## Conventions
 
 - Prefer **SwiftUI** for UI; avoid UIKit bridges unless required by platform APIs.
+- For refactors, follow `swiftui-view-refactor` rules and keep PRs behavior-preserving.
+- Default to MV; retain view models only when they own complex async/domain workflows.
 - New screens: place under `Features/<Domain>/`, inject dependencies via **Factory** or `EnvironmentObject` where already established (e.g. portfolio `PortfolioViewModel` shared across Holdings and Allocation tabs).
 - Align request/response shapes with **StockPlanShared** and the StockPlan backend OpenAPI.

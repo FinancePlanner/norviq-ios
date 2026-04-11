@@ -19,6 +19,7 @@ struct CreateStockEndpoint: Endpoint {
   let buyDate: String?
   let notes: String?
   let category: AssetCategory
+  let portfolioListId: String?
 
   var method: HTTPMethod { .post }
   var path: String { "/v1/stocks" }
@@ -32,6 +33,9 @@ struct CreateStockEndpoint: Endpoint {
     params["category"] = category.rawValue
     if let buyDate { params["buyDate"] = buyDate }
     if let notes, !notes.isEmpty { params["notes"] = notes }
+    if let portfolioListId, !portfolioListId.isEmpty {
+      params["portfolioListId"] = portfolioListId
+    }
     return params
   }
 }
@@ -45,37 +49,41 @@ struct BulkCreateStocksEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    // Encode array of StockRequest into JSON-compatible Parameters
-    let data = try JSONEncoder.default.encode(stocks)
-    let json = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] ?? []
     var params: Parameters = [:]
-    params["stocks"] = json
+    params["stocks"] = stocks.map { stockParameters($0) }
     return params
   }
 }
 
 struct GetStocksEndpoint: Endpoint {
   typealias Response = [StockResponse]
+  let portfolioListId: String?
 
   var method: HTTPMethod { .get }
   var path: String { "/v1/stocks" }
   var decoder: JSONDecoder { .stockPlanShared }
 
-  func asParameters() throws -> Parameters { [:] }
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [:]
+    if let portfolioListId, !portfolioListId.isEmpty {
+      params["portfolioListId"] = portfolioListId
+    }
+    return params
+  }
 }
 
 struct UpdateStockEndpoint: Endpoint {
   typealias Response = StockResponse
   let stockId: String
   let payload: StockRequest
+  let portfolioListId: String?
 
   var method: HTTPMethod { .put }
   var path: String { "/v1/stocks/id/\(stockId)" }
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    let data = try JSONEncoder.default.encode(payload)
-    return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+    stockParameters(payload, portfolioListId: portfolioListId)
   }
 }
 
@@ -89,6 +97,24 @@ struct DeleteStockEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters { [:] }
+}
+
+struct SellStockEndpoint: Endpoint {
+  typealias Response = StockResponse
+  let stockId: String
+  let payload: SellStockRequest
+
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/stocks/id/\(stockId)/sell" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    [
+      "sharesToSell": payload.sharesToSell,
+      "sellPrice": payload.sellPrice,
+      "sellDate": payload.sellDate
+    ]
+  }
 }
 struct GetStockDetailsEndpoint: Endpoint {
   typealias Response = StockDetails
@@ -114,12 +140,36 @@ struct GetStockInsightsEndpoint: Endpoint {
 
 struct GetPortfolioPerformanceEndpoint: Endpoint {
   typealias Response = PortfolioPerformanceResponse
+  let portfolioListId: String?
 
   var method: HTTPMethod { .get }
   var path: String { "/v1/portfolio/performance" }
   var decoder: JSONDecoder { .stockPlanShared }
 
-  func asParameters() throws -> Parameters { [:] }
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [:]
+    if let portfolioListId, !portfolioListId.isEmpty {
+      params["portfolioListId"] = portfolioListId
+    }
+    return params
+  }
+}
+
+struct GetPortfolioSummaryEndpoint: Endpoint {
+  typealias Response = PortfolioSummaryResponse
+  let portfolioListId: String?
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/portfolio/summary" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [:]
+    if let portfolioListId, !portfolioListId.isEmpty {
+      params["portfolioListId"] = portfolioListId
+    }
+    return params
+  }
 }
 
 struct GetStockHistoryEndpoint: Endpoint {
@@ -278,25 +328,32 @@ struct UpdateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
 
 struct GetWatchlistEndpoint: Endpoint {
   typealias Response = [WatchlistItemResponse]
+  let watchlistListId: String?
 
   var method: HTTPMethod { .get }
   var path: String { "/v1/watchlist" }
   var decoder: JSONDecoder { .stockPlanShared }
 
-  func asParameters() throws -> Parameters { [:] }
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [:]
+    if let watchlistListId, !watchlistListId.isEmpty {
+      params["watchlistListId"] = watchlistListId
+    }
+    return params
+  }
 }
 
 struct CreateWatchlistEndpoint: Endpoint {
   typealias Response = WatchlistItemResponse
   let payload: WatchlistItemRequest
+  let watchlistListId: String?
 
   var method: HTTPMethod { .post }
   var path: String { "/v1/watchlist" }
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    let data = try JSONEncoder.default.encode(payload)
-    return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+    watchlistParameters(payload, watchlistListId: watchlistListId)
   }
 }
 
@@ -304,15 +361,69 @@ struct UpdateWatchlistEndpoint: Endpoint {
   typealias Response = WatchlistItemResponse
   let watchlistId: String
   let payload: WatchlistItemUpdateRequest
+  let watchlistListId: String?
 
   var method: HTTPMethod { .patch }
   var path: String { "/v1/watchlist/\(watchlistId)" }
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    let data = try JSONEncoder.default.encode(payload)
-    return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+    watchlistUpdateParameters(payload, watchlistListId: watchlistListId)
   }
+}
+
+private func stockParameters(_ payload: StockRequest, portfolioListId: String? = nil) -> Parameters {
+  var params: Parameters = [
+    "symbol": payload.symbol,
+    "shares": payload.shares,
+    "buyPrice": payload.buyPrice,
+    "buyDate": payload.buyDate,
+    "category": payload.category.rawValue
+  ]
+  if let notes = payload.notes, !notes.isEmpty {
+    params["notes"] = notes
+  }
+  if let portfolioListId, !portfolioListId.isEmpty {
+    params["portfolioListId"] = portfolioListId
+  }
+  return params
+}
+
+private func watchlistParameters(_ payload: WatchlistItemRequest, watchlistListId: String? = nil) -> Parameters {
+  var params: Parameters = ["symbol": payload.symbol]
+  if let note = payload.note {
+    params["note"] = note
+  }
+  if let status = payload.status {
+    params["status"] = status.rawValue
+  }
+  if let nextReviewAt = payload.nextReviewAt {
+    params["nextReviewAt"] = nextReviewAt
+  }
+  if let watchlistListId, !watchlistListId.isEmpty {
+    params["watchlistListId"] = watchlistListId
+  }
+  return params
+}
+
+private func watchlistUpdateParameters(_ payload: WatchlistItemUpdateRequest, watchlistListId: String? = nil) -> Parameters {
+  var params: Parameters = [:]
+  if let note = payload.note {
+    params["note"] = note
+  }
+  if let status = payload.status {
+    params["status"] = status.rawValue
+  }
+  if let lastReviewedAt = payload.lastReviewedAt {
+    params["lastReviewedAt"] = lastReviewedAt
+  }
+  if let nextReviewAt = payload.nextReviewAt {
+    params["nextReviewAt"] = nextReviewAt
+  }
+  if let watchlistListId, !watchlistListId.isEmpty {
+    params["watchlistListId"] = watchlistListId
+  }
+  return params
 }
 
 struct DeleteWatchlistEndpoint: Endpoint {
@@ -321,6 +432,102 @@ struct DeleteWatchlistEndpoint: Endpoint {
 
   var method: HTTPMethod { .delete }
   var path: String { "/v1/watchlist/\(watchlistId)" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+struct GetPortfolioListsEndpoint: Endpoint {
+  typealias Response = [PortfolioListDTOResponse]
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/portfolio/lists" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+struct CreatePortfolioListEndpoint: Endpoint {
+  typealias Response = PortfolioListDTOResponse
+  let payload: PortfolioListDTORequest
+
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/portfolio/lists" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    ["name": payload.name]
+  }
+}
+
+struct UpdatePortfolioListEndpoint: Endpoint {
+  typealias Response = PortfolioListDTOResponse
+  let listId: String
+  let payload: PortfolioListDTORequest
+
+  var method: HTTPMethod { .patch }
+  var path: String { "/v1/portfolio/lists/\(listId)" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    ["name": payload.name]
+  }
+}
+
+struct DeletePortfolioListEndpoint: Endpoint {
+  typealias Response = EmptyAPIResponse
+  let listId: String
+
+  var method: HTTPMethod { .delete }
+  var path: String { "/v1/portfolio/lists/\(listId)" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+struct GetWatchlistListsEndpoint: Endpoint {
+  typealias Response = [WatchlistListDTOResponse]
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/watchlist/lists" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+struct CreateWatchlistListEndpoint: Endpoint {
+  typealias Response = WatchlistListDTOResponse
+  let payload: WatchlistListDTORequest
+
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/watchlist/lists" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    ["name": payload.name]
+  }
+}
+
+struct UpdateWatchlistListEndpoint: Endpoint {
+  typealias Response = WatchlistListDTOResponse
+  let listId: String
+  let payload: WatchlistListDTORequest
+
+  var method: HTTPMethod { .patch }
+  var path: String { "/v1/watchlist/lists/\(listId)" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    ["name": payload.name]
+  }
+}
+
+struct DeleteWatchlistListEndpoint: Endpoint {
+  typealias Response = EmptyAPIResponse
+  let listId: String
+
+  var method: HTTPMethod { .delete }
+  var path: String { "/v1/watchlist/lists/\(listId)" }
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters { [:] }

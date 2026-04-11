@@ -6,18 +6,23 @@ protocol BrokerServicing {
   func listConnections() async throws -> [BrokerConnectionResponse]
   func getConnection(provider: String) async throws -> BrokerConnectionResponse
   func syncIBKR() async throws -> BrokerSyncResponse
+  func previewCsvImport(provider: String, csvData: Data) async throws -> CsvImportPreviewResponse
+  func commitCsvImport(provider: String, csvData: Data) async throws -> CsvImportCommitResponse
 }
 
 struct BrokerService: BrokerServicing {
   private let environmentManager: AppEnvironmentManager
   private let authSessionManager: AuthSessionManaging
+  private let session: BrokerURLSessionProtocol
 
   init(
     environmentManager: AppEnvironmentManager,
-    authSessionManager: AuthSessionManaging
+    authSessionManager: AuthSessionManaging,
+    session: BrokerURLSessionProtocol = URLSession.shared
   ) {
     self.environmentManager = environmentManager
     self.authSessionManager = authSessionManager
+    self.session = session
   }
 
   func listConnections() async throws -> [BrokerConnectionResponse] {
@@ -35,6 +40,18 @@ struct BrokerService: BrokerServicing {
   func syncIBKR() async throws -> BrokerSyncResponse {
     try await performAuthenticated { client in
       try await client.syncIBKR()
+    }
+  }
+
+  func previewCsvImport(provider: String, csvData: Data) async throws -> CsvImportPreviewResponse {
+    try await performAuthenticated { client in
+      try await client.previewCsvImport(provider: provider, csvData: csvData)
+    }
+  }
+
+  func commitCsvImport(provider: String, csvData: Data) async throws -> CsvImportCommitResponse {
+    try await performAuthenticated { client in
+      try await client.commitCsvImport(provider: provider, csvData: csvData)
     }
   }
 
@@ -59,7 +76,7 @@ struct BrokerService: BrokerServicing {
     let token = try await resolvedAccessToken(forceRefresh: forceRefresh)
     return BrokerHTTPClient(
       baseURL: environmentManager.current.apiBaseUrl,
-      session: .shared,
+      session: session,
       authTokenProvider: { token }
     )
   }
@@ -90,5 +107,13 @@ struct BrokerServiceStub: BrokerServicing {
 
   func syncIBKR() async throws -> BrokerSyncResponse {
     BrokerSyncResponse(runId: UUID().uuidString, status: "accepted")
+  }
+
+  func previewCsvImport(provider: String, csvData: Data) async throws -> CsvImportPreviewResponse {
+    CsvImportPreviewResponse(provider: provider, items: [], errors: [])
+  }
+
+  func commitCsvImport(provider: String, csvData: Data) async throws -> CsvImportCommitResponse {
+    CsvImportCommitResponse(provider: provider, inserted: [], updated: [], errors: [])
   }
 }

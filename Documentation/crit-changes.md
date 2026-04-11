@@ -61,3 +61,39 @@ This document records the implemented critical/major updates for the current mod
 - `xcodebuild ... build`: **succeeds**
 - `BudgetPlannerViewModelTests`: **passes**
 - Existing `ExpensesHTTPClientTests` failures are present and are not part of this specific critical state-flow refactor.
+
+## 7) Reports Data Correctness (Implemented)
+- Backend now guarantees a month snapshot exists when creating an expense:
+  - `DefaultExpensesService.createExpense` normalizes `occurredOn` to UTC month start.
+  - Auto-creates snapshot for that month (clone latest salary/target shares, fallback defaults) before inserting expense.
+- Report month aggregation hardened to month-range matching (`>= monthStart && < nextMonthStart`) to avoid date-equality misses.
+- Reports screen now reloads on every appearance:
+  - `ExpensesComparisonScreen` triggers `reportsViewModel.load(force: true)` in `onAppear`.
+- Cross-tab refresh added:
+  - `BudgetPlannerViewModel` posts `.budgetPlannerDataDidChange` after successful snapshot/plan-item/expense writes.
+  - `ExpensesComparisonScreen` and `HomeScreen` listen to this signal and refresh immediately.
+- Portfolio fallback in reports:
+  - `ReportsViewModel` now falls back to holdings from `StockServicing.fetchPortfolio()` when `/v1/reports/overview` returns zero positions/value.
+
+## 8) Request/Contract Hardening (Implemented)
+- iOS expenses endpoints now build payload dictionaries explicitly in snake_case (instead of relying on encoder strategy):
+  - snapshots: `month_start`, `net_salary`, `target_shares`
+  - expenses: `occurred_on`, `split_mode`, `user_share_percent`
+  - plan items: `snapshot_id`, `planned_amount`, `split_mode`, `user_share_percent`
+- Backend snapshot decode path now mirrors expense/plan-item tolerance:
+  - `BudgetController` uses a `BudgetSnapshotPayload` that accepts both snake_case and camelCase keys (`month_start`/`monthStart`, etc.).
+
+## 9) Validation Notes / Current External Blockers
+- iOS auth suite blocker resolved:
+  - `StockChannelShareSupport.swift` now uses fully-qualified `StockPlanShared` types for share formatter inputs.
+  - `StockDetailsScreen.swift` call site for `StockOverviewTab` aligned with current initializer.
+- Backend APNS compile blocker resolved:
+  - `PushNotificationSender.swift` now returns `any APNSClientProtocol` instead of `APNSGenericClient`.
+
+### Re-run status (2026-04-11)
+- iOS:
+  - `xcodebuild -project financeplan.xcodeproj -scheme financeplan -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.4' -only-testing:financeplanTests/AuthHTTPClientTests test`
+  - Result: **PASS** (`EXIT:0`)
+- Backend:
+  - `swift test --filter ExpensesTests/expenseAutoCreatesSnapshotForMonth`
+  - Result: **PASS** (Swift Testing case passed: “Saving expense in a month without snapshot auto-creates snapshot and reports include it”)

@@ -15,6 +15,7 @@ final class LoginViewModelTests: XCTestCase {
     var lastLoginEmail: String?
     var lastSignupUsername: String?
     var lastSignupEmail: String?
+    var lastSignupConfirmPassword: String?
     var lastSignupDateOfBirth: Date?
     var lastForgotPasswordEmail: String?
     var lastRefreshToken: String?
@@ -41,12 +42,15 @@ final class LoginViewModelTests: XCTestCase {
     func signup(
       username: String,
       email: String,
-      password _: String,
+      password: String,
+      confirmPassword: String,
       dateOfBirth: Date
     ) async throws {
       signupCalls += 1
       lastSignupUsername = username
       lastSignupEmail = email
+      lastSignupConfirmPassword = confirmPassword
+      XCTAssertEqual(password, confirmPassword)
       lastSignupDateOfBirth = dateOfBirth
       _ = try signupResult.get()
     }
@@ -151,7 +155,7 @@ final class LoginViewModelTests: XCTestCase {
     store.loginIsSignup = false
     let viewModel = LoginViewModel(authService: service, sessionStore: store)
     viewModel.username = "not-an-email"
-    viewModel.password = "Password123"
+    viewModel.password = "Password123!"
 
     await viewModel.submit()
 
@@ -177,7 +181,7 @@ final class LoginViewModelTests: XCTestCase {
     service.loginResult = .success(expected)
 
     viewModel.username = "user@example.com"
-    viewModel.password = "Password123"
+    viewModel.password = "Password123!"
 
     await viewModel.submit()
 
@@ -210,7 +214,7 @@ final class LoginViewModelTests: XCTestCase {
     )
 
     viewModel.username = "user@example.com"
-    viewModel.password = "Password123"
+    viewModel.password = "Password123!"
 
     async let first: Void = viewModel.submit()
     await Task.yield()
@@ -227,7 +231,7 @@ final class LoginViewModelTests: XCTestCase {
     viewModel.isSignup = true
     viewModel.username = "valid_user"
     viewModel.email = "invalid-email"
-    viewModel.password = "Password123"
+    viewModel.password = "Password123!"
 
     await viewModel.submit()
 
@@ -244,7 +248,8 @@ final class LoginViewModelTests: XCTestCase {
     viewModel.isSignup = true
     viewModel.username = "valid_user"
     viewModel.email = "user@example.com"
-    viewModel.password = "Password123"
+    viewModel.password = "Password123!"
+    viewModel.confirmPassword = "Password123!"
     viewModel.dateOfBirth = Date(timeIntervalSince1970: 946684800)
 
     await viewModel.submit()
@@ -288,13 +293,15 @@ final class LoginViewModelTests: XCTestCase {
     viewModel.username = "valid_user"
     viewModel.email = "user@example.com"
     viewModel.dateOfBirth = expectedDOB
-    viewModel.password = "Password123"
+    viewModel.password = "Password123!"
+    viewModel.confirmPassword = "Password123!"
 
     await viewModel.submit()
 
     XCTAssertEqual(service.signupCalls, 1)
     XCTAssertEqual(service.lastSignupUsername, "valid_user")
     XCTAssertEqual(service.lastSignupEmail, "user@example.com")
+    XCTAssertEqual(service.lastSignupConfirmPassword, "Password123!")
     XCTAssertEqual(service.lastSignupDateOfBirth, expectedDOB)
     XCTAssertEqual(viewModel.error, "Could not sign up. Please try again.")
   }

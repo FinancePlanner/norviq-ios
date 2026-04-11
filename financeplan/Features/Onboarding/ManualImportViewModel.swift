@@ -6,7 +6,7 @@ import StockPlanShared
 @MainActor
 final class ManualImportViewModel: ObservableObject {
   @Published var entries: [ManualEntry] = [ManualEntry()]
-  private let bulkCreateStocks: @Sendable ([StockRequest]) async throws -> BulkStockResponse
+  private let bulkCreateStocks: ([StockRequest]) async throws -> BulkStockResponse
 
   init(stockService: any StockServicing = Container.shared.stockService()) {
     self.bulkCreateStocks = { requests in
@@ -15,7 +15,7 @@ final class ManualImportViewModel: ObservableObject {
   }
 
   init(
-    bulkCreateStocks: @escaping @Sendable ([StockRequest]) async throws -> BulkStockResponse
+    bulkCreateStocks: @escaping ([StockRequest]) async throws -> BulkStockResponse
   ) {
     self.bulkCreateStocks = bulkCreateStocks
   }

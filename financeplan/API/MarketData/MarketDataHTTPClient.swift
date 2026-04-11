@@ -126,7 +126,7 @@ struct MarketDataHTTPClient {
     do {
       return try endpoint.decode(data)
     } catch {
-      if let envelope = try? endpoint.decoder.decode(APIEnvelope<E.Response>.self, from: data) {
+      if let envelope = try? endpoint.decoder.decode(HTTPEnvelope<E.Response>.self, from: data) {
         if let payload = envelope.data {
           return payload
         }
@@ -249,7 +249,12 @@ struct MarketDataHTTPClient {
   }
 }
 
-struct MarketBasicFinancialsResponse: Codable {
+private struct HTTPEnvelope<T: Codable>: Codable {
+  let data: T?
+  let message: String?
+}
+
+struct MarketBasicFinancialsResponse: Codable, Sendable {
   let series: MarketBasicFinancialSeriesResponse
   let metricType: String
   let metric: [String: MarketBasicFinancialMetricValue]
@@ -299,7 +304,7 @@ struct MarketBasicFinancialsResponse: Codable {
   }
 }
 
-struct MarketBasicFinancialSeriesResponse: Codable {
+struct MarketBasicFinancialSeriesResponse: Codable, Sendable {
   let annual: [String: [MarketBasicFinancialSeriesValue]]
   let quarterly: [String: [MarketBasicFinancialSeriesValue]]
 
@@ -335,7 +340,7 @@ struct MarketBasicFinancialSeriesResponse: Codable {
   }
 }
 
-struct MarketBasicFinancialSeriesValue: Codable, Equatable {
+struct MarketBasicFinancialSeriesValue: Codable, Equatable, Sendable {
   let period: String
   let value: Double
 
@@ -345,12 +350,12 @@ struct MarketBasicFinancialSeriesValue: Codable, Equatable {
   }
 }
 
-enum MarketBasicFinancialSeriesFrequency {
+enum MarketBasicFinancialSeriesFrequency: Sendable {
   case annual
   case quarterly
 }
 
-enum MarketBasicFinancialMetricValue: Codable, Equatable {
+enum MarketBasicFinancialMetricValue: Codable, Equatable, Sendable {
   case number(Double)
   case string(String)
   case null

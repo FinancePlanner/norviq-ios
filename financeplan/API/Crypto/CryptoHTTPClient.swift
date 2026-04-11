@@ -83,12 +83,12 @@ struct CryptoHTTPClient {
     }
 
     func removeFromPortfolio(itemId: String) async throws {
-        _ = try await call(RemoveFromCryptoPortfolioEndpoint(itemId: itemId))
+        _ = try await perform(RemoveFromCryptoPortfolioEndpoint(itemId: itemId))
     }
 
     // MARK: - Core Logic (Mirrored from MarketDataHTTPClient)
 
-    private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
+    private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable & Sendable {
         let data = try await perform(endpoint)
         do {
             return try endpoint.decode(data)

@@ -60,8 +60,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FinancePlanner/FinanceShared.git",
       "state" : {
-        "revision" : "449604f8ec3acb3743db74cbe000bba7243864c4",
-        "version" : "0.7.6"
+        "revision" : "a0024959064852508a361620384901f3cdf42876",
+        "version" : "0.8.3"
       }
     },
     {

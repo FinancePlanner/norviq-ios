@@ -1,8 +1,10 @@
 import XCTest
 @testable import financeplan
 
+@MainActor
 final class DCFCalculatorTests: XCTestCase {
 
+  @MainActor
   func testCalculateDCF_WithValidInputs_ComputesFairValuePerShare() {
     let projections = [
       YearlyProjection(year: 2025, revenue: 110, revenueGrowth: 0.1, netIncome: 20, netIncomeGrowth: 0.1, netMargin: 0.18, eps: 2.0, fcf: 25.0, fcfMargin: 0.22),
@@ -38,6 +40,7 @@ final class DCFCalculatorTests: XCTestCase {
     XCTAssertEqual(fairValue, 41.0743, accuracy: 0.001)
   }
 
+  @MainActor
   func testCalculateDCF_WithZeroFCF_ComputesValidResult() {
     let projections = [
       YearlyProjection(year: 2025, revenue: 110, revenueGrowth: 0.1, netIncome: 20, netIncomeGrowth: 0.1, netMargin: 0.18, eps: 2.0, fcf: nil, fcfMargin: nil)
@@ -54,6 +57,7 @@ final class DCFCalculatorTests: XCTestCase {
     XCTAssertEqual(fairValue, 0.0, accuracy: 0.001)
   }
 
+  @MainActor
   func testCalculateDCF_WithHighDebt_ComputesNegativeOrLowValue() {
     let projections = [
       YearlyProjection(year: 2025, revenue: 110, revenueGrowth: 0.1, netIncome: 20, netIncomeGrowth: 0.1, netMargin: 0.18, eps: 2.0, fcf: 10.0, fcfMargin: 0.1)

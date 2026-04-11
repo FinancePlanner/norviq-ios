@@ -3,6 +3,7 @@ import XCTest
 
 @testable import financeplan
 
+@MainActor
 final class DCFValuationCardTests: XCTestCase {
 
     func testDCFValuationCard_canBeCompiled() {

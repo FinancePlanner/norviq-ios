@@ -57,11 +57,12 @@ struct AddToCryptoPortfolioEndpoint: Endpoint {
     var path: String { "/v1/crypto/portfolio" }
     var decoder: JSONDecoder { .stockPlanShared }
     func asParameters() throws -> Parameters {
-        let data = try JSONEncoder.stockPlanShared.encode(payload)
-        guard let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return [:]
-        }
-        return dict
+        [
+            "symbol": payload.symbol,
+            "name": payload.name,
+            "quantity": payload.quantity,
+            "average_buy_price": payload.averageBuyPrice
+        ]
     }
 }
 
@@ -73,21 +74,20 @@ struct UpdateCryptoPortfolioItemEndpoint: Endpoint {
     var path: String { "/v1/crypto/portfolio/\(itemId)" }
     var decoder: JSONDecoder { .stockPlanShared }
     func asParameters() throws -> Parameters {
-        let data = try JSONEncoder.stockPlanShared.encode(payload)
-        guard let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return [:]
-        }
-        return dict
+        [
+            "symbol": payload.symbol,
+            "name": payload.name,
+            "quantity": payload.quantity,
+            "average_buy_price": payload.averageBuyPrice
+        ]
     }
 }
 
 struct RemoveFromCryptoPortfolioEndpoint: Endpoint {
-    typealias Response = EmptyResponse
+    typealias Response = EmptyAPIResponse
     let itemId: String
     var method: HTTPMethod { .delete }
     var path: String { "/v1/crypto/portfolio/\(itemId)" }
     var decoder: JSONDecoder { .stockPlanShared }
     func asParameters() throws -> Parameters { [:] }
 }
-
-struct EmptyResponse: Codable {}

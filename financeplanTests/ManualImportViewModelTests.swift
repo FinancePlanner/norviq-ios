@@ -93,6 +93,7 @@ final class ManualImportViewModelTests: XCTestCase {
     }
 }
 
+@MainActor
 private final class ExpenseBudgetSetupServiceMock: ExpenseBudgetSetupServicing {
     private(set) var snapshotRequests: [BudgetSnapshotRequest] = []
     private(set) var expenseRequests: [ExpenseRequest] = []

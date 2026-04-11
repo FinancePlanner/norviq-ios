@@ -32,7 +32,7 @@ final class AuthHTTPClientTests: XCTestCase {
 
     session.handler = { request in
       XCTAssertEqual(request.httpMethod, "POST")
-      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/auth/login")
+      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/auth/login")
       XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
 
       let body = try XCTUnwrap(request.httpBody)
@@ -60,7 +60,7 @@ final class AuthHTTPClientTests: XCTestCase {
     let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
 
     session.handler = { request in
-      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/auth/register")
+      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/auth/register")
 
       let data = #"{"error":"Email already in use"}"#.data(using: .utf8) ?? Data()
       let response = try XCTUnwrap(
@@ -76,6 +76,7 @@ final class AuthHTTPClientTests: XCTestCase {
         AuthRegisterRequest(
           username: "dupe_user",
           password: "Password123",
+          confirmPassword: "Password123",
           email: "dupe@example.com",
           dateOfBirth: Date(timeIntervalSince1970: 946684800)
         )
@@ -93,7 +94,7 @@ final class AuthHTTPClientTests: XCTestCase {
     let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
 
     session.handler = { request in
-      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/auth/register")
+      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/auth/register")
 
       let data = #"{"error":true,"reason":"Username already registered"}"#.data(using: .utf8) ?? Data()
       let response = try XCTUnwrap(
@@ -109,6 +110,7 @@ final class AuthHTTPClientTests: XCTestCase {
         AuthRegisterRequest(
           username: "dupe_user",
           password: "Password123",
+          confirmPassword: "Password123",
           email: "dupe@example.com",
           dateOfBirth: Date(timeIntervalSince1970: 946684800)
         )
@@ -126,7 +128,7 @@ final class AuthHTTPClientTests: XCTestCase {
     let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
 
     session.handler = { request in
-      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/auth/register")
+      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/auth/register")
       let data = #"{"ok":true}"#.data(using: .utf8) ?? Data()
       let response = try XCTUnwrap(
         HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 201, httpVersion: nil, headerFields: nil)
@@ -140,6 +142,7 @@ final class AuthHTTPClientTests: XCTestCase {
       AuthRegisterRequest(
         username: "new_user",
         password: "Password123",
+        confirmPassword: "Password123",
         email: "new@example.com",
         dateOfBirth: Date(timeIntervalSince1970: 946684800)
       )
@@ -151,7 +154,7 @@ final class AuthHTTPClientTests: XCTestCase {
     let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
 
     session.handler = { request in
-      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/auth/forgot-password")
+      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/auth/forgot-password")
       let data = Data("Internal Error".utf8)
       let response = try XCTUnwrap(
         HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 500, httpVersion: nil, headerFields: nil)
@@ -210,7 +213,7 @@ final class AuthHTTPClientTests: XCTestCase {
 
     session.handler = { request in
       XCTAssertEqual(request.httpMethod, "POST")
-      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/auth/refresh")
+      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/auth/refresh")
       XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
 
       let body = try XCTUnwrap(request.httpBody)

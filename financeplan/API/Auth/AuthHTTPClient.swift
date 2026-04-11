@@ -51,12 +51,29 @@ struct AuthHTTPClient {
     return try decodeAuthResponse(from: data)
   }
 
-  func register(_ request: AuthRegisterRequest) async throws {
-    let endpoint = SignupEndpoint(
+  func register(_ request: AuthRegisterRequest, confirmPassword: String? = nil) async throws {
+    try await register(
       username: request.username,
       email: request.email,
       password: request.password,
-      dateOfBirth: request.dateOfBirth
+      dateOfBirth: request.dateOfBirth,
+      confirmPassword: confirmPassword ?? request.password
+    )
+  }
+
+  func register(
+    username: String,
+    email: String,
+    password: String,
+    dateOfBirth: Date,
+    confirmPassword: String
+  ) async throws {
+    let endpoint = SignupEndpoint(
+      username: username,
+      email: email,
+      password: password,
+      confirmPassword: confirmPassword,
+      dateOfBirth: dateOfBirth
     )
     try await callWithoutResponse(endpoint)
   }
@@ -98,7 +115,7 @@ struct AuthHTTPClient {
   }
 
   private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response
-    where E.Response: Codable {
+    where E.Response: Codable & Sendable {
     let data = try await perform(endpoint)
     do {
       return try endpoint.decode(data)

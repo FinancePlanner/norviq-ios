@@ -61,7 +61,7 @@ struct GoalsHTTPClient {
         do {
             return try endpoint.decode(data)
         } catch {
-            if let envelope = try? endpoint.decoder.decode(APIEnvelope<E.Response>.self, from: data), let payload = envelope.data {
+            if let envelope = try? endpoint.decoder.decode(HTTPEnvelope<E.Response>.self, from: data), let payload = envelope.data {
                 return payload
             }
             throw error
@@ -92,4 +92,9 @@ struct GoalsHTTPClient {
         }
         return request
     }
+}
+
+private struct HTTPEnvelope<T: Codable>: Codable {
+    let data: T?
+    let message: String?
 }

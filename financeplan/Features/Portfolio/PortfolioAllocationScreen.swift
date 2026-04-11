@@ -18,15 +18,23 @@ struct PortfolioAllocationScreen: View {
   @State private var sharePayload: SharePayload?
   @State private var isShareRendering = false
 
-  private var totalValue: Double {
+  private var holdingsValue: Double {
     stocks.reduce(0) { $0 + ($1.shares * $1.buyPrice) }
+  }
+
+  private var cashBalance: Double {
+    viewModel.cashBalance
+  }
+
+  private var totalValue: Double {
+    holdingsValue + cashBalance
   }
 
   /// Cost-basis weights by position value, largest first.
   private var allocationSlices: [PortfolioAllocationSlice] {
     let total = totalValue
     guard total > 0 else { return [] }
-    return stocks
+    var slices = stocks
       .map { stock in
         let value = stock.shares * stock.buyPrice
         return PortfolioAllocationSlice(
@@ -36,7 +44,17 @@ struct PortfolioAllocationScreen: View {
           percentage: (value / total) * 100
         )
       }
-      .sorted { $0.value > $1.value }
+    if cashBalance > 0 {
+      slices.append(
+        PortfolioAllocationSlice(
+          id: "cash-position",
+          symbol: "CASH",
+          value: cashBalance,
+          percentage: (cashBalance / total) * 100
+        )
+      )
+    }
+    return slices.sorted { $0.value > $1.value }
   }
 
   var body: some View {

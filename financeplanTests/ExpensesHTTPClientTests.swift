@@ -30,10 +30,11 @@ private final class MockURLProtocol: URLProtocol {
 
 // MARK: - Tests
 
+@MainActor
 final class ExpensesHTTPClientTests: XCTestCase {
-  private var session: URLSession!
-  private var baseURL: URL!
-  private var client: ExpensesHTTPClient!
+  nonisolated(unsafe) private var session: URLSession!
+  nonisolated(unsafe) private var baseURL: URL!
+  nonisolated(unsafe) private var client: ExpensesHTTPClient!
 
   override func setUp() {
     super.setUp()
@@ -282,19 +283,19 @@ final class ExpensesHTTPClientTests: XCTestCase {
 
   // MARK: - Create Snapshot
 
-  func testCreateSnapshot_SendsCamelCasePayload() async throws {
+  func testCreateSnapshot_SendsSnakeCasePayload() async throws {
     MockURLProtocol.handler = { request in
       XCTAssertEqual(request.httpMethod, "POST")
       XCTAssertEqual(request.url?.path, "/v1/budget/snapshots")
 
       let json = try self.jsonBody(from: request)
 
-      XCTAssertEqual(json["monthStart"] as? String, "2026-05-01")
-      XCTAssertEqual(json["netSalary"] as? Double, 4500)
-      XCTAssertEqual((json["targetShares"] as? [String: Double])?["fundamentals"], 0.5)
-      XCTAssertNil(json["month_start"])
-      XCTAssertNil(json["net_salary"])
-      XCTAssertNil(json["target_shares"])
+      XCTAssertEqual(json["month_start"] as? String, "2026-05-01")
+      XCTAssertEqual(json["net_salary"] as? Double, 4500)
+      XCTAssertEqual((json["target_shares"] as? [String: Double])?["fundamentals"], 0.5)
+      XCTAssertNil(json["monthStart"])
+      XCTAssertNil(json["netSalary"])
+      XCTAssertNil(json["targetShares"])
 
       let response = BudgetSnapshotResponse(
         id: UUID().uuidString, monthStart: "2026-05-01",
@@ -316,19 +317,19 @@ final class ExpensesHTTPClientTests: XCTestCase {
     XCTAssertEqual(result.netSalary, 4500)
   }
 
-  func testUpdateSnapshot_SendsCamelCasePayload() async throws {
+  func testUpdateSnapshot_SendsSnakeCasePayload() async throws {
     MockURLProtocol.handler = { request in
       XCTAssertEqual(request.httpMethod, "PATCH")
       XCTAssertEqual(request.url?.path, "/v1/budget/snapshots/snap-123")
 
       let json = try self.jsonBody(from: request)
 
-      XCTAssertEqual(json["monthStart"] as? String, "2026-05-01")
-      XCTAssertEqual(json["netSalary"] as? Double, 5000)
-      XCTAssertEqual((json["targetShares"] as? [String: Double])?["futureYou"], 0.4)
-      XCTAssertNil(json["month_start"])
-      XCTAssertNil(json["net_salary"])
-      XCTAssertNil(json["target_shares"])
+      XCTAssertEqual(json["month_start"] as? String, "2026-05-01")
+      XCTAssertEqual(json["net_salary"] as? Double, 5000)
+      XCTAssertEqual((json["target_shares"] as? [String: Double])?["futureYou"], 0.4)
+      XCTAssertNil(json["monthStart"])
+      XCTAssertNil(json["netSalary"])
+      XCTAssertNil(json["targetShares"])
 
       let response = BudgetSnapshotResponse(
         id: "snap-123", monthStart: "2026-05-01",

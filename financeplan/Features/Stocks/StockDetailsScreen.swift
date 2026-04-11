@@ -16,6 +16,7 @@ struct StockDetailScreen: View {
     @StateObject private var viewModel = StockDetailsViewModel()
     @State private var showEditValuation = false
     @State private var showEditPosition = false
+    @State private var showSellPosition = false
     @State private var showEditAnalysis = false
     @State private var selectedTab: StockDetailTab = .overview
     @State private var selectedScenario: StockProjectionScenarioKind = .base
@@ -97,6 +98,23 @@ struct StockDetailScreen: View {
                 return await viewModel.saveValuation(draft)
             }
         }
+        .sheet(isPresented: $showSellPosition) {
+            if let stock = viewModel.details {
+                SellStockSheet(
+                    stock: stock,
+                    isSelling: viewModel.isSellingPosition,
+                    onCancel: { showSellPosition = false },
+                    onSell: { request in
+                        let outcome = await viewModel.sellPosition(request)
+                        if outcome.shouldDismiss {
+                            showSellPosition = false
+                            dismiss()
+                        }
+                        return outcome.errorMessage
+                    }
+                )
+            }
+        }
         .sheet(isPresented: $showEditAnalysis) {
             if let stock = viewModel.details {
                 EditStockAnalysisSheet(stock: stock) { analysis in
@@ -135,7 +153,8 @@ struct StockDetailScreen: View {
                         basicFinancials: viewModel.basicFinancials,
                         errorMessage: viewModel.errorMessage,
                         onEditValuation: { showEditValuation = true },
-                        onEditPosition: { showEditPosition = true }
+                        onEditPosition: { showEditPosition = true },
+                        onSellPosition: { showSellPosition = true }
                     )
                 case .statements:
                     StockFinancialStatementsTab(

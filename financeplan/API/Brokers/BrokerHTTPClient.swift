@@ -2,6 +2,12 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
+protocol BrokerURLSessionProtocol {
+  func data(for request: URLRequest) async throws -> (Data, URLResponse)
+}
+
+extension URLSession: BrokerURLSessionProtocol {}
+
 struct BrokerHTTPClient {
   enum Error: LocalizedError, Equatable {
     case invalidResponse
@@ -31,12 +37,12 @@ struct BrokerHTTPClient {
   }
 
   let baseURL: URL
-  let session: URLSession
+  let session: BrokerURLSessionProtocol
   let authTokenProvider: () -> String?
 
   init(
     baseURL: URL,
-    session: URLSession = .shared,
+    session: BrokerURLSessionProtocol = URLSession.shared,
     authTokenProvider: @escaping () -> String? = { nil }
   ) {
     self.baseURL = baseURL
@@ -56,7 +62,43 @@ struct BrokerHTTPClient {
     try await call(SyncIBKREndpoint())
   }
 
-  private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
+  func previewCsvImport(provider: String, csvData: Data) async throws -> CsvImportPreviewResponse {
+    let request = try makeCSVUploadRequest(
+      path: "/v1/brokers/import/csv",
+      provider: provider,
+      csvData: csvData
+    )
+    let data = try await perform(request: request)
+    do {
+      return try JSONDecoder.stockPlanShared.decode(CsvImportPreviewResponse.self, from: data)
+    } catch {
+      if let envelope = try? JSONDecoder.stockPlanShared.decode(APIEnvelope<CsvImportPreviewResponse>.self, from: data),
+         let payload = envelope.data {
+        return payload
+      }
+      throw error
+    }
+  }
+
+  func commitCsvImport(provider: String, csvData: Data) async throws -> CsvImportCommitResponse {
+    let request = try makeCSVUploadRequest(
+      path: "/v1/brokers/import/csv/commit",
+      provider: provider,
+      csvData: csvData
+    )
+    let data = try await perform(request: request)
+    do {
+      return try JSONDecoder.stockPlanShared.decode(CsvImportCommitResponse.self, from: data)
+    } catch {
+      if let envelope = try? JSONDecoder.stockPlanShared.decode(APIEnvelope<CsvImportCommitResponse>.self, from: data),
+         let payload = envelope.data {
+        return payload
+      }
+      throw error
+    }
+  }
+
+  private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable & Sendable {
     let data = try await perform(endpoint)
     do {
       return try endpoint.decode(data)
@@ -75,6 +117,10 @@ struct BrokerHTTPClient {
 
   private func perform<E: Endpoint>(_ endpoint: E) async throws -> Data {
     let request = try makeURLRequest(for: endpoint)
+    return try await perform(request: request)
+  }
+
+  private func perform(request: URLRequest) async throws -> Data {
     let (data, response) = try await session.data(for: request)
 
     guard let httpResponse = response as? HTTPURLResponse else {
@@ -92,6 +138,28 @@ struct BrokerHTTPClient {
       throw Error.invalidStatus(httpResponse.statusCode)
     }
     return data
+  }
+
+  private func makeCSVUploadRequest(path: String, provider: String, csvData: Data) throws -> URLRequest {
+    let normalizedPath = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    let base = baseURL.appendingPathComponent(normalizedPath)
+
+    var components = URLComponents(url: base, resolvingAgainstBaseURL: false)
+    components?.queryItems = [URLQueryItem(name: "provider", value: provider)]
+    guard let url = components?.url else {
+      throw Error.invalidResponse
+    }
+
+    var request = URLRequest(url: url)
+    request.httpMethod = HTTPMethod.post.rawValue
+    request.setValue("text/csv", forHTTPHeaderField: "Content-Type")
+
+    if let token = authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    }
+
+    request.httpBody = csvData
+    return request
   }
 
   private func makeURLRequest<E: Endpoint>(for endpoint: E) throws -> URLRequest {

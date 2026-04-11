@@ -18,16 +18,21 @@ final class FinanceplanUITests: XCTestCase {
     let app = makeAuthenticatedFirstLoginApp(userID: "ui-test-\(UUID().uuidString)")
     app.launch()
 
-    let importTitle = app.staticTexts["Import Your Stocks"]
+    let importStocksButton = app.buttons["onboarding.importStocksButton"]
     XCTAssertTrue(
-      importTitle.waitForExistence(timeout: 15),
-      "Expected the mandatory import screen to appear for first login."
+      importStocksButton.waitForExistence(timeout: 20),
+      "Expected onboarding import gate to appear for first login."
     )
+    XCTAssertFalse(app.tabBars.buttons["Home"].exists, "Home flow should not be reachable before import selection.")
 
-    let continueButton = app.buttons["Select a Method"]
+    importStocksButton.tap()
+
+    let importScreen = app.otherElements["initialStockImportScreen"]
+    XCTAssertTrue(importScreen.waitForExistence(timeout: 8))
+
+    let continueButton = app.buttons["stockImportContinueButton"]
     XCTAssertTrue(continueButton.waitForExistence(timeout: 8))
     XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled until an import method is selected.")
-    XCTAssertFalse(app.tabBars.buttons["Home"].exists, "Home flow should not be reachable before import selection.")
   }
 
   @MainActor
@@ -35,11 +40,11 @@ final class FinanceplanUITests: XCTestCase {
     let app = makeAuthenticatedFirstLoginApp(userID: "ui-test-\(UUID().uuidString)")
     app.launch()
 
-    completeImportViaCSV(in: app)
+    completeMandatoryImport(in: app)
 
     XCTAssertTrue(app.tabBars.buttons["Home"].waitForExistence(timeout: 15))
     XCTAssertTrue(app.staticTexts["Portfolio Value"].waitForExistence(timeout: 15))
-    XCTAssertFalse(app.staticTexts["Import Your Stocks"].exists)
+    XCTAssertFalse(app.staticTexts["Import Your Portfolio"].exists)
   }
 
   @MainActor
@@ -48,7 +53,7 @@ final class FinanceplanUITests: XCTestCase {
     let firstLaunchApp = makeAuthenticatedFirstLoginApp(userID: userID)
     firstLaunchApp.launch()
 
-    completeImportViaCSV(in: firstLaunchApp)
+    completeMandatoryImport(in: firstLaunchApp)
     XCTAssertTrue(firstLaunchApp.tabBars.buttons["Home"].waitForExistence(timeout: 15))
     firstLaunchApp.terminate()
 
@@ -58,24 +63,59 @@ final class FinanceplanUITests: XCTestCase {
     XCTAssertTrue(secondLaunchApp.tabBars.buttons["Home"].waitForExistence(timeout: 15))
     XCTAssertTrue(secondLaunchApp.staticTexts["Portfolio Value"].waitForExistence(timeout: 15))
     XCTAssertFalse(
-      secondLaunchApp.staticTexts["Import Your Stocks"].exists,
+      secondLaunchApp.staticTexts["Import Your Portfolio"].exists,
       "The same user should skip the initial import gate after completing it once."
     )
   }
 
   @MainActor
-  private func completeImportViaCSV(in app: XCUIApplication) {
-    XCTAssertTrue(app.staticTexts["Import Your Stocks"].waitForExistence(timeout: 15))
-    let csvMethodButton = app.buttons.containing(.staticText, identifier: "Import CSV").firstMatch
-    XCTAssertTrue(csvMethodButton.waitForExistence(timeout: 8))
-    csvMethodButton.tap()
+  func testPortfolioCSVImportSheetCanBeOpenedFromToolbar() throws {
+    let app = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)")
+    app.launch()
 
-    let continueButton = app.buttons["Continue with Import CSV"]
+    let portfolioTab = app.tabBars.buttons["Portfolio"]
+    XCTAssertTrue(portfolioTab.waitForExistence(timeout: 25))
+    portfolioTab.tap()
+
+    let actionsMenu = app.buttons["portfolio.actionsMenu"]
+    XCTAssertTrue(actionsMenu.waitForExistence(timeout: 8))
+    actionsMenu.tap()
+
+    let importAction = app.buttons["Import CSV"]
+    XCTAssertTrue(importAction.waitForExistence(timeout: 8))
+    importAction.tap()
+
+    XCTAssertTrue(app.otherElements["portfolioCSVImportSheet"].waitForExistence(timeout: 8))
+  }
+
+  @MainActor
+  private func completeMandatoryImport(in app: XCUIApplication) {
+    let importStocksButton = app.buttons["onboarding.importStocksButton"]
+    XCTAssertTrue(importStocksButton.waitForExistence(timeout: 20))
+    importStocksButton.tap()
+
+    XCTAssertTrue(app.otherElements["initialStockImportScreen"].waitForExistence(timeout: 8))
+    let apiMethodButton = app.buttons["stockImportMethod.api"]
+    XCTAssertTrue(apiMethodButton.waitForExistence(timeout: 8))
+    apiMethodButton.tap()
+
+    let continueButton = app.buttons["stockImportContinueButton"]
     XCTAssertTrue(continueButton.waitForExistence(timeout: 8))
     XCTAssertTrue(continueButton.isEnabled)
     continueButton.tap()
+
+    let apiContinueButton = app.buttons["Continue"]
+    XCTAssertTrue(apiContinueButton.waitForExistence(timeout: 8))
+    apiContinueButton.tap()
+
+    let successTitle = app.staticTexts["All Set!"]
+    XCTAssertTrue(successTitle.waitForExistence(timeout: 8))
+    let goToHomeButton = app.buttons["Go to Home"]
+    XCTAssertTrue(goToHomeButton.waitForExistence(timeout: 8))
+    goToHomeButton.tap()
   }
 
+  @MainActor
   private func makeAuthenticatedFirstLoginApp(userID: String, resetSession: Bool = true) -> XCUIApplication {
     let app = XCUIApplication()
     var launchArguments = [
@@ -83,6 +123,25 @@ final class FinanceplanUITests: XCTestCase {
       "-ui_test_auth_token",
       "ui-test-token",
       "-ui_test_user_id",
+      userID
+    ]
+    if resetSession {
+      launchArguments.append("-ui_test_reset_session")
+    }
+    app.launchArguments += launchArguments
+    return app
+  }
+
+  @MainActor
+  private func makeAuthenticatedImportedUserApp(userID: String, resetSession: Bool = true) -> XCUIApplication {
+    let app = XCUIApplication()
+    var launchArguments = [
+      "-ui_test_skip_splash",
+      "-ui_test_auth_token",
+      "ui-test-token",
+      "-ui_test_user_id",
+      userID,
+      "-ui_test_imported_user_id",
       userID
     ]
     if resetSession {

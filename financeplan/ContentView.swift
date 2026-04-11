@@ -1,16 +1,31 @@
 import Factory
+import Combine
+import OSLog
 import SwiftUI
 
 public struct ContentView: View {
+  private static let pushLogger = Logger(
+    subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
+    category: "PushNotificationsUX"
+  )
+
   @EnvironmentObject private var sessionManager: SessionManager
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.scenePhase) private var scenePhase
   @State private var launchCompleted = false
   @State private var launchStarted = false
   @State private var isAuthenticated: Bool
   @State private var requiresInitialStockImport: Bool
+  @State private var isUnlocking = false
+  @State private var isAppLocked = false
+  @State private var showSessionRecoveryAlert = false
+  @State private var sessionRecoveryMessage = ""
+  @StateObject private var pushNotificationsCoordinator: PushNotificationsCoordinator
+  @AppStorage("useFaceID") private var useFaceID: Bool = true
   private let splashDelay: Duration
   private let authSessionManager: AuthSessionManaging
   private let sessionStore: AuthSessionStoring
+  private let appLockManager: AppLockManaging
 
   public init() {
     let processInfo = ProcessInfo.processInfo
@@ -26,6 +41,7 @@ public struct ContentView: View {
     }
 
     authSessionManager = Container.shared.authSessionManager()
+    appLockManager = Container.shared.appLockManager()
 
     if let forcedAuthToken = processInfo.argumentValue(for: "-ui_test_auth_token") {
       store.authToken = forcedAuthToken
@@ -50,6 +66,9 @@ public struct ContentView: View {
     }
 
     sessionStore = store
+    _pushNotificationsCoordinator = StateObject(
+      wrappedValue: Container.shared.pushNotificationsCoordinator()
+    )
     _isAuthenticated = State(initialValue: false)
     _requiresInitialStockImport = State(initialValue: false)
   }
@@ -61,22 +80,45 @@ public struct ContentView: View {
 
       if launchCompleted {
         if isAuthenticated {
-          if requiresInitialStockImport {
-            OnboardingImportFlow(
-              onFinished: {
-                sessionStore.markInitialStockImportCompleted(for: sessionStore.currentUserID)
-                requiresInitialStockImport = false
-              },
-              onSignOut: {
-                await authSessionManager.logout()
-              }
-            )
-          } else {
-            HomeScreen(
-              onLogout: {
-                await authSessionManager.logout()
-              }
-            )
+          ZStack {
+            if requiresInitialStockImport {
+              OnboardingImportFlow(
+                onFinished: {
+                  sessionStore.markInitialStockImportCompleted(for: sessionStore.currentUserID)
+                  requiresInitialStockImport = false
+                },
+                onSignOut: {
+                  await authSessionManager.logout()
+                }
+              )
+            } else {
+              HomeScreen(
+                onLogout: {
+                  await authSessionManager.logout()
+                }
+              )
+            }
+
+            if isAppLocked {
+              AppLockOverlay(
+                isUnlocking: isUnlocking,
+                onUnlock: {
+                  guard !isUnlocking else { return }
+                  isUnlocking = true
+                  Task { @MainActor in
+                    let unlocked = await appLockManager.unlock()
+                    isAppLocked = !unlocked
+                    if !unlocked {
+                      sessionRecoveryMessage = "Authentication failed. Please try again or sign in again."
+                    }
+                    isUnlocking = false
+                  }
+                },
+                onSignOut: {
+                  await authSessionManager.logout()
+                }
+              )
+            }
           }
         } else {
           LoginScreen(onAuthenticated: {
@@ -95,6 +137,42 @@ public struct ContentView: View {
     }
     .onReceive(NotificationCenter.default.publisher(for: .authSessionDidInvalidate)) { _ in
       handleSessionInvalidation()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .authSessionWillInvalidate)) { _ in
+      pushNotificationsCoordinator.handleSessionWillInvalidate()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .authSessionStorageFailure)) { _ in
+      sessionRecoveryMessage = "Secure session storage is unavailable on this device. Please sign in again."
+      showSessionRecoveryAlert = true
+      Task {
+        await authSessionManager.invalidateSession()
+      }
+      handleSessionInvalidation()
+    }
+    .onChange(of: scenePhase) { _, newPhase in
+      switch newPhase {
+      case .background:
+        appLockManager.appDidEnterBackground()
+      case .active:
+        Task {
+          await pushNotificationsCoordinator.refreshAuthorizationStatus()
+          await enforceAppLockIfNeeded()
+        }
+      default:
+        break
+      }
+    }
+    .onReceive(pushNotificationsCoordinator.$pendingNotificationRoute.compactMap { $0 }) { _ in
+      deliverPendingPushNotificationRouteIfPossible()
+    }
+    .onChange(of: isAuthenticated) { _, _ in
+      deliverPendingPushNotificationRouteIfPossible()
+    }
+    .onChange(of: requiresInitialStockImport) { _, _ in
+      deliverPendingPushNotificationRouteIfPossible()
+    }
+    .onChange(of: launchCompleted) { _, _ in
+      deliverPendingPushNotificationRouteIfPossible()
     }
     .task {
       guard !launchStarted else {
@@ -116,6 +194,21 @@ public struct ContentView: View {
         launchCompleted = true
       }
     }
+    .sheet(isPresented: $pushNotificationsCoordinator.showPostLoginExplainer) {
+      PushNotificationsExplainerSheet(
+        onEnable: {
+          await pushNotificationsCoordinator.enableFromExplainer()
+        },
+        onNotNow: {
+          pushNotificationsCoordinator.dismissExplainer()
+        }
+      )
+    }
+    .alert("Session Recovery Needed", isPresented: $showSessionRecoveryAlert) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text(sessionRecoveryMessage)
+    }
   }
 
   private func syncSessionUsername() {
@@ -132,12 +225,122 @@ public struct ContentView: View {
     requiresInitialStockImport =
       userID.isEmpty || !sessionStore.hasCompletedInitialStockImport(for: userID)
     sessionManager.updateUsername(sessionStore.currentUsername)
+    Task {
+      pushNotificationsCoordinator.handleAuthenticatedSessionBecameActive()
+      await enforceAppLockIfNeeded()
+      deliverPendingPushNotificationRouteIfPossible()
+    }
   }
 
   private func handleSessionInvalidation() {
     isAuthenticated = false
     requiresInitialStockImport = false
+    isAppLocked = false
+    appLockManager.clear()
     sessionManager.reset()
+    pushNotificationsCoordinator.handleSessionDidInvalidate()
+  }
+
+  private func deliverPendingPushNotificationRouteIfPossible() {
+    guard launchCompleted, isAuthenticated, !requiresInitialStockImport else {
+      return
+    }
+
+    guard let route = pushNotificationsCoordinator.consumePendingNotificationRoute() else {
+      return
+    }
+
+    switch route.kind {
+    case .targetHit:
+      guard let symbol = route.symbol, !symbol.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        Self.pushLogger.warning("push.analytics routed_failure destination=home reason=missing_symbol kind=target_hit")
+        return
+      }
+
+      Self.pushLogger.info("push.analytics routed_success destination=home kind=target_hit symbol=\(symbol, privacy: .public)")
+      NotificationCenter.default.post(
+        name: .openStockFromPushNotification,
+        object: nil,
+        userInfo: [
+          "symbol": symbol
+        ]
+      )
+    case .openPortfolio:
+      Self.pushLogger.info("push.analytics routed_success destination=home kind=open_portfolio symbol=\(route.symbol ?? "-", privacy: .public)")
+      let userInfo: [AnyHashable: Any]? = route.symbol.map { symbol in
+        ["symbol": symbol]
+      }
+      NotificationCenter.default.post(
+        name: .openPortfolioFromPushNotification,
+        object: nil,
+        userInfo: userInfo
+      )
+    }
+  }
+
+  private func enforceAppLockIfNeeded() async {
+    let result = await appLockManager.enforceIfNeeded(
+      isAuthenticated: isAuthenticated,
+      isEnabled: useFaceID
+    )
+    isAppLocked = (result == .locked)
+
+    if result == .requiresReauthentication {
+      sessionRecoveryMessage = "Unable to validate device authentication. Please sign in again."
+      showSessionRecoveryAlert = true
+      await authSessionManager.invalidateSession()
+      handleSessionInvalidation()
+    }
+  }
+}
+
+private struct AppLockOverlay: View {
+  let isUnlocking: Bool
+  let onUnlock: () -> Void
+  let onSignOut: () async -> Void
+
+  var body: some View {
+    ZStack {
+      Color.black.opacity(0.35).ignoresSafeArea()
+
+      VStack(spacing: 16) {
+        Image(systemName: "lock.shield.fill")
+          .font(.system(size: 40))
+          .foregroundStyle(.primary)
+
+        Text("Unlock to continue")
+          .font(.headline)
+
+        Button(action: onUnlock) {
+          HStack(spacing: 8) {
+            if isUnlocking {
+              ProgressView()
+            }
+            Text("Unlock")
+              .fontWeight(.semibold)
+          }
+          .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(isUnlocking)
+
+        Button(role: .destructive) {
+          Task { @MainActor in
+            await onSignOut()
+          }
+        } label: {
+          Text("Sign Out")
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+      }
+      .padding(24)
+      .frame(maxWidth: 320)
+      .background(.ultraThinMaterial)
+      .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+      .padding(.horizontal, 24)
+    }
+    .transition(.opacity)
   }
 }
 

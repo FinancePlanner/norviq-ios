@@ -7,11 +7,13 @@ final class LoginViewModel: ObservableObject {
   enum Field: Hashable {
     case username
     case password
+    case confirmPassword
     case email
   }
 
   @Published var username = ""
   @Published var password = ""
+  @Published var confirmPassword = ""
   @Published var email = ""
   @Published var dateOfBirth = {
     let calendar = Calendar.current
@@ -28,6 +30,24 @@ final class LoginViewModel: ObservableObject {
   @Published var signupFieldsOpacity: Double
   @Published var isForgotPasswordPresented = false
   @Published var isSubmitting = false
+
+  var passwordRuleScore: Int {
+    AuthValidation.passwordRuleScore(password)
+  }
+
+  var passwordStrength: AuthValidation.PasswordStrength {
+    AuthValidation.passwordStrength(password)
+  }
+
+  var canSubmitSignup: Bool {
+    let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+    return AuthValidation.isValidUsername(trimmedUsername)
+      && AuthValidation.isValidEmail(trimmedEmail)
+      && AuthValidation.isStrongPassword(password)
+      && !confirmPassword.isEmpty
+      && password == confirmPassword
+  }
 
   private let authService: AuthServicing
   private let sessionStore: AuthSessionStoring
@@ -82,6 +102,7 @@ final class LoginViewModel: ObservableObject {
     isSignup = false
     signupFieldsOpacity = 0
     sessionStore.loginIsSignup = false
+    confirmPassword = ""
     error = nil
     infoMessage = nil
   }
@@ -165,12 +186,14 @@ final class LoginViewModel: ObservableObject {
         username: username.trimmingCharacters(in: .whitespacesAndNewlines),
         email: email.trimmingCharacters(in: .whitespacesAndNewlines),
         password: password,
+        confirmPassword: confirmPassword,
         dateOfBirth: dateOfBirth
       )
 
       let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
       username = trimmedEmail
       password = ""
+      confirmPassword = ""
       hideSignup()
       infoMessage = "Account created. Please sign in."
       error = nil
@@ -188,7 +211,7 @@ final class LoginViewModel: ObservableObject {
     fieldErrors.removeAll()
 
     let fieldsToValidate: [Field] = isSignup
-      ? [.username, .email, .password]
+      ? [.username, .email, .password, .confirmPassword]
       : [.username, .password]
 
     for field in fieldsToValidate {
@@ -214,8 +237,20 @@ final class LoginViewModel: ObservableObject {
       if password.isEmpty {
         return "Password is required"
       }
-      if !AuthValidation.isValidPassword(password) {
+      if isSignup && !AuthValidation.isStrongPassword(password) {
+        return "Password must be at least 8 characters and include uppercase, lowercase, number, and symbol"
+      }
+      if !isSignup && !AuthValidation.isValidPassword(password) {
         return "Password must be at least 8 characters"
+      }
+    case .confirmPassword:
+      if isSignup {
+        if confirmPassword.isEmpty {
+          return "Confirm password is required"
+        }
+        if password != confirmPassword {
+          return "Passwords do not match"
+        }
       }
     case .email:
       if isSignup {

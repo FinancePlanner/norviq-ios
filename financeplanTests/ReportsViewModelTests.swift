@@ -56,6 +56,52 @@ final class ReportsViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.partnerDisplayName, "Partner X")
   }
 
+  func testLoadFallsBackToPortfolioWhenOverviewStatsAreZero() async {
+    let service = MockExpensesService()
+    service.partnerResult = .success(HouseholdPartnerProfileResponse(displayName: "Ana"))
+    service.reportsOverviewResult = .success(
+      ReportsOverviewResponse(
+        generatedAt: "2026-04-08T00:00:00Z",
+        portfolioStatistics: ImportedStocksStatisticsDTO(
+          totalPositions: 0,
+          totalMarketValue: 0,
+          totalCostBasis: 0,
+          totalUnrealizedPnl: 0,
+          totalRealizedPnl: 0,
+          stockSummaries: [],
+          stockAllocations: [],
+          sectorAllocations: [],
+          calendarPerformance: []
+        ),
+        monthlySummaries: [],
+        yearlySummaries: [],
+        latestMonthSummary: nil,
+        latestPillarSummaries: [],
+        cashFlow: []
+      )
+    )
+
+    let stockService = MockStockService()
+    stockService.fetchPortfolioResult = .success([
+      StockResponse(
+        id: "1",
+        symbol: "AAPL",
+        shares: 2,
+        buyPrice: 100,
+        buyDate: "2026-01-01",
+        notes: nil
+      )
+    ])
+
+    let viewModel = ReportsViewModel(expensesService: service, stockService: stockService)
+    await viewModel.load(force: true)
+
+    XCTAssertEqual(stockService.fetchPortfolioCalls, 1)
+    XCTAssertEqual(viewModel.portfolioStatistics?.totalPositions, 1)
+    XCTAssertEqual(viewModel.portfolioStatistics?.totalMarketValue, 200)
+    XCTAssertEqual(viewModel.portfolioStatistics?.stockAllocations.count, 1)
+  }
+
   private func makeReportsOverview(
     monthly: [BudgetMonthSummaryResponse] = [],
     latest: BudgetMonthSummaryResponse? = nil
@@ -226,4 +272,42 @@ private enum MockExpensesError: LocalizedError {
   var errorDescription: String? {
     "Not configured."
   }
+}
+
+@MainActor
+private final class MockStockService: StockServicing {
+  var fetchPortfolioCalls = 0
+  var fetchPortfolioResult: Result<[StockResponse], Error> = .success([])
+
+  @discardableResult
+  func create(stock _: StockRequest) async throws -> StockResponse { throw MockExpensesError.notConfigured }
+
+  @discardableResult
+  func bulkCreate(stocks _: [StockRequest]) async throws -> BulkStockResponse { throw MockExpensesError.notConfigured }
+
+  func fetchPortfolio() async throws -> [StockResponse] {
+    fetchPortfolioCalls += 1
+    return try fetchPortfolioResult.get()
+  }
+
+  func fetchStockDetails(stockId _: String) async throws -> StockDetails { throw MockExpensesError.notConfigured }
+  func fetchStockInsights(symbol _: String) async throws -> StockInsightsResponse { throw MockExpensesError.notConfigured }
+  func fetchPortfolioPerformance() async throws -> PortfolioPerformanceResponse { throw MockExpensesError.notConfigured }
+  func fetchPortfolioSummary() async throws -> PortfolioSummaryResponse { throw MockExpensesError.notConfigured }
+  func fetchStockHistory(symbol _: String) async throws -> [StockHistory] { throw MockExpensesError.notConfigured }
+  func fetchStockNews(symbol _: String) async throws -> [StockNews] { throw MockExpensesError.notConfigured }
+  func updateStock(_: StockResponse) async throws -> StockResponse { throw MockExpensesError.notConfigured }
+  func delete(id _: String) async throws { throw MockExpensesError.notConfigured }
+  func getValuation(symbol _: String) async throws -> StockValuationRequest { throw MockExpensesError.notConfigured }
+  func createValuation(symbol _: String, draft _: StockValuationDraft) async throws -> StockValuationRequest { throw MockExpensesError.notConfigured }
+  func createValuation(symbol _: String, bearLow _: Double, bearHigh _: Double, baseLow _: Double, baseHigh _: Double, bullLow _: Double, bullHigh _: Double, rationale _: String?, targetDate _: String?) async throws -> StockValuationRequest { throw MockExpensesError.notConfigured }
+  func updateValuation(symbol _: String, draft _: StockValuationDraft) async throws -> StockValuationRequest { throw MockExpensesError.notConfigured }
+  func updateValuation(symbol _: String, bearLow _: Double, bearHigh _: Double, baseLow _: Double, baseHigh _: Double, bullLow _: Double, bullHigh _: Double, rationale _: String?, targetDate _: String?) async throws -> StockValuationRequest { throw MockExpensesError.notConfigured }
+  func fetchWatchlist() async throws -> [WatchlistItemResponse] { throw MockExpensesError.notConfigured }
+  @discardableResult
+  func createWatchlistItem(_: WatchlistItemRequest) async throws -> WatchlistItemResponse { throw MockExpensesError.notConfigured }
+  @discardableResult
+  func updateWatchlistItem(id _: String, request _: WatchlistItemUpdateRequest) async throws -> WatchlistItemResponse { throw MockExpensesError.notConfigured }
+  func deleteWatchlistItem(id _: String) async throws { throw MockExpensesError.notConfigured }
+  func sellStock(id _: String, request _: SellStockRequest) async throws -> StockResponse { throw MockExpensesError.notConfigured }
 }

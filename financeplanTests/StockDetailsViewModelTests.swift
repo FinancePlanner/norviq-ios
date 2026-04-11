@@ -5,6 +5,7 @@ import XCTest
 
 @MainActor
 final class StockDetailsViewModelTests: XCTestCase {
+  @MainActor
   private final class StockServiceMock: StockServicing {
     var fetchStockDetailsCalls = 0
     var createValuationCalls = 0
@@ -27,14 +28,19 @@ final class StockDetailsViewModelTests: XCTestCase {
     var lastUpdateValuationBullHigh: Double?
     var lastUpdateValuationRationale: String?
     var lastUpdateValuationTargetDate: String?
+    var sellStockCalls = 0
+    var lastSellStockId: String?
+    var lastSellRequest: SellStockRequest?
 
     var createValuationResult: Result<StockValuationRequest, Error> = .failure(MockError.notConfigured)
     var updateValuationResult: Result<StockValuationRequest, Error> = .failure(MockError.notConfigured)
     var fetchStockDetailsResult: Result<StockDetails, Error> = .failure(MockError.notConfigured)
+    var fetchStockInsightsResult: Result<StockInsightsResponse, Error> = .failure(MockError.notConfigured)
     var fetchStockHistoryResult: Result<[StockHistory], Error> = .success([])
     var fetchStockNewsResult: Result<[StockNews], Error> = .success([])
     var getValuationResult: Result<StockValuationRequest, Error> = .failure(StockHTTPClient.Error.invalidStatus(404))
     var updateStockResult: Result<StockResponse, Error> = .failure(MockError.notConfigured)
+    var sellStockResult: Result<StockResponse, Error> = .failure(MockError.notConfigured)
 
     func create(stock _: StockRequest) async throws -> StockResponse {
       throw MockError.notConfigured
@@ -48,9 +54,17 @@ final class StockDetailsViewModelTests: XCTestCase {
       throw MockError.notConfigured
     }
 
+    func fetchPortfolioSummary() async throws -> PortfolioSummaryResponse {
+      throw MockError.notConfigured
+    }
+
     func fetchStockDetails(stockId _: String) async throws -> StockDetails {
       fetchStockDetailsCalls += 1
       return try fetchStockDetailsResult.get()
+    }
+
+    func fetchStockInsights(symbol _: String) async throws -> StockInsightsResponse {
+      try fetchStockInsightsResult.get()
     }
 
     func fetchStockHistory(symbol _: String) async throws -> [StockHistory] {
@@ -71,6 +85,13 @@ final class StockDetailsViewModelTests: XCTestCase {
     }
 
     func delete(id _: String) async throws {}
+
+    func sellStock(id: String, request: SellStockRequest) async throws -> StockResponse {
+      sellStockCalls += 1
+      lastSellStockId = id
+      lastSellRequest = request
+      return try sellStockResult.get()
+    }
 
     func fetchWatchlist() async throws -> [WatchlistItemResponse] {
       throw MockError.notConfigured
@@ -178,6 +199,7 @@ final class StockDetailsViewModelTests: XCTestCase {
     }
   }
 
+  @MainActor
   private final class MarketDataServiceMock: MarketDataServicing {
     var fetchAnalystConsensusCalls = 0
     var lastFetchAnalystConsensusSymbol: String?
@@ -388,7 +410,7 @@ final class StockDetailsViewModelTests: XCTestCase {
         otherPayables: nil,
         accruedExpenses: nil,
         shortTermDebt: 12_000_000_000,
-        capitalLeaseObligationsCurrent: nil,
+        capitalLeaseOblationsCurrent: nil,
         taxPayables: nil,
         deferredRevenue: nil,
         otherCurrentLiabilities: nil,
@@ -789,6 +811,53 @@ final class StockDetailsViewModelTests: XCTestCase {
     )
   }
 
+  private func makeInsights(
+    symbol: String,
+    ttmPE: Double = 24.9,
+    grossMargin: Double = 0.81,
+    peerSymbols: [String] = ["MSFT", "GOOG"]
+  ) -> StockInsightsResponse {
+    StockInsightsResponse(
+      generatedAt: "2026-04-09T09:00:00Z",
+      symbol: symbol,
+      profile: StockInsightProfileDTO(
+        symbol: symbol,
+        companyName: "\(symbol) Inc.",
+        currentPrice: 612.42,
+        marketCap: 2_500_000_000_000,
+        sharesOutstanding: 2_500_000_000,
+        metrics: [
+          "ttmPE": ttmPE,
+          "grossMargin": grossMargin
+        ],
+        dcfBasePrice: 650,
+        dcfBearPrice: 540,
+        dcfBullPrice: 760
+      ),
+      peers: peerSymbols.map { peer in
+        StockInsightPeerDTO(
+          symbol: peer,
+          companyName: "\(peer) Corp",
+          currentPrice: 100,
+          marketCap: 1_000_000_000_000,
+          sharesOutstanding: 1_000_000_000
+        )
+      },
+      projectionScenarios: [
+        StockInsightProjectionScenarioDTO(
+          kind: "base",
+          years: [
+            StockInsightProjectionYearDTO(year: 2024, revenue: 360_000_000_000, revenueGrowth: 0.05, netIncome: 96_000_000_000, netIncomeGrowth: 0.06, netMargin: 0.267, eps: 4.8, peLowEstimate: 16, peHighEstimate: 24, sharePriceLow: 76.8, sharePriceHigh: 115.2, cagrLow: -0.15, cagrHigh: -0.09),
+            StockInsightProjectionYearDTO(year: 2025, revenue: 381_600_000_000, revenueGrowth: 0.06, netIncome: 103_680_000_000, netIncomeGrowth: 0.08, netMargin: 0.272, eps: 5.4, peLowEstimate: 17, peHighEstimate: 25, sharePriceLow: 91.8, sharePriceHigh: 135.0, cagrLow: -0.13, cagrHigh: -0.07),
+            StockInsightProjectionYearDTO(year: 2026, revenue: 404_496_000_000, revenueGrowth: 0.06, netIncome: 112_000_000_000, netIncomeGrowth: 0.08, netMargin: 0.277, eps: 6.0, peLowEstimate: 18, peHighEstimate: 26, sharePriceLow: 108.0, sharePriceHigh: 156.0, cagrLow: -0.11, cagrHigh: -0.06),
+            StockInsightProjectionYearDTO(year: 2027, revenue: 428_765_760_000, revenueGrowth: 0.06, netIncome: 120_960_000_000, netIncomeGrowth: 0.08, netMargin: 0.282, eps: 6.6, peLowEstimate: 18, peHighEstimate: 27, sharePriceLow: 118.8, sharePriceHigh: 178.2, cagrLow: -0.10, cagrHigh: -0.05),
+            StockInsightProjectionYearDTO(year: 2028, revenue: 454_491_705_600, revenueGrowth: 0.06, netIncome: 130_636_800_000, netIncomeGrowth: 0.08, netMargin: 0.287, eps: 7.2, peLowEstimate: 19, peHighEstimate: 28, sharePriceLow: 136.8, sharePriceHigh: 201.6, cagrLow: -0.08, cagrHigh: -0.03)
+          ]
+        )
+      ]
+    )
+  }
+
   func testShareSnapshot_BuildsStructuredExportText() {
     let service = StockServiceMock()
     let marketDataService = MarketDataServiceMock()
@@ -884,6 +953,7 @@ final class StockDetailsViewModelTests: XCTestCase {
     let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
 
     service.fetchStockDetailsResult = .success(makeDetails(symbol: "META"))
+    service.fetchStockInsightsResult = .success(makeInsights(symbol: "META"))
     service.fetchStockHistoryResult = .success([makeHistory()])
     service.fetchStockNewsResult = .success([makeNews()])
     service.getValuationResult = .success(makeValuation(symbol: "META"))
@@ -1033,6 +1103,7 @@ final class StockDetailsViewModelTests: XCTestCase {
     let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
 
     service.fetchStockDetailsResult = .success(makeDetails(symbol: "ZETA"))
+    service.fetchStockInsightsResult = .success(makeInsights(symbol: "ZETA", ttmPE: 24.4, grossMargin: 0.61))
 
     await viewModel.load(stockId: "stock-1")
     await viewModel.loadSupplementaryDataIfNeeded(for: .analysis)
@@ -1053,6 +1124,7 @@ final class StockDetailsViewModelTests: XCTestCase {
     let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
 
     service.fetchStockDetailsResult = .success(makeDetails(symbol: "META"))
+    service.fetchStockInsightsResult = .success(makeInsights(symbol: "META", ttmPE: 24.9, grossMargin: 0.81))
     marketDataService.fetchAnalysisMetricsResult = .failure(MockError.notConfigured)
 
     await viewModel.load(stockId: "stock-1")
@@ -1272,5 +1344,88 @@ final class StockDetailsViewModelTests: XCTestCase {
     XCTAssertEqual(message, "Body symbol must match the route symbol.")
     XCTAssertEqual(viewModel.errorMessage, "Body symbol must match the route symbol.")
     XCTAssertFalse(viewModel.isLoading)
+  }
+
+  func testSellPositionPartialSaleUpdatesDetailsAndKeepsScreenOpen() async {
+    let service = StockServiceMock()
+    let viewModel = StockDetailsViewModel(service: service)
+    viewModel.details = makeDetails(symbol: "AAPL")
+
+    let request = SellStockRequest(
+      sharesToSell: 2,
+      sellPrice: 200,
+      sellDate: "2026-04-10"
+    )
+    service.sellStockResult = .success(
+      StockResponse(
+        id: "stock-1",
+        symbol: "AAPL",
+        shares: 8,
+        buyPrice: 123.45,
+        buyDate: "2026-03-13",
+        notes: nil
+      )
+    )
+
+    let outcome = await viewModel.sellPosition(request)
+
+    XCTAssertEqual(service.sellStockCalls, 1)
+    XCTAssertEqual(service.lastSellStockId, "stock-1")
+    XCTAssertEqual(service.lastSellRequest, request)
+    XCTAssertFalse(outcome.shouldDismiss)
+    XCTAssertNil(outcome.errorMessage)
+    XCTAssertEqual(viewModel.details?.shares ?? 0, 8, accuracy: 0.001)
+    XCTAssertNil(viewModel.errorMessage)
+  }
+
+  func testSellPositionFullSaleClearsLoadedStateAndDismisses() async {
+    let service = StockServiceMock()
+    let viewModel = StockDetailsViewModel(service: service)
+    viewModel.details = makeDetails(symbol: "AAPL")
+
+    let request = SellStockRequest(
+      sharesToSell: 10,
+      sellPrice: 200,
+      sellDate: "2026-04-10"
+    )
+    service.sellStockResult = .success(
+      StockResponse(
+        id: "stock-1",
+        symbol: "AAPL",
+        shares: 0,
+        buyPrice: 123.45,
+        buyDate: "2026-03-13",
+        notes: nil
+      )
+    )
+
+    let outcome = await viewModel.sellPosition(request)
+
+    XCTAssertEqual(service.sellStockCalls, 1)
+    XCTAssertTrue(outcome.shouldDismiss)
+    XCTAssertNil(outcome.errorMessage)
+    XCTAssertNil(viewModel.details)
+    XCTAssertTrue(viewModel.history.isEmpty)
+    XCTAssertTrue(viewModel.news.isEmpty)
+  }
+
+  func testSellPositionFailureReturnsErrorMessage() async {
+    let service = StockServiceMock()
+    let viewModel = StockDetailsViewModel(service: service)
+    viewModel.details = makeDetails(symbol: "AAPL")
+    service.sellStockResult = .failure(StockHTTPClient.Error.api("Cannot sell more shares than currently owned."))
+
+    let outcome = await viewModel.sellPosition(
+      SellStockRequest(
+        sharesToSell: 100,
+        sellPrice: 200,
+        sellDate: "2026-04-10"
+      )
+    )
+
+    XCTAssertEqual(service.sellStockCalls, 1)
+    XCTAssertFalse(outcome.shouldDismiss)
+    XCTAssertEqual(outcome.errorMessage, "Cannot sell more shares than currently owned.")
+    XCTAssertEqual(viewModel.errorMessage, "Cannot sell more shares than currently owned.")
   }
 }

@@ -66,23 +66,17 @@ private struct SocialAuthButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
-                icon
-                    .frame(width: 20, height: 20)
-
-                Text(provider.title)
-                    .font(.system(size: 15, weight: .semibold))
-            }
-            .foregroundStyle(foregroundColor)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .frame(maxWidth: .infinity)
-            .background(backgroundColor)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(borderColor, lineWidth: 1)
-            )
-            .clipShape(.rect(cornerRadius: 12))
+            icon
+                .frame(width: 20, height: 20)
+                .foregroundStyle(foregroundColor)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity)
+                .background(backgroundColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(borderColor, lineWidth: 1)
+                )
+                .clipShape(.rect(cornerRadius: 12))
         }
         .buttonStyle(.plain)
     }
@@ -156,7 +150,7 @@ private struct SocialAuthSection: View {
                     .frame(height: 1)
             }
 
-            VStack(spacing: 10) {
+            HStack(spacing: 12) {
                 ForEach(SocialAuthProvider.allCases) { provider in
                     SocialAuthButton(provider: provider) {
                         if let oauthProvider = provider.oauthProvider {
@@ -171,6 +165,60 @@ private struct SocialAuthSection: View {
                     }
                 }
             }
+        }
+    }
+}
+
+private struct PasswordStrengthMeter: View {
+    let score: Int
+    let strength: AuthValidation.PasswordStrength
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                ForEach(0..<5, id: \.self) { index in
+                    Capsule()
+                        .fill(index < score ? barColor : Color(white: 0.85))
+                        .frame(height: 6)
+                }
+            }
+
+            Text("Password strength: \(strengthLabel)")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(strengthTextColor)
+        }
+    }
+
+    private var barColor: Color {
+        switch strength {
+        case .weak:
+            return Color(red: 0.90, green: 0.29, blue: 0.23)
+        case .medium:
+            return Color(red: 0.95, green: 0.62, blue: 0.13)
+        case .strong:
+            return Color(red: 0.12, green: 0.73, blue: 0.33)
+        }
+    }
+
+    private var strengthTextColor: Color {
+        switch strength {
+        case .weak:
+            return Color(red: 0.75, green: 0.28, blue: 0.22)
+        case .medium:
+            return Color(red: 0.78, green: 0.50, blue: 0.13)
+        case .strong:
+            return Color(red: 0.12, green: 0.73, blue: 0.33)
+        }
+    }
+
+    private var strengthLabel: String {
+        switch strength {
+        case .weak:
+            return "Weak"
+        case .medium:
+            return "Medium"
+        case .strong:
+            return "Strong"
         }
     }
 }
@@ -510,6 +558,7 @@ private struct SignUpView: View {
     @ObservedObject var viewModel: LoginViewModel
     @Binding var isEnvironmentPresented: Bool
     @State private var isPasswordVisible = false
+    @State private var isConfirmPasswordVisible = false
 
     var body: some View {
         ScrollView {
@@ -585,6 +634,26 @@ private struct SignUpView: View {
                         textContentType: .newPassword
                     )
 
+                    PasswordStrengthMeter(
+                        score: viewModel.passwordRuleScore,
+                        strength: viewModel.passwordStrength
+                    )
+
+                    VaultTextField(
+                        label: "Confirm Password",
+                        placeholder: "••••••••",
+                        text: $viewModel.confirmPassword,
+                        isSecure: !isConfirmPasswordVisible,
+                        isLight: true,
+                        rightAccessory:
+                            Button(action: { isConfirmPasswordVisible.toggle() }) {
+                                Image(systemName: isConfirmPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                                    .foregroundStyle(Color(white: 0.8))
+                            }
+                            .accessibilityLabel(isConfirmPasswordVisible ? "Hide confirm password" : "Show confirm password"),
+                        textContentType: .newPassword
+                    )
+
                     // Custom Date Picker mimicking text field
                     VStack(alignment: .leading, spacing: 8) {
                         Text("DATE OF BIRTH")
@@ -630,7 +699,7 @@ private struct SignUpView: View {
                         .background(VaultColors.primaryBlue)
                         .clipShape(.rect(cornerRadius: 12))
                     }
-                    .disabled(viewModel.isSubmitting)
+                    .disabled(viewModel.isSubmitting || !viewModel.canSubmitSignup)
 
                     SocialAuthSection(viewModel: viewModel, intentLabel: "sign up")
 

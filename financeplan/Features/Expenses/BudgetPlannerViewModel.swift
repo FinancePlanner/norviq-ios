@@ -497,6 +497,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
                 _ = try await expensesService.createPlanItem(payload: itemReq)
             }
             await load(force: true)
+            notifyDataDidChange()
         } catch {
             self.errorMessage = error.localizedDescription
             await load(force: true)
@@ -523,6 +524,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
       Task {
           do {
               try await expensesService.deleteSnapshot(snapshotId: snapshotId.uuidString)
+              notifyDataDidChange()
           } catch {
               self.errorMessage = error.localizedDescription
               await load(force: true)
@@ -551,6 +553,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
             let mapped = mapSnapshotResponse(updated, existingItems: currentSnapshot.items)
             upsertSnapshot(mapped)
             refreshDerivedSummariesFromLocal()
+            notifyDataDidChange()
         } catch {
             self.errorMessage = error.localizedDescription
             await load(force: true)
@@ -579,6 +582,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
             let mapped = mapSnapshotResponse(updated, existingItems: currentSnapshot.items)
             upsertSnapshot(mapped)
             refreshDerivedSummariesFromLocal()
+            notifyDataDidChange()
         } catch {
             self.errorMessage = error.localizedDescription
             await load(force: true)
@@ -611,7 +615,8 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
     Task {
       do {
         let snapshot = try await ensureSnapshotExistsForSelectedMonth()
-        guard let selectedMonthSnapshotIndex else {
+        let targetSnapshotID = snapshot.id
+        guard let selectedMonthSnapshotIndex = monthlySnapshots.firstIndex(where: { $0.id == targetSnapshotID }) else {
           throw NSError(
             domain: "BudgetPlannerViewModel",
             code: 1003,
@@ -637,8 +642,9 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
           )
           let updated = try await expensesService.updatePlanItem(itemId: itemID.uuidString, payload: req)
           if let mapped = mapPlanItemResponse(updated),
-             let existingIndex = monthlySnapshots[selectedMonthSnapshotIndex].items.firstIndex(where: { $0.id == itemID }) {
-            monthlySnapshots[selectedMonthSnapshotIndex].items[existingIndex] = mapped
+             let snapshotIndex = monthlySnapshots.firstIndex(where: { $0.id == targetSnapshotID }),
+             let existingIndex = monthlySnapshots[snapshotIndex].items.firstIndex(where: { $0.id == itemID }) {
+            monthlySnapshots[snapshotIndex].items[existingIndex] = mapped
           }
           logger.debug("Plan item update succeeded id=\(itemID.uuidString, privacy: .public)")
         } else {
@@ -653,24 +659,39 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
           )
           let created = try await expensesService.createPlanItem(payload: req)
           if let mapped = mapPlanItemResponse(created) {
-            monthlySnapshots[selectedMonthSnapshotIndex].items.removeAll {
+            guard let snapshotIndex = monthlySnapshots.firstIndex(where: { $0.id == targetSnapshotID }) else {
+              throw NSError(
+                domain: "BudgetPlannerViewModel",
+                code: 1004,
+                userInfo: [NSLocalizedDescriptionKey: "Could not resolve selected month snapshot after create."]
+              )
+            }
+            monthlySnapshots[snapshotIndex].items.removeAll {
               if let placeholderItemID = draft.placeholderItemID {
                 return $0.id == placeholderItemID
               }
               return false
             }
-            monthlySnapshots[selectedMonthSnapshotIndex].items.append(mapped)
+            monthlySnapshots[snapshotIndex].items.append(mapped)
           }
           logger.debug("Plan item create succeeded title=\(title, privacy: .public)")
         }
 
-        monthlySnapshots[selectedMonthSnapshotIndex].items.sort {
+        guard let finalSnapshotIndex = monthlySnapshots.firstIndex(where: { $0.id == targetSnapshotID }) else {
+          throw NSError(
+            domain: "BudgetPlannerViewModel",
+            code: 1005,
+            userInfo: [NSLocalizedDescriptionKey: "Could not resolve selected month snapshot after save."]
+          )
+        }
+        monthlySnapshots[finalSnapshotIndex].items.sort {
           if $0.pillar == $1.pillar {
             return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
           }
           return $0.pillar.rawValue < $1.pillar.rawValue
         }
         refreshDerivedSummariesFromLocal()
+        notifyDataDidChange()
       } catch {
         let message = "Could not save planned item: \(error.localizedDescription)"
         self.errorMessage = message
@@ -682,15 +703,20 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
   }
 
   func removePlanItem(_ itemID: UUID) {
-    guard let selectedMonthSnapshotIndex else { return }
-    let removedItems = monthlySnapshots[selectedMonthSnapshotIndex].items
-    monthlySnapshots[selectedMonthSnapshotIndex].items.removeAll { $0.id == itemID }
+    guard let selectedMonthSnapshot else { return }
+    let targetSnapshotID = selectedMonthSnapshot.id
+    let removedItems = selectedMonthSnapshot.items
+    guard let snapshotIndex = monthlySnapshots.firstIndex(where: { $0.id == targetSnapshotID }) else { return }
+    monthlySnapshots[snapshotIndex].items.removeAll { $0.id == itemID }
     refreshDerivedSummariesFromLocal()
     Task {
         do {
             try await expensesService.deletePlanItem(itemId: itemID.uuidString)
+            notifyDataDidChange()
         } catch {
-            monthlySnapshots[selectedMonthSnapshotIndex].items = removedItems
+            if let rollbackSnapshotIndex = monthlySnapshots.firstIndex(where: { $0.id == targetSnapshotID }) {
+              monthlySnapshots[rollbackSnapshotIndex].items = removedItems
+            }
             refreshDerivedSummariesFromLocal()
             self.errorMessage = error.localizedDescription
             await load(force: true)
@@ -745,6 +771,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
       }
       logger.debug("Expense create succeeded title=\(prepared.title, privacy: .public)")
       refreshDerivedSummariesFromLocal()
+      notifyDataDidChange()
       return true
     } catch {
       let message = "Could not record spend: \(error.localizedDescription)"
@@ -1034,6 +1061,10 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
     }
   }
 
+  private func notifyDataDidChange() {
+    NotificationCenter.default.post(name: .budgetPlannerDataDidChange, object: nil)
+  }
+
   private func parseDayString(_ value: String) -> Date? {
     let segments = value.split(separator: "-")
     guard segments.count == 3,
@@ -1228,4 +1259,8 @@ private extension String {
   var normalizedBudgetKey: String {
     String(self).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
   }
+}
+
+extension Notification.Name {
+  static let budgetPlannerDataDidChange = Notification.Name("budgetPlannerDataDidChange")
 }

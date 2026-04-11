@@ -31,7 +31,7 @@ enum FMPFreeTierCoverage {
   }
 }
 
-struct YearlyProjection: Codable, Equatable {
+struct YearlyProjection: Codable, Equatable, Sendable {
   let year: Int
   let revenue: Double
   let revenueGrowth: Double
@@ -43,7 +43,7 @@ struct YearlyProjection: Codable, Equatable {
   let fcfMargin: Double?
 }
 
-struct StockAnalysisMetrics: Codable, Equatable {
+struct StockAnalysisMetrics: Codable, Equatable, Sendable {
   let symbol: String
   let ttmPE: Double?
   let forwardPE: Double?
@@ -111,7 +111,7 @@ struct StockAnalysisMetrics: Codable, Equatable {
   }
 }
 
-struct StockAnalystConsensus: Codable, Equatable {
+struct StockAnalystConsensus: Codable, Equatable, Sendable {
   let symbol: String
   let strongBuy: Int
   let buy: Int
@@ -148,14 +148,14 @@ struct StockAnalystConsensus: Codable, Equatable {
   }
 }
 
-struct StockAnalystConsensusBucket: Identifiable, Equatable {
+struct StockAnalystConsensusBucket: Identifiable, Equatable, Sendable {
   let kind: StockAnalystConsensusBucketKind
   let count: Int
 
   var id: StockAnalystConsensusBucketKind { kind }
 }
 
-enum StockAnalystConsensusBucketKind: String, CaseIterable, Codable, Identifiable {
+enum StockAnalystConsensusBucketKind: String, CaseIterable, Codable, Identifiable, Sendable {
   case strongBuy
   case buy
   case hold

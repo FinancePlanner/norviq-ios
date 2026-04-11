@@ -7,6 +7,7 @@ import SwiftData
 @main
 @MainActor
 struct NorviqaApp: App {
+  @UIApplicationDelegateAdaptor(PushNotificationsAppDelegate.self) var pushNotificationsAppDelegate
   @InjectedObservable(\Container.appEnvironment) var environmentManager
   @StateObject private var sessionManager = SessionManager()
   @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system

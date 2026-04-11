@@ -26,7 +26,7 @@ extension Container {
   }
 
   var windowSize: Factory<WindowSize> {
-    self { WindowSize() }.singleton
+    self { @MainActor in WindowSize() }.singleton
   }
 
   var authService: Factory<AuthServicing> {
@@ -34,7 +34,11 @@ extension Container {
   }
 
   var authSessionStore: Factory<AuthSessionStoring> {
-    self { UserDefaultsAuthSessionStore() }.singleton
+    self { @MainActor in UserDefaultsAuthSessionStore() }.singleton
+  }
+
+  var appLockManager: Factory<AppLockManaging> {
+    self { @MainActor in AppLockManager() }.singleton
   }
 
   var authSessionManager: Factory<AuthSessionManaging> {

@@ -1,6 +1,7 @@
 import XCTest
 @testable import financeplan
 
+@MainActor
 final class AuthValidationTests: XCTestCase {
   func testIsValidEmail_WithValidEmail_ReturnsTrue() {
     XCTAssertTrue(AuthValidation.isValidEmail("user@example.com"))
@@ -28,5 +29,19 @@ final class AuthValidationTests: XCTestCase {
 
   func testIsValidPassword_WithShortLength_ReturnsFalse() {
     XCTAssertFalse(AuthValidation.isValidPassword("short"))
+  }
+
+  func testIsStrongPassword_WithAllRequirements_ReturnsTrue() {
+    XCTAssertTrue(AuthValidation.isStrongPassword("Password123!"))
+  }
+
+  func testIsStrongPassword_WithoutSymbol_ReturnsFalse() {
+    XCTAssertFalse(AuthValidation.isStrongPassword("Password123"))
+  }
+
+  func testPasswordStrength_ReturnsWeakMediumAndStrong() {
+    XCTAssertEqual(AuthValidation.passwordStrength("abc"), .weak)
+    XCTAssertEqual(AuthValidation.passwordStrength("Password123"), .medium)
+    XCTAssertEqual(AuthValidation.passwordStrength("Password123!"), .strong)
   }
 }

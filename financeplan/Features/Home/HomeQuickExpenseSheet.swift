@@ -81,23 +81,45 @@ struct HomeQuickExpenseSheet: View {
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel") {
-            dismiss()
+          if #available(iOS 26, *) {
+            Button("Cancel") {
+              dismiss()
+            }
+            .buttonStyle(.glass)
+            .disabled(isSaving)
+          } else {
+            Button("Cancel") {
+              dismiss()
+            }
+            .disabled(isSaving)
           }
-          .disabled(isSaving)
         }
 
         ToolbarItem(placement: .confirmationAction) {
-          Button {
-            Task { await submit() }
-          } label: {
-            if isSaving {
-              ProgressView()
-            } else {
-              Text("Save")
+          if #available(iOS 26, *) {
+            Button {
+              Task { await submit() }
+            } label: {
+              if isSaving {
+                ProgressView()
+              } else {
+                Text("Save")
+              }
             }
+            .buttonStyle(.glassProminent)
+            .disabled(!canSave)
+          } else {
+            Button {
+              Task { await submit() }
+            } label: {
+              if isSaving {
+                ProgressView()
+              } else {
+                Text("Save")
+              }
+            }
+            .disabled(!canSave)
           }
-          .disabled(!canSave)
         }
       }
     }

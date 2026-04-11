@@ -156,11 +156,16 @@ struct StockOverviewTab: View {
     let errorMessage: String?
     let onEditValuation: () -> Void
     let onEditPosition: () -> Void
+    let onSellPosition: () -> Void
 
     var body: some View {
         LazyVStack(spacing: 16) {
             if let details {
-                StockPositionOverviewCard(details: details, onEditPosition: onEditPosition)
+                StockPositionOverviewCard(
+                    details: details,
+                    onEditPosition: onEditPosition,
+                    onSellPosition: onSellPosition
+                )
             }
 
             if let marketSnapshot {
@@ -190,6 +195,8 @@ struct StockOverviewTab: View {
             }
 
             StockValuationSummaryCard(
+                symbol: details?.symbol,
+                currentPrice: marketSnapshot?.currentPrice,
                 valuation: valuation,
                 onEditValuation: onEditValuation
             )
@@ -302,6 +309,8 @@ struct StockAnalysisTab: View {
             }
 
             StockThesisCard(
+                symbol: details?.symbol,
+                details: details,
                 analysis: details?.notes,
                 valuationRationale: valuation?.rationale,
                 canEdit: details != nil,
@@ -1778,6 +1787,10 @@ private struct StockAnalysisPlaceholderCard: View {
 private struct StockFundamentalsCard: View {
     let profile: StockComparisonProfile
 
+    private var sharePayload: StockSharePayload {
+        StockSharePayloadFormatter.fundamentals(profile: profile)
+    }
+
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 16) {
@@ -1824,12 +1837,16 @@ private struct StockFundamentalsCard: View {
                         )
                     }
                 }
+
+                StockChannelShareActions(payload: sharePayload)
             }
         }
     }
 }
 
 private struct StockThesisCard: View {
+    let symbol: String?
+    let details: StockDetails?
     let analysis: String?
     let valuationRationale: String?
     let canEdit: Bool
@@ -1871,6 +1888,15 @@ private struct StockThesisCard: View {
         normalizedAnalysis == nil && normalizedValuationRationale == nil ? "Add" : "Edit"
     }
 
+    private var sharePayload: StockSharePayload? {
+        guard let symbol, let text = normalizedAnalysis ?? normalizedValuationRationale else { return nil }
+        return StockSharePayloadFormatter.thesis(
+            symbol: symbol,
+            thesis: text,
+            details: details
+        )
+    }
+
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
@@ -1897,6 +1923,10 @@ private struct StockThesisCard: View {
                     .typography(.small)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+
+                if let sharePayload {
+                    StockChannelShareActions(payload: sharePayload)
+                }
             }
         }
     }
@@ -2098,8 +2128,19 @@ private struct ProjectionRangeChartCard: View {
 }
 
 private struct StockValuationSummaryCard: View {
+    let symbol: String?
+    let currentPrice: Double?
     let valuation: StockValuationRequest?
     let onEditValuation: () -> Void
+
+    private var sharePayload: StockSharePayload? {
+        guard let symbol, let valuation else { return nil }
+        return StockSharePayloadFormatter.basePrice(
+            symbol: symbol,
+            valuation: valuation,
+            currentPrice: currentPrice
+        )
+    }
 
     var body: some View {
         GlassCard {
@@ -2132,6 +2173,10 @@ private struct StockValuationSummaryCard: View {
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
+
+                if let sharePayload {
+                    StockChannelShareActions(payload: sharePayload)
+                }
             }
         }
     }
@@ -2162,6 +2207,7 @@ private struct ValuationCaseTile: View {
 private struct StockPositionOverviewCard: View {
     let details: StockDetails
     let onEditPosition: () -> Void
+    let onSellPosition: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -2176,9 +2222,14 @@ private struct StockPositionOverviewCard: View {
                     Text("Position details")
                         .typography(.small, weight: .semibold)
                     Spacer()
-                    Button("Edit", action: onEditPosition)
-                        .typography(.small, weight: .semibold)
-                        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                    HStack(spacing: 10) {
+                        Button("Sell", action: onSellPosition)
+                            .typography(.small, weight: .semibold)
+                            .foregroundStyle(.orange)
+                        Button("Edit", action: onEditPosition)
+                            .typography(.small, weight: .semibold)
+                            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                    }
                 }
 
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 12) {

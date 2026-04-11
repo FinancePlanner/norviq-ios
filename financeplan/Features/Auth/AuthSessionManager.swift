@@ -2,7 +2,9 @@ import Foundation
 import StockPlanShared
 
 extension Notification.Name {
+  static let authSessionWillInvalidate = Notification.Name("authSessionWillInvalidate")
   static let authSessionDidInvalidate = Notification.Name("authSessionDidInvalidate")
+  static let authSessionStorageFailure = Notification.Name("authSessionStorageFailure")
 }
 
 enum AuthSessionError: LocalizedError, Equatable {
@@ -78,7 +80,7 @@ final class AuthSessionManager: AuthSessionManaging {
         }
 
         do {
-          return try await refreshAccessToken()
+          return try await refreshAccessToken(clearSessionOnFailure: false)
         } catch {
           return token
         }
@@ -105,9 +107,15 @@ final class AuthSessionManager: AuthSessionManaging {
   }
 
   func refreshAccessToken() async throws -> String? {
+    try await refreshAccessToken(clearSessionOnFailure: true)
+  }
+
+  private func refreshAccessToken(clearSessionOnFailure: Bool) async throws -> String? {
     let now = nowProvider()
     guard hasUsableRefreshToken(now: now) else {
-      clearSession(notify: true)
+      if clearSessionOnFailure {
+        clearSession(notify: true)
+      }
       throw AuthSessionError.notAuthenticated
     }
 
@@ -121,7 +129,9 @@ final class AuthSessionManager: AuthSessionManaging {
 
       let refreshToken = self.trimmed(self.sessionStore.refreshToken)
       guard !refreshToken.isEmpty else {
-        self.clearSession(notify: true)
+        if clearSessionOnFailure {
+          self.clearSession(notify: true)
+        }
         throw AuthSessionError.notAuthenticated
       }
 
@@ -137,17 +147,21 @@ final class AuthSessionManager: AuthSessionManaging {
     do {
       return try await task.value
     } catch {
-      clearSession(notify: true)
+      if clearSessionOnFailure {
+        clearSession(notify: true)
+      }
       throw error
     }
   }
 
   func logout() async {
+    NotificationCenter.default.post(name: .authSessionWillInvalidate, object: nil)
     await authService.logout(refreshToken: sessionStore.refreshToken)
     clearSession(notify: true)
   }
 
   func invalidateSession() async {
+    NotificationCenter.default.post(name: .authSessionWillInvalidate, object: nil)
     clearSession(notify: true)
   }
 

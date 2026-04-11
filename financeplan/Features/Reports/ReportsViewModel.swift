@@ -16,6 +16,7 @@ final class ReportsViewModel: ObservableObject {
   @Published var errorMessage: String?
 
   private let expensesService: any ExpensesServicing
+  private let stockService: any StockServicing
   private var hasLoadedOnce = false
 
   private let dateFormatter: DateFormatter = {
@@ -26,8 +27,12 @@ final class ReportsViewModel: ObservableObject {
       return formatter
   }()
 
-  init(expensesService: any ExpensesServicing = Container.shared.expensesService()) {
+  init(
+    expensesService: any ExpensesServicing = Container.shared.expensesService(),
+    stockService: any StockServicing = Container.shared.stockService()
+  ) {
     self.expensesService = expensesService
+    self.stockService = stockService
   }
 
   func load(force: Bool = false) async {
@@ -41,7 +46,8 @@ final class ReportsViewModel: ObservableObject {
       async let reportTask = expensesService.getReportsOverview(from: nil, to: nil)
       let (partner, report) = try await (partnerTask, reportTask)
 
-      self.portfolioStatistics = report.portfolioStatistics
+      let portfolioStats = try await resolvePortfolioStatistics(from: report)
+      self.portfolioStatistics = portfolioStats
       self.yearlySummaries = report.yearlySummaries
       self.latestPillarSummaries = report.latestPillarSummaries
       self.cashFlow = report.cashFlow
@@ -54,6 +60,48 @@ final class ReportsViewModel: ObservableObject {
     }
 
     isLoading = false
+  }
+
+  private func resolvePortfolioStatistics(from report: ReportsOverviewResponse) async throws -> ImportedStocksStatisticsDTO {
+    let overviewStats = report.portfolioStatistics
+    if overviewStats.totalPositions > 0 || overviewStats.totalMarketValue > 0 {
+      return overviewStats
+    }
+
+    let portfolio = try await stockService.fetchPortfolio()
+    guard !portfolio.isEmpty else {
+      return overviewStats
+    }
+
+    let totalMarketValue = portfolio.reduce(0) { $0 + ($1.shares * $1.buyPrice) }
+    let stockAllocations = portfolio.map { stock in
+      let value = stock.shares * stock.buyPrice
+      let weight = totalMarketValue > 0 ? (value / totalMarketValue) * 100 : 0
+      return StockAllocationDTO(symbol: stock.symbol, value: value, weightPercent: weight)
+    }
+
+    let stockSummaries = portfolio.map { stock in
+      let value = stock.shares * stock.buyPrice
+      let weight = totalMarketValue > 0 ? (value / totalMarketValue) * 100 : 0
+      return StockStatisticsSummaryDTO(
+        symbol: stock.symbol,
+        marketValue: value,
+        weightPercent: weight,
+        unrealizedPnl: 0
+      )
+    }
+
+    return ImportedStocksStatisticsDTO(
+      totalPositions: portfolio.count,
+      totalMarketValue: totalMarketValue,
+      totalCostBasis: totalMarketValue,
+      totalUnrealizedPnl: 0,
+      totalRealizedPnl: overviewStats.totalRealizedPnl,
+      stockSummaries: stockSummaries,
+      stockAllocations: stockAllocations,
+      sectorAllocations: overviewStats.sectorAllocations,
+      calendarPerformance: overviewStats.calendarPerformance
+    )
   }
 
   private func mapMonthSummary(_ report: BudgetMonthSummaryResponse) -> BudgetMonthSummary? {

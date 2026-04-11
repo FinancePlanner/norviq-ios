@@ -13,6 +13,11 @@ import StockPlanShared
 
 @MainActor
 final class StockDetailsViewModel: ObservableObject {
+    struct SellPositionOutcome {
+        let shouldDismiss: Bool
+        let errorMessage: String?
+    }
+
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
         category: "StockDetailsPerformance"
@@ -61,6 +66,7 @@ final class StockDetailsViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var isSavingPosition = false
     @Published var isDeletingPosition = false
+    @Published var isSellingPosition = false
     @Published var errorMessage: String?
 
     private let service: StockServicing
@@ -118,6 +124,7 @@ final class StockDetailsViewModel: ObservableObject {
         do {
             let saved = try await service.updateStock(updated)
             details = saved
+            NotificationCenter.default.post(name: .portfolioDataDidChange, object: nil)
             return true
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
@@ -135,35 +142,42 @@ final class StockDetailsViewModel: ObservableObject {
 
         do {
             try await service.delete(id: current.id)
-            details = nil
-            history = []
-            news = []
-            valuation = nil
-            companyProfile = nil
-            marketSnapshot = nil
-            analystConsensus = nil
-            analystConsensusMessage = nil
-            basicFinancials = nil
-            stockEarnings = []
-            stockEarningsMessage = nil
-            isEarningsLoading = false
-            analysisMetrics = nil
-            analysisMetricsMessage = nil
-            financialStatements = nil
-            financialStatementsMessage = nil
-            primaryComparisonProfile = nil
-            comparisonUniverse = []
-            selectedPeerSymbols = []
-            comparisonRefreshTask?.cancel()
-            comparisonRefreshTask = nil
-            loadedTabs = []
-            loadingTabs = []
-            loadedStockID = nil
+            resetLoadedState()
+            NotificationCenter.default.post(name: .portfolioDataDidChange, object: nil)
             return true
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             errorMessage = message
             return false
+        }
+    }
+
+    func sellPosition(_ request: SellStockRequest) async -> SellPositionOutcome {
+        guard let current = details else {
+            return SellPositionOutcome(shouldDismiss: false, errorMessage: "Unable to load the stock details for this sale.")
+        }
+        guard !isSellingPosition else {
+            return SellPositionOutcome(shouldDismiss: false, errorMessage: "A sell request is already in progress.")
+        }
+
+        isSellingPosition = true
+        errorMessage = nil
+        defer { isSellingPosition = false }
+
+        let isFullSale = request.sharesToSell >= current.shares
+        do {
+            let updated = try await service.sellStock(id: current.id, request: request)
+            if isFullSale {
+                resetLoadedState()
+            } else {
+                details = updated
+            }
+            NotificationCenter.default.post(name: .portfolioDataDidChange, object: nil)
+            return SellPositionOutcome(shouldDismiss: isFullSale, errorMessage: nil)
+        } catch {
+            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            errorMessage = message
+            return SellPositionOutcome(shouldDismiss: false, errorMessage: message)
         }
     }
 
@@ -416,6 +430,33 @@ final class StockDetailsViewModel: ObservableObject {
         } catch {
             return []
         }
+    }
+
+    private func resetLoadedState() {
+        details = nil
+        history = []
+        news = []
+        valuation = nil
+        companyProfile = nil
+        marketSnapshot = nil
+        analystConsensus = nil
+        analystConsensusMessage = nil
+        basicFinancials = nil
+        stockEarnings = []
+        stockEarningsMessage = nil
+        isEarningsLoading = false
+        analysisMetrics = nil
+        analysisMetricsMessage = nil
+        financialStatements = nil
+        financialStatementsMessage = nil
+        primaryComparisonProfile = nil
+        comparisonUniverse = []
+        selectedPeerSymbols = []
+        comparisonRefreshTask?.cancel()
+        comparisonRefreshTask = nil
+        loadedTabs = []
+        loadingTabs = []
+        loadedStockID = nil
     }
 
     private func loadNews(symbol: String) async -> [StockNews] {

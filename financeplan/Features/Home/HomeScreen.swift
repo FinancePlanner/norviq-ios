@@ -1,6 +1,6 @@
 import Charts
-import Combine
 import Foundation
+import Observation
 import OSLog
 import StoreKit
 import SwiftUI
@@ -13,11 +13,13 @@ private let homePerformanceLogger = Logger(
 )
 
 @MainActor
-final class ActivityViewModel: ObservableObject {
-    @Published var activities: [UserActivityResponse] = []
-    @Published var isLoading = false
-    @Published var errorMessage: String?
+@Observable
+final class ActivityViewModel {
+    var activities: [UserActivityResponse] = []
+    var isLoading = false
+    var errorMessage: String?
 
+    @ObservationIgnored
     @Injected(\.activityService) private var activityService
 
     func loadActivities() async {
@@ -45,14 +47,16 @@ final class ActivityViewModel: ObservableObject {
 }
 
 @MainActor
-final class FocusPointsViewModel: ObservableObject {
-    @Published var points: [GoalResponse] = []
-    @Published var draftTitle = ""
-    @Published var isLoading = false
-    @Published var isSubmitting = false
-    @Published var pendingStatusUpdates: Set<String> = []
-    @Published var errorMessage: String?
+@Observable
+final class FocusPointsViewModel {
+    var points: [GoalResponse] = []
+    var draftTitle = ""
+    var isLoading = false
+    var isSubmitting = false
+    var pendingStatusUpdates: Set<String> = []
+    var errorMessage: String?
 
+    @ObservationIgnored
     @Injected(\.goalsService) private var goalsService
 
     func load() async {
@@ -143,11 +147,11 @@ private enum PortfolioSegment: String, CaseIterable, Identifiable {
 
 @MainActor
 struct HomeScreen: View {
-  let onLogout: () async -> Void
-
   @Environment(\.colorScheme) private var colorScheme
+  let onLogout: () async -> Void
   @State private var selectedTab: HomeTab = .dashboard
   @State private var isSettingsPresented = false
+  @State private var pendingPortfolioOpenSymbol: String?
   @StateObject private var budgetPlannerViewModel = BudgetPlannerViewModel()
 
   var body: some View {
@@ -162,7 +166,10 @@ struct HomeScreen: View {
         }
         .tag(HomeTab.dashboard)
 
-      PortfolioRoot(isSettingsPresented: $isSettingsPresented)
+      PortfolioRoot(
+        isSettingsPresented: $isSettingsPresented,
+        pendingOpenSymbol: $pendingPortfolioOpenSymbol
+      )
         .tabItem {
           Label("Portfolio", systemImage: "chart.line.uptrend.xyaxis")
         }
@@ -187,18 +194,32 @@ struct HomeScreen: View {
     .sheet(isPresented: $isSettingsPresented) {
       UserProfileView()
     }
+    .onReceive(NotificationCenter.default.publisher(for: .openStockFromPushNotification)) { notification in
+      guard
+        let symbol = notification.userInfo?["symbol"] as? String,
+        !symbol.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      else {
+        return
+      }
+      pendingPortfolioOpenSymbol = symbol
+      selectedTab = .portfolio
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .openPortfolioFromPushNotification)) { _ in
+      pendingPortfolioOpenSymbol = nil
+      selectedTab = .portfolio
+    }
   }
 }
 
 @MainActor
 private struct DashboardRoot: View {
+  @Environment(\.colorScheme) private var colorScheme
   @Binding var selectedTab: HomeTab
   @Binding var isSettingsPresented: Bool
   @ObservedObject var budgetStore: BudgetPlannerViewModel
-  @Environment(\.colorScheme) private var colorScheme
   @StateObject private var searchViewModel = AssetSearchViewModel()
-  @StateObject private var activityViewModel = ActivityViewModel()
-  @StateObject private var focusPointsViewModel = FocusPointsViewModel()
+  @State private var activityViewModel = ActivityViewModel()
+  @State private var focusPointsViewModel = FocusPointsViewModel()
   @State private var dashboardInsights: DashboardInsightsResponse?
   @State private var isInsightsLoading = false
   @State private var insightsLoadFailed = false
@@ -263,61 +284,67 @@ private struct DashboardRoot: View {
     }
   }
 
+  private var isHomeMetricsRedacted: Bool {
+    isHomeMetricsLoading && !hasLoadedContent
+  }
+
+  private var isSearchResultsVisible: Bool {
+    !searchViewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
+
   var body: some View {
     NavigationStack {
       ScrollView {
-        VStack(spacing: 20) {
-            DashboardHeroCard(
-                totalValue: portfolioTotalValue,
-                totalSpending: spendingTotalValue,
+        Group {
+          if #available(iOS 26, *) {
+            GlassEffectContainer(spacing: 20) {
+              DashboardContentSection(
+                portfolioTotalValue: portfolioTotalValue,
+                spendingTotalValue: spendingTotalValue,
                 portfolioDeltaPercent: portfolioDeltaPercent,
                 spendingDeltaPercent: spendingDeltaPercent,
-                portfolioPoints: portfolioChartPoints,
-                spendingPoints: spendingChartPoints,
-                onPortfolioTap: { selectedTab = .portfolio },
-                onExpensesTap: { selectedTab = .expenses },
-                onReportsTap: { selectedTab = .reports }
+                portfolioChartPoints: portfolioChartPoints,
+                spendingChartPoints: spendingChartPoints,
+                isHomeMetricsRedacted: isHomeMetricsRedacted,
+                isSearchResultsVisible: isSearchResultsVisible,
+                searchViewModel: searchViewModel,
+                activityViewModel: activityViewModel,
+                recentExpenses: budgetStore.recentExpenseActivities,
+                financialHealth: dashboardInsights?.financialHealth,
+                isFinancialHealthLoading: isInsightsLoading,
+                financialHealthUnavailable: insightsLoadFailed,
+                insightCards: insightCards,
+                focusPointsViewModel: focusPointsViewModel,
+                onPortfolioTap: showPortfolioTab,
+                onExpensesTap: showExpensesTab,
+                onReportsTap: showReportsTab,
+                onQuickAddTap: presentQuickAdd
+              )
+            }
+          } else {
+            DashboardContentSection(
+              portfolioTotalValue: portfolioTotalValue,
+              spendingTotalValue: spendingTotalValue,
+              portfolioDeltaPercent: portfolioDeltaPercent,
+              spendingDeltaPercent: spendingDeltaPercent,
+              portfolioChartPoints: portfolioChartPoints,
+              spendingChartPoints: spendingChartPoints,
+              isHomeMetricsRedacted: isHomeMetricsRedacted,
+              isSearchResultsVisible: isSearchResultsVisible,
+              searchViewModel: searchViewModel,
+              activityViewModel: activityViewModel,
+              recentExpenses: budgetStore.recentExpenseActivities,
+              financialHealth: dashboardInsights?.financialHealth,
+              isFinancialHealthLoading: isInsightsLoading,
+              financialHealthUnavailable: insightsLoadFailed,
+              insightCards: insightCards,
+              focusPointsViewModel: focusPointsViewModel,
+              onPortfolioTap: showPortfolioTab,
+              onExpensesTap: showExpensesTab,
+              onReportsTap: showReportsTab,
+              onQuickAddTap: presentQuickAdd
             )
-            .redacted(reason: isHomeMetricsLoading && !hasLoadedContent ? .placeholder : [])
-          // ... rest of view
-
-          if !searchViewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            AssetSearchCard(viewModel: searchViewModel)
-              .transition(.opacity.combined(with: .move(edge: .top)))
           }
-
-          UnifiedActivityFeed(
-            viewModel: activityViewModel,
-            recentExpenses: budgetStore.recentExpenseActivities,
-            financialHealth: dashboardInsights?.financialHealth,
-            isFinancialHealthLoading: isInsightsLoading,
-            financialHealthUnavailable: insightsLoadFailed
-          )
-
-          Button(action: {
-              isQuickAddPresented = true
-          }) {
-              HStack {
-                  Image(systemName: "plus.circle.fill")
-                  Text("Add Entry")
-                      .font(.headline)
-              }
-              .frame(maxWidth: .infinity)
-              .padding()
-              .background(Color.white.opacity(0.1))
-              .clipShape(.rect(cornerRadius: 16))
-              .foregroundStyle(.white)
-          }
-
-          // Keeping old cards hidden behind a disclosure group or just at the bottom for functionality
-          DisclosureGroup("More Insights") {
-              VStack(spacing: 20) {
-                  InsightsGrid(cards: insightCards)
-                  FocusListCard(viewModel: focusPointsViewModel)
-              }
-              .padding(.top, 16)
-          }
-          .tint(AppTheme.Colors.tint(for: colorScheme))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 20)
@@ -326,24 +353,37 @@ private struct DashboardRoot: View {
       .navigationTitle(greetingText)
       .navigationBarTitleDisplayMode(.large)
       .task {
-          await loadContent()
+        await handleInitialTask()
+      }
+      .onReceive(NotificationCenter.default.publisher(for: .portfolioDataDidChange)) { _ in
+        handleHomeDataDidChange()
       }
       .onChange(of: selectedTab) { _, tab in
-        guard tab == .dashboard else { return }
-        Task { await loadContent(force: true) }
+        handleTabSelectionChange(tab)
+      }
+      .onReceive(NotificationCenter.default.publisher(for: .budgetPlannerDataDidChange)) { _ in
+        handleHomeDataDidChange()
       }
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
-          Button {
-            isSettingsPresented = true
-          } label: {
-            Image(systemName: "gearshape")
-              .font(.system(size: 16, weight: .semibold))
-              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-              .padding(6)
-              .appGlassEffect(.capsule)
+          if #available(iOS 26, *) {
+            Button(action: openSettings) {
+              Image(systemName: "gearshape")
+                .font(.system(size: 16, weight: .semibold))
+            }
+            .buttonStyle(.glass)
+            .tint(AppTheme.Colors.tint(for: colorScheme))
+            .accessibilityLabel("Open settings")
+          } else {
+            Button(action: openSettings) {
+              Image(systemName: "gearshape")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                .padding(6)
+                .appGlassEffect(.capsule)
+            }
+            .accessibilityLabel("Open settings")
           }
-          .accessibilityLabel("Open settings")
         }
       }
       .searchable(
@@ -352,17 +392,65 @@ private struct DashboardRoot: View {
         prompt: "Search stocks, ETFs, or owned assets"
       )
       .onChange(of: searchViewModel.query) { _, _ in
-        searchViewModel.queryChanged()
+        handleSearchQueryChange()
       }
       .onSubmit(of: .search) {
-        Task { await searchViewModel.searchNow() }
+        handleSearchSubmit()
       }
       .sheet(isPresented: $isQuickAddPresented) {
         HomeQuickExpenseSheet { draft in
-          await saveQuickExpense(draft)
+          await handleQuickExpenseSave(draft)
         }
       }
     }
+  }
+
+  private func handleInitialTask() async {
+    await loadContent()
+  }
+
+  private func handleHomeDataDidChange() {
+    Task {
+      await loadHomeMetrics()
+      await activityViewModel.loadActivities()
+    }
+  }
+
+  private func handleTabSelectionChange(_ tab: HomeTab) {
+    guard tab == .dashboard else { return }
+    Task { await loadContent(force: true) }
+  }
+
+  private func openSettings() {
+    isSettingsPresented = true
+  }
+
+  private func showPortfolioTab() {
+    selectedTab = .portfolio
+  }
+
+  private func showExpensesTab() {
+    selectedTab = .expenses
+  }
+
+  private func showReportsTab() {
+    selectedTab = .reports
+  }
+
+  private func presentQuickAdd() {
+    isQuickAddPresented = true
+  }
+
+  private func handleSearchQueryChange() {
+    searchViewModel.queryChanged()
+  }
+
+  private func handleSearchSubmit() {
+    Task { await searchViewModel.searchNow() }
+  }
+
+  private func handleQuickExpenseSave(_ draft: HomeQuickExpenseDraft) async -> String? {
+    await saveQuickExpense(draft)
   }
 
   private func loadContent(force: Bool = false) async {
@@ -482,12 +570,113 @@ private struct DashboardRoot: View {
   }
 }
 
+private struct DashboardContentSection: View {
+  let portfolioTotalValue: Double
+  let spendingTotalValue: Double
+  let portfolioDeltaPercent: Double?
+  let spendingDeltaPercent: Double?
+  let portfolioChartPoints: [ChartDataPoint]
+  let spendingChartPoints: [ChartDataPoint]
+  let isHomeMetricsRedacted: Bool
+  let isSearchResultsVisible: Bool
+  let searchViewModel: AssetSearchViewModel
+  let activityViewModel: ActivityViewModel
+  let recentExpenses: [BudgetActivity]
+  let financialHealth: DashboardFinancialHealthDTO?
+  let isFinancialHealthLoading: Bool
+  let financialHealthUnavailable: Bool
+  let insightCards: [InsightCard]
+  let focusPointsViewModel: FocusPointsViewModel
+  let onPortfolioTap: () -> Void
+  let onExpensesTap: () -> Void
+  let onReportsTap: () -> Void
+  let onQuickAddTap: () -> Void
+
+  @Environment(\.colorScheme) private var colorScheme
+
+  var body: some View {
+    DashboardHeroCard(
+      totalValue: portfolioTotalValue,
+      totalSpending: spendingTotalValue,
+      portfolioDeltaPercent: portfolioDeltaPercent,
+      spendingDeltaPercent: spendingDeltaPercent,
+      portfolioPoints: portfolioChartPoints,
+      spendingPoints: spendingChartPoints,
+      onPortfolioTap: onPortfolioTap,
+      onExpensesTap: onExpensesTap,
+      onReportsTap: onReportsTap
+    )
+    .redacted(reason: isHomeMetricsRedacted ? .placeholder : [])
+
+    if isSearchResultsVisible {
+      AssetSearchCard(viewModel: searchViewModel)
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    UnifiedActivityFeed(
+      viewModel: activityViewModel,
+      recentExpenses: recentExpenses,
+      financialHealth: financialHealth,
+      isFinancialHealthLoading: isFinancialHealthLoading,
+      financialHealthUnavailable: financialHealthUnavailable
+    )
+
+    QuickAddEntryButton(action: onQuickAddTap)
+
+    DisclosureGroup("More Insights") {
+      VStack(spacing: 20) {
+        InsightsGrid(cards: insightCards)
+        FocusListCard(viewModel: focusPointsViewModel)
+      }
+      .padding(.top, 16)
+    }
+    .tint(AppTheme.Colors.tint(for: colorScheme))
+  }
+}
+
+private struct QuickAddEntryButton: View {
+  @Environment(\.colorScheme) private var colorScheme
+  let action: () -> Void
+
+  var body: some View {
+    if #available(iOS 26, *) {
+      Button(action: action) {
+        Label("Add Entry", systemImage: "plus.circle.fill")
+          .font(.headline)
+          .frame(maxWidth: .infinity)
+          .padding()
+      }
+      .buttonStyle(.glassProminent)
+      .tint(AppTheme.Colors.tint(for: colorScheme))
+    } else {
+      Button(action: action) {
+        HStack {
+          Image(systemName: "plus.circle.fill")
+          Text("Add Entry")
+            .font(.headline)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(Color.white.opacity(0.1))
+        .clipShape(.rect(cornerRadius: 16))
+        .foregroundStyle(.white)
+      }
+    }
+  }
+}
+
 private struct PortfolioRoot: View {
   @Binding var isSettingsPresented: Bool
+  @Binding var pendingOpenSymbol: String?
   @Environment(\.colorScheme) private var colorScheme
   @StateObject private var portfolioViewModel = PortfolioViewModel()
+  @StateObject private var watchlistViewModel = WatchlistViewModel()
   @State private var selectedSegment: PortfolioSegment = .holdings
-  @Namespace private var segmentContentNamespace
+  @State private var isListManagerPresented = false
+
+  private var shouldShowListSwitcher: Bool {
+    selectedSegment == .holdings || selectedSegment == .watchlist
+  }
 
   var body: some View {
     NavigationStack {
@@ -501,14 +690,42 @@ private struct PortfolioRoot: View {
         .padding(.horizontal, 16)
         .padding(.top, 8)
 
+        if shouldShowListSwitcher {
+          if selectedSegment == .holdings {
+            PortfolioListSwitcherBar(
+              items: portfolioViewModel.portfolioLists.map {
+                .init(id: $0.id, name: $0.name, isDefault: $0.isDefault)
+              },
+              selectedId: portfolioViewModel.selectedPortfolioListId,
+              onSelect: { id in
+                Task { await portfolioViewModel.selectPortfolioList(id) }
+              },
+              onManage: { isListManagerPresented = true }
+            )
+            .padding(.horizontal, 16)
+          } else {
+            PortfolioListSwitcherBar(
+              items: watchlistViewModel.watchlistLists.map {
+                .init(id: $0.id, name: $0.name, isDefault: $0.isDefault)
+              },
+              selectedId: watchlistViewModel.selectedWatchlistListId,
+              onSelect: { id in
+                Task { await watchlistViewModel.selectWatchlistList(id) }
+              },
+              onManage: { isListManagerPresented = true }
+            )
+            .padding(.horizontal, 16)
+          }
+        }
+
         Group {
           switch selectedSegment {
           case .holdings:
-            PortfolioScreen()
+            PortfolioScreen(pendingOpenSymbol: $pendingOpenSymbol)
           case .allocation:
             PortfolioAllocationScreen()
           case .watchlist:
-            WatchlistTab()
+            WatchlistTab(viewModel: watchlistViewModel)
           case .earnings:
             EarningsCalendarScreen()
           case .news:
@@ -533,6 +750,300 @@ private struct PortfolioRoot: View {
               .appGlassEffect(.capsule)
           }
           .accessibilityLabel("Open settings")
+        }
+      }
+      .onChange(of: pendingOpenSymbol) { _, symbol in
+        guard
+          let symbol = symbol?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !symbol.isEmpty
+        else {
+          return
+        }
+
+        selectedSegment = .holdings
+      }
+      .onReceive(NotificationCenter.default.publisher(for: .openPortfolioFromPushNotification)) { _ in
+        selectedSegment = .holdings
+      }
+      .sheet(isPresented: $isListManagerPresented) {
+        if selectedSegment == .holdings {
+          PortfolioListManagementSheet(
+            title: "Manage Portfolios",
+            lists: portfolioViewModel.portfolioLists,
+            onCreate: { name in await portfolioViewModel.createPortfolioList(name: name) },
+            onRename: { id, name in await portfolioViewModel.renamePortfolioList(id: id, name: name) },
+            onDelete: { id in await portfolioViewModel.deletePortfolioList(id: id) }
+          )
+        } else {
+          WatchlistListManagementSheet(
+            title: "Manage Watchlists",
+            lists: watchlistViewModel.watchlistLists,
+            onCreate: { name in await watchlistViewModel.createWatchlistList(name: name) },
+            onRename: { id, name in await watchlistViewModel.renameWatchlistList(id: id, name: name) },
+            onDelete: { id in await watchlistViewModel.deleteWatchlistList(id: id) }
+          )
+        }
+      }
+      .task {
+        await portfolioViewModel.load(force: true)
+        await watchlistViewModel.load(force: true)
+      }
+      .onChange(of: selectedSegment) { _, value in
+        if value == .holdings {
+          Task { await portfolioViewModel.load(force: true) }
+        } else if value == .watchlist {
+          Task { await watchlistViewModel.load(force: true) }
+        }
+      }
+    }
+  }
+}
+
+private struct ListSwitcherItem: Identifiable {
+  let id: String
+  let name: String
+  let isDefault: Bool
+}
+
+private struct PortfolioListSwitcherBar: View {
+  let items: [ListSwitcherItem]
+  let selectedId: String?
+  let onSelect: (String) -> Void
+  let onManage: () -> Void
+
+  var body: some View {
+    ScrollView(.horizontal, showsIndicators: false) {
+      if #available(iOS 26, *) {
+        GlassEffectContainer(spacing: 10) {
+          HStack(spacing: 10) {
+            ForEach(items) { item in
+              listChip(item)
+            }
+
+            manageButton
+          }
+          .padding(.vertical, 4)
+        }
+      } else {
+        HStack(spacing: 10) {
+          ForEach(items) { item in
+            listChip(item)
+          }
+
+          manageButton
+        }
+        .padding(.vertical, 4)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func listChip(_ item: ListSwitcherItem) -> some View {
+    let isSelected = selectedId == item.id
+
+    if #available(iOS 26, *) {
+      Button(action: { onSelect(item.id) }) {
+        HStack(spacing: 6) {
+          Text(item.name)
+            .lineLimit(1)
+          if item.isDefault {
+            Image(systemName: "star.fill")
+              .font(.caption2)
+          }
+        }
+        .font(.caption.weight(.semibold))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+      }
+      .glassEffect(
+        isSelected
+          ? .regular.tint(.accentColor).interactive()
+          : .regular.interactive(),
+        in: .capsule
+      )
+    } else {
+      Button(action: { onSelect(item.id) }) {
+        HStack(spacing: 6) {
+          Text(item.name)
+            .lineLimit(1)
+          if item.isDefault {
+            Image(systemName: "star.fill")
+              .font(.caption2)
+          }
+        }
+        .font(.caption.weight(.semibold))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+      }
+      .foregroundStyle(isSelected ? .primary : .secondary)
+      .background(
+        Capsule()
+          .fill(isSelected ? Color.accentColor.opacity(0.20) : Color.secondary.opacity(0.12))
+      )
+      .appGlassEffect(.capsule)
+    }
+  }
+
+  @ViewBuilder
+  private var manageButton: some View {
+    if #available(iOS 26, *) {
+      Button("Manage", action: onManage)
+        .buttonStyle(.glass)
+        .controlSize(.small)
+    } else {
+      Button("Manage", action: onManage)
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+    }
+  }
+}
+
+private struct PortfolioListManagementSheet: View {
+  let title: String
+  let lists: [PortfolioListDTOResponse]
+  let onCreate: (String) async -> String?
+  let onRename: (String, String) async -> String?
+  let onDelete: (String) async -> String?
+
+  @Environment(\.dismiss) private var dismiss
+  @State private var newName = ""
+  @State private var draftNames: [String: String] = [:]
+  @State private var feedbackMessage: String?
+
+  var body: some View {
+    NavigationStack {
+      List {
+        Section("Create") {
+          TextField("Portfolio name", text: $newName)
+          Button("Create") {
+            Task {
+              feedbackMessage = await onCreate(newName)
+              if feedbackMessage == nil {
+                newName = ""
+              }
+            }
+          }
+        }
+
+        Section("Existing") {
+          ForEach(lists) { list in
+            VStack(alignment: .leading, spacing: 8) {
+              TextField(
+                "Name",
+                text: Binding(
+                  get: { draftNames[list.id] ?? list.name },
+                  set: { draftNames[list.id] = $0 }
+                )
+              )
+
+              HStack(spacing: 12) {
+                Button("Save") {
+                  Task {
+                    let draft = draftNames[list.id] ?? list.name
+                    feedbackMessage = await onRename(list.id, draft)
+                  }
+                }
+                .buttonStyle(.bordered)
+
+                if !list.isDefault {
+                  Button("Delete", role: .destructive) {
+                    Task { feedbackMessage = await onDelete(list.id) }
+                  }
+                  .buttonStyle(.bordered)
+                }
+              }
+            }
+            .padding(.vertical, 4)
+          }
+        }
+
+        if let feedbackMessage {
+          Section {
+            Text(feedbackMessage)
+              .foregroundStyle(.secondary)
+          }
+        }
+      }
+      .navigationTitle(title)
+      .toolbar {
+        ToolbarItem(placement: .topBarTrailing) {
+          Button("Done") { dismiss() }
+        }
+      }
+    }
+  }
+}
+
+private struct WatchlistListManagementSheet: View {
+  let title: String
+  let lists: [WatchlistListDTOResponse]
+  let onCreate: (String) async -> String?
+  let onRename: (String, String) async -> String?
+  let onDelete: (String) async -> String?
+
+  @Environment(\.dismiss) private var dismiss
+  @State private var newName = ""
+  @State private var draftNames: [String: String] = [:]
+  @State private var feedbackMessage: String?
+
+  var body: some View {
+    NavigationStack {
+      List {
+        Section("Create") {
+          TextField("Watchlist name", text: $newName)
+          Button("Create") {
+            Task {
+              feedbackMessage = await onCreate(newName)
+              if feedbackMessage == nil {
+                newName = ""
+              }
+            }
+          }
+        }
+
+        Section("Existing") {
+          ForEach(lists) { list in
+            VStack(alignment: .leading, spacing: 8) {
+              TextField(
+                "Name",
+                text: Binding(
+                  get: { draftNames[list.id] ?? list.name },
+                  set: { draftNames[list.id] = $0 }
+                )
+              )
+
+              HStack(spacing: 12) {
+                Button("Save") {
+                  Task {
+                    let draft = draftNames[list.id] ?? list.name
+                    feedbackMessage = await onRename(list.id, draft)
+                  }
+                }
+                .buttonStyle(.bordered)
+
+                if !list.isDefault {
+                  Button("Delete", role: .destructive) {
+                    Task { feedbackMessage = await onDelete(list.id) }
+                  }
+                  .buttonStyle(.bordered)
+                }
+              }
+            }
+            .padding(.vertical, 4)
+          }
+        }
+
+        if let feedbackMessage {
+          Section {
+            Text(feedbackMessage)
+              .foregroundStyle(.secondary)
+          }
+        }
+      }
+      .navigationTitle(title)
+      .toolbar {
+        ToolbarItem(placement: .topBarTrailing) {
+          Button("Done") { dismiss() }
         }
       }
     }
@@ -685,7 +1196,7 @@ private struct InsightsGrid: View {
 }
 
 private struct FocusListCard: View {
-  @ObservedObject var viewModel: FocusPointsViewModel
+  @Bindable var viewModel: FocusPointsViewModel
   @Environment(\.colorScheme) private var colorScheme
 
   private var orderedPoints: [GoalResponse] {
@@ -708,13 +1219,9 @@ private struct FocusListCard: View {
             .textInputAutocapitalization(.sentences)
             .autocorrectionDisabled(false)
             .submitLabel(.done)
-            .onSubmit {
-              Task { await viewModel.createFromDraft() }
-            }
+            .onSubmit(createFocusPointFromDraft)
 
-          Button {
-            Task { await viewModel.createFromDraft() }
-          } label: {
+          Button(action: createFocusPointFromDraft) {
             if viewModel.isSubmitting {
               ProgressView()
             } else {
@@ -728,7 +1235,7 @@ private struct FocusListCard: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .appGlassEffect(.rect(cornerRadius: 12))
+        .modifier(FocusInputSurfaceModifier())
 
         if let errorMessage = viewModel.errorMessage {
           Text(errorMessage)
@@ -745,9 +1252,7 @@ private struct FocusListCard: View {
         } else {
           ForEach(orderedPoints) { item in
             Button {
-              if item.statusUpdatedBy != .system {
-                Task { await viewModel.toggleStatus(for: item) }
-              }
+              toggleStatus(for: item)
             } label: {
               HStack(alignment: .top, spacing: 10) {
                 if item.statusUpdatedBy == .system {
@@ -776,6 +1281,15 @@ private struct FocusListCard: View {
         }
       }
     }
+  }
+
+  private func createFocusPointFromDraft() {
+    Task { await viewModel.createFromDraft() }
+  }
+
+  private func toggleStatus(for item: GoalResponse) {
+    guard item.statusUpdatedBy != .system else { return }
+    Task { await viewModel.toggleStatus(for: item) }
   }
 }
 
@@ -838,34 +1352,63 @@ private struct DashboardActionButton: View {
   let action: () -> Void
 
   var body: some View {
-    Button(action: action) {
-      VStack(spacing: 8) {
-        Image(systemName: symbol)
-          .font(.headline.weight(.semibold))
-          .foregroundStyle(isDisabled ? .secondary.opacity(0.8) : tint)
+    Group {
+      if #available(iOS 26, *) {
+        Button(action: action) {
+          actionContent
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.glass)
+        .tint(tint)
+        .opacity(isDisabled ? 0.6 : 1.0)
+        .disabled(isDisabled)
+      } else {
+        Button(action: action) {
+          actionContent
+            .padding(.vertical, 12)
+            .appGlassEffect(.rect(cornerRadius: 18), tint: tint.opacity(0.10))
+            .opacity(isDisabled ? 0.6 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+      }
+    }
+  }
 
-        HStack(spacing: 4) {
-          Text(title)
-            .typography(.nano, weight: .semibold)
-            .foregroundStyle(isDisabled ? .secondary : tint)
+  private var actionContent: some View {
+    VStack(spacing: 8) {
+      Image(systemName: symbol)
+        .font(.headline.weight(.semibold))
+        .foregroundStyle(isDisabled ? .secondary.opacity(0.8) : tint)
 
-          if isDisabled {
-            Text("Soon")
-              .font(.system(size: 8, weight: .bold, design: .rounded))
-              .foregroundStyle(.white)
-              .padding(.horizontal, 4)
-              .padding(.vertical, 1)
-              .background(Color.red, in: Capsule())
-          }
+      HStack(spacing: 4) {
+        Text(title)
+          .typography(.nano, weight: .semibold)
+          .foregroundStyle(isDisabled ? .secondary : tint)
+
+        if isDisabled {
+          Text("Soon")
+            .font(.system(size: 8, weight: .bold, design: .rounded))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 1)
+            .background(Color.red, in: Capsule())
         }
       }
-      .frame(maxWidth: .infinity)
-      .padding(.vertical, 12)
-      .appGlassEffect(.rect(cornerRadius: 18), tint: tint.opacity(0.10))
-      .opacity(isDisabled ? 0.6 : 1.0)
     }
-    .buttonStyle(.plain)
-    .disabled(isDisabled)
+    .frame(maxWidth: .infinity)
+  }
+}
+
+private struct FocusInputSurfaceModifier: ViewModifier {
+  func body(content: Content) -> some View {
+    if #available(iOS 26, *) {
+      content
+        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+    } else {
+      content
+        .appGlassEffect(.rect(cornerRadius: 12))
+    }
   }
 }
 

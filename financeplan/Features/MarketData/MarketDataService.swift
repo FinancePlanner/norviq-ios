@@ -1,7 +1,7 @@
 import Foundation
 import StockPlanShared
 
-protocol MarketDataServicing {
+protocol MarketDataServicing: Sendable {
   func fetchCompanyProfile(symbol: String) async throws -> CompanyProfileResponse
   func fetchQuote(symbol: String) async throws -> QuoteResponse
   func fetchAnalystConsensus(symbol: String) async throws -> StockAnalystConsensus
@@ -20,7 +20,7 @@ protocol MarketDataServicing {
   func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements
 }
 
-final class MarketDataHTTPService: MarketDataServicing {
+final class MarketDataHTTPService: MarketDataServicing, @unchecked Sendable {
   private let environmentManager: AppEnvironmentManager
   private let session: MarketDataURLSessionProtocol
   private let authSessionManager: AuthSessionManaging

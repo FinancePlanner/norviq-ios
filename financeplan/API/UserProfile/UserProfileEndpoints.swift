@@ -29,8 +29,7 @@ struct UpdateUserProfileEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    let data = try JSONEncoder.stockPlanShared.encode(request)
-    return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    userProfileUpdateParameters(request)
   }
 }
 
@@ -54,8 +53,7 @@ struct UpdateUsernameEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    let data = try JSONEncoder.stockPlanShared.encode(request)
-    return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    ["username": request.username]
   }
 }
 
@@ -69,8 +67,7 @@ struct UpdateEmailEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    let data = try JSONEncoder.stockPlanShared.encode(request)
-    return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    ["email": request.email]
   }
 }
 
@@ -84,7 +81,29 @@ struct UpdatePasswordEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    let data = try JSONEncoder.stockPlanShared.encode(request)
-    return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    [
+      "currentPassword": request.currentPassword,
+      "newPassword": request.newPassword
+    ]
   }
+}
+
+private func userProfileUpdateParameters(_ request: UpdateUserProfileRequest) -> Parameters {
+  var userProfile: Parameters = [
+    "id": request.userProfile.id,
+    "email": request.userProfile.email
+  ]
+  if let bio = request.userProfile.bio {
+    userProfile["bio"] = bio
+  }
+  if let avatarURL = request.userProfile.avatarURL {
+    userProfile["avatarURL"] = avatarURL.absoluteString
+  }
+  if let bannerAvatarURL = request.userProfile.bannerAvatarURL {
+    userProfile["bannerAvatarURL"] = bannerAvatarURL.absoluteString
+  }
+  if let username = request.userProfile.username {
+    userProfile["username"] = username
+  }
+  return ["userProfile": userProfile]
 }

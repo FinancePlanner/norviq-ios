@@ -2,6 +2,7 @@ import XCTest
 import StockPlanShared
 @testable import financeplan
 
+@MainActor
 final class FinancialHealthCardTests: XCTestCase {
     func testDashboardInsightsResponseDecodingIncludesFinancialHealth() throws {
         let payload = """

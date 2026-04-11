@@ -1,31 +1,34 @@
 import Foundation
+import Security
 import StockPlanShared
 import XCTest
 @testable import financeplan
 
+@MainActor
 final class AuthSessionStoreTests: XCTestCase {
   private final class InMemorySecureStore: SecureStringStoring {
     private var values: [String: String] = [:]
 
-    func string(for key: String) -> String? {
+    func string(for key: String) throws -> String? {
       values[key]
     }
 
-    func setString(_ value: String, for key: String) {
+    func setString(_ value: String, for key: String) throws {
       values[key] = value
     }
 
-    func removeValue(for key: String) {
+    func removeValue(for key: String) throws {
       values.removeValue(forKey: key)
     }
   }
 
   private final class BrokenSecureStore: SecureStringStoring {
-    func string(for key: String) -> String? { nil }
-    func setString(_ value: String, for key: String) {}
-    func removeValue(for key: String) {}
+    func string(for key: String) throws -> String? { throw SecureStoreError.readFailed(errSecAuthFailed) }
+    func setString(_ value: String, for key: String) throws { throw SecureStoreError.writeFailed(errSecAuthFailed) }
+    func removeValue(for key: String) throws { throw SecureStoreError.deleteFailed(errSecAuthFailed) }
   }
 
+  @MainActor
   func testStoreAuthResponse_PrefersJWTExpirationWhenPresent() throws {
     let defaults = UserDefaults(suiteName: #function)!
     defaults.removePersistentDomain(forName: #function)
@@ -58,6 +61,7 @@ final class AuthSessionStoreTests: XCTestCase {
     XCTAssertEqual(store.authToken, makeJWT(userID: userID, expiresAt: jwtExpiry))
   }
 
+  @MainActor
   func testStoreAuthResponse_WithOpaqueToken_FallsBackToExpiresIn() {
     let defaults = UserDefaults(suiteName: #function)!
     defaults.removePersistentDomain(forName: #function)
@@ -87,7 +91,8 @@ final class AuthSessionStoreTests: XCTestCase {
     XCTAssertEqual(store.refreshTokenExpiresAt, now.addingTimeInterval(86_400))
   }
 
-  func testStoreAuthResponse_WhenSecureStoreCannotReadBack_FallsBackToUserDefaults() {
+  @MainActor
+  func testStoreAuthResponse_WhenSecureStoreFails_DoesNotFallBackToUserDefaults() {
     let defaults = UserDefaults(suiteName: #function)!
     defaults.removePersistentDomain(forName: #function)
     let now = Date(timeIntervalSince1970: 1_800_000_000)
@@ -111,10 +116,11 @@ final class AuthSessionStoreTests: XCTestCase {
       )
     )
 
-    XCTAssertEqual(store.authToken, "opaque-token")
-    XCTAssertEqual(store.refreshToken, "refresh-123")
-    XCTAssertEqual(defaults.string(forKey: "auth_token"), "opaque-token")
-    XCTAssertEqual(defaults.string(forKey: "refresh_token"), "refresh-123")
+    XCTAssertEqual(store.authToken, "")
+    XCTAssertEqual(store.refreshToken, "")
+    XCTAssertNil(defaults.string(forKey: "auth_token"))
+    XCTAssertNil(defaults.string(forKey: "refresh_token"))
+    XCTAssertEqual(store.currentUserID, "")
   }
 
   private func makeJWT(userID: UUID, expiresAt: Date) -> String {

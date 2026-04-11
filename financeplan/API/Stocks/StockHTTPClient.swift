@@ -58,7 +58,7 @@ struct StockHTTPClient {
     do {
       return try endpoint.decode(data)
     } catch {
-      if let envelope = try? endpoint.decoder.decode(APIEnvelope<E.Response>.self, from: data) {
+      if let envelope = try? endpoint.decoder.decode(HTTPEnvelope<E.Response>.self, from: data) {
         if let payload = envelope.data {
           return payload
         }
@@ -212,4 +212,9 @@ struct StockHTTPClient {
       "Stock response [\(endpointPath, privacy: .public)] status=\(statusCode, privacy: .public) body=\(body, privacy: .public)"
     )
   }
+}
+
+private struct HTTPEnvelope<T: Codable>: Codable {
+  let data: T?
+  let message: String?
 }

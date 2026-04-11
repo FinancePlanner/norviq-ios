@@ -107,6 +107,7 @@ struct OnboardingMainMenu: View {
           subtitle: "Connect accounts or upload CSVs",
           icon: "chart.line.uptrend.xyaxis",
           color: .blue,
+          accessibilityIdentifier: "onboarding.importStocksButton",
           action: onSelectStocks
         )
 
@@ -115,6 +116,7 @@ struct OnboardingMainMenu: View {
           subtitle: "Track your spending and budget",
           icon: "creditcard.fill",
           color: .orange,
+          accessibilityIdentifier: "onboarding.importExpensesButton",
           action: onSelectExpenses
         )
 
@@ -157,6 +159,7 @@ struct OnboardingMainMenu: View {
       .padding(.bottom, 40)
     }
     .background(MeshGradientBackground().ignoresSafeArea())
+    .accessibilityIdentifier("onboardingMainMenu")
   }
 }
 
@@ -165,6 +168,7 @@ private struct OnboardingMenuButton: View {
   let subtitle: String
   let icon: String
   let color: Color
+  var accessibilityIdentifier: String?
   var isDisabled: Bool = false
   var showSoonBadge: Bool = false
   let action: () -> Void
@@ -216,6 +220,7 @@ private struct OnboardingMenuButton: View {
       .opacity(isDisabled ? 0.6 : 1.0)
     }
     .buttonStyle(PressEffectStyle())
+    .accessibilityIdentifier(accessibilityIdentifier ?? "onboarding.menuButton.\(title)")
     .disabled(isDisabled)
   }
 }

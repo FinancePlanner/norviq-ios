@@ -1,6 +1,7 @@
 import XCTest
 @testable import financeplan
 
+@MainActor
 final class MarketDataModelsTests: XCTestCase {
   func testStockBasicFinancials_OverviewItemsKeepExpectedOrder() throws {
     let financials = StockBasicFinancials(

@@ -7,18 +7,22 @@ private let stockServiceLogger = Logger(
   category: "StockService"
 )
 
-protocol StockServicing {
+protocol StockServicing: Sendable {
   @discardableResult
-  func create(stock: StockRequest) async throws -> StockResponse
+  func create(stock: StockRequest, portfolioListId: String?) async throws -> StockResponse
   @discardableResult
   func bulkCreate(stocks: [StockRequest]) async throws -> BulkStockResponse
   func fetchPortfolio() async throws -> [StockResponse]
+  func fetchPortfolio(portfolioListId: String?) async throws -> [StockResponse]
   func fetchStockDetails(stockId: String) async throws -> StockDetails
   func fetchStockInsights(symbol: String) async throws -> StockInsightsResponse
   func fetchPortfolioPerformance() async throws -> PortfolioPerformanceResponse
+  func fetchPortfolioSummary() async throws -> PortfolioSummaryResponse
+  func fetchPortfolioPerformance(portfolioListId: String?) async throws -> PortfolioPerformanceResponse
+  func fetchPortfolioSummary(portfolioListId: String?) async throws -> PortfolioSummaryResponse
   func fetchStockHistory(symbol: String) async throws -> [StockHistory]
   func fetchStockNews(symbol: String) async throws -> [StockNews]
-  func updateStock(_ stock: StockResponse) async throws -> StockResponse
+  func updateStock(_ stock: StockResponse, portfolioListId: String?) async throws -> StockResponse
   func delete(id: String) async throws
   func getValuation(symbol: String) async throws -> StockValuationRequest
   func createValuation(
@@ -52,27 +56,143 @@ protocol StockServicing {
     targetDate: String?
   ) async throws -> StockValuationRequest
   func fetchWatchlist() async throws -> [WatchlistItemResponse]
+  func fetchWatchlist(watchlistListId: String?) async throws -> [WatchlistItemResponse]
   @discardableResult
-  func createWatchlistItem(_ request: WatchlistItemRequest) async throws -> WatchlistItemResponse
+  func createWatchlistItem(
+    _ request: WatchlistItemRequest,
+    watchlistListId: String?
+  ) async throws -> WatchlistItemResponse
   @discardableResult
   func updateWatchlistItem(
     id: String,
-    request: WatchlistItemUpdateRequest
+    request: WatchlistItemUpdateRequest,
+    watchlistListId: String?
   ) async throws -> WatchlistItemResponse
   func deleteWatchlistItem(id: String) async throws
+  func sellStock(id: String, request: SellStockRequest) async throws -> StockResponse
+  func fetchPortfolioLists() async throws -> [PortfolioListDTOResponse]
+  func createPortfolioList(name: String) async throws -> PortfolioListDTOResponse
+  func updatePortfolioList(id: String, name: String) async throws -> PortfolioListDTOResponse
+  func deletePortfolioList(id: String) async throws
+  func fetchWatchlistLists() async throws -> [WatchlistListDTOResponse]
+  func createWatchlistList(name: String) async throws -> WatchlistListDTOResponse
+  func updateWatchlistList(id: String, name: String) async throws -> WatchlistListDTOResponse
+  func deleteWatchlistList(id: String) async throws
 }
 
 extension StockServicing {
+  func create(stock: StockRequest) async throws -> StockResponse {
+    try await create(stock: stock, portfolioListId: nil)
+  }
+
+  func create(stock: StockRequest, portfolioListId _: String?) async throws -> StockResponse {
+    try await create(stock: stock)
+  }
+
+  func fetchPortfolio(portfolioListId _: String?) async throws -> [StockResponse] {
+    try await fetchPortfolio()
+  }
+
+  func fetchPortfolio() async throws -> [StockResponse] {
+    try await fetchPortfolio(portfolioListId: nil)
+  }
+
   func fetchStockInsights(symbol _: String) async throws -> StockInsightsResponse {
     throw StockHTTPClient.Error.api("Stock insights endpoint is unavailable.")
   }
 
   func fetchPortfolioPerformance() async throws -> PortfolioPerformanceResponse {
-    throw StockHTTPClient.Error.api("Portfolio performance endpoint is unavailable.")
+    try await fetchPortfolioPerformance(portfolioListId: nil)
+  }
+
+  func fetchPortfolioSummary() async throws -> PortfolioSummaryResponse {
+    try await fetchPortfolioSummary(portfolioListId: nil)
+  }
+
+  func fetchPortfolioPerformance(portfolioListId _: String?) async throws -> PortfolioPerformanceResponse {
+    try await fetchPortfolioPerformance()
+  }
+
+  func fetchPortfolioSummary(portfolioListId _: String?) async throws -> PortfolioSummaryResponse {
+    try await fetchPortfolioSummary()
+  }
+
+  func updateStock(_ stock: StockResponse) async throws -> StockResponse {
+    try await updateStock(stock, portfolioListId: nil)
+  }
+
+  func updateStock(_ stock: StockResponse, portfolioListId _: String?) async throws -> StockResponse {
+    try await updateStock(stock)
+  }
+
+  func fetchWatchlist(watchlistListId _: String?) async throws -> [WatchlistItemResponse] {
+    try await fetchWatchlist()
+  }
+
+  func fetchWatchlist() async throws -> [WatchlistItemResponse] {
+    try await fetchWatchlist(watchlistListId: nil)
+  }
+
+  func createWatchlistItem(_ request: WatchlistItemRequest) async throws -> WatchlistItemResponse {
+    try await createWatchlistItem(request, watchlistListId: nil)
+  }
+
+  func createWatchlistItem(
+    _ request: WatchlistItemRequest,
+    watchlistListId _: String?
+  ) async throws -> WatchlistItemResponse {
+    try await createWatchlistItem(request)
+  }
+
+  func updateWatchlistItem(
+    id: String,
+    request: WatchlistItemUpdateRequest
+  ) async throws -> WatchlistItemResponse {
+    try await updateWatchlistItem(id: id, request: request, watchlistListId: nil)
+  }
+
+  func updateWatchlistItem(
+    id: String,
+    request: WatchlistItemUpdateRequest,
+    watchlistListId _: String?
+  ) async throws -> WatchlistItemResponse {
+    try await updateWatchlistItem(id: id, request: request)
+  }
+
+  func fetchPortfolioLists() async throws -> [PortfolioListDTOResponse] {
+    throw StockHTTPClient.Error.api("Portfolio lists endpoint is unavailable.")
+  }
+
+  func createPortfolioList(name _: String) async throws -> PortfolioListDTOResponse {
+    throw StockHTTPClient.Error.api("Portfolio lists endpoint is unavailable.")
+  }
+
+  func updatePortfolioList(id _: String, name _: String) async throws -> PortfolioListDTOResponse {
+    throw StockHTTPClient.Error.api("Portfolio lists endpoint is unavailable.")
+  }
+
+  func deletePortfolioList(id _: String) async throws {
+    throw StockHTTPClient.Error.api("Portfolio lists endpoint is unavailable.")
+  }
+
+  func fetchWatchlistLists() async throws -> [WatchlistListDTOResponse] {
+    throw StockHTTPClient.Error.api("Watchlist lists endpoint is unavailable.")
+  }
+
+  func createWatchlistList(name _: String) async throws -> WatchlistListDTOResponse {
+    throw StockHTTPClient.Error.api("Watchlist lists endpoint is unavailable.")
+  }
+
+  func updateWatchlistList(id _: String, name _: String) async throws -> WatchlistListDTOResponse {
+    throw StockHTTPClient.Error.api("Watchlist lists endpoint is unavailable.")
+  }
+
+  func deleteWatchlistList(id _: String) async throws {
+    throw StockHTTPClient.Error.api("Watchlist lists endpoint is unavailable.")
   }
 }
 
-final class StockService: StockServicing {
+final class StockService: StockServicing, @unchecked Sendable {
   private let environmentManager: AppEnvironmentManager
   private let session: StockURLSessionProtocol
   private let authSessionManager: AuthSessionManaging
@@ -88,7 +208,7 @@ final class StockService: StockServicing {
   }
 
   @discardableResult
-  func create(stock: StockRequest) async throws -> StockResponse {
+  func create(stock: StockRequest, portfolioListId: String? = nil) async throws -> StockResponse {
     try await performAuthenticated { client in
       let endpoint = CreateStockEndpoint(
         symbol: stock.symbol,
@@ -96,7 +216,8 @@ final class StockService: StockServicing {
         buyPrice: stock.buyPrice,
         buyDate: stock.buyDate,
         notes: stock.notes,
-        category: stock.category
+        category: stock.category,
+        portfolioListId: portfolioListId
       )
       return try await client.call(endpoint)
     }
@@ -110,16 +231,16 @@ final class StockService: StockServicing {
     }
   }
 
-  func fetchPortfolio() async throws -> [StockResponse] {
+  func fetchPortfolio(portfolioListId: String? = nil) async throws -> [StockResponse] {
     try await performAuthenticated { client in
-      let endpoint = GetStocksEndpoint()
+      let endpoint = GetStocksEndpoint(portfolioListId: portfolioListId)
       return try await client.call(endpoint)
     }
   }
 
-  func fetchWatchlist() async throws -> [WatchlistItemResponse] {
+  func fetchWatchlist(watchlistListId: String? = nil) async throws -> [WatchlistItemResponse] {
     try await performAuthenticated { client in
-      try await client.call(GetWatchlistEndpoint())
+      return try await client.call(GetWatchlistEndpoint(watchlistListId: watchlistListId))
     }
   }
 
@@ -137,9 +258,15 @@ final class StockService: StockServicing {
     }
   }
 
-  func fetchPortfolioPerformance() async throws -> PortfolioPerformanceResponse {
+  func fetchPortfolioPerformance(portfolioListId: String? = nil) async throws -> PortfolioPerformanceResponse {
     try await performAuthenticated { client in
-      return try await client.call(GetPortfolioPerformanceEndpoint())
+      return try await client.call(GetPortfolioPerformanceEndpoint(portfolioListId: portfolioListId))
+    }
+  }
+
+  func fetchPortfolioSummary(portfolioListId: String? = nil) async throws -> PortfolioSummaryResponse {
+    try await performAuthenticated { client in
+      return try await client.call(GetPortfolioSummaryEndpoint(portfolioListId: portfolioListId))
     }
   }
 
@@ -157,7 +284,7 @@ final class StockService: StockServicing {
     }
   }
 
-  func updateStock(_ stock: StockResponse) async throws -> StockResponse {
+  func updateStock(_ stock: StockResponse, portfolioListId: String? = nil) async throws -> StockResponse {
     try await performAuthenticated { client in
       let request = StockRequest(
         symbol: stock.symbol,
@@ -167,7 +294,11 @@ final class StockService: StockServicing {
         notes: stock.notes ?? "",
         category: stock.category
       )
-      let endpoint = UpdateStockEndpoint(stockId: stock.id, payload: request)
+      let endpoint = UpdateStockEndpoint(
+        stockId: stock.id,
+        payload: request,
+        portfolioListId: portfolioListId
+      )
       return try await client.call(endpoint)
     }
   }
@@ -180,25 +311,96 @@ final class StockService: StockServicing {
   }
 
   @discardableResult
-  func createWatchlistItem(_ request: WatchlistItemRequest) async throws -> WatchlistItemResponse {
+  func createWatchlistItem(
+    _ request: WatchlistItemRequest,
+    watchlistListId: String? = nil
+  ) async throws -> WatchlistItemResponse {
     try await performAuthenticated { client in
-      try await client.call(CreateWatchlistEndpoint(payload: request))
+      try await client.call(
+        CreateWatchlistEndpoint(payload: request, watchlistListId: watchlistListId)
+      )
     }
   }
 
   @discardableResult
   func updateWatchlistItem(
     id: String,
-    request: WatchlistItemUpdateRequest
+    request: WatchlistItemUpdateRequest,
+    watchlistListId: String? = nil
   ) async throws -> WatchlistItemResponse {
     try await performAuthenticated { client in
-      try await client.call(UpdateWatchlistEndpoint(watchlistId: id, payload: request))
+      try await client.call(
+        UpdateWatchlistEndpoint(
+          watchlistId: id,
+          payload: request,
+          watchlistListId: watchlistListId
+        )
+      )
     }
   }
 
   func deleteWatchlistItem(id: String) async throws {
     try await performAuthenticated { client in
       try await client.callWithoutResponse(DeleteWatchlistEndpoint(watchlistId: id))
+    }
+  }
+
+  func sellStock(id: String, request: SellStockRequest) async throws -> StockResponse {
+    try await performAuthenticated { client in
+      let endpoint = SellStockEndpoint(stockId: id, payload: request)
+      return try await client.call(endpoint)
+    }
+  }
+
+  func fetchPortfolioLists() async throws -> [PortfolioListDTOResponse] {
+    try await performAuthenticated { client in
+      try await client.call(GetPortfolioListsEndpoint())
+    }
+  }
+
+  func createPortfolioList(name: String) async throws -> PortfolioListDTOResponse {
+    try await performAuthenticated { client in
+      try await client.call(CreatePortfolioListEndpoint(payload: PortfolioListDTORequest(name: name)))
+    }
+  }
+
+  func updatePortfolioList(id: String, name: String) async throws -> PortfolioListDTOResponse {
+    try await performAuthenticated { client in
+      try await client.call(
+        UpdatePortfolioListEndpoint(listId: id, payload: PortfolioListDTORequest(name: name))
+      )
+    }
+  }
+
+  func deletePortfolioList(id: String) async throws {
+    try await performAuthenticated { client in
+      try await client.callWithoutResponse(DeletePortfolioListEndpoint(listId: id))
+    }
+  }
+
+  func fetchWatchlistLists() async throws -> [WatchlistListDTOResponse] {
+    try await performAuthenticated { client in
+      try await client.call(GetWatchlistListsEndpoint())
+    }
+  }
+
+  func createWatchlistList(name: String) async throws -> WatchlistListDTOResponse {
+    try await performAuthenticated { client in
+      try await client.call(CreateWatchlistListEndpoint(payload: WatchlistListDTORequest(name: name)))
+    }
+  }
+
+  func updateWatchlistList(id: String, name: String) async throws -> WatchlistListDTOResponse {
+    try await performAuthenticated { client in
+      try await client.call(
+        UpdateWatchlistListEndpoint(listId: id, payload: WatchlistListDTORequest(name: name))
+      )
+    }
+  }
+
+  func deleteWatchlistList(id: String) async throws {
+    try await performAuthenticated { client in
+      try await client.callWithoutResponse(DeleteWatchlistListEndpoint(listId: id))
     }
   }
 

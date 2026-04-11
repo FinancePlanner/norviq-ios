@@ -32,6 +32,7 @@ struct SignupEndpoint: Endpoint {
   let username: String
   let email: String
   let password: String
+  let confirmPassword: String
   let dateOfBirth: Date
 
   var method: HTTPMethod { .post }
@@ -43,6 +44,7 @@ struct SignupEndpoint: Endpoint {
     params["username"] = username
     params["email"] = email
     params["password"] = password
+    params["confirmPassword"] = confirmPassword
     params["dateOfBirth"] = Self.formatter.string(from: dateOfBirth)
     return params
   }

@@ -298,6 +298,94 @@ final class StockServiceTests: XCTestCase {
     XCTAssertEqual(response, expected)
   }
 
+  func testFetchPortfolioSummary_UsesSummaryEndpointAndDecodesPayload() async throws {
+    let session = SessionMock()
+    let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+    let service = StockService(
+      environmentManager: AppEnvironmentManager(),
+      session: session,
+      authSessionManager: authSessionManager
+    )
+    let expected = PortfolioSummaryResponse(
+      baseCurrency: "USD",
+      totalValue: 25_000,
+      totalCost: 20_000,
+      unrealizedPnl: 4_000,
+      realizedPnl: 1_000,
+      allocation: [
+        AllocationItem(symbol: "AAPL", value: 20_000, currency: "USD"),
+        AllocationItem(symbol: "CASH", value: 5_000, currency: "USD")
+      ]
+    )
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.path, "/v1/portfolio/summary")
+      XCTAssertEqual(request.httpMethod, "GET")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+
+      let response = try XCTUnwrap(
+        HTTPURLResponse(
+          url: try XCTUnwrap(request.url),
+          statusCode: 200,
+          httpVersion: nil,
+          headerFields: nil
+        )
+      )
+      return (try JSONEncoder().encode(expected), response)
+    }
+
+    let response = try await service.fetchPortfolioSummary()
+    XCTAssertEqual(response, expected)
+  }
+
+  func testSellStock_UsesSellEndpointAndSendsPayload() async throws {
+    let session = SessionMock()
+    let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+    let service = StockService(
+      environmentManager: AppEnvironmentManager(),
+      session: session,
+      authSessionManager: authSessionManager
+    )
+    let sellRequest = SellStockRequest(
+      sharesToSell: 3,
+      sellPrice: 220,
+      sellDate: "2026-04-10"
+    )
+    let expected = StockResponse(
+      id: "stock-1",
+      symbol: "AAPL",
+      shares: 7,
+      buyPrice: 150,
+      buyDate: "2026-03-08",
+      notes: nil
+    )
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.path, "/v1/stocks/id/stock-1/sell")
+      XCTAssertEqual(request.httpMethod, "POST")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+
+      let body = try XCTUnwrap(request.httpBody)
+      let decoded = try JSONDecoder.stockPlanShared.decode(SellStockRequest.self, from: body)
+      XCTAssertEqual(decoded, sellRequest)
+
+      let response = try XCTUnwrap(
+        HTTPURLResponse(
+          url: try XCTUnwrap(request.url),
+          statusCode: 200,
+          httpVersion: nil,
+          headerFields: nil
+        )
+      )
+      return (try JSONEncoder().encode(expected), response)
+    }
+
+    let response = try await service.sellStock(id: "stock-1", request: sellRequest)
+    XCTAssertEqual(response, expected)
+  }
+
   func testFetchStockInsights_UsesInsightsEndpointAndDecodesPayload() async throws {
     let session = SessionMock()
     let authSessionManager = AuthSessionManagerMock()
@@ -355,7 +443,7 @@ final class StockServiceTests: XCTestCase {
     )
 
     session.handler = { request in
-      XCTAssertEqual(request.url?.path, "/v1/stocks/AAPL/insights")
+      XCTAssertEqual(request.url?.path, "/v1/stocks/symbol/AAPL/insights")
       XCTAssertEqual(request.httpMethod, "GET")
       XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
 

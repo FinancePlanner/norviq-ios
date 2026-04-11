@@ -74,7 +74,7 @@ struct FinancialHealthCardState: Equatable {
 }
 
 struct UnifiedActivityFeed: View {
-  @ObservedObject var viewModel: ActivityViewModel
+  let viewModel: ActivityViewModel
   let recentExpenses: [BudgetActivity]
   let financialHealth: DashboardFinancialHealthDTO?
   let isFinancialHealthLoading: Bool

@@ -39,42 +39,50 @@ final class OAuthWebAuthenticator: NSObject, OAuthWebAuthenticating {
 
   @MainActor
   func authenticate(url: URL, callbackScheme: String) async throws -> URL {
-    try await withCheckedThrowingContinuation { continuation in
-      let session = ASWebAuthenticationSession(url: url, callbackURLScheme: callbackScheme) { [weak self] callbackURL, error in
+    try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        let session = ASWebAuthenticationSession(url: url, callbackURLScheme: callbackScheme) { [weak self] callbackURL, error in
+          self?.session = nil
+          self?.contextProvider = nil
+
+          if let error = error as? ASWebAuthenticationSessionError,
+             error.code == .canceledLogin {
+            continuation.resume(throwing: OAuthWebAuthenticationError.cancelled)
+            return
+          }
+
+          if let error {
+            continuation.resume(throwing: error)
+            return
+          }
+
+          guard let callbackURL else {
+            continuation.resume(throwing: OAuthWebAuthenticationError.invalidCallback)
+            return
+          }
+
+          continuation.resume(returning: callbackURL)
+        }
+
+        let contextProvider = OAuthPresentationContextProvider()
+        self.contextProvider = contextProvider
+        session.presentationContextProvider = contextProvider
+        session.prefersEphemeralWebBrowserSession = true
+
+        self.session = session
+
+        guard session.start() else {
+          self.session = nil
+          self.contextProvider = nil
+          continuation.resume(throwing: OAuthWebAuthenticationError.unableToStart)
+          return
+        }
+      }
+    } onCancel: { [weak self] in
+      Task { @MainActor in
+        self?.session?.cancel()
         self?.session = nil
         self?.contextProvider = nil
-
-        if let error = error as? ASWebAuthenticationSessionError,
-           error.code == .canceledLogin {
-          continuation.resume(throwing: OAuthWebAuthenticationError.cancelled)
-          return
-        }
-
-        if let error {
-          continuation.resume(throwing: error)
-          return
-        }
-
-        guard let callbackURL else {
-          continuation.resume(throwing: OAuthWebAuthenticationError.invalidCallback)
-          return
-        }
-
-        continuation.resume(returning: callbackURL)
-      }
-
-      let contextProvider = OAuthPresentationContextProvider()
-      self.contextProvider = contextProvider
-      session.presentationContextProvider = contextProvider
-      session.prefersEphemeralWebBrowserSession = true
-
-      self.session = session
-
-      guard session.start() else {
-        self.session = nil
-        self.contextProvider = nil
-        continuation.resume(throwing: OAuthWebAuthenticationError.unableToStart)
-        return
       }
     }
   }

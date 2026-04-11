@@ -37,6 +37,7 @@ final class CryptoViewModelTests: XCTestCase {
   }
 }
 
+@MainActor
 private final class CryptoServiceMock: CryptoServicing {
   var fetchCryptoListCalls = 0
   var fetchGeneralCryptoNewsCalls = 0

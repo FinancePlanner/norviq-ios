@@ -5,13 +5,25 @@ import SwiftData
 struct WatchlistTab: View {
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.modelContext) private var modelContext
-  @StateObject private var viewModel = WatchlistViewModel()
+  @EnvironmentObject private var portfolioViewModel: PortfolioViewModel
+  @ObservedObject var viewModel: WatchlistViewModel
 
   @Query(sort: \SDWatchlistItem.symbol) private var items: [SDWatchlistItem]
 
   @State private var convertingItem: SDWatchlistItem?
   @State private var removePromptItem: SDWatchlistItem?
   @State private var destructiveFeedbackTrigger = 0
+
+  private var scopedItems: [SDWatchlistItem] {
+    guard let selectedListId = viewModel.selectedWatchlistListId else {
+      return items
+    }
+    return items.filter { ($0.watchlistListId ?? "") == selectedListId }
+  }
+
+  init(viewModel: WatchlistViewModel = WatchlistViewModel()) {
+    self.viewModel = viewModel
+  }
 
   var body: some View {
     List {
@@ -22,7 +34,7 @@ struct WatchlistTab: View {
         }
       }
 
-      if items.isEmpty {
+      if scopedItems.isEmpty {
         Section {
           ContentUnavailableView {
             Label("No Watchlist Items", systemImage: "star")
@@ -39,7 +51,7 @@ struct WatchlistTab: View {
         }
       }
 
-      ForEach(items) { item in
+      ForEach(scopedItems) { item in
         WatchlistRow(
           item: item,
           onAddToPortfolio: { convertingItem = item }
@@ -48,13 +60,7 @@ struct WatchlistTab: View {
           Button(role: .destructive) {
             destructiveFeedbackTrigger += 1
             Task {
-              await viewModel.removeFromWatchlist(WatchlistItemResponse(
-                id: item.id,
-                symbol: item.symbol,
-                note: item.note,
-                status: WatchlistStatus(rawValue: item.status) ?? .active,
-                nextReviewAt: item.nextReviewAt
-              ))
+              await viewModel.removeFromWatchlist(watchlistResponse(from: item))
             }
           } label: {
             Label("Delete", systemImage: "trash")
@@ -100,13 +106,11 @@ struct WatchlistTab: View {
         ),
         isSaving: viewModel.isSaving,
         onSave: { draft in
-          let result = await viewModel.savePosition(from: WatchlistItemResponse(
-            id: item.id,
-            symbol: item.symbol,
-            note: item.note,
-            status: WatchlistStatus(rawValue: item.status) ?? .active,
-            nextReviewAt: item.nextReviewAt
-          ), draft: draft)
+          let result = await viewModel.savePosition(
+            from: watchlistResponse(from: item),
+            draft: draft,
+            portfolioListId: portfolioViewModel.selectedPortfolioListId
+          )
           if result == nil {
             removePromptItem = item
           }
@@ -125,13 +129,7 @@ struct WatchlistTab: View {
       Button("Remove", role: .destructive) {
         destructiveFeedbackTrigger += 1
         Task {
-          await viewModel.removeFromWatchlist(WatchlistItemResponse(
-            id: item.id,
-            symbol: item.symbol,
-            note: item.note,
-            status: WatchlistStatus(rawValue: item.status) ?? .active,
-            nextReviewAt: item.nextReviewAt
-          ))
+          await viewModel.removeFromWatchlist(watchlistResponse(from: item))
         }
       }
       Button("Keep", role: .cancel) {
@@ -143,6 +141,16 @@ struct WatchlistTab: View {
     .task { await viewModel.load() }
     .refreshable { await viewModel.load(force: true) }
     .appSensoryFeedback(destructive: destructiveFeedbackTrigger)
+  }
+
+  private func watchlistResponse(from item: SDWatchlistItem) -> WatchlistItemResponse {
+    WatchlistItemResponse(
+      id: item.id,
+      symbol: item.symbol,
+      note: item.note,
+      status: WatchlistStatus(rawValue: item.status) ?? .active,
+      nextReviewAt: item.nextReviewAt
+    )
   }
 }
 

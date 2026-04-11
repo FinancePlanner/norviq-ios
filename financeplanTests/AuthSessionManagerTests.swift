@@ -20,6 +20,7 @@ final class AuthSessionManagerTests: XCTestCase {
       username: String,
       email: String,
       password: String,
+      confirmPassword: String,
       dateOfBirth: Date
     ) async throws {
       throw MockError.notConfigured

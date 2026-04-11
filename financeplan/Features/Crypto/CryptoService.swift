@@ -1,7 +1,7 @@
 import Foundation
 import StockPlanShared
 
-protocol CryptoServicing {
+protocol CryptoServicing: Sendable {
     func fetchCryptoList() async throws -> [CryptoAssetResponse]
     func fetchCryptoQuote(symbols: String) async throws -> [CryptoQuoteResponse]
     func fetchCryptoBatchQuotes(short: Bool) async throws -> [CryptoQuoteShortResponse]
