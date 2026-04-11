@@ -128,6 +128,24 @@ enum AppTheme {
     static let warning = Color.orange
     static let disabled = Color.gray.opacity(0.65)
 
+    static func dangerText(for scheme: ColorScheme) -> Color {
+      scheme == .dark
+        ? Color(red: 1.0, green: 0.60, blue: 0.55) // Lighter red for dark mode
+        : Color.red
+    }
+
+    static func successText(for scheme: ColorScheme) -> Color {
+      scheme == .dark
+        ? Color(red: 0.65, green: 0.95, blue: 0.68) // Lighter green for dark mode
+        : Color.green
+    }
+
+    static func warningText(for scheme: ColorScheme) -> Color {
+      scheme == .dark
+        ? Color(red: 1.0, green: 0.80, blue: 0.42) // Lighter orange for dark mode
+        : Color.orange
+    }
+
     // MARK: - Overlays
 
     static let scrim = Color.black.opacity(0.5)

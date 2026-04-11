@@ -65,7 +65,7 @@ private struct BudgetCategoryCard: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      HStack(alignment: .top) {
+      HStack(alignment: .top, spacing: 12) {
         HStack(alignment: .center, spacing: 12) {
           Image(systemName: pillar.symbol)
             .font(.title2)
@@ -81,24 +81,32 @@ private struct BudgetCategoryCard: View {
           }
         }
         Spacer()
-        Menu {
-          Button("Plan item", systemImage: "plus.rectangle.on.folder") {
-            onAddPlanItem()
+        HStack(spacing: 8) {
+          Button(action: onAddPlanItem) {
+            HStack(spacing: 4) {
+              Image(systemName: "plus.rectangle.on.folder")
+              Text("Plan")
+            }
+            .font(.subheadline.weight(.semibold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(pillar.color(for: colorScheme).opacity(0.15))
+            .cornerRadius(8)
+            .foregroundStyle(pillar.color(for: colorScheme))
           }
-          Button("Record expense", systemImage: "plus.circle") {
-            onRecordExpense()
+          
+          Button(action: onRecordExpense) {
+            HStack(spacing: 4) {
+              Image(systemName: "plus.circle")
+              Text("Spend")
+            }
+            .font(.subheadline.weight(.semibold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.white.opacity(0.1))
+            .cornerRadius(8)
+            .foregroundStyle(.primary)
           }
-        } label: {
-          HStack(spacing: 4) {
-            Image(systemName: "plus")
-            Text("Add")
-          }
-          .font(.subheadline.weight(.semibold))
-          .padding(.horizontal, 12)
-          .padding(.vertical, 6)
-          .background(Color.white.opacity(0.1))
-          .cornerRadius(8)
-          .foregroundStyle(.white)
         }
       }
       .padding(16)
@@ -106,20 +114,22 @@ private struct BudgetCategoryCard: View {
       Divider()
         .background(Color.white.opacity(0.1))
 
-      HStack(spacing: 0) {
-        MetricItem(title: "Goal", value: summary.targetAmount.currency, color: .primary)
-        Divider().background(Color.white.opacity(0.1))
-        MetricItem(title: "Planned", value: summary.plannedAmount.currency, color: .primary)
-        Divider().background(Color.white.opacity(0.1))
-        MetricItem(title: "Actual", value: summary.actualAmount.currency, color: .primary)
-        Divider().background(Color.white.opacity(0.1))
-        MetricItem(
-          title: "Left",
-          value: leftAmount.currency,
-          color: leftAmount >= 0 ? .green : .red
-        )
+      VStack(spacing: 12) {
+        HStack(spacing: 12) {
+          MetricItem(title: "Goal", value: summary.targetAmount.currency, color: .primary)
+          MetricItem(title: "Planned", value: summary.plannedAmount.currency, color: .primary)
+        }
+        
+        HStack(spacing: 12) {
+          MetricItem(title: "Actual", value: summary.actualAmount.currency, color: .primary)
+          MetricItem(
+            title: "Left",
+            value: leftAmount.currency,
+            color: leftAmount >= 0 ? .green : .red
+          )
+        }
       }
-      .padding(.vertical, 12)
+      .padding(16)
     }
     .background(Color(uiColor: .secondarySystemGroupedBackground))
     .cornerRadius(16)
@@ -136,15 +146,20 @@ private struct MetricItem: View {
   let color: Color
 
   var body: some View {
-    VStack(spacing: 4) {
+    VStack(alignment: .leading, spacing: 6) {
       Text(title)
-        .font(.caption)
+        .font(.caption2)
         .foregroundStyle(.secondary)
+        .textCase(.uppercase)
+        .tracking(0.5)
       Text(value)
-        .font(.subheadline.weight(.semibold))
+        .font(.headline.weight(.bold))
         .foregroundStyle(color)
     }
-    .frame(maxWidth: .infinity)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(12)
+    .background(Color.white.opacity(0.04))
+    .cornerRadius(10)
   }
 }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import StockPlanShared
 
 // MARK: - Form Sheet Header
 
@@ -131,8 +132,10 @@ struct FormTextField: View {
   var keyboardType: UIKeyboardType = .default
   var autocapitalization: TextInputAutocapitalization = .sentences
   var disableAutocorrection: Bool = false
+  var isCurrencyField: Bool = false
 
   @Environment(\.colorScheme) private var colorScheme
+  @FocusState private var isFocused: Bool
 
   init(
     icon: String? = nil,
@@ -141,7 +144,8 @@ struct FormTextField: View {
     text: Binding<String>,
     keyboardType: UIKeyboardType = .default,
     autocapitalization: TextInputAutocapitalization = .sentences,
-    disableAutocorrection: Bool = false
+    disableAutocorrection: Bool = false,
+    isCurrencyField: Bool = false
   ) {
     self.icon = icon
     self.iconColor = iconColor
@@ -150,6 +154,7 @@ struct FormTextField: View {
     self.keyboardType = keyboardType
     self.autocapitalization = autocapitalization
     self.disableAutocorrection = disableAutocorrection
+    self.isCurrencyField = isCurrencyField
   }
 
   var body: some View {
@@ -166,9 +171,44 @@ struct FormTextField: View {
         .keyboardType(keyboardType)
         .textInputAutocapitalization(autocapitalization)
         .autocorrectionDisabled(disableAutocorrection)
+        .focused($isFocused)
+        .onChange(of: text) { _, newValue in
+          if isCurrencyField {
+            text = formatCurrencyInput(newValue)
+          }
+        }
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 13)
+    .background(
+      isFocused
+        ? AppTheme.Colors.tintSoft(for: colorScheme)
+        : Color.clear
+    )
+    .clipShape(RoundedRectangle(cornerRadius: 8))
+    .animation(.easeInOut(duration: 0.15), value: isFocused)
+  }
+
+  private func formatCurrencyInput(_ input: String) -> String {
+    let digits = input.filter { $0.isNumber || $0 == "." }
+    
+    guard !digits.isEmpty else { return "" }
+    
+    if let lastDotIndex = digits.lastIndex(of: ".") {
+      let beforeDot = digits[..<lastDotIndex]
+      let afterDot = digits[digits.index(after: lastDotIndex)...]
+      
+      let decimalPart = String(afterDot).prefix(2)
+      let wholePart = String(beforeDot)
+      
+      if decimalPart.isEmpty {
+        return wholePart + "."
+      } else {
+        return wholePart + "." + decimalPart
+      }
+    }
+    
+    return digits
   }
 }
 
@@ -288,16 +328,203 @@ struct FormInfoTag: View {
 struct FormErrorBanner: View {
   let message: String
 
+  @Environment(\.colorScheme) private var colorScheme
+
   var body: some View {
     HStack(spacing: 8) {
       Image(systemName: "exclamationmark.triangle.fill")
-        .foregroundStyle(AppTheme.Colors.danger)
+        .foregroundStyle(AppTheme.Colors.dangerText(for: colorScheme))
       Text(message)
         .typography(.small)
-        .foregroundStyle(AppTheme.Colors.danger)
+        .foregroundStyle(AppTheme.Colors.dangerText(for: colorScheme))
     }
     .padding(14)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .appGlassEffect(.rect(cornerRadius: 12), tint: AppTheme.Colors.danger.opacity(0.08))
+    .appGlassEffect(.rect(cornerRadius: 12), tint: AppTheme.Colors.danger.opacity(colorScheme == .dark ? 0.15 : 0.08))
+  }
+}
+
+// MARK: - Currency Input Field
+
+/// Enhanced text field for currency input with real-time formatting validation.
+struct CurrencyInputField: View {
+  let icon: String?
+  let iconColor: Color?
+  let placeholder: String
+  @Binding var value: String
+  var isValid: Bool = true
+  var errorMessage: String?
+
+  @Environment(\.colorScheme) private var colorScheme
+  @FocusState private var isFocused: Bool
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(spacing: 12) {
+        if let icon {
+          Image(systemName: icon)
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(iconColor ?? .secondary)
+            .frame(width: 24, alignment: .center)
+        }
+
+         HStack(spacing: 4) {
+          Text("$")
+            .typography(.label)
+            .foregroundStyle(.secondary)
+
+          TextField(placeholder, text: $value)
+            .typography(.label)
+            .keyboardType(.decimalPad)
+            .focused($isFocused)
+            .onChange(of: value) { _, newValue in
+              value = formatCurrencyInput(newValue)
+            }
+        }
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 13)
+      .background(
+        isFocused && isValid
+          ? AppTheme.Colors.tintSoft(for: colorScheme)
+          : Color.clear
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: 8)
+          .stroke(
+            isValid ? (isFocused ? AppTheme.Colors.tint(for: colorScheme).opacity(0.3) : Color.clear) : AppTheme.Colors.dangerText(for: colorScheme),
+            lineWidth: isValid ? (isFocused ? 1 : 0) : 1.5
+          )
+      )
+      .clipShape(RoundedRectangle(cornerRadius: 8))
+      .animation(.easeInOut(duration: 0.15), value: isFocused)
+
+      if let errorMessage, !isValid {
+        HStack(spacing: 6) {
+          Image(systemName: "exclamationmark.circle.fill")
+            .font(.caption)
+          Text(errorMessage)
+            .typography(.small)
+        }
+        .foregroundStyle(AppTheme.Colors.dangerText(for: colorScheme))
+      }
+    }
+  }
+
+  private func formatCurrencyInput(_ input: String) -> String {
+    let digits = input.filter { $0.isNumber || $0 == "." }
+    
+    guard !digits.isEmpty else { return "" }
+    
+    if let lastDotIndex = digits.lastIndex(of: ".") {
+      let beforeDot = digits[..<lastDotIndex]
+      let afterDot = digits[digits.index(after: lastDotIndex)...]
+      
+      let decimalPart = String(afterDot).prefix(2)
+      let wholePart = String(beforeDot)
+      
+      if decimalPart.isEmpty {
+        return wholePart + "."
+      } else {
+        return wholePart + "." + decimalPart
+      }
+    }
+    
+    return digits
+  }
+}
+
+// MARK: - Pillar Picker with Color Preview
+
+/// A pillar selector with color indicator for better visual feedback.
+struct PillarPicker: View {
+  let label: String
+  let icon: String?
+  let iconColor: Color?
+  @Binding var selectedPillar: BudgetPillar
+
+  @Environment(\.colorScheme) private var colorScheme
+
+  var body: some View {
+    FormRow(icon: icon, iconColor: iconColor, label: label) {
+      HStack(spacing: 10) {
+        HStack(spacing: 6) {
+          Circle()
+            .fill(selectedPillar.color(for: colorScheme))
+            .frame(width: 10, height: 10)
+          
+          Text(selectedPillar.title)
+            .typography(.label)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+          RoundedRectangle(cornerRadius: 6)
+            .fill(selectedPillar.color(for: colorScheme).opacity(0.1))
+        )
+        
+        Picker("Pillar", selection: $selectedPillar) {
+          ForEach(BudgetPillar.allCases, id: \.self) { pillar in
+            HStack(spacing: 6) {
+              Circle()
+                .fill(pillar.color(for: colorScheme))
+                .frame(width: 6, height: 6)
+              Text(pillar.title)
+            }
+            .tag(pillar)
+          }
+        }
+        .labelsHidden()
+        .frame(width: 0)
+        .opacity(0)
+      }
+    }
+  }
+}
+
+// MARK: - Split Mode Indicator
+
+/// Visual indicator for expense split mode (personal/shared).
+struct SplitModeIndicator: View {
+  @Binding var splitMode: ExpenseSplitMode
+  @Binding var userSharePercent: Double
+
+  var body: some View {
+    VStack(spacing: 12) {
+      FormRow(icon: "person.2", iconColor: .green, label: "Mode") {
+        HStack(spacing: 6) {
+          Image(systemName: splitMode == .personal ? "person.fill" : "person.2.fill")
+            .font(.caption.weight(.semibold))
+          Picker("Mode", selection: $splitMode) {
+            Text("Personal").tag(ExpenseSplitMode.personal)
+            Text("Shared").tag(ExpenseSplitMode.shared)
+          }
+          .labelsHidden()
+        }
+      }
+
+      if splitMode == .shared {
+        FormDivider()
+        VStack(alignment: .leading, spacing: 8) {
+          HStack {
+            Label("Your Share", systemImage: "person.crop.circle.badge.checkmark")
+              .font(.subheadline.weight(.medium))
+            Spacer()
+            Text("\(Int(userSharePercent.rounded()))%")
+              .typography(.label, weight: .semibold)
+              .foregroundStyle(.secondary)
+          }
+          Slider(value: $userSharePercent, in: 0...100, step: 1)
+            .tint(.green)
+          HStack(spacing: 8) {
+            Text("You pay")
+            Spacer()
+            Text("Partner pays")
+          }
+          .font(.caption)
+          .foregroundStyle(.secondary)
+        }
+      }
+    }
   }
 }
