@@ -28,6 +28,7 @@ final class PortfolioViewModel: ObservableObject {
   @Published private(set) var cashBalance: Double = 0
   @Published private(set) var portfolioLists: [PortfolioListDTOResponse] = []
   @Published var selectedPortfolioListId: String?
+  @Published private(set) var isShowingAllLists: Bool = false
 
   private let service: StockServicing
   private var localStore: (any PortfolioLocalPersisting)?
@@ -59,7 +60,8 @@ final class PortfolioViewModel: ObservableObject {
     do {
       let lists = try await service.fetchPortfolioLists()
       portfolioLists = lists
-      if selectedPortfolioListId == nil || !lists.contains(where: { $0.id == selectedPortfolioListId }) {
+      if !isShowingAllLists &&
+          (selectedPortfolioListId == nil || !lists.contains(where: { $0.id == selectedPortfolioListId })) {
         selectedPortfolioListId = lists.first?.id
       }
 
@@ -186,8 +188,17 @@ final class PortfolioViewModel: ObservableObject {
   }
 
   func selectPortfolioList(_ listId: String) async {
+    isShowingAllLists = false
     guard selectedPortfolioListId != listId else { return }
     selectedPortfolioListId = listId
+    hasLoadedOnce = false
+    await load(force: true)
+  }
+
+  func selectAllLists() async {
+    guard !isShowingAllLists else { return }
+    isShowingAllLists = true
+    selectedPortfolioListId = nil
     hasLoadedOnce = false
     await load(force: true)
   }

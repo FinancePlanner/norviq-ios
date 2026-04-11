@@ -35,20 +35,7 @@ struct WatchlistTab: View {
       }
 
       if scopedItems.isEmpty {
-        Section {
-          ContentUnavailableView {
-            Label("No Watchlist Items", systemImage: "star")
-          } description: {
-            Text("Save names you want to revisit so research and entry timing stay organized.")
-          } actions: {
-            Button("Add Watchlist Item") {
-              viewModel.isAddWatchlistPresented = true
-            }
-            .buttonStyle(.borderedProminent)
-          }
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, 16)
-        }
+        emptyWatchlistSection
       }
 
       ForEach(scopedItems) { item in
@@ -151,6 +138,25 @@ struct WatchlistTab: View {
       status: WatchlistStatus(rawValue: item.status) ?? .active,
       nextReviewAt: item.nextReviewAt
     )
+  }
+
+  private var emptyWatchlistSection: some View {
+    Section {
+      ContentUnavailableView {
+        Label("No Watchlist Items", systemImage: "star")
+      } description: {
+        Text("Save names you want to revisit so research and entry timing stay organized.")
+      } actions: {
+        Button("Add Watchlist Item", action: presentAddWatchlistSheet)
+          .buttonStyle(.borderedProminent)
+      }
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, 16)
+    }
+  }
+
+  private func presentAddWatchlistSheet() {
+    viewModel.isAddWatchlistPresented = true
   }
 }
 

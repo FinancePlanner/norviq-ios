@@ -46,6 +46,10 @@ final class StockDetailsViewModelTests: XCTestCase {
       throw MockError.notConfigured
     }
 
+    func create(stock: StockRequest, portfolioListId _: String?) async throws -> StockResponse {
+      try await create(stock: stock)
+    }
+
     func bulkCreate(stocks _: [StockRequest]) async throws -> BulkStockResponse {
       throw MockError.notConfigured
     }
@@ -54,8 +58,20 @@ final class StockDetailsViewModelTests: XCTestCase {
       throw MockError.notConfigured
     }
 
+    func fetchPortfolio(portfolioListId _: String?) async throws -> [StockResponse] {
+      try await fetchPortfolio()
+    }
+
+    func fetchPortfolioPerformance(portfolioListId _: String?) async throws -> PortfolioPerformanceResponse {
+      throw MockError.notConfigured
+    }
+
     func fetchPortfolioSummary() async throws -> PortfolioSummaryResponse {
       throw MockError.notConfigured
+    }
+
+    func fetchPortfolioSummary(portfolioListId _: String?) async throws -> PortfolioSummaryResponse {
+      try await fetchPortfolioSummary()
     }
 
     func fetchStockDetails(stockId _: String) async throws -> StockDetails {
@@ -84,6 +100,10 @@ final class StockDetailsViewModelTests: XCTestCase {
       }
     }
 
+    func updateStock(_ stock: StockResponse, portfolioListId _: String?) async throws -> StockResponse {
+      try await updateStock(stock)
+    }
+
     func delete(id _: String) async throws {}
 
     func sellStock(id: String, request: SellStockRequest) async throws -> StockResponse {
@@ -97,8 +117,19 @@ final class StockDetailsViewModelTests: XCTestCase {
       throw MockError.notConfigured
     }
 
+    func fetchWatchlist(watchlistListId _: String?) async throws -> [WatchlistItemResponse] {
+      try await fetchWatchlist()
+    }
+
     func createWatchlistItem(_ request: WatchlistItemRequest) async throws -> WatchlistItemResponse {
       throw MockError.notConfigured
+    }
+
+    func createWatchlistItem(
+      _ request: WatchlistItemRequest,
+      watchlistListId _: String?
+    ) async throws -> WatchlistItemResponse {
+      try await createWatchlistItem(request)
     }
 
     func updateWatchlistItem(
@@ -106,6 +137,14 @@ final class StockDetailsViewModelTests: XCTestCase {
       request _: WatchlistItemUpdateRequest
     ) async throws -> WatchlistItemResponse {
       throw MockError.notConfigured
+    }
+
+    func updateWatchlistItem(
+      id: String,
+      request: WatchlistItemUpdateRequest,
+      watchlistListId _: String?
+    ) async throws -> WatchlistItemResponse {
+      try await updateWatchlistItem(id: id, request: request)
     }
 
     func deleteWatchlistItem(id _: String) async throws {

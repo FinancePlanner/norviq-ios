@@ -89,6 +89,18 @@ struct PortfolioScreen: View {
     return holdingsValue / Double(scopedStocks.count)
   }
 
+  private var heroLabel: String {
+    viewModel.isShowingAllLists ? "All portfolios" : "Portfolio value"
+  }
+
+  private var heroSubtitle: String {
+    if viewModel.isShowingAllLists {
+      let listCount = viewModel.portfolioLists.count
+      return "\(scopedStocks.count) positions across \(listCount) list\(listCount == 1 ? "" : "s")"
+    }
+    return "\(scopedStocks.count) positions"
+  }
+
   var body: some View {
     rootContent
     .animation(.smooth(duration: 0.3), value: viewModel.isLoading)
@@ -208,7 +220,7 @@ struct PortfolioScreen: View {
           GlassCard(cornerRadius: 22) {
             VStack(alignment: .leading, spacing: 16) {
               VStack(alignment: .leading, spacing: 4) {
-                Text("Portfolio value")
+                Text(heroLabel)
                   .typography(.small, weight: .semibold)
                   .foregroundStyle(.secondary)
 
@@ -216,7 +228,7 @@ struct PortfolioScreen: View {
                   Text(totalValue.currency)
                     .typography(.hero, weight: .bold)
                     .contentTransition(.numericText())
-                  Text("\(scopedStocks.count) positions")
+                  Text(heroSubtitle)
                     .typography(.small)
                     .foregroundStyle(.secondary)
                 }

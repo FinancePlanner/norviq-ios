@@ -78,11 +78,11 @@ public struct UserProfileView: View {
                 case .badges:
                     BadgesView()
                 case .helpSupport:
-                    Text("Help & Support")
+                    HelpSupportView()
                 case .shareFeedback:
-                    Text("Share Feedback")
+                    ShareFeedbackView()
                 case .about:
-                    Text("About Norviqa")
+                    AboutNorviqaView()
                 case .dataHandling:
                     Text("Data handling")
                 case .sensitiveActions:
@@ -137,7 +137,7 @@ public struct UserProfileView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
-            Section("Notifications") {
+            Section("Alerts") {
                 Toggle(isOn: notificationsToggleBinding) {
                     Label("Price target alerts", systemImage: "bell.badge")
                 }
@@ -182,29 +182,19 @@ public struct UserProfileView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
-            // Integrations
+            // Integrations (Coming Soon)
             Section("Integrations") {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        Text("Connected Models")
-                            .typography(.body)
-                        Spacer()
-                        Text("3 ACTIVE")
-                            .typography(.nano, weight: .bold)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color(white: 0.2))
-                            .clipShape(Capsule())
-                    }
-
-                    HStack(spacing: 12) {
-                        integrationPill("Claude")
-                        integrationPill("ChatGPT")
-                        integrationPill("Grok")
-                    }
+                HStack {
+                    Label("AI Model Integrations", systemImage: "cpu")
+                    Spacer()
+                    Text("Soon")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.red, in: Capsule())
                 }
-                .padding(.vertical, 4)
+                .opacity(0.6)
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
@@ -273,7 +263,7 @@ public struct UserProfileView: View {
 
             // Footer
             Section {
-                Text("NORVIQA V2.4.1 (BUILD 108)")
+                Text(versionString)
                     .typography(.nano)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -307,6 +297,12 @@ public struct UserProfileView: View {
         )
     }
 
+    private var versionString: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "–"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "–"
+        return "NORVIQA V\(version) (BUILD \(build))"
+    }
+
     // MARK: - Components
 
     private func iconView(_ systemName: String, backgroundColor: Color, foregroundColor: Color) -> some View {
@@ -318,20 +314,7 @@ public struct UserProfileView: View {
             .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 
-    private func integrationPill(_ name: String) -> some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(.green)
-                .frame(width: 6, height: 6)
-            Text(name)
-                .font(.footnote)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color(white: 0.15))
-        .clipShape(Capsule())
-        .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 1))
-    }
+
 
     private func avatarView(_ profile: UserProfile?) -> some View {
         ZStack {

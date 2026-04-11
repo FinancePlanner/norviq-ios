@@ -310,7 +310,11 @@ private final class MockStockService: StockServicing {
   var fetchPortfolioSummaryCalls = 0
   var createCalls = 0
   var lastCreateRequest: StockRequest?
+  var lastCreatePortfolioListId: String?
   var fetchPortfolioResult: Result<[StockResponse], Error> = .success([])
+  var fetchPortfolioListsResult: Result<[PortfolioListDTOResponse], Error> = .success([
+    PortfolioListDTOResponse(id: "default-list", name: "Default", isDefault: true, createdAt: nil, updatedAt: nil)
+  ])
   var fetchPortfolioSummaryResult: Result<PortfolioSummaryResponse, Error> = .success(
     PortfolioSummaryResponse(
       baseCurrency: "USD",
@@ -325,9 +329,10 @@ private final class MockStockService: StockServicing {
   var updateResult: Result<StockResponse, Error> = .failure(MockError("Not configured."))
   var deleteResult: Result<Void, Error> = .success(())
 
-  func create(stock: StockRequest) async throws -> StockResponse {
+  func create(stock: StockRequest, portfolioListId: String?) async throws -> StockResponse {
     createCalls += 1
     lastCreateRequest = stock
+    lastCreatePortfolioListId = portfolioListId
     return try createResult.get()
   }
 
@@ -353,6 +358,10 @@ private final class MockStockService: StockServicing {
     try await fetchPortfolioSummary()
   }
 
+  func fetchPortfolioPerformance(portfolioListId _: String?) async throws -> PortfolioPerformanceResponse {
+    throw MockError("Not configured.")
+  }
+
   func fetchStockDetails(stockId _: String) async throws -> StockDetails {
     throw MockError("Not configured.")
   }
@@ -365,8 +374,9 @@ private final class MockStockService: StockServicing {
     throw MockError("Not configured.")
   }
 
-  func updateStock(_ stock: StockResponse) async throws -> StockResponse {
-    try updateResult.get()
+  func updateStock(_ stock: StockResponse, portfolioListId _: String?) async throws -> StockResponse {
+    _ = stock
+    return try updateResult.get()
   }
 
   func delete(id _: String) async throws {
@@ -435,6 +445,13 @@ private final class MockStockService: StockServicing {
     throw MockError("Not configured.")
   }
 
+  func createWatchlistItem(
+    _ request: WatchlistItemRequest,
+    watchlistListId _: String?
+  ) async throws -> WatchlistItemResponse {
+    try await createWatchlistItem(request)
+  }
+
   func updateWatchlistItem(
     id _: String,
     request _: WatchlistItemUpdateRequest
@@ -442,8 +459,20 @@ private final class MockStockService: StockServicing {
     throw MockError("Not configured.")
   }
 
+  func updateWatchlistItem(
+    id: String,
+    request: WatchlistItemUpdateRequest,
+    watchlistListId _: String?
+  ) async throws -> WatchlistItemResponse {
+    try await updateWatchlistItem(id: id, request: request)
+  }
+
   func deleteWatchlistItem(id _: String) async throws {
     throw MockError("Not configured.")
+  }
+
+  func fetchPortfolioLists() async throws -> [PortfolioListDTOResponse] {
+    try fetchPortfolioListsResult.get()
   }
 }
 

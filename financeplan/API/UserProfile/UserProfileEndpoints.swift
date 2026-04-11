@@ -97,13 +97,13 @@ private func userProfileUpdateParameters(_ request: UpdateUserProfileRequest) ->
     userProfile["bio"] = bio
   }
   if let avatarURL = request.userProfile.avatarURL {
-    userProfile["avatarURL"] = avatarURL.absoluteString
+    userProfile["avatar_url"] = avatarURL.absoluteString
   }
   if let bannerAvatarURL = request.userProfile.bannerAvatarURL {
-    userProfile["bannerAvatarURL"] = bannerAvatarURL.absoluteString
+    userProfile["banner_avatar_url"] = bannerAvatarURL.absoluteString
   }
   if let username = request.userProfile.username {
     userProfile["username"] = username
   }
-  return ["userProfile": userProfile]
+  return ["user_profile": userProfile]
 }
