@@ -737,6 +737,33 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
     return await persistExpense(prepared)
   }
 
+  @discardableResult
+  func updateExpenseAndWait(expenseID: UUID, _ draft: BudgetActivityDraft) async -> Bool {
+    guard let prepared = prepareExpenseForSave(draft) else { return false }
+    return await persistExpenseUpdate(expenseID: expenseID, prepared: prepared)
+  }
+
+  func removeExpense(_ expenseID: UUID) {
+    guard let removedIndex = activities.firstIndex(where: { $0.id == expenseID }) else { return }
+    let removedActivity = activities[removedIndex]
+    activities.remove(at: removedIndex)
+    refreshDerivedSummariesFromLocal()
+
+    Task {
+      do {
+        try await expensesService.deleteExpense(expenseId: expenseID.uuidString)
+        notifyDataDidChange()
+      } catch {
+        activities.removeAll { $0.id == removedActivity.id }
+        activities.insert(removedActivity, at: 0)
+        activities.sort { $0.occurredOn > $1.occurredOn }
+        refreshDerivedSummariesFromLocal()
+        self.errorMessage = "Could not delete expense: \(error.localizedDescription)"
+        await load(force: true)
+      }
+    }
+  }
+
   private func prepareExpenseForSave(_ draft: BudgetActivityDraft) -> (title: String, draft: BudgetActivityDraft)? {
     let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !title.isEmpty else {
@@ -777,6 +804,36 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
       let message = "Could not record spend: \(error.localizedDescription)"
       self.errorMessage = message
       logger.error("Expense create failed: \(error.localizedDescription, privacy: .public)")
+      self.errorMessage = message
+      return false
+    }
+  }
+
+  private func persistExpenseUpdate(
+    expenseID: UUID,
+    prepared: (title: String, draft: BudgetActivityDraft)
+  ) async -> Bool {
+    do {
+      let req = ExpenseRequest(
+        title: prepared.title,
+        amount: max(prepared.draft.amount, 0),
+        pillar: prepared.draft.pillar,
+        occurredOn: self.dayString(from: prepared.draft.occurredOn),
+        linkedPlanItemId: prepared.draft.linkedPlanItemID?.uuidString,
+        splitMode: prepared.draft.splitMode,
+        userSharePercent: prepared.draft.userSharePercent
+      )
+      let updated = try await expensesService.updateExpense(expenseId: expenseID.uuidString, payload: req)
+      if let mapped = mapExpenseResponse(updated) {
+        activities.removeAll { $0.id == mapped.id }
+        activities.insert(mapped, at: 0)
+        activities.sort { $0.occurredOn > $1.occurredOn }
+      }
+      refreshDerivedSummariesFromLocal()
+      notifyDataDidChange()
+      return true
+    } catch {
+      let message = "Could not update expense: \(error.localizedDescription)"
       self.errorMessage = message
       return false
     }

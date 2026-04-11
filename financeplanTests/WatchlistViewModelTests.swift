@@ -126,6 +126,9 @@ private final class MockWatchlistLocalStore: WatchlistLocalPersisting {
 private final class MockStockService: StockServicing {
   var fetchWatchlistCalls = 0
   var fetchWatchlistResult: Result<[WatchlistItemResponse], Error> = .success([])
+  var fetchWatchlistListsResult: Result<[WatchlistListDTOResponse], Error> = .success([
+    WatchlistListDTOResponse(id: "default-watchlist", name: "Default", isDefault: true, createdAt: nil, updatedAt: nil)
+  ])
   var createWatchlistItemResult: Result<WatchlistItemResponse, Error> = .failure(MockStockError.notConfigured)
 
   func fetchWatchlist() async throws -> [WatchlistItemResponse] {
@@ -137,7 +140,7 @@ private final class MockStockService: StockServicing {
     try await fetchWatchlist()
   }
 
-  func create(stock _: StockRequest) async throws -> StockResponse {
+  func create(stock _: StockRequest, portfolioListId _: String?) async throws -> StockResponse {
     throw MockStockError.notConfigured
   }
 
@@ -157,6 +160,10 @@ private final class MockStockService: StockServicing {
     throw MockStockError.notConfigured
   }
 
+  func fetchPortfolioPerformance(portfolioListId _: String?) async throws -> PortfolioPerformanceResponse {
+    throw MockStockError.notConfigured
+  }
+
   func fetchStockDetails(stockId _: String) async throws -> StockDetails {
     throw MockStockError.notConfigured
   }
@@ -171,6 +178,10 @@ private final class MockStockService: StockServicing {
 
   func updateStock(_: StockResponse) async throws -> StockResponse {
     throw MockStockError.notConfigured
+  }
+
+  func updateStock(_ stock: StockResponse, portfolioListId _: String?) async throws -> StockResponse {
+    try await updateStock(stock)
   }
 
   func delete(id _: String) async throws {
@@ -227,20 +238,28 @@ private final class MockStockService: StockServicing {
     throw MockStockError.notConfigured
   }
 
-  func createWatchlistItem(_ request: WatchlistItemRequest) async throws -> WatchlistItemResponse {
+  func createWatchlistItem(
+    _ request: WatchlistItemRequest,
+    watchlistListId _: String?
+  ) async throws -> WatchlistItemResponse {
     _ = request
     return try createWatchlistItemResult.get()
   }
 
   func updateWatchlistItem(
     id _: String,
-    request _: WatchlistItemUpdateRequest
+    request _: WatchlistItemUpdateRequest,
+    watchlistListId _: String?
   ) async throws -> WatchlistItemResponse {
     throw MockStockError.notConfigured
   }
 
   func deleteWatchlistItem(id _: String) async throws {
     throw MockStockError.notConfigured
+  }
+
+  func fetchWatchlistLists() async throws -> [WatchlistListDTOResponse] {
+    try fetchWatchlistListsResult.get()
   }
 }
 

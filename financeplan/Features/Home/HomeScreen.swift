@@ -693,16 +693,26 @@ private struct PortfolioRoot: View {
         if shouldShowListSwitcher {
           if selectedSegment == .holdings {
             PortfolioListSwitcherBar(
-              items: portfolioViewModel.portfolioLists.map {
-                .init(id: $0.id, name: $0.name, isDefault: $0.isDefault)
-              },
-              selectedId: portfolioViewModel.selectedPortfolioListId,
+              items: [.init(id: "__all__", name: "All", isDefault: false)]
+                + portfolioViewModel.portfolioLists.map {
+                    .init(id: $0.id, name: $0.name, isDefault: $0.isDefault)
+                  },
+              selectedId: portfolioViewModel.isShowingAllLists
+                ? "__all__"
+                : portfolioViewModel.selectedPortfolioListId,
               onSelect: { id in
-                Task { await portfolioViewModel.selectPortfolioList(id) }
+                Task {
+                  if id == "__all__" {
+                    await portfolioViewModel.selectAllLists()
+                  } else {
+                    await portfolioViewModel.selectPortfolioList(id)
+                  }
+                }
               },
               onManage: { isListManagerPresented = true }
             )
             .padding(.horizontal, 16)
+
           } else {
             PortfolioListSwitcherBar(
               items: watchlistViewModel.watchlistLists.map {
@@ -806,34 +816,30 @@ private struct ListSwitcherItem: Identifiable {
 }
 
 private struct PortfolioListSwitcherBar: View {
+  @Environment(\.colorScheme) private var colorScheme
   let items: [ListSwitcherItem]
   let selectedId: String?
   let onSelect: (String) -> Void
   let onManage: () -> Void
 
   var body: some View {
-    ScrollView(.horizontal, showsIndicators: false) {
-      if #available(iOS 26, *) {
-        GlassEffectContainer(spacing: 10) {
-          HStack(spacing: 10) {
-            ForEach(items) { item in
-              listChip(item)
-            }
-
-            manageButton
-          }
-          .padding(.vertical, 4)
-        }
-      } else {
-        HStack(spacing: 10) {
+    HStack(spacing: 0) {
+      ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: 8) {
           ForEach(items) { item in
             listChip(item)
           }
-
-          manageButton
         }
         .padding(.vertical, 4)
+        .padding(.leading, 2)
+        .padding(.trailing, 8)
       }
+
+      Divider()
+        .frame(height: 24)
+        .padding(.horizontal, 4)
+
+      manageButton
     }
   }
 
@@ -843,60 +849,370 @@ private struct PortfolioListSwitcherBar: View {
 
     if #available(iOS 26, *) {
       Button(action: { onSelect(item.id) }) {
-        HStack(spacing: 6) {
-          Text(item.name)
-            .lineLimit(1)
+        HStack(spacing: 5) {
           if item.isDefault {
             Image(systemName: "star.fill")
-              .font(.caption2)
+              .font(.system(size: 9, weight: .bold))
           }
+          Text(item.name)
+            .lineLimit(1)
         }
         .font(.caption.weight(.semibold))
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.vertical, 7)
       }
+      .foregroundStyle(isSelected ? Color.white : Color.primary)
+      .accessibilityLabel(Text(item.name))
       .glassEffect(
         isSelected
-          ? .regular.tint(.accentColor).interactive()
+          ? .regular.tint(AppTheme.Colors.tint(for: colorScheme)).interactive()
           : .regular.interactive(),
         in: .capsule
       )
     } else {
       Button(action: { onSelect(item.id) }) {
-        HStack(spacing: 6) {
-          Text(item.name)
-            .lineLimit(1)
+        HStack(spacing: 5) {
           if item.isDefault {
             Image(systemName: "star.fill")
-              .font(.caption2)
+              .font(.system(size: 9, weight: .bold))
           }
+          Text(item.name)
+            .lineLimit(1)
         }
         .font(.caption.weight(.semibold))
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.vertical, 7)
       }
-      .foregroundStyle(isSelected ? .primary : .secondary)
+      .foregroundStyle(isSelected ? Color.white : Color.primary)
+      .accessibilityLabel(Text(item.name))
       .background(
         Capsule()
-          .fill(isSelected ? Color.accentColor.opacity(0.20) : Color.secondary.opacity(0.12))
+          .fill(
+            isSelected
+              ? AppTheme.Colors.tint(for: colorScheme)
+              : AppTheme.Colors.tertiaryFill(for: colorScheme)
+          )
       )
-      .appGlassEffect(.capsule)
+      .overlay(
+        Capsule()
+          .strokeBorder(AppTheme.Colors.separator(for: colorScheme))
+      )
     }
   }
 
   @ViewBuilder
   private var manageButton: some View {
     if #available(iOS 26, *) {
-      Button("Manage", action: onManage)
-        .buttonStyle(.glass)
-        .controlSize(.small)
+      Button(action: onManage) {
+        Image(systemName: "slider.horizontal.3")
+          .font(.subheadline.weight(.semibold))
+      }
+      .buttonStyle(.glass)
+      .controlSize(.small)
+      .accessibilityLabel("Manage lists")
     } else {
-      Button("Manage", action: onManage)
-        .buttonStyle(.bordered)
-        .controlSize(.small)
+      Button(action: onManage) {
+        Image(systemName: "slider.horizontal.3")
+          .font(.subheadline.weight(.semibold))
+      }
+      .buttonStyle(.bordered)
+      .controlSize(.small)
+      .accessibilityLabel("Manage lists")
     }
   }
 }
+
+// MARK: - Unified List Management Sheet
+
+private struct ListManagementItem: Identifiable {
+  let id: String
+  let name: String
+  let isDefault: Bool
+}
+
+/// Generic management sheet shared by both portfolio lists and watchlist lists.
+private struct ListManagementSheet: View {
+  let title: String
+  let placeholder: String
+  let items: [ListManagementItem]
+  let onCreate: (String) async -> String?
+  let onRename: (String, String) async -> String?
+  let onDelete: (String) async -> String?
+
+  @Environment(\.dismiss) private var dismiss
+  @Environment(\.colorScheme) private var colorScheme
+
+  @State private var newName = ""
+  @State private var editingId: String? = nil
+  @State private var draftName = ""
+  @State private var pendingDeleteItem: ListManagementItem? = nil
+  @State private var isCreating = false
+
+  // Toast
+  @State private var toastMessage: String? = nil
+  @State private var toastStyle: ToastBanner.Style = .success
+
+  private var isNewNameValid: Bool {
+    !newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
+
+  private var deleteDialogTitle: String {
+    if let name = pendingDeleteItem?.name {
+      return "Delete \(name)?"
+    }
+    return "Delete this list?"
+  }
+
+  var body: some View {
+    NavigationStack {
+      List {
+        createSection
+        existingSection
+      }
+      .listStyle(.insetGrouped)
+      .navigationTitle(title)
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .topBarTrailing) {
+          Button("Done") { dismiss() }
+            .fontWeight(.semibold)
+        }
+      }
+      // Delete confirmation
+      .confirmationDialog(
+        deleteDialogTitle,
+        isPresented: Binding(
+          get: { pendingDeleteItem != nil },
+          set: { if !$0 { pendingDeleteItem = nil } }
+        ),
+        titleVisibility: .visible
+      ) {
+        if let item = pendingDeleteItem {
+          Button("Delete", role: .destructive) {
+            performDelete(item)
+          }
+          Button("Cancel", role: .cancel) { pendingDeleteItem = nil }
+        }
+      } message: {
+        Text("This list and all its contents will be removed. This cannot be undone.")
+      }
+      // Toast overlay
+      .overlay(alignment: .top) {
+        if let message = toastMessage {
+          ToastBanner(message: message, style: toastStyle)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .transition(.move(edge: .top).combined(with: .opacity))
+        }
+      }
+      .animation(.spring(response: 0.35, dampingFraction: 0.8), value: toastMessage)
+    }
+  }
+
+  // MARK: - Create Section
+
+  private var createSection: some View {
+    Section {
+      HStack(spacing: 10) {
+        Image(systemName: "plus.circle.fill")
+          .foregroundStyle(isNewNameValid ? AppTheme.Colors.tint(for: colorScheme) : .secondary)
+          .animation(.easeInOut(duration: 0.2), value: isNewNameValid)
+
+        TextField(placeholder, text: $newName)
+          .submitLabel(.done)
+          .onSubmit { createList() }
+
+        if isCreating {
+          ProgressView()
+            .controlSize(.small)
+        } else {
+          Button {
+            createList()
+          } label: {
+            Image(systemName: "arrow.up.circle.fill")
+              .font(.title3)
+              .foregroundStyle(isNewNameValid
+                ? AppTheme.Colors.tint(for: colorScheme)
+                : Color.secondary.opacity(0.4)
+              )
+          }
+          .buttonStyle(.plain)
+          .disabled(!isNewNameValid)
+          .animation(.easeInOut(duration: 0.2), value: isNewNameValid)
+        }
+      }
+    } header: {
+      Text("New List")
+    } footer: {
+      Text("Enter a name then tap ↑ or press Return.")
+    }
+  }
+
+  // MARK: - Existing Section
+
+  @ViewBuilder
+  private var existingSection: some View {
+    if !items.isEmpty {
+      Section {
+        ForEach(items) { item in
+          itemRow(item)
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+              if !item.isDefault {
+                Button(role: .destructive) {
+                  pendingDeleteItem = item
+                } label: {
+                  Label("Delete", systemImage: "trash")
+                }
+              }
+            }
+            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+              Button {
+                beginEditing(item)
+              } label: {
+                Label("Rename", systemImage: "pencil")
+              }
+              .tint(.indigo)
+            }
+        }
+      } header: {
+        HStack {
+          Text("Your Lists")
+          Spacer()
+          Text("\(items.count)")
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .monospacedDigit()
+        }
+      } footer: {
+        Text("Swipe left to delete, right to rename. Default lists cannot be deleted.")
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func itemRow(_ item: ListManagementItem) -> some View {
+    if editingId == item.id {
+      // Inline editing mode
+      HStack(spacing: 10) {
+        Image(systemName: "pencil.circle.fill")
+          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+
+        TextField("List name", text: $draftName)
+          .submitLabel(.done)
+          .onSubmit { commitRename(item) }
+
+        Button {
+          commitRename(item)
+        } label: {
+          Image(systemName: "checkmark.circle.fill")
+            .font(.title3)
+            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+        }
+        .buttonStyle(.plain)
+
+        Button {
+          editingId = nil
+          draftName = ""
+        } label: {
+          Image(systemName: "xmark.circle.fill")
+            .font(.title3)
+            .foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+      }
+    } else {
+      // Display mode
+      HStack(spacing: 10) {
+        if item.isDefault {
+          Image(systemName: "star.fill")
+            .font(.caption)
+            .foregroundStyle(.yellow)
+        }
+        Text(item.name)
+          .font(.body)
+
+        Spacer()
+
+        if item.isDefault {
+          Text("Default")
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(.secondary.opacity(0.12), in: Capsule())
+        }
+      }
+      .contentShape(Rectangle())
+      .onTapGesture { beginEditing(item) }
+    }
+  }
+
+  // MARK: - Actions
+
+  private func createList() {
+    guard isNewNameValid else { return }
+    let name = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+    isCreating = true
+    Task {
+      let error = await onCreate(name)
+      isCreating = false
+      if let error {
+        showToast(error, style: .error)
+      } else {
+        newName = ""
+        showToast("\"\(name)\" created", style: .success)
+      }
+    }
+  }
+
+  private func beginEditing(_ item: ListManagementItem) {
+    editingId = item.id
+    draftName = item.name
+  }
+
+  private func commitRename(_ item: ListManagementItem) {
+    let trimmed = draftName.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty, trimmed != item.name else {
+      editingId = nil
+      return
+    }
+    Task {
+      let error = await onRename(item.id, trimmed)
+      editingId = nil
+      draftName = ""
+      if let error {
+        showToast(error, style: .error)
+      } else {
+        showToast("Renamed to \"\(trimmed)\"", style: .success)
+      }
+    }
+  }
+
+  private func performDelete(_ item: ListManagementItem) {
+    pendingDeleteItem = nil
+    Task {
+      let error = await onDelete(item.id)
+      if let error {
+        showToast(error, style: .error)
+      } else {
+        showToast("\"\(item.name)\" deleted", style: .success)
+      }
+    }
+  }
+
+  private func showToast(_ message: String, style: ToastBanner.Style) {
+    toastMessage = message
+    toastStyle = style
+    Task {
+      try? await Task.sleep(for: .seconds(2.5))
+      withAnimation {
+        if toastMessage == message { toastMessage = nil }
+      }
+    }
+  }
+}
+
+// MARK: - Convenience wrappers preserving call sites
 
 private struct PortfolioListManagementSheet: View {
   let title: String
@@ -905,72 +1221,15 @@ private struct PortfolioListManagementSheet: View {
   let onRename: (String, String) async -> String?
   let onDelete: (String) async -> String?
 
-  @Environment(\.dismiss) private var dismiss
-  @State private var newName = ""
-  @State private var draftNames: [String: String] = [:]
-  @State private var feedbackMessage: String?
-
   var body: some View {
-    NavigationStack {
-      List {
-        Section("Create") {
-          TextField("Portfolio name", text: $newName)
-          Button("Create") {
-            Task {
-              feedbackMessage = await onCreate(newName)
-              if feedbackMessage == nil {
-                newName = ""
-              }
-            }
-          }
-        }
-
-        Section("Existing") {
-          ForEach(lists) { list in
-            VStack(alignment: .leading, spacing: 8) {
-              TextField(
-                "Name",
-                text: Binding(
-                  get: { draftNames[list.id] ?? list.name },
-                  set: { draftNames[list.id] = $0 }
-                )
-              )
-
-              HStack(spacing: 12) {
-                Button("Save") {
-                  Task {
-                    let draft = draftNames[list.id] ?? list.name
-                    feedbackMessage = await onRename(list.id, draft)
-                  }
-                }
-                .buttonStyle(.bordered)
-
-                if !list.isDefault {
-                  Button("Delete", role: .destructive) {
-                    Task { feedbackMessage = await onDelete(list.id) }
-                  }
-                  .buttonStyle(.bordered)
-                }
-              }
-            }
-            .padding(.vertical, 4)
-          }
-        }
-
-        if let feedbackMessage {
-          Section {
-            Text(feedbackMessage)
-              .foregroundStyle(.secondary)
-          }
-        }
-      }
-      .navigationTitle(title)
-      .toolbar {
-        ToolbarItem(placement: .topBarTrailing) {
-          Button("Done") { dismiss() }
-        }
-      }
-    }
+    ListManagementSheet(
+      title: title,
+      placeholder: "Portfolio name",
+      items: lists.map { .init(id: $0.id, name: $0.name, isDefault: $0.isDefault) },
+      onCreate: onCreate,
+      onRename: onRename,
+      onDelete: onDelete
+    )
   }
 }
 
@@ -981,72 +1240,15 @@ private struct WatchlistListManagementSheet: View {
   let onRename: (String, String) async -> String?
   let onDelete: (String) async -> String?
 
-  @Environment(\.dismiss) private var dismiss
-  @State private var newName = ""
-  @State private var draftNames: [String: String] = [:]
-  @State private var feedbackMessage: String?
-
   var body: some View {
-    NavigationStack {
-      List {
-        Section("Create") {
-          TextField("Watchlist name", text: $newName)
-          Button("Create") {
-            Task {
-              feedbackMessage = await onCreate(newName)
-              if feedbackMessage == nil {
-                newName = ""
-              }
-            }
-          }
-        }
-
-        Section("Existing") {
-          ForEach(lists) { list in
-            VStack(alignment: .leading, spacing: 8) {
-              TextField(
-                "Name",
-                text: Binding(
-                  get: { draftNames[list.id] ?? list.name },
-                  set: { draftNames[list.id] = $0 }
-                )
-              )
-
-              HStack(spacing: 12) {
-                Button("Save") {
-                  Task {
-                    let draft = draftNames[list.id] ?? list.name
-                    feedbackMessage = await onRename(list.id, draft)
-                  }
-                }
-                .buttonStyle(.bordered)
-
-                if !list.isDefault {
-                  Button("Delete", role: .destructive) {
-                    Task { feedbackMessage = await onDelete(list.id) }
-                  }
-                  .buttonStyle(.bordered)
-                }
-              }
-            }
-            .padding(.vertical, 4)
-          }
-        }
-
-        if let feedbackMessage {
-          Section {
-            Text(feedbackMessage)
-              .foregroundStyle(.secondary)
-          }
-        }
-      }
-      .navigationTitle(title)
-      .toolbar {
-        ToolbarItem(placement: .topBarTrailing) {
-          Button("Done") { dismiss() }
-        }
-      }
-    }
+    ListManagementSheet(
+      title: title,
+      placeholder: "Watchlist name",
+      items: lists.map { .init(id: $0.id, name: $0.name, isDefault: $0.isDefault) },
+      onCreate: onCreate,
+      onRename: onRename,
+      onDelete: onDelete
+    )
   }
 }
 

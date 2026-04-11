@@ -16,6 +16,8 @@ struct ExpensesPlannerScreen: View {
   @State private var presentedPlanItemDraft: BudgetPlanItemDraft?
   @State private var didSavePresentedPlanItemDraft = false
   @State private var itemToDelete: BudgetPlanItem?
+  @State private var activityToEdit: BudgetActivity?
+  @State private var activityToDelete: BudgetActivity?
   @State private var recordSpendInitialPillar: BudgetPillar = .fundamentals
   @State private var destructiveFeedbackTrigger = 0
 
@@ -28,6 +30,20 @@ struct ExpensesPlannerScreen: View {
             totalAmount: viewModel.selectedMonthSnapshot?.netSalary ?? 0
           )
           .padding(.top, 10)
+            
+            MonthlyPlanItemsCard(
+              monthTitle: viewModel.selectedMonthDisplayTitle,
+              items: (viewModel.selectedMonthSnapshot?.items ?? []).sorted {
+                if $0.pillar == $1.pillar {
+                  return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
+                }
+                return $0.pillar.rawValue < $1.pillar.rawValue
+              },
+              onAdd: { presentNewPlanItemDraft(pillar: .fundamentals) },
+              onEdit: { item in presentExistingPlanItemDraft(item) },
+              onDelete: { item in itemToDelete = item }
+            )
+            .padding(.horizontal, 16)
 
           if (viewModel.selectedMonthSnapshot?.netSalary ?? 0) <= 0 {
             GlassCard(cornerRadius: 18) {
@@ -99,7 +115,15 @@ struct ExpensesPlannerScreen: View {
           )
             .padding(.horizontal, 16)
 
-          RecentTransactionsList(activities: viewModel.selectedMonthActivities)
+          RecentTransactionsList(
+            activities: viewModel.selectedMonthActivities,
+            onEdit: { activity in
+              activityToEdit = activity
+            },
+            onDelete: { activity in
+              activityToDelete = activity
+            }
+          )
             .padding(.horizontal, 16)
 
           NavigationLink {
@@ -271,10 +295,22 @@ struct ExpensesPlannerScreen: View {
         RecordSpendSheet(
           monthTitle: viewModel.selectedMonthDisplayTitle,
           selectedMonthStart: viewModel.selectedMonthStart,
+          editingActivity: nil,
           initialPillar: recordSpendInitialPillar,
           availableItems: viewModel.selectedMonthSnapshot?.items ?? []
         ) { draft in
           await viewModel.recordExpenseAndWait(draft)
+        }
+      }
+      .sheet(item: $activityToEdit) { activity in
+        RecordSpendSheet(
+          monthTitle: viewModel.selectedMonthDisplayTitle,
+          selectedMonthStart: viewModel.selectedMonthStart,
+          editingActivity: activity,
+          initialPillar: activity.pillar,
+          availableItems: viewModel.selectedMonthSnapshot?.items ?? []
+        ) { draft in
+          await viewModel.updateExpenseAndWait(expenseID: activity.id, draft)
         }
       }
       .sheet(isPresented: $isPartnerEditorPresented) {
@@ -299,6 +335,21 @@ struct ExpensesPlannerScreen: View {
       } message: { item in
         Text("Remove \(item.title) from the \(item.pillar.title) plan for \(viewModel.selectedMonthDisplayTitle).")
       }
+      .confirmationDialog(
+        "Delete expense?",
+        isPresented: Binding(
+          get: { activityToDelete != nil },
+          set: { if !$0 { activityToDelete = nil } }
+        ),
+        presenting: activityToDelete
+      ) { activity in
+        Button("Delete", role: .destructive) {
+          destructiveFeedbackTrigger += 1
+          viewModel.removeExpense(activity.id)
+        }
+      } message: { activity in
+        Text("Remove \(activity.title) from \(viewModel.selectedMonthDisplayTitle).")
+      }
     }
     .appSensoryFeedback(destructive: destructiveFeedbackTrigger)
   }
@@ -318,6 +369,21 @@ struct ExpensesPlannerScreen: View {
         itemDraft = draft
       }
     }
+  }
+
+  private func presentExistingPlanItemDraft(_ item: BudgetPlanItem) {
+    let draft = BudgetPlanItemDraft(
+      itemID: item.id,
+      placeholderItemID: nil,
+      title: item.title,
+      plannedAmount: item.plannedAmount,
+      pillar: item.pillar,
+      splitMode: item.splitMode,
+      userSharePercent: item.userSharePercent
+    )
+    presentedPlanItemDraft = draft
+    didSavePresentedPlanItemDraft = false
+    itemDraft = draft
   }
 
   private var selectedYearBinding: Binding<Int> {
@@ -632,6 +698,72 @@ private struct PillarAllocationTableCard: View {
             }
           }
         }
+      }
+    }
+  }
+}
+
+private struct MonthlyPlanItemsCard: View {
+  let monthTitle: String
+  let items: [BudgetPlanItem]
+  let onAdd: () -> Void
+  let onEdit: (BudgetPlanItem) -> Void
+  let onDelete: (BudgetPlanItem) -> Void
+
+  var body: some View {
+    GlassCard(cornerRadius: 20) {
+      VStack(alignment: .leading, spacing: 16) {
+        HStack {
+          Text("Monthly plan items")
+            .font(.headline)
+          Spacer()
+          Text(monthTitle)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+
+        if items.isEmpty {
+          Text("No planned items for this month.")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        } else {
+          ForEach(items) { item in
+            HStack(spacing: 12) {
+              VStack(alignment: .leading, spacing: 4) {
+                Text(item.title)
+                  .font(.subheadline.weight(.semibold))
+                Text(item.pillar.title)
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+              }
+              Spacer()
+              Text(item.plannedAmount.currency)
+                .font(.subheadline.weight(.semibold))
+
+              Menu {
+                Button("Edit", systemImage: "pencil") {
+                  onEdit(item)
+                }
+                Button("Delete", systemImage: "trash", role: .destructive) {
+                  onDelete(item)
+                }
+              } label: {
+                Image(systemName: "ellipsis.circle")
+                  .font(.body)
+                  .foregroundStyle(.secondary)
+              }
+            }
+            .padding(.vertical, 6)
+
+            if item.id != items.last?.id {
+              Divider().background(Color.white.opacity(0.1))
+            }
+          }
+        }
+
+        Button("Add planned item", action: onAdd)
+          .buttonStyle(.bordered)
+          .controlSize(.small)
       }
     }
   }
@@ -1171,6 +1303,7 @@ private struct RecordSpendSheet: View {
   @Environment(\.colorScheme) private var colorScheme
 
   let monthTitle: String
+  let editingActivity: BudgetActivity?
   let initialPillar: BudgetPillar
   let availableItems: [BudgetPlanItem]
   let onSave: @MainActor (BudgetActivityDraft) async -> Bool
@@ -1190,22 +1323,31 @@ private struct RecordSpendSheet: View {
   init(
     monthTitle: String,
     selectedMonthStart: Date,
+    editingActivity: BudgetActivity? = nil,
     initialPillar: BudgetPillar = .fundamentals,
     availableItems: [BudgetPlanItem],
     onSave: @escaping @MainActor (BudgetActivityDraft) async -> Bool
   ) {
     self.monthTitle = monthTitle
+    self.editingActivity = editingActivity
     self.initialPillar = initialPillar
     self.availableItems = availableItems
     self.onSave = onSave
-    _pillar = State(initialValue: initialPillar)
-    _occurredOn = State(initialValue: Self.defaultDate(for: selectedMonthStart))
+    _title = State(initialValue: editingActivity?.title ?? "")
+    _amount = State(initialValue: editingActivity.map { Self.formattedAmount($0.amount) } ?? "")
+    _pillar = State(initialValue: editingActivity?.pillar ?? initialPillar)
+    _occurredOn = State(
+      initialValue: editingActivity?.occurredOn ?? Self.defaultDate(for: selectedMonthStart)
+    )
+    _linkedPlanItemID = State(initialValue: editingActivity?.linkedPlanItemID)
+    _splitMode = State(initialValue: editingActivity?.splitMode ?? .personal)
+    _userSharePercent = State(initialValue: editingActivity?.userSharePercent ?? 100)
   }
 
   var body: some View {
     VStack(spacing: 0) {
       FormSheetHeader(
-        title: "Record Spend",
+        title: editingActivity == nil ? "Record Spend" : "Edit Spend",
         subtitle: monthTitle,
         onDismiss: { dismiss() }
       )
@@ -1308,7 +1450,7 @@ private struct RecordSpendSheet: View {
       .scrollDismissesKeyboard(.interactively)
 
       FormActionBar(
-        primaryLabel: "Save",
+        primaryLabel: editingActivity == nil ? "Save" : "Save changes",
         isLoading: isSaving,
         isDisabled: parseMonetaryValue(amount) == nil
           || (
@@ -1369,6 +1511,14 @@ private struct RecordSpendSheet: View {
     let clampedDay = min(day, maxDay)
     let comps = calendar.dateComponents([.year, .month], from: monthStart)
     return calendar.date(from: DateComponents(year: comps.year, month: comps.month, day: clampedDay)) ?? monthStart
+  }
+
+  private static func formattedAmount(_ amount: Double) -> String {
+    let rounded = amount.rounded()
+    if abs(amount - rounded) < 0.000_1 {
+      return String(Int(rounded))
+    }
+    return amount.formatted(.number.precision(.fractionLength(0...2)))
   }
 
   private func parseMonetaryValue(_ raw: String) -> Double? {
@@ -1625,6 +1775,8 @@ private struct SuggestionDetailSheet: View {
 
 struct RecentTransactionsList: View {
   let activities: [BudgetActivity]
+  let onEdit: (BudgetActivity) -> Void
+  let onDelete: (BudgetActivity) -> Void
 
   private func relativeDateString(from date: Date) -> String {
       let calendar = Calendar.current
@@ -1674,6 +1826,19 @@ struct RecentTransactionsList: View {
 
               Text("-\(activity.amount.currency)")
                 .font(.headline)
+
+              Menu {
+                Button("Edit", systemImage: "pencil") {
+                  onEdit(activity)
+                }
+                Button("Delete", systemImage: "trash", role: .destructive) {
+                  onDelete(activity)
+                }
+              } label: {
+                Image(systemName: "ellipsis.circle")
+                  .font(.body)
+                  .foregroundStyle(.secondary)
+              }
             }
             .padding(.vertical, 14)
             .padding(.horizontal, 16)

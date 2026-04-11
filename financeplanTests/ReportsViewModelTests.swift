@@ -281,6 +281,10 @@ private final class MockStockService: StockServicing {
 
   @discardableResult
   func create(stock _: StockRequest) async throws -> StockResponse { throw MockExpensesError.notConfigured }
+  @discardableResult
+  func create(stock: StockRequest, portfolioListId _: String?) async throws -> StockResponse {
+    try await create(stock: stock)
+  }
 
   @discardableResult
   func bulkCreate(stocks _: [StockRequest]) async throws -> BulkStockResponse { throw MockExpensesError.notConfigured }
@@ -289,13 +293,17 @@ private final class MockStockService: StockServicing {
     fetchPortfolioCalls += 1
     return try fetchPortfolioResult.get()
   }
+  func fetchPortfolio(portfolioListId _: String?) async throws -> [StockResponse] { try await fetchPortfolio() }
 
   func fetchStockDetails(stockId _: String) async throws -> StockDetails { throw MockExpensesError.notConfigured }
   func fetchStockInsights(symbol _: String) async throws -> StockInsightsResponse { throw MockExpensesError.notConfigured }
+  func fetchPortfolioPerformance(portfolioListId _: String?) async throws -> PortfolioPerformanceResponse { throw MockExpensesError.notConfigured }
   func fetchPortfolioPerformance() async throws -> PortfolioPerformanceResponse { throw MockExpensesError.notConfigured }
+  func fetchPortfolioSummary(portfolioListId _: String?) async throws -> PortfolioSummaryResponse { throw MockExpensesError.notConfigured }
   func fetchPortfolioSummary() async throws -> PortfolioSummaryResponse { throw MockExpensesError.notConfigured }
   func fetchStockHistory(symbol _: String) async throws -> [StockHistory] { throw MockExpensesError.notConfigured }
   func fetchStockNews(symbol _: String) async throws -> [StockNews] { throw MockExpensesError.notConfigured }
+  func updateStock(_ stock: StockResponse, portfolioListId _: String?) async throws -> StockResponse { try await updateStock(stock) }
   func updateStock(_: StockResponse) async throws -> StockResponse { throw MockExpensesError.notConfigured }
   func delete(id _: String) async throws { throw MockExpensesError.notConfigured }
   func getValuation(symbol _: String) async throws -> StockValuationRequest { throw MockExpensesError.notConfigured }
@@ -304,10 +312,21 @@ private final class MockStockService: StockServicing {
   func updateValuation(symbol _: String, draft _: StockValuationDraft) async throws -> StockValuationRequest { throw MockExpensesError.notConfigured }
   func updateValuation(symbol _: String, bearLow _: Double, bearHigh _: Double, baseLow _: Double, baseHigh _: Double, bullLow _: Double, bullHigh _: Double, rationale _: String?, targetDate _: String?) async throws -> StockValuationRequest { throw MockExpensesError.notConfigured }
   func fetchWatchlist() async throws -> [WatchlistItemResponse] { throw MockExpensesError.notConfigured }
+  func fetchWatchlist(watchlistListId _: String?) async throws -> [WatchlistItemResponse] { throw MockExpensesError.notConfigured }
   @discardableResult
   func createWatchlistItem(_: WatchlistItemRequest) async throws -> WatchlistItemResponse { throw MockExpensesError.notConfigured }
   @discardableResult
+  func createWatchlistItem(_: WatchlistItemRequest, watchlistListId _: String?) async throws -> WatchlistItemResponse {
+    throw MockExpensesError.notConfigured
+  }
+  @discardableResult
   func updateWatchlistItem(id _: String, request _: WatchlistItemUpdateRequest) async throws -> WatchlistItemResponse { throw MockExpensesError.notConfigured }
+  @discardableResult
+  func updateWatchlistItem(
+    id _: String,
+    request _: WatchlistItemUpdateRequest,
+    watchlistListId _: String?
+  ) async throws -> WatchlistItemResponse { throw MockExpensesError.notConfigured }
   func deleteWatchlistItem(id _: String) async throws { throw MockExpensesError.notConfigured }
   func sellStock(id _: String, request _: SellStockRequest) async throws -> StockResponse { throw MockExpensesError.notConfigured }
 }

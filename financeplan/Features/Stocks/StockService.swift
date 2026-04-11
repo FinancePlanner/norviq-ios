@@ -85,14 +85,6 @@ extension StockServicing {
     try await create(stock: stock, portfolioListId: nil)
   }
 
-  func create(stock: StockRequest, portfolioListId _: String?) async throws -> StockResponse {
-    try await create(stock: stock)
-  }
-
-  func fetchPortfolio(portfolioListId _: String?) async throws -> [StockResponse] {
-    try await fetchPortfolio()
-  }
-
   func fetchPortfolio() async throws -> [StockResponse] {
     try await fetchPortfolio(portfolioListId: nil)
   }
@@ -109,24 +101,8 @@ extension StockServicing {
     try await fetchPortfolioSummary(portfolioListId: nil)
   }
 
-  func fetchPortfolioPerformance(portfolioListId _: String?) async throws -> PortfolioPerformanceResponse {
-    try await fetchPortfolioPerformance()
-  }
-
-  func fetchPortfolioSummary(portfolioListId _: String?) async throws -> PortfolioSummaryResponse {
-    try await fetchPortfolioSummary()
-  }
-
   func updateStock(_ stock: StockResponse) async throws -> StockResponse {
     try await updateStock(stock, portfolioListId: nil)
-  }
-
-  func updateStock(_ stock: StockResponse, portfolioListId _: String?) async throws -> StockResponse {
-    try await updateStock(stock)
-  }
-
-  func fetchWatchlist(watchlistListId _: String?) async throws -> [WatchlistItemResponse] {
-    try await fetchWatchlist()
   }
 
   func fetchWatchlist() async throws -> [WatchlistItemResponse] {
@@ -137,26 +113,11 @@ extension StockServicing {
     try await createWatchlistItem(request, watchlistListId: nil)
   }
 
-  func createWatchlistItem(
-    _ request: WatchlistItemRequest,
-    watchlistListId _: String?
-  ) async throws -> WatchlistItemResponse {
-    try await createWatchlistItem(request)
-  }
-
   func updateWatchlistItem(
     id: String,
     request: WatchlistItemUpdateRequest
   ) async throws -> WatchlistItemResponse {
     try await updateWatchlistItem(id: id, request: request, watchlistListId: nil)
-  }
-
-  func updateWatchlistItem(
-    id: String,
-    request: WatchlistItemUpdateRequest,
-    watchlistListId _: String?
-  ) async throws -> WatchlistItemResponse {
-    try await updateWatchlistItem(id: id, request: request)
   }
 
   func fetchPortfolioLists() async throws -> [PortfolioListDTOResponse] {
