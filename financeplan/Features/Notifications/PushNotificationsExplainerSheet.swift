@@ -8,7 +8,7 @@ struct PushNotificationsExplainerSheet: View {
     NavigationStack {
       VStack(alignment: .leading, spacing: 20) {
         Image(systemName: "bell.badge.fill")
-          .font(.system(size: 36, weight: .bold))
+          .font(.largeTitle.bold())
           .foregroundStyle(.tint)
 
         Text("Stay on top of target hits")

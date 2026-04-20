@@ -278,7 +278,13 @@ final class StockDetailsViewModelTests: XCTestCase {
       try fetchBasicFinancialsResult.get()
     }
 
-    func fetchAnalysisMetrics(symbol _: String) async throws -> StockAnalysisMetrics {
+    func fetchAnalysisMetrics(
+      symbol _: String,
+      wacc _: Double?,
+      terminalGrowthRate _: Double?,
+      terminalMargin _: Double?,
+      fcfMarginAssumption _: Double?
+    ) async throws -> StockAnalysisMetrics {
       try fetchAnalysisMetricsResult.get()
     }
 

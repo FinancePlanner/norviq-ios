@@ -34,13 +34,14 @@ final class AuthHTTPClientTests: XCTestCase {
       XCTAssertEqual(request.httpMethod, "POST")
       XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/auth/login")
       XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "X-StockPlan-Client-Capabilities"), "mfa-auth-v1")
 
       let body = try XCTUnwrap(request.httpBody)
       let decoded = try JSONDecoder().decode(AuthLoginRequest.self, from: body)
       XCTAssertEqual(decoded.email, "user@example.com")
       XCTAssertEqual(decoded.password, "Password123")
 
-      let data = try JSONEncoder().encode(expected)
+      let data = try JSONEncoder().encode(AuthLoginOutcomePayload.authenticated(expected))
       let response = try XCTUnwrap(
         HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
       )
@@ -52,7 +53,8 @@ final class AuthHTTPClientTests: XCTestCase {
       AuthLoginRequest(email: "user@example.com", password: "Password123")
     )
 
-    XCTAssertEqual(response, expected)
+    XCTAssertEqual(response.status, .authenticated)
+    XCTAssertEqual(response.auth, expected)
   }
 
   func testRegister_WhenServerReturnsAPIError_ThrowsAPIError() async throws {
@@ -272,7 +274,8 @@ final class AuthHTTPClientTests: XCTestCase {
       AuthLoginRequest(email: "user@example.com", password: "Password123")
     )
 
-    XCTAssertEqual(response, expected)
+    XCTAssertEqual(response.status, .authenticated)
+    XCTAssertEqual(response.auth, expected)
   }
 
   func testLogout_WhenV2Returns404_FallsBackToAuthLogout() async throws {
@@ -307,5 +310,79 @@ final class AuthHTTPClientTests: XCTestCase {
         "https://api.example.com/auth/logout"
       ]
     )
+  }
+
+  func testVerifyMFA_SendsRequestAndDecodesAuthResponse() async throws {
+    let session = SessionMock()
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
+    let expected = AuthResponse(
+      token: "token-verified",
+      userId: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+      expiresIn: 3600,
+      refreshToken: "refresh-verified",
+      refreshExpiresIn: 86_400,
+      username: "valid_user",
+      email: "user@example.com",
+      dateOfBirth: Date(timeIntervalSince1970: 946684800)
+    )
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/auth/mfa/verify")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "X-StockPlan-Client-Capabilities"), "mfa-auth-v1")
+      let body = try XCTUnwrap(request.httpBody)
+      let payload = try JSONDecoder().decode(AuthMFAVerifyRequestPayload.self, from: body)
+      XCTAssertEqual(payload.code, "123456")
+
+      let data = try JSONEncoder().encode(expected)
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (data, response)
+    }
+
+    let client = AuthHTTPClient(baseURL: baseURL, session: session)
+    let response = try await client.verifyMFA(
+      AuthMFAVerifyRequestPayload(
+        challengeId: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
+        code: "123456"
+      )
+    )
+
+    XCTAssertEqual(response, expected)
+  }
+
+  func testResendMFA_SendsRequestAndDecodesChallenge() async throws {
+    let session = SessionMock()
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
+    let expected = AuthMFAChallengeResponsePayload(
+      challengeId: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
+      channel: .email,
+      maskedDestination: "us***@e***.com",
+      expiresIn: 300,
+      resendAvailableIn: 30
+    )
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/auth/mfa/resend")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "X-StockPlan-Client-Capabilities"), "mfa-auth-v1")
+      let body = try XCTUnwrap(request.httpBody)
+      let payload = try JSONDecoder().decode(AuthMFAResendRequestPayload.self, from: body)
+      XCTAssertEqual(payload.challengeId.uuidString, "22222222-2222-2222-2222-222222222222")
+
+      let data = try JSONEncoder().encode(expected)
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (data, response)
+    }
+
+    let client = AuthHTTPClient(baseURL: baseURL, session: session)
+    let response = try await client.resendMFA(
+      AuthMFAResendRequestPayload(
+        challengeId: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+      )
+    )
+
+    XCTAssertEqual(response, expected)
   }
 }

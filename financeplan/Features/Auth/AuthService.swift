@@ -2,7 +2,7 @@ import Foundation
 import StockPlanShared
 
 protocol AuthServicing {
-  func login(email: String, password: String) async throws -> AuthResponse
+  func login(email: String, password: String) async throws -> AuthLoginOutcomePayload
   func signup(
     username: String,
     email: String,
@@ -11,10 +11,12 @@ protocol AuthServicing {
     dateOfBirth: Date
   ) async throws
   func forgotPassword(email: String) async throws -> AuthForgotPasswordResponse
+  func verifyMFA(challengeId: UUID, code: String) async throws -> AuthResponse
+  func resendMFA(challengeId: UUID) async throws -> AuthMFAChallengeResponsePayload
   func refresh(refreshToken: String) async throws -> AuthResponse
   func logout(refreshToken: String) async
   @MainActor
-  func oauthSignIn(provider: OAuthProviderKind) async throws -> AuthResponse
+  func oauthSignIn(provider: OAuthProviderKind) async throws -> AuthLoginOutcomePayload
 }
 
 protocol AuthSessionStoring: AnyObject {
@@ -47,7 +49,7 @@ final class AuthService: AuthServicing {
     self.webAuthenticator = webAuthenticator
   }
 
-  func login(email: String, password: String) async throws -> AuthResponse {
+  func login(email: String, password: String) async throws -> AuthLoginOutcomePayload {
     try await client().login(AuthLoginRequest(email: email, password: password))
   }
 
@@ -71,6 +73,18 @@ final class AuthService: AuthServicing {
     try await client().forgotPassword(AuthForgotPasswordRequest(email: email))
   }
 
+  func verifyMFA(challengeId: UUID, code: String) async throws -> AuthResponse {
+    try await client().verifyMFA(
+      AuthMFAVerifyRequestPayload(challengeId: challengeId, code: code)
+    )
+  }
+
+  func resendMFA(challengeId: UUID) async throws -> AuthMFAChallengeResponsePayload {
+    try await client().resendMFA(
+      AuthMFAResendRequestPayload(challengeId: challengeId)
+    )
+  }
+
   func refresh(refreshToken: String) async throws -> AuthResponse {
     try await client().refresh(AuthRefreshRequest(refreshToken: refreshToken))
   }
@@ -83,7 +97,7 @@ final class AuthService: AuthServicing {
   }
 
   @MainActor
-  func oauthSignIn(provider: OAuthProviderKind) async throws -> AuthResponse {
+  func oauthSignIn(provider: OAuthProviderKind) async throws -> AuthLoginOutcomePayload {
     let callbackScheme = oauthCallbackScheme()
     let redirectURI = oauthRedirectURI(for: callbackScheme)
 

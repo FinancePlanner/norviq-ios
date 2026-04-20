@@ -12,7 +12,7 @@ final class AuthSessionManagerTests: XCTestCase {
     var lastLogoutRefreshToken: String?
     var refreshResult: Result<AuthResponse, Error> = .failure(MockError.notConfigured)
 
-    func login(email: String, password: String) async throws -> AuthResponse {
+    func login(email: String, password: String) async throws -> AuthLoginOutcomePayload {
       throw MockError.notConfigured
     }
 
@@ -30,6 +30,14 @@ final class AuthSessionManagerTests: XCTestCase {
       throw MockError.notConfigured
     }
 
+    func verifyMFA(challengeId _: UUID, code _: String) async throws -> AuthResponse {
+      throw MockError.notConfigured
+    }
+
+    func resendMFA(challengeId _: UUID) async throws -> AuthMFAChallengeResponsePayload {
+      throw MockError.notConfigured
+    }
+
     func refresh(refreshToken: String) async throws -> AuthResponse {
       refreshCalls += 1
       lastRefreshToken = refreshToken
@@ -42,7 +50,7 @@ final class AuthSessionManagerTests: XCTestCase {
     }
 
     @MainActor
-    func oauthSignIn(provider _: OAuthProviderKind) async throws -> AuthResponse {
+    func oauthSignIn(provider _: OAuthProviderKind) async throws -> AuthLoginOutcomePayload {
       throw MockError.notConfigured
     }
   }

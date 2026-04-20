@@ -628,12 +628,12 @@ struct CryptoNewsCard: View {
                     } placeholder: {
                         Color.gray.opacity(0.2)
                     }
-                    .frame(height: 160)
+                    .frame(minHeight: 160, maxHeight: 200)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 } else {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(.gray.opacity(0.2))
-                        .frame(height: 160)
+                        .frame(minHeight: 160, maxHeight: 200)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -1179,24 +1179,24 @@ struct CryptoOverviewSkeleton: View {
             HStack(spacing: 16) {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(.gray.opacity(0.12))
-                    .frame(height: 110)
+                    .frame(minHeight: 110)
                     .shimmer()
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(.gray.opacity(0.12))
-                    .frame(height: 110)
+                    .frame(minHeight: 110)
                     .shimmer()
             }
             .padding(.horizontal)
 
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(.gray.opacity(0.12))
-                .frame(height: 70)
+                .frame(minHeight: 70)
                 .shimmer()
                 .padding(.horizontal)
 
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.gray.opacity(0.12))
-                .frame(height: 200)
+                .frame(minHeight: 200)
                 .shimmer()
                 .padding(.horizontal)
 

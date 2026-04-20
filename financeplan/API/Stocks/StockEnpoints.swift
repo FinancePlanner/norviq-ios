@@ -426,12 +426,67 @@ private func watchlistUpdateParameters(_ payload: WatchlistItemUpdateRequest, wa
   return params
 }
 
+private func targetParameters(_ payload: TargetRequest) -> Parameters {
+  var params: Parameters = [
+    "symbol": payload.symbol,
+    "scenario": payload.scenario,
+    "targetPrice": payload.targetPrice
+  ]
+  if let targetDate = payload.targetDate, !targetDate.isEmpty {
+    params["targetDate"] = targetDate
+  }
+  if let rationale = payload.rationale, !rationale.isEmpty {
+    params["rationale"] = rationale
+  }
+  return params
+}
+
 struct DeleteWatchlistEndpoint: Endpoint {
   typealias Response = EmptyAPIResponse
   let watchlistId: String
 
   var method: HTTPMethod { .delete }
   var path: String { "/v1/watchlist/\(watchlistId)" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+struct GetTargetsEndpoint: Endpoint {
+  typealias Response = [TargetResponse]
+  let symbol: String?
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/targets" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    guard let symbol else { return [:] }
+    let normalized = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    guard !normalized.isEmpty else { return [:] }
+    return ["symbol": normalized]
+  }
+}
+
+struct CreateTargetEndpoint: Endpoint {
+  typealias Response = TargetResponse
+  let payload: TargetRequest
+
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/targets" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    targetParameters(payload)
+  }
+}
+
+struct DeleteTargetEndpoint: Endpoint {
+  typealias Response = EmptyAPIResponse
+  let targetId: String
+
+  var method: HTTPMethod { .delete }
+  var path: String { "/v1/targets/\(targetId)" }
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters { [:] }

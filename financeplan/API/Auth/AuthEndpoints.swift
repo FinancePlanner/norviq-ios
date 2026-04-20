@@ -8,8 +8,15 @@ typealias OAuthStartRequestPayload = OAuthStartRequest
 typealias OAuthStartResponsePayload = OAuthStartResponse
 typealias OAuthExchangeRequestPayload = OAuthExchangeRequest
 
+typealias AuthMFAChannelPayload = AuthMFAChannel
+typealias AuthMFAChallengeResponsePayload = AuthMFAChallengeResponse
+typealias AuthMFAVerifyRequestPayload = AuthMFAVerifyRequest
+typealias AuthMFAResendRequestPayload = AuthMFAResendRequest
+typealias AuthLoginOutcomeStatusPayload = AuthLoginOutcomeStatus
+typealias AuthLoginOutcomePayload = AuthLoginOutcome
+
 struct LoginEndpoint: Endpoint {
-  typealias Response = AuthResponse
+  typealias Response = AuthLoginOutcomePayload
 
   let email: String
   let password: String
@@ -121,7 +128,7 @@ struct OAuthStartEndpoint: Endpoint {
 }
 
 struct OAuthExchangeEndpoint: Endpoint {
-  typealias Response = AuthResponse
+  typealias Response = AuthLoginOutcomePayload
 
   let provider: OAuthProviderKind
   let payload: OAuthExchangeRequestPayload
@@ -136,6 +143,39 @@ struct OAuthExchangeEndpoint: Endpoint {
       "code": payload.code,
       "state": payload.state,
       "redirectURI": payload.redirectURI
+    ]
+  }
+}
+
+struct MFAVerifyEndpoint: Endpoint {
+  typealias Response = AuthResponse
+
+  let payload: AuthMFAVerifyRequestPayload
+
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/auth/mfa/verify" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    [
+      "challengeId": payload.challengeId.uuidString,
+      "code": payload.code
+    ]
+  }
+}
+
+struct MFAResendEndpoint: Endpoint {
+  typealias Response = AuthMFAChallengeResponsePayload
+
+  let payload: AuthMFAResendRequestPayload
+
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/auth/mfa/resend" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    [
+      "challengeId": payload.challengeId.uuidString
     ]
   }
 }

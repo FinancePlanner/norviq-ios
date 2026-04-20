@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import SwiftData
 import OSLog
 import Factory
 import StockPlanShared
@@ -11,6 +12,8 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
   @Published private(set) var monthlySummaries: [BudgetMonthSummary] = []
   @Published private(set) var yearlySummaries: [BudgetYearSummary] = []
   @Published private(set) var reportSuggestions: [ReportSuggestionResponse] = []
+  @Published private(set) var categories: [ExpenseCategoryResponse] = []
+  @Published private(set) var recurringTemplates: [RecurringTemplateResponse] = []
   @Published private(set) var isSuggestionsLoading = false
   @Published private(set) var suggestionsUnavailable = false
   @Published private(set) var partnerDisplayName: String = "Partner"
@@ -80,51 +83,65 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
       errorMessage = nil
 
       do {
-          async let fetchPartner = expensesService.getHouseholdPartner()
-          async let fetchSnapshots = expensesService.getSnapshots(year: nil, month: nil)
-          async let fetchItems = expensesService.getAllPlanItems()
-          async let fetchExpenses = expensesService.getExpenses(from: nil, to: nil)
-          async let fetchMonthlyReports = expensesService.getMonthlyExpenseReports(from: nil, to: nil)
-          async let fetchYearlyReports = expensesService.getYearlyExpenseReports(from: nil, to: nil)
+          let partner = try? await expensesService.getHouseholdPartner()
+          if let partner {
+              self.partnerDisplayName = partner.displayName ?? "Partner"
+          }
 
-          let (partner, fetchedSnapshots, fetchedItems, fetchedExpenses, fetchedMonthlyReports, fetchedYearlyReports) = try await (
-            fetchPartner,
-            fetchSnapshots,
-            fetchItems,
-            fetchExpenses,
-            fetchMonthlyReports,
-            fetchYearlyReports
-          )
-          self.partnerDisplayName = partner.displayName ?? "Partner"
+          // Trigger sync in the background or wait if forced
+          if force || !hasLoadedOnce {
+              try? await ExpensesSyncManager.shared.pullLatestData(from: expensesService)
+          }
 
-          let itemsBySnapshotId = Dictionary(grouping: fetchedItems, by: \.snapshotId)
+          // Load from SwiftData
+          let context = ExpensesSyncManager.shared.context
+          let fetchedSnapshots = try context.fetch(FetchDescriptor<LocalBudgetSnapshot>())
+          let fetchedItems = try context.fetch(FetchDescriptor<LocalBudgetPlanItem>())
+          let fetchedExpenses = try context.fetch(FetchDescriptor<LocalExpense>())
+          let fetchedCategories = try context.fetch(FetchDescriptor<LocalExpenseCategory>())
+          let fetchedRecurringTemplates = try context.fetch(FetchDescriptor<LocalRecurringTemplate>())
 
-          var newSnapshots = fetchedSnapshots.compactMap { snap -> MonthlyBudgetSnapshot? in
-              guard let id = UUID(uuidString: snap.id),
-                    let monthStart = self.parseDayString(snap.monthStart) else { return nil }
+          self.categories = fetchedCategories.map { cat in
+              ExpenseCategoryResponse(id: cat.id, name: cat.name, pillar: cat.pillar)
+          }
+          
+          self.recurringTemplates = fetchedRecurringTemplates.map { tpl in
+              RecurringTemplateResponse(
+                  id: tpl.id,
+                  title: tpl.title,
+                  amount: tpl.amount,
+                  pillar: tpl.pillar,
+                  categoryId: tpl.categoryId,
+                  frequency: tpl.frequency,
+                  splitMode: tpl.splitMode,
+                  userSharePercent: tpl.userSharePercent
+              )
+          }
 
-              var targetShares = BudgetPillar.defaultShares
-              for (key, val) in snap.targetShares {
-                  if let pillar = BudgetPillar(rawValue: key) {
-                      targetShares[pillar] = val
+          let itemsBySnapshotId = Dictionary(grouping: fetchedItems, by: \.snapshot?.id.uuidString)
+
+          var newSnapshots = fetchedSnapshots.map { snap -> MonthlyBudgetSnapshot in
+              let targetShares = snap.targetShares
+
+              let mappedItems = (itemsBySnapshotId[snap.id.uuidString] ?? []).compactMap { item -> BudgetPlanItem? in
+                  let catName = item.categoryId.flatMap { catId in
+                      fetchedCategories.first(where: { $0.id == catId })?.name
                   }
-              }
-
-              let mappedItems = (itemsBySnapshotId[snap.id] ?? []).compactMap { item -> BudgetPlanItem? in
-                  guard let itemId = UUID(uuidString: item.id) else { return nil }
                   return BudgetPlanItem(
-                    id: itemId,
+                    id: item.id,
                     title: item.title,
                     plannedAmount: item.plannedAmount,
                     pillar: item.pillar,
+                    categoryId: item.categoryId,
+                    categoryName: catName,
                     splitMode: item.splitMode,
                     userSharePercent: item.userSharePercent
                   )
               }
 
               return MonthlyBudgetSnapshot(
-                  id: id,
-                  monthStart: monthStart,
+                  id: snap.id,
+                  monthStart: snap.monthStart,
                   netSalary: snap.netSalary,
                   targetShares: targetShares,
                   items: mappedItems
@@ -133,32 +150,33 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
 
           if newSnapshots.isEmpty {
               let start = calendar.startOfMonth(for: .now)
-              let req = BudgetSnapshotRequest(monthStart: self.dayString(from: start), netSalary: 2700, targetShares: [:])
-              let created = try await expensesService.createBudgetSnapshot(request: req)
-              if let id = UUID(uuidString: created.id) {
-                  newSnapshots.append(
-                    MonthlyBudgetSnapshot(
-                      id: id,
-                      monthStart: start,
-                      netSalary: created.netSalary,
-                      targetShares: mapTargetShares(created.targetShares),
-                      items: []
-                    )
-                  )
-              }
+              let newSnap = LocalBudgetSnapshot(
+                  monthStart: start,
+                  netSalary: 2700,
+                  targetShares: [:]
+              )
+              context.insert(newSnap)
+              try? context.save()
+              
+              newSnapshots.append(
+                MonthlyBudgetSnapshot(
+                  id: newSnap.id,
+                  monthStart: start,
+                  netSalary: newSnap.netSalary,
+                  targetShares: BudgetPillar.defaultShares,
+                  items: []
+                )
+              )
           }
 
-          let newActivities = fetchedExpenses.compactMap { exp -> BudgetActivity? in
-              guard let id = UUID(uuidString: exp.id),
-                    let date = self.parseDayString(exp.occurredOn) else { return nil }
-              let linkedId = exp.linkedPlanItemId.flatMap { UUID(uuidString: $0) }
-              return BudgetActivity(
-                id: id,
+          let newActivities = fetchedExpenses.map { exp -> BudgetActivity in
+              BudgetActivity(
+                id: exp.id,
                 title: exp.title,
                 amount: exp.amount,
                 pillar: exp.pillar,
-                occurredOn: date,
-                linkedPlanItemID: linkedId,
+                occurredOn: exp.occurredOn,
+                linkedPlanItemID: exp.linkedPlanItemId,
                 splitMode: exp.splitMode,
                 userSharePercent: exp.userSharePercent
               )
@@ -168,18 +186,22 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
           self.monthlySnapshots = newSnapshots
           self.activities = newActivities.sorted { $0.occurredOn > $1.occurredOn }
 
-          let fetchedMonthlySummaries = fetchedMonthlyReports.compactMap(mapMonthSummary)
           let localMonthlySummaries = Self.makeLocalMonthlySummaries(
             snapshots: newSnapshots,
             activities: self.activities,
             calendar: self.calendar
           )
+          
+          let fetchedMonthlyReports = (try? await expensesService.getMonthlyExpenseReports(from: nil, to: nil)) ?? []
+          let fetchedMonthlySummaries = fetchedMonthlyReports.compactMap(mapMonthSummary)
+          
           self.monthlySummaries = Self.mergeMonthlySummaries(
-            preferred: fetchedMonthlySummaries,
+            preferred: fetchedMonthlySummaries.isEmpty ? localMonthlySummaries : fetchedMonthlySummaries,
             fallback: localMonthlySummaries,
             calendar: self.calendar
           )
 
+          let fetchedYearlyReports = (try? await expensesService.getYearlyExpenseReports(from: nil, to: nil)) ?? []
           let fetchedYearlySummaries = fetchedYearlyReports.map { report in
               BudgetYearSummary(
                   year: report.year,
@@ -197,7 +219,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
             calendar: self.calendar
           )
           self.yearlySummaries = Self.mergeYearlySummaries(
-            preferred: fetchedYearlySummaries,
+            preferred: fetchedYearlySummaries.isEmpty ? localYearlySummaries : fetchedYearlySummaries,
             fallback: localYearlySummaries
           )
 
@@ -211,6 +233,13 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
               self.selectedMonthStart = latest
           }
 
+          if self.selectedMonthSnapshotIndex == nil {
+              logger.debug(
+                "No snapshot for selected month \(self.dayString(from: self.selectedMonthStart), privacy: .public). Creating one."
+              )
+              _ = try await self.ensureSnapshotExistsForSelectedMonth()
+          }
+
           do {
               let suggestionsResponse = try await expensesService.getReportSuggestions(from: nil, to: nil)
               self.reportSuggestions = suggestionsResponse.suggestions
@@ -222,7 +251,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
 
           hasLoadedOnce = true
       } catch {
-          self.errorMessage = "Could not refresh planner data: \(error.localizedDescription)"
+          self.errorMessage = "Could not load planner data: \(error.localizedDescription)"
       }
 
       isLoading = false
@@ -232,6 +261,9 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
           pendingForceReload = false
           await load(force: true)
       }
+      
+      // Attempt to push offline actions
+      await ExpensesSyncManager.shared.pushPendingActions(to: expensesService)
   }
 
   var topReportSuggestion: ReportSuggestionResponse? {
@@ -378,8 +410,65 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
       .sorted { $0.occurredOn > $1.occurredOn }
   }
 
+  var selectedMonthPillars: [BudgetPillar] {
+    guard let snapshot = snapshot(for: selectedMonthStart) else {
+      return BudgetPillar.standardPillars
+    }
+    return Self.resolvedPillars(snapshot: snapshot, activities: activitiesForMonth(selectedMonthStart))
+  }
+
+  var preferredInitialPillar: BudgetPillar {
+    selectedMonthPillars.first ?? .fundamentals
+  }
+
+  func categories(for pillar: BudgetPillar) -> [ExpenseCategoryResponse] {
+    categories.filter { $0.pillar == nil || $0.pillar == pillar }
+  }
+
+  func saveRecurringTemplate(_ request: RecurringTemplateRequest, templateId: String? = nil) {
+    Task {
+      do {
+        if let templateId {
+          let updated = try await expensesService.updateRecurringTemplate(templateId: templateId, payload: request)
+          if let idx = recurringTemplates.firstIndex(where: { $0.id == templateId }) {
+            recurringTemplates[idx] = updated
+          }
+        } else {
+          let created = try await expensesService.createRecurringTemplate(payload: request)
+          recurringTemplates.append(created)
+        }
+      } catch {
+        self.errorMessage = error.localizedDescription
+      }
+    }
+  }
+
+  func deleteRecurringTemplate(_ templateId: String) {
+    recurringTemplates.removeAll { $0.id == templateId }
+    Task {
+      do {
+        try await expensesService.deleteRecurringTemplate(templateId: templateId)
+      } catch {
+        self.errorMessage = error.localizedDescription
+        await load(force: true)
+      }
+    }
+  }
+
+  func draftFromRecurringTemplate(_ template: RecurringTemplateResponse) -> BudgetActivityDraft {
+    BudgetActivityDraft(
+      title: template.title,
+      amount: template.amount,
+      pillar: template.pillar,
+      occurredOn: Date(),
+      categoryId: template.categoryId,
+      splitMode: template.splitMode,
+      userSharePercent: template.userSharePercent
+    )
+  }
+
   var selectedMonthSummaries: [PillarPlanningSummary] {
-    BudgetPillar.allCases.map { pillar in
+    selectedMonthPillars.map { pillar in
       PillarPlanningSummary(
         pillar: pillar,
         targetAmount: targetAmount(for: pillar, monthStart: selectedMonthStart),
@@ -388,6 +477,14 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
         unplannedActualAmount: unplannedActual(for: pillar, monthStart: selectedMonthStart)
       )
     }
+  }
+  
+  func previousMonthPillarActual(for pillar: BudgetPillar) -> Double? {
+    guard let previousMonth = calendar.date(byAdding: .month, value: -1, to: selectedMonthStart) else {
+      return nil
+    }
+    let previousMonthStart = calendar.startOfMonth(for: previousMonth)
+    return actualTotal(for: pillar, monthStart: previousMonthStart)
   }
 
   var selectedMonthPlannedTotal: Double {
@@ -467,6 +564,8 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
           title: $0.title,
           plannedAmount: $0.plannedAmount,
           pillar: $0.pillar,
+          categoryId: $0.categoryId,
+          categoryName: $0.categoryName,
           splitMode: $0.splitMode,
           userSharePercent: $0.userSharePercent
         )
@@ -491,6 +590,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
                   title: item.title,
                   plannedAmount: item.plannedAmount,
                   pillar: item.pillar,
+                  categoryId: item.categoryId,
                   splitMode: item.splitMode,
                   userSharePercent: item.userSharePercent
                 )
@@ -637,6 +737,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
             title: title,
             plannedAmount: plannedAmount,
             pillar: draft.pillar,
+            categoryId: draft.categoryId,
             splitMode: draft.splitMode,
             userSharePercent: draft.userSharePercent
           )
@@ -654,6 +755,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
             title: title,
             plannedAmount: plannedAmount,
             pillar: draft.pillar,
+            categoryId: draft.categoryId,
             splitMode: draft.splitMode,
             userSharePercent: draft.userSharePercent
           )
@@ -781,30 +883,79 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
       logger.debug(
         "Attempting expense create title=\(prepared.title, privacy: .public) amount=\(prepared.draft.amount, privacy: .public)"
       )
+      
+      let context = ExpensesSyncManager.shared.context
+      let newId = UUID()
+      let expense = LocalExpense(
+        id: newId,
+        title: prepared.title,
+        amount: max(prepared.draft.amount, 0),
+        pillar: prepared.draft.pillar,
+        occurredOn: prepared.draft.occurredOn,
+        linkedPlanItemId: prepared.draft.linkedPlanItemID,
+        categoryId: prepared.draft.categoryId,
+        splitMode: prepared.draft.splitMode,
+        userSharePercent: prepared.draft.userSharePercent,
+        foreignAmount: prepared.draft.foreignAmount,
+        foreignCurrency: prepared.draft.foreignCurrency,
+        exchangeRate: prepared.draft.exchangeRate
+      )
+      context.insert(expense)
+      
       let req = ExpenseRequest(
         title: prepared.title,
         amount: max(prepared.draft.amount, 0),
         pillar: prepared.draft.pillar,
         occurredOn: self.dayString(from: prepared.draft.occurredOn),
         linkedPlanItemId: prepared.draft.linkedPlanItemID?.uuidString,
+        categoryId: prepared.draft.categoryId,
         splitMode: prepared.draft.splitMode,
-        userSharePercent: prepared.draft.userSharePercent
+        userSharePercent: prepared.draft.userSharePercent,
+        foreignAmount: prepared.draft.foreignAmount,
+        foreignCurrency: prepared.draft.foreignCurrency,
+        exchangeRate: prepared.draft.exchangeRate
       )
-      let created = try await expensesService.createExpense(request: req)
-      if let mapped = mapExpenseResponse(created) {
-        activities.removeAll { $0.id == mapped.id }
-        activities.insert(mapped, at: 0)
-        activities.sort { $0.occurredOn > $1.occurredOn }
-      }
-      logger.debug("Expense create succeeded title=\(prepared.title, privacy: .public)")
+      
+      let payload = try? JSONEncoder().encode(req)
+      let action = OfflineSyncAction(
+        entityId: newId.uuidString,
+        entityType: .expense,
+        operationType: .create,
+        payloadJSON: payload
+      )
+      context.insert(action)
+      try context.save()
+      
+      // Update local memory
+      let newActivity = BudgetActivity(
+          id: newId,
+          title: prepared.title,
+          amount: max(prepared.draft.amount, 0),
+          pillar: prepared.draft.pillar,
+          occurredOn: prepared.draft.occurredOn,
+          linkedPlanItemID: prepared.draft.linkedPlanItemID,
+          splitMode: prepared.draft.splitMode,
+          userSharePercent: prepared.draft.userSharePercent,
+          foreignAmount: prepared.draft.foreignAmount,
+          foreignCurrency: prepared.draft.foreignCurrency,
+          exchangeRate: prepared.draft.exchangeRate
+      )
+      activities.removeAll { $0.id == newActivity.id }
+      activities.insert(newActivity, at: 0)
+      activities.sort { $0.occurredOn > $1.occurredOn }
+
+      logger.debug("Expense create succeeded locally title=\(prepared.title, privacy: .public)")
       refreshDerivedSummariesFromLocal()
       notifyDataDidChange()
+      
+      // Trigger sync
+      Task { await ExpensesSyncManager.shared.pushPendingActions(to: expensesService) }
+      
       return true
     } catch {
       let message = "Could not record spend: \(error.localizedDescription)"
       self.errorMessage = message
-      logger.error("Expense create failed: \(error.localizedDescription, privacy: .public)")
-      self.errorMessage = message
+      logger.error("Expense create failed locally: \(error.localizedDescription, privacy: .public)")
       return false
     }
   }
@@ -820,8 +971,12 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
         pillar: prepared.draft.pillar,
         occurredOn: self.dayString(from: prepared.draft.occurredOn),
         linkedPlanItemId: prepared.draft.linkedPlanItemID?.uuidString,
+        categoryId: prepared.draft.categoryId,
         splitMode: prepared.draft.splitMode,
-        userSharePercent: prepared.draft.userSharePercent
+        userSharePercent: prepared.draft.userSharePercent,
+        foreignAmount: prepared.draft.foreignAmount,
+        foreignCurrency: prepared.draft.foreignCurrency,
+        exchangeRate: prepared.draft.exchangeRate
       )
       let updated = try await expensesService.updateExpense(expenseId: expenseID.uuidString, payload: req)
       if let mapped = mapExpenseResponse(updated) {
@@ -978,9 +1133,12 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
   }
 
   private func normalizeShares(_ shares: [BudgetPillar: Double]) -> [BudgetPillar: Double] {
-    let sanitized = Dictionary(uniqueKeysWithValues: BudgetPillar.allCases.map { pillar in
-      (pillar, max(shares[pillar] ?? pillar.defaultTargetShare, 0))
-    })
+    var sanitized = shares.reduce(into: [BudgetPillar: Double]()) { result, entry in
+      result[entry.key] = max(entry.value, 0)
+    }
+    for pillar in BudgetPillar.standardPillars where sanitized[pillar] == nil {
+      sanitized[pillar] = pillar.defaultTargetShare
+    }
     let total = sanitized.values.reduce(0, +)
 
     guard total > 0 else { return BudgetPillar.defaultShares }
@@ -1054,11 +1212,16 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
 
   private func mapPlanItemResponse(_ item: BudgetPlanItemResponse) -> BudgetPlanItem? {
     guard let itemID = UUID(uuidString: item.id) else { return nil }
+    let catName = item.categoryId.flatMap { catId in
+      categories.first(where: { $0.id == catId })?.name
+    }
     return BudgetPlanItem(
       id: itemID,
       title: item.title,
       plannedAmount: item.plannedAmount,
       pillar: item.pillar,
+      categoryId: item.categoryId,
+      categoryName: catName,
       splitMode: item.splitMode,
       userSharePercent: item.userSharePercent
     )
@@ -1078,7 +1241,10 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
       occurredOn: occurredOn,
       linkedPlanItemID: expense.linkedPlanItemId.flatMap(UUID.init(uuidString:)),
       splitMode: expense.splitMode,
-      userSharePercent: expense.userSharePercent
+      userSharePercent: expense.userSharePercent,
+      foreignAmount: expense.foreignAmount,
+      foreignCurrency: expense.foreignCurrency,
+      exchangeRate: expense.exchangeRate
     )
   }
 
@@ -1193,10 +1359,12 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
       }
       let partnerActual = actual - myActual
 
+      let monthPillars = resolvedPillars(snapshot: snapshot, activities: monthActivities)
+
       var pillarPlans: [BudgetPillar: Double] = [:]
       var myPillarPlans: [BudgetPillar: Double] = [:]
       var partnerPillarPlans: [BudgetPillar: Double] = [:]
-      for pillar in BudgetPillar.allCases {
+      for pillar in monthPillars {
         let pillarItems = snapshot.items.filter { $0.pillar == pillar }
         let pillarPlanned = pillarItems.reduce(0) { $0 + $1.plannedAmount }
         let myPillarPlanned = pillarItems.reduce(0) {
@@ -1210,7 +1378,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
       var pillarActuals: [BudgetPillar: Double] = [:]
       var myPillarActuals: [BudgetPillar: Double] = [:]
       var partnerPillarActuals: [BudgetPillar: Double] = [:]
-      for pillar in BudgetPillar.allCases {
+      for pillar in monthPillars {
         let pillarActivities = monthActivities.filter { $0.pillar == pillar }
         let pillarActual = pillarActivities.reduce(0) { $0 + $1.amount }
         let myPillarActual = pillarActivities.reduce(0) {
@@ -1238,6 +1406,17 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
         partnerPillarPlans: partnerPillarPlans
       )
     }
+  }
+
+  private static func resolvedPillars(
+    snapshot: MonthlyBudgetSnapshot,
+    activities: [BudgetActivity]
+  ) -> [BudgetPillar] {
+    var pillars = Set(BudgetPillar.standardPillars)
+    pillars.formUnion(snapshot.targetShares.keys)
+    pillars.formUnion(snapshot.items.map(\.pillar))
+    pillars.formUnion(activities.map(\.pillar))
+    return BudgetPillar.sortedForDisplay(pillars)
   }
 
   private static func makeLocalYearlySummaries(

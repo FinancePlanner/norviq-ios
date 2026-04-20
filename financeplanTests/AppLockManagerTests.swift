@@ -4,6 +4,26 @@ import XCTest
 
 @MainActor
 final class AppLockManagerTests: XCTestCase {
+  private final class SecureStoreStub: SecureStringStoring {
+    var values: [String: String] = [:]
+    var writeError: Error?
+
+    func string(for key: String) throws -> String? {
+      values[key]
+    }
+
+    func setString(_ value: String, for key: String) throws {
+      if let writeError {
+        throw writeError
+      }
+      values[key] = value
+    }
+
+    func removeValue(for key: String) throws {
+      values.removeValue(forKey: key)
+    }
+  }
+
   private final class ContextStub: LAContext {
     var canEvaluate = true
     var evaluateResult = true
@@ -81,5 +101,49 @@ final class AppLockManagerTests: XCTestCase {
     let result = await manager.enforceIfNeeded(isAuthenticated: true, isEnabled: true)
     XCTAssertEqual(result, .requiresReauthentication)
     XCTAssertTrue(manager.isLocked)
+  }
+
+  func testAuthenticateDevice_ReturnsAuthenticatedWhenPolicySucceeds() async {
+    let context = ContextStub()
+    context.canEvaluate = true
+    context.evaluateResult = true
+    let manager = AppLockManager(contextFactory: { context })
+
+    let result = await manager.authenticateDevice(localizedReason: "Enable Face ID")
+
+    XCTAssertEqual(result, .authenticated)
+  }
+
+  func testSecurityCodeManager_SetsAndVerifiesCode() throws {
+    let store = SecureStoreStub()
+    let manager = SecurityCodeManager(store: store)
+
+    try manager.setCode("123456")
+
+    XCTAssertTrue(manager.isEnabled)
+    XCTAssertTrue(try manager.verifyCode("123456"))
+    XCTAssertFalse(try manager.verifyCode("654321"))
+  }
+
+  func testSecurityCodeManager_RejectsInvalidCode() {
+    let store = SecureStoreStub()
+    let manager = SecurityCodeManager(store: store)
+
+    XCTAssertThrowsError(try manager.setCode("12345"))
+    XCTAssertFalse(manager.isEnabled)
+  }
+
+  func testSecurityCodeManager_ChangesAndRemovesCode() throws {
+    let store = SecureStoreStub()
+    let manager = SecurityCodeManager(store: store)
+
+    try manager.setCode("123456")
+    try manager.changeCode(currentCode: "123456", newCode: "222222")
+
+    XCTAssertFalse(try manager.verifyCode("123456"))
+    XCTAssertTrue(try manager.verifyCode("222222"))
+
+    try manager.removeCode(currentCode: "222222")
+    XCTAssertFalse(manager.isEnabled)
   }
 }

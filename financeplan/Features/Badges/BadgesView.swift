@@ -66,7 +66,7 @@ public struct BadgesView: View {
 
                 VStack(spacing: 2) {
                     Text("\(viewModel.totalEarnedTiers)")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .font(.title.bold()).fontDesign(.rounded)
                         .foregroundStyle(.primary)
 
                     Text("of \(viewModel.totalAvailableTiers)")
@@ -220,7 +220,7 @@ public struct BadgesView: View {
                 .frame(width: 44, height: 44)
 
             Image(systemName: badge.iconName)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.headline)
                 .foregroundStyle(
                     badge.currentTier != nil
                         ? tierColor(for: badge.currentTier!)
@@ -247,7 +247,7 @@ public struct BadgesView: View {
     private func earnedTierPill(_ earned: EarnedTierInfo) -> some View {
         HStack(spacing: 4) {
             Image(systemName: "checkmark")
-                .font(.system(size: 8, weight: .bold))
+                .typography(.nano, weight: .bold)
             Text(earned.tier.rawValue.capitalized)
                 .font(.caption2.weight(.semibold))
         }
