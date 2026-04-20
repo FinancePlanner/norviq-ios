@@ -30,6 +30,13 @@ final class LoginViewModel: ObservableObject {
   @Published var signupFieldsOpacity: Double
   @Published var isForgotPasswordPresented = false
   @Published var isSubmitting = false
+  @Published var pendingMFAChallenge: AuthMFAChallengeResponsePayload?
+  @Published var mfaCode = ""
+  @Published var mfaError: String?
+  @Published var mfaInfoMessage: String?
+  @Published var mfaResendAvailableIn = 0
+  @Published var isVerifyingMFA = false
+  @Published var isResendingMFA = false
 
   var passwordRuleScore: Int {
     AuthValidation.passwordRuleScore(password)
@@ -52,6 +59,7 @@ final class LoginViewModel: ObservableObject {
   private let authService: AuthServicing
   private let sessionStore: AuthSessionStoring
   private let onAuthenticated: () -> Void
+  private var mfaCountdownTask: Task<Void, Never>?
 
   init(
     authService: AuthServicing,
@@ -67,9 +75,15 @@ final class LoginViewModel: ObservableObject {
     signupFieldsOpacity = storedIsSignup ? 1 : 0
   }
 
+  deinit {
+    mfaCountdownTask?.cancel()
+  }
+
   func clearError() {
     error = nil
     infoMessage = nil
+    mfaError = nil
+    mfaInfoMessage = nil
   }
 
   func clearFieldError(_ field: Field) {
@@ -91,6 +105,7 @@ final class LoginViewModel: ObservableObject {
   }
 
   func showSignup() {
+    dismissMFAFlow()
     isSignup = true
     signupFieldsOpacity = 1
     sessionStore.loginIsSignup = true
@@ -99,6 +114,7 @@ final class LoginViewModel: ObservableObject {
   }
 
   func hideSignup() {
+    dismissMFAFlow()
     isSignup = false
     signupFieldsOpacity = 0
     sessionStore.loginIsSignup = false
@@ -126,6 +142,73 @@ final class LoginViewModel: ObservableObject {
     return response.message
   }
 
+  func dismissMFAFlow() {
+    pendingMFAChallenge = nil
+    mfaCode = ""
+    mfaError = nil
+    mfaInfoMessage = nil
+    mfaResendAvailableIn = 0
+    isVerifyingMFA = false
+    isResendingMFA = false
+    mfaCountdownTask?.cancel()
+    mfaCountdownTask = nil
+  }
+
+  func submitMFA() async {
+    guard !isVerifyingMFA else {
+      return
+    }
+    guard let challenge = pendingMFAChallenge else {
+      return
+    }
+
+    let trimmed = mfaCode.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard trimmed.range(of: #"^[0-9]{6}$"#, options: .regularExpression) != nil else {
+      mfaError = "Enter the 6-digit verification code."
+      return
+    }
+
+    mfaError = nil
+    mfaInfoMessage = nil
+    isVerifyingMFA = true
+    defer { isVerifyingMFA = false }
+
+    do {
+      let auth = try await authService.verifyMFA(challengeId: challenge.challengeId, code: trimmed)
+      persistAuth(auth)
+      dismissMFAFlow()
+      error = nil
+    } catch {
+      mfaError = errorMessage(from: error, fallback: "Could not verify code. Please try again.")
+    }
+  }
+
+  func resendMFA() async {
+    guard !isResendingMFA else {
+      return
+    }
+    guard mfaResendAvailableIn == 0 else {
+      return
+    }
+    guard let challenge = pendingMFAChallenge else {
+      return
+    }
+
+    mfaError = nil
+    mfaInfoMessage = nil
+    isResendingMFA = true
+    defer { isResendingMFA = false }
+
+    do {
+      let refreshed = try await authService.resendMFA(challengeId: challenge.challengeId)
+      pendingMFAChallenge = refreshed
+      startMFAResendCountdown(seconds: refreshed.resendAvailableIn)
+      mfaInfoMessage = "A new code has been sent."
+    } catch {
+      mfaError = errorMessage(from: error, fallback: "Could not resend code right now.")
+    }
+  }
+
   func signInWithOAuth(_ provider: OAuthProviderKind) async {
     guard !isSubmitting else {
       return
@@ -137,8 +220,11 @@ final class LoginViewModel: ObservableObject {
     defer { isSubmitting = false }
 
     do {
-      let auth = try await authService.oauthSignIn(provider: provider)
-      persistAuth(auth)
+      let outcome = try await authService.oauthSignIn(provider: provider)
+      try handleAuthOutcome(
+        outcome,
+        fallbackOnMissingPayload: "Could not complete sign in. Please try again."
+      )
       error = nil
     } catch {
       self.error = errorMessage(from: error, fallback: "Could not sign in with \(provider.rawValue.capitalized). Please try again.")
@@ -158,11 +244,14 @@ final class LoginViewModel: ObservableObject {
     defer { isSubmitting = false }
 
     do {
-      let auth = try await authService.login(
+      let outcome = try await authService.login(
         email: username.trimmingCharacters(in: .whitespacesAndNewlines),
         password: password
       )
-      persistAuth(auth)
+      try handleAuthOutcome(
+        outcome,
+        fallbackOnMissingPayload: "Could not complete sign in. Please try again."
+      )
       error = nil
     } catch {
       self.error = errorMessage(from: error, fallback: "Could not log in. Please try again.")
@@ -205,6 +294,46 @@ final class LoginViewModel: ObservableObject {
   private func persistAuth(_ auth: AuthResponse) {
     sessionStore.store(authResponse: auth)
     onAuthenticated()
+  }
+
+  private func handleAuthOutcome(
+    _ outcome: AuthLoginOutcomePayload,
+    fallbackOnMissingPayload: String
+  ) throws {
+    switch outcome.status {
+    case .authenticated:
+      guard let auth = outcome.auth else {
+        throw AuthHTTPClient.Error.api(fallbackOnMissingPayload)
+      }
+      dismissMFAFlow()
+      persistAuth(auth)
+    case .mfaRequired:
+      guard let challenge = outcome.mfa else {
+        throw AuthHTTPClient.Error.api(fallbackOnMissingPayload)
+      }
+      pendingMFAChallenge = challenge
+      mfaCode = ""
+      mfaError = nil
+      mfaInfoMessage = nil
+      startMFAResendCountdown(seconds: challenge.resendAvailableIn)
+    }
+  }
+
+  private func startMFAResendCountdown(seconds: Int) {
+    mfaCountdownTask?.cancel()
+    mfaResendAvailableIn = max(0, seconds)
+    guard mfaResendAvailableIn > 0 else {
+      return
+    }
+
+    mfaCountdownTask = Task { [weak self] in
+      guard let self else { return }
+      while !Task.isCancelled && self.mfaResendAvailableIn > 0 {
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        guard !Task.isCancelled else { return }
+        self.mfaResendAvailableIn = max(0, self.mfaResendAvailableIn - 1)
+      }
+    }
   }
 
   private func validateAllFields() {

@@ -202,7 +202,7 @@ struct InitialStockImportScreen: View {
               id: "onboarding.header.icon.bg", namespace: headerNamespace))
 
         Image(systemName: "chart.line.uptrend.xyaxis")
-          .font(.system(size: 28, weight: .bold))
+          .font(.largeTitle.bold())
           .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
           .modifier(
             MatchedGeometryIfAvailable(
@@ -326,7 +326,7 @@ private struct ImportMethodCard: View {
           .frame(width: 44, height: 44)
 
         Image(systemName: method.icon)
-          .font(.system(size: 18, weight: .semibold))
+          .font(.headline)
           .foregroundStyle(method.iconColor(colorScheme))
       }
 
@@ -361,7 +361,7 @@ private struct ImportMethodCard: View {
             .frame(width: 24, height: 24)
             .overlay(
               Image(systemName: "checkmark")
-                .font(.system(size: 11, weight: .bold))
+                .typography(.nano, weight: .bold)
                 .foregroundStyle(.white)
             )
             .transition(.scale.combined(with: .opacity))

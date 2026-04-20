@@ -12,10 +12,27 @@ struct HelpSupportView: View {
 
     var body: some View {
         List {
-            // Getting Started
             Section("Getting Started") {
-                Label("How Norviqa Works", systemImage: "lightbulb.fill")
-                Label("Import Guide", systemImage: "square.and.arrow.down")
+                supportGuideRow(
+                    title: "Portfolio import",
+                    detail: "Import CSV holdings from Portfolio, preview rows, then commit when everything looks right.",
+                    systemImage: "square.and.arrow.down"
+                )
+                supportGuideRow(
+                    title: "Price target alerts",
+                    detail: "Create bull, base, or bear targets from a stock detail screen and enable alerts in Settings.",
+                    systemImage: "bell.badge.fill"
+                )
+                supportGuideRow(
+                    title: "Watchlist tracking",
+                    detail: "Save tickers to a watchlist and use notes to keep research context close to the quote.",
+                    systemImage: "list.bullet.rectangle"
+                )
+                supportGuideRow(
+                    title: "Account security",
+                    detail: "Use MFA at sign-in, Face ID app lock, and a local Security Code for protected access.",
+                    systemImage: "lock.shield.fill"
+                )
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
@@ -65,5 +82,22 @@ struct HelpSupportView: View {
         .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
         .navigationTitle("Help & Support")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func supportGuideRow(title: String, detail: String, systemImage: String) -> some View {
+        Label {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .typography(.body, weight: .semibold)
+                    .foregroundStyle(.primary)
+                Text(detail)
+                    .typography(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 3)
+        } icon: {
+            Image(systemName: systemImage)
+                .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+        }
     }
 }

@@ -1,4 +1,6 @@
+import Combine
 import Foundation
+import SwiftUI
 
 struct StockInsightsResponse: Codable, Equatable {
   let generatedAt: String

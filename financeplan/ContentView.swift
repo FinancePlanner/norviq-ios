@@ -18,6 +18,8 @@ public struct ContentView: View {
   @State private var requiresInitialStockImport: Bool
   @State private var isUnlocking = false
   @State private var isAppLocked = false
+  @State private var securityCodeInput = ""
+  @State private var securityCodeError: String?
   @State private var showSessionRecoveryAlert = false
   @State private var sessionRecoveryMessage = ""
   @StateObject private var pushNotificationsCoordinator: PushNotificationsCoordinator
@@ -26,6 +28,7 @@ public struct ContentView: View {
   private let authSessionManager: AuthSessionManaging
   private let sessionStore: AuthSessionStoring
   private let appLockManager: AppLockManaging
+  private let securityCodeManager: SecurityCodeManaging
 
   public init() {
     let processInfo = ProcessInfo.processInfo
@@ -42,6 +45,7 @@ public struct ContentView: View {
 
     authSessionManager = Container.shared.authSessionManager()
     appLockManager = Container.shared.appLockManager()
+    securityCodeManager = Container.shared.securityCodeManager()
 
     if let forcedAuthToken = processInfo.argumentValue(for: "-ui_test_auth_token") {
       store.authToken = forcedAuthToken
@@ -102,6 +106,9 @@ public struct ContentView: View {
             if isAppLocked {
               AppLockOverlay(
                 isUnlocking: isUnlocking,
+                securityCodeInput: $securityCodeInput,
+                securityCodeError: securityCodeError,
+                isSecurityCodeEnabled: securityCodeManager.isEnabled,
                 onUnlock: {
                   guard !isUnlocking else { return }
                   isUnlocking = true
@@ -113,6 +120,9 @@ public struct ContentView: View {
                     }
                     isUnlocking = false
                   }
+                },
+                onSecurityCodeUnlock: {
+                  verifySecurityCodeUnlock()
                 },
                 onSignOut: {
                   await authSessionManager.logout()
@@ -236,6 +246,8 @@ public struct ContentView: View {
     isAuthenticated = false
     requiresInitialStockImport = false
     isAppLocked = false
+    securityCodeInput = ""
+    securityCodeError = nil
     appLockManager.clear()
     sessionManager.reset()
     pushNotificationsCoordinator.handleSessionDidInvalidate()
@@ -292,11 +304,30 @@ public struct ContentView: View {
       handleSessionInvalidation()
     }
   }
+
+  private func verifySecurityCodeUnlock() {
+    do {
+      if try securityCodeManager.verifyCode(securityCodeInput) {
+        securityCodeInput = ""
+        securityCodeError = nil
+        isAppLocked = false
+        appLockManager.clear()
+      } else {
+        securityCodeError = "That security code is incorrect."
+      }
+    } catch {
+      securityCodeError = (error as? LocalizedError)?.errorDescription ?? "Unable to verify Security Code."
+    }
+  }
 }
 
 private struct AppLockOverlay: View {
   let isUnlocking: Bool
+  @Binding var securityCodeInput: String
+  let securityCodeError: String?
+  let isSecurityCodeEnabled: Bool
   let onUnlock: () -> Void
+  let onSecurityCodeUnlock: () -> Void
   let onSignOut: () async -> Void
 
   var body: some View {
@@ -323,6 +354,33 @@ private struct AppLockOverlay: View {
         }
         .buttonStyle(.borderedProminent)
         .disabled(isUnlocking)
+
+        if isSecurityCodeEnabled {
+          VStack(alignment: .leading, spacing: 8) {
+            SecureField("Security Code", text: $securityCodeInput)
+              .keyboardType(.numberPad)
+              .textContentType(.oneTimeCode)
+              .multilineTextAlignment(.center)
+              .font(.title3.monospacedDigit())
+              .padding(.horizontal, 12)
+              .padding(.vertical, 10)
+              .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+              .onChange(of: securityCodeInput) { _, newValue in
+                securityCodeInput = String(newValue.filter(\.isNumber).prefix(6))
+              }
+
+            if let securityCodeError {
+              Text(securityCodeError)
+                .typography(.caption)
+                .foregroundStyle(AppTheme.Colors.danger)
+            }
+
+            Button("Unlock with Security Code", action: onSecurityCodeUnlock)
+              .buttonStyle(.bordered)
+              .frame(maxWidth: .infinity)
+              .disabled(securityCodeInput.count != 6)
+          }
+        }
 
         Button(role: .destructive) {
           Task { @MainActor in

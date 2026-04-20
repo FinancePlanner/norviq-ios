@@ -2,6 +2,7 @@ import Foundation
 import StockPlanShared
 
 enum StockDetailTab: String, CaseIterable, Identifiable {
+    case chart
     case overview
     case statements
     case analysis
@@ -14,6 +15,8 @@ enum StockDetailTab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        case .chart:
+            "Chart"
         case .overview:
             "Overview"
         case .statements:
@@ -249,6 +252,7 @@ struct StockProjectionYear: Identifiable, Equatable {
     let netIncomeGrowth: Double
     let netMargin: Double
     let eps: Double
+    let freeCashFlow: Double?
     let peLowEstimate: Double
     let peHighEstimate: Double
     let sharePriceLow: Double
@@ -705,6 +709,7 @@ enum StockInsightsMockStore {
                 netIncomeGrowth: actualNetIncomeGrowth,
                 netMargin: actualNetMargin,
                 eps: actualEPS,
+                freeCashFlow: nil,
                 peLowEstimate: actualPELow,
                 peHighEstimate: actualPEHigh,
                 sharePriceLow: actualEPS * actualPELow,
@@ -749,6 +754,7 @@ enum StockInsightsMockStore {
                     netIncomeGrowth: netIncomeGrowth,
                     netMargin: netMargin,
                     eps: eps,
+                    freeCashFlow: nil,
                     peLowEstimate: peLow,
                     peHighEstimate: peHigh,
                     sharePriceLow: sharePriceLow,

@@ -18,6 +18,7 @@ struct StockDetailScreen: View {
     @State private var showEditPosition = false
     @State private var showSellPosition = false
     @State private var showEditAnalysis = false
+    @State private var showEditDCF = false
     @State private var selectedTab: StockDetailTab = .overview
     @State private var selectedScenario: StockProjectionScenarioKind = .base
     @State private var selectedStatementPeriod: StockFinancialStatementPeriod = .fy
@@ -122,6 +123,11 @@ struct StockDetailScreen: View {
                 }
             }
         }
+        .sheet(isPresented: $showEditDCF) {
+            EditDCFSheet {
+                viewModel.reloadAnalysisMetrics()
+            }
+        }
         .task {
             await viewModel.load(stockId: stockId)
         }
@@ -143,6 +149,14 @@ struct StockDetailScreen: View {
                 StockDetailTabBar(selectedTab: $selectedTab)
 
                 switch selectedTab {
+                case .chart:
+                    StockPriceChartTab(
+                        series: viewModel.chartSeries,
+                        selectedRange: viewModel.selectedChartRange,
+                        isLoading: viewModel.isChartLoading,
+                        errorMessage: viewModel.chartErrorMessage,
+                        onSelectRange: viewModel.switchChartRange
+                    )
                 case .overview:
                     StockOverviewTab(
                         details: viewModel.details,
@@ -169,12 +183,14 @@ struct StockDetailScreen: View {
                         analysisMetrics: viewModel.analysisMetrics,
                         analysisMetricsMessage: viewModel.analysisMetricsMessage,
                         valuation: viewModel.valuation,
-                        onEditAnalysis: { showEditAnalysis = true }
+                        onEditAnalysis: { showEditAnalysis = true },
+                        onEditDCF: { showEditDCF = true }
                     )
                 case .forecast:
                     StockForecastTab(
                         profile: viewModel.primaryComparisonProfile,
-                        selectedScenario: $selectedScenario
+                        selectedScenario: $selectedScenario,
+                        onEditDCF: { showEditDCF = true }
                     )
                 case .compare:
                     StockCompareTab(viewModel: viewModel)

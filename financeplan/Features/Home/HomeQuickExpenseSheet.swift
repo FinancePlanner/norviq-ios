@@ -157,13 +157,6 @@ struct HomeQuickExpenseSheet: View {
   }
 
   private func pillarTitle(_ pillar: BudgetPillar) -> String {
-    switch pillar {
-    case .fundamentals:
-      return "Fundamentals"
-    case .futureYou:
-      return "Future You"
-    case .fun:
-      return "Fun"
-    }
+    pillar.title
   }
 }

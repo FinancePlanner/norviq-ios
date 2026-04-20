@@ -109,6 +109,38 @@ struct ExpensesHTTPClient {
         _ = try await call(DeleteExpenseEndpoint(expenseId: expenseId))
     }
 
+    // MARK: - Categories
+
+    func getCategories() async throws -> [ExpenseCategoryResponse] {
+        try await call(GetCategoriesEndpoint())
+    }
+
+    func createCategory(payload: ExpenseCategoryRequest) async throws -> ExpenseCategoryResponse {
+        try await call(CreateCategoryEndpoint(payload: payload))
+    }
+
+    func deleteCategory(categoryId: String) async throws {
+        _ = try await call(DeleteCategoryEndpoint(categoryId: categoryId))
+    }
+
+    // MARK: - Recurring Templates
+
+    func getRecurringTemplates() async throws -> [RecurringTemplateResponse] {
+        try await call(GetRecurringTemplatesEndpoint())
+    }
+
+    func createRecurringTemplate(payload: RecurringTemplateRequest) async throws -> RecurringTemplateResponse {
+        try await call(CreateRecurringTemplateEndpoint(payload: payload))
+    }
+
+    func updateRecurringTemplate(templateId: String, payload: RecurringTemplateRequest) async throws -> RecurringTemplateResponse {
+        try await call(UpdateRecurringTemplateEndpoint(templateId: templateId, payload: payload))
+    }
+
+    func deleteRecurringTemplate(templateId: String) async throws {
+        _ = try await call(DeleteRecurringTemplateEndpoint(templateId: templateId))
+    }
+
     // MARK: - Reports
 
     func getReportsOverview(from: String? = nil, to: String? = nil) async throws -> ReportsOverviewResponse {

@@ -3,58 +3,55 @@ import StockPlanShared
 
 extension BudgetPillar {
   public var title: String {
-    switch self {
-    case .fundamentals:
-      return "Fundamentals"
-    case .futureYou:
-      return "Future You"
-    case .fun:
-      return "Fun"
-    }
+    if self == .fundamentals { return "Fundamentals" }
+    if self == .futureYou { return "Future You" }
+    if self == .fun { return "Fun" }
+
+    let pattern = "([a-z0-9])([A-Z])"
+    let spaced = rawValue.replacingOccurrences(
+      of: pattern,
+      with: "$1 $2",
+      options: .regularExpression
+    )
+    let words = spaced
+      .replacingOccurrences(of: "[^A-Za-z0-9]+", with: " ", options: .regularExpression)
+      .split(separator: " ")
+      .map(String.init)
+      .map { $0.capitalized }
+    return words.joined(separator: " ")
   }
 
   public var subtitle: String {
-    switch self {
-    case .fundamentals:
-      return "Daily life and recurring essentials."
-    case .futureYou:
-      return "Investments and long-term goals."
-    case .fun:
-      return "Lifestyle, travel, and discretionary spending."
-    }
+    if self == .fundamentals { return "Daily life and recurring essentials." }
+    if self == .futureYou { return "Investments and long-term goals." }
+    if self == .fun { return "Lifestyle, travel, and discretionary spending." }
+    return "Custom spending category."
   }
 
   public var symbol: String {
-    switch self {
-    case .fundamentals:
-      return "house"
-    case .futureYou:
-      return "chart.line.uptrend.xyaxis"
-    case .fun:
-      return "sparkles"
-    }
+    if self == .fundamentals { return "house" }
+    if self == .futureYou { return "chart.line.uptrend.xyaxis" }
+    if self == .fun { return "sparkles" }
+    return "square.stack.3d.up"
   }
 
   public var defaultTargetShare: Double {
-    switch self {
-    case .fundamentals:
-      return 0.50
-    case .futureYou:
-      return 0.20
-    case .fun:
-      return 0.30
-    }
+    if self == .fundamentals { return 0.50 }
+    if self == .futureYou { return 0.20 }
+    if self == .fun { return 0.30 }
+    return 0
   }
 
   public func color(for scheme: ColorScheme) -> Color {
-    switch self {
-    case .fundamentals:
-      return AppTheme.Colors.tint(for: scheme)
-    case .futureYou:
-      return .indigo
-    case .fun:
-      return AppTheme.Colors.secondaryTint(for: scheme)
+    if self == .fundamentals { return AppTheme.Colors.tint(for: scheme) }
+    if self == .futureYou { return .indigo }
+    if self == .fun { return AppTheme.Colors.secondaryTint(for: scheme) }
+
+    let palette: [Color] = [.teal, .cyan, .mint, .orange, .pink, .brown, .blue]
+    let hash = rawValue.unicodeScalars.reduce(0) { partial, scalar in
+      partial &+ Int(scalar.value)
     }
+    return palette[hash % palette.count]
   }
 }
 
@@ -85,6 +82,8 @@ struct BudgetPlanItem: Identifiable, Equatable {
   var title: String
   var plannedAmount: Double
   var pillar: BudgetPillar
+  var categoryId: String?
+  var categoryName: String?
   var splitMode: ExpenseSplitMode
   var userSharePercent: Double
 
@@ -93,6 +92,8 @@ struct BudgetPlanItem: Identifiable, Equatable {
     title: String,
     plannedAmount: Double,
     pillar: BudgetPillar,
+    categoryId: String? = nil,
+    categoryName: String? = nil,
     splitMode: ExpenseSplitMode = .personal,
     userSharePercent: Double = 100
   ) {
@@ -100,8 +101,14 @@ struct BudgetPlanItem: Identifiable, Equatable {
     self.title = title
     self.plannedAmount = plannedAmount
     self.pillar = pillar
+    self.categoryId = categoryId
+    self.categoryName = categoryName
     self.splitMode = splitMode
     self.userSharePercent = userSharePercent
+  }
+
+  var isSubscription: Bool {
+    categoryName?.lowercased() == "subscriptions"
   }
 }
 
@@ -114,6 +121,9 @@ struct BudgetActivity: Identifiable, Equatable {
   var linkedPlanItemID: UUID?
   var splitMode: ExpenseSplitMode
   var userSharePercent: Double
+  var foreignAmount: Double?
+  var foreignCurrency: String?
+  var exchangeRate: Double?
 
   init(
     id: UUID = UUID(),
@@ -123,7 +133,10 @@ struct BudgetActivity: Identifiable, Equatable {
     occurredOn: Date,
     linkedPlanItemID: UUID? = nil,
     splitMode: ExpenseSplitMode = .personal,
-    userSharePercent: Double = 100
+    userSharePercent: Double = 100,
+    foreignAmount: Double? = nil,
+    foreignCurrency: String? = nil,
+    exchangeRate: Double? = nil
   ) {
     self.id = id
     self.title = title
@@ -133,6 +146,9 @@ struct BudgetActivity: Identifiable, Equatable {
     self.linkedPlanItemID = linkedPlanItemID
     self.splitMode = splitMode
     self.userSharePercent = userSharePercent
+    self.foreignAmount = foreignAmount
+    self.foreignCurrency = foreignCurrency
+    self.exchangeRate = exchangeRate
   }
 }
 
@@ -276,6 +292,7 @@ struct BudgetPlanItemDraft: Identifiable, Sendable {
   var title: String
   var plannedAmount: Double
   var pillar: BudgetPillar
+  var categoryId: String?
   var splitMode: ExpenseSplitMode
   var userSharePercent: Double
 
@@ -285,6 +302,7 @@ struct BudgetPlanItemDraft: Identifiable, Sendable {
     title: String,
     plannedAmount: Double,
     pillar: BudgetPillar,
+    categoryId: String? = nil,
     splitMode: ExpenseSplitMode = .personal,
     userSharePercent: Double = 100
   ) {
@@ -293,6 +311,7 @@ struct BudgetPlanItemDraft: Identifiable, Sendable {
     self.title = title
     self.plannedAmount = plannedAmount
     self.pillar = pillar
+    self.categoryId = categoryId
     self.splitMode = splitMode
     self.userSharePercent = userSharePercent
   }
@@ -304,8 +323,12 @@ struct BudgetActivityDraft: Sendable {
   var pillar: BudgetPillar
   var occurredOn: Date
   var linkedPlanItemID: UUID?
+  var categoryId: String?
   var splitMode: ExpenseSplitMode
   var userSharePercent: Double
+  var foreignAmount: Double?
+  var foreignCurrency: String?
+  var exchangeRate: Double?
 
   init(
     title: String,
@@ -313,21 +336,51 @@ struct BudgetActivityDraft: Sendable {
     pillar: BudgetPillar,
     occurredOn: Date,
     linkedPlanItemID: UUID? = nil,
+    categoryId: String? = nil,
     splitMode: ExpenseSplitMode = .personal,
-    userSharePercent: Double = 100
+    userSharePercent: Double = 100,
+    foreignAmount: Double? = nil,
+    foreignCurrency: String? = nil,
+    exchangeRate: Double? = nil
   ) {
     self.title = title
     self.amount = amount
     self.pillar = pillar
     self.occurredOn = occurredOn
     self.linkedPlanItemID = linkedPlanItemID
+    self.categoryId = categoryId
     self.splitMode = splitMode
     self.userSharePercent = userSharePercent
+    self.foreignAmount = foreignAmount
+    self.foreignCurrency = foreignCurrency
+    self.exchangeRate = exchangeRate
   }
 }
 
 extension BudgetPillar {
+  static var standardPillars: [BudgetPillar] {
+    BudgetPillar.allCases
+  }
+
+  static func sortedForDisplay<S: Sequence>(_ pillars: S) -> [BudgetPillar] where S.Element == BudgetPillar {
+    Array(Set(pillars)).sorted { lhs, rhs in
+      let lhsRank = sortRank(lhs)
+      let rhsRank = sortRank(rhs)
+      if lhsRank == rhsRank {
+        return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+      }
+      return lhsRank < rhsRank
+    }
+  }
+
+  private static func sortRank(_ pillar: BudgetPillar) -> Int {
+    if pillar == .fundamentals { return 0 }
+    if pillar == .futureYou { return 1 }
+    if pillar == .fun { return 2 }
+    return 3
+  }
+
   static var defaultShares: [BudgetPillar: Double] {
-    Dictionary(uniqueKeysWithValues: BudgetPillar.allCases.map { ($0, $0.defaultTargetShare) })
+    Dictionary(uniqueKeysWithValues: BudgetPillar.standardPillars.map { ($0, $0.defaultTargetShare) })
   }
 }

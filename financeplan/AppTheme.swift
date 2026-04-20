@@ -9,7 +9,7 @@ enum AppAppearance: String, CaseIterable, Identifiable {
 
   var id: String { rawValue }
 
-  var title: String {
+  var title: LocalizedStringKey {
     switch self {
     case .system:
       "System"
@@ -20,7 +20,7 @@ enum AppAppearance: String, CaseIterable, Identifiable {
     }
   }
 
-  var subtitle: String {
+  var subtitle: LocalizedStringKey {
     switch self {
     case .system:
       "Follow your device appearance."

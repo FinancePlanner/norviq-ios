@@ -386,6 +386,129 @@ final class StockServiceTests: XCTestCase {
     XCTAssertEqual(response, expected)
   }
 
+  func testFetchTargets_UsesTargetsEndpointWithSymbolFilter() async throws {
+    let session = SessionMock()
+    let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+    let service = StockService(
+      environmentManager: AppEnvironmentManager(),
+      session: session,
+      authSessionManager: authSessionManager
+    )
+    let expected = [
+      TargetResponse(
+        id: "target-1",
+        symbol: "AAPL",
+        scenario: "base",
+        targetPrice: 220,
+        targetDate: nil,
+        rationale: "Portfolio alert for AAPL"
+      )
+    ]
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.path, "/v1/targets")
+      XCTAssertEqual(request.url?.query, "symbol=AAPL")
+      XCTAssertEqual(request.httpMethod, "GET")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+
+      let response = try XCTUnwrap(
+        HTTPURLResponse(
+          url: try XCTUnwrap(request.url),
+          statusCode: 200,
+          httpVersion: nil,
+          headerFields: nil
+        )
+      )
+      return (try JSONEncoder().encode(expected), response)
+    }
+
+    let response = try await service.fetchTargets(symbol: " aapl ")
+    XCTAssertEqual(response, expected)
+  }
+
+  func testCreateTarget_UsesTargetsEndpointAndSendsPayload() async throws {
+    let session = SessionMock()
+    let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+    let service = StockService(
+      environmentManager: AppEnvironmentManager(),
+      session: session,
+      authSessionManager: authSessionManager
+    )
+    let request = TargetRequest(
+      symbol: "AAPL",
+      scenario: "base",
+      targetPrice: 220,
+      targetDate: nil,
+      rationale: "Portfolio alert for AAPL"
+    )
+    let expected = TargetResponse(
+      id: "target-1",
+      symbol: "AAPL",
+      scenario: "base",
+      targetPrice: 220,
+      targetDate: nil,
+      rationale: "Portfolio alert for AAPL"
+    )
+
+    session.handler = { urlRequest in
+      XCTAssertEqual(urlRequest.url?.path, "/v1/targets")
+      XCTAssertEqual(urlRequest.httpMethod, "POST")
+      XCTAssertEqual(urlRequest.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+
+      let body = try XCTUnwrap(urlRequest.httpBody)
+      let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+      XCTAssertEqual(json["symbol"] as? String, "AAPL")
+      XCTAssertEqual(json["scenario"] as? String, "base")
+      XCTAssertEqual((json["targetPrice"] as? NSNumber)?.doubleValue, 220)
+      XCTAssertEqual(json["rationale"] as? String, "Portfolio alert for AAPL")
+      XCTAssertNil(json["targetDate"])
+
+      let response = try XCTUnwrap(
+        HTTPURLResponse(
+          url: try XCTUnwrap(urlRequest.url),
+          statusCode: 201,
+          httpVersion: nil,
+          headerFields: nil
+        )
+      )
+      return (try JSONEncoder().encode(expected), response)
+    }
+
+    let response = try await service.createTarget(request)
+    XCTAssertEqual(response, expected)
+  }
+
+  func testDeleteTarget_UsesTargetIdEndpoint() async throws {
+    let session = SessionMock()
+    let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+    let service = StockService(
+      environmentManager: AppEnvironmentManager(),
+      session: session,
+      authSessionManager: authSessionManager
+    )
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.path, "/v1/targets/target-1")
+      XCTAssertEqual(request.httpMethod, "DELETE")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+
+      let response = try XCTUnwrap(
+        HTTPURLResponse(
+          url: try XCTUnwrap(request.url),
+          statusCode: 204,
+          httpVersion: nil,
+          headerFields: nil
+        )
+      )
+      return (Data(), response)
+    }
+
+    try await service.deleteTarget(id: "target-1")
+  }
+
   func testFetchStockInsights_UsesInsightsEndpointAndDecodesPayload() async throws {
     let session = SessionMock()
     let authSessionManager = AuthSessionManagerMock()

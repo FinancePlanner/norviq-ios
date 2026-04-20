@@ -6,7 +6,13 @@ protocol MarketDataServicing: Sendable {
   func fetchQuote(symbol: String) async throws -> QuoteResponse
   func fetchAnalystConsensus(symbol: String) async throws -> StockAnalystConsensus
   func fetchBasicFinancials(symbol: String) async throws -> StockBasicFinancials
-  func fetchAnalysisMetrics(symbol: String) async throws -> StockAnalysisMetrics
+  func fetchAnalysisMetrics(
+    symbol: String,
+    wacc: Double?,
+    terminalGrowthRate: Double?,
+    terminalMargin: Double?,
+    fcfMarginAssumption: Double?
+  ) async throws -> StockAnalysisMetrics
   func fetchMarketCompare(symbols: [String]) async throws -> [StockAnalysisMetrics]
   func fetchBalanceSheetStatement(symbol: String, limit: Int?, period: String?) async throws -> [BalanceSheetStatementResponse]
   func fetchCashFlowStatement(symbol: String, limit: Int?, period: String?) async throws -> [CashFlowStatementResponse]
@@ -18,6 +24,8 @@ protocol MarketDataServicing: Sendable {
   func fetchEarningsCalendar(from: String, to: String) async throws -> [EarningsEvent]
   func fetchMarketNews(limit: Int?) async throws -> [StockNews]
   func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements
+  func fetchPriceChart(symbol: String, range: String) async throws -> PriceChartSeries
+  func fetchPriceChartComparison(symbols: [String], range: String) async throws -> PriceChartComparisonResponse
 }
 
 final class MarketDataHTTPService: MarketDataServicing, @unchecked Sendable {
@@ -59,9 +67,21 @@ final class MarketDataHTTPService: MarketDataServicing, @unchecked Sendable {
     }
   }
 
-  func fetchAnalysisMetrics(symbol: String) async throws -> StockAnalysisMetrics {
+  func fetchAnalysisMetrics(
+    symbol: String,
+    wacc: Double? = nil,
+    terminalGrowthRate: Double? = nil,
+    terminalMargin: Double? = nil,
+    fcfMarginAssumption: Double? = nil
+  ) async throws -> StockAnalysisMetrics {
     try await performAuthenticated { client in
-      try await client.fetchAnalysisMetrics(symbol: symbol)
+      try await client.fetchAnalysisMetrics(
+        symbol: symbol,
+        wacc: wacc,
+        terminalGrowthRate: terminalGrowthRate,
+        terminalMargin: terminalMargin,
+        fcfMarginAssumption: fcfMarginAssumption
+      )
     }
   }
 
@@ -129,6 +149,18 @@ final class MarketDataHTTPService: MarketDataServicing, @unchecked Sendable {
     StockFinancialStatements.mock(symbol: symbol)
   }
 
+  func fetchPriceChart(symbol: String, range: String) async throws -> PriceChartSeries {
+    try await performAuthenticated { client in
+      try await client.fetchPriceChart(symbol: symbol, range: range)
+    }
+  }
+
+  func fetchPriceChartComparison(symbols: [String], range: String) async throws -> PriceChartComparisonResponse {
+    try await performAuthenticated { client in
+      try await client.fetchPriceChartComparison(symbols: symbols, range: range)
+    }
+  }
+
   private func makeClient(forceRefresh: Bool = false) async throws -> MarketDataHTTPClient {
     let token = try await resolvedAccessToken(forceRefresh: forceRefresh)
     return MarketDataHTTPClient(
@@ -187,7 +219,13 @@ struct MarketDataServiceStub: MarketDataServicing {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 
-  func fetchAnalysisMetrics(symbol _: String) async throws -> StockAnalysisMetrics {
+  func fetchAnalysisMetrics(
+    symbol _: String,
+    wacc _: Double? = nil,
+    terminalGrowthRate _: Double? = nil,
+    terminalMargin _: Double? = nil,
+    fcfMarginAssumption _: Double? = nil
+  ) async throws -> StockAnalysisMetrics {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 
@@ -233,6 +271,14 @@ struct MarketDataServiceStub: MarketDataServicing {
 
   func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements {
     StockFinancialStatements.mock(symbol: symbol)
+  }
+
+  func fetchPriceChart(symbol _: String, range _: String) async throws -> PriceChartSeries {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchPriceChartComparison(symbols _: [String], range _: String) async throws -> PriceChartComparisonResponse {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 }
 

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AboutNorviqaView: View {
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.openURL) private var openURL
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "–"
@@ -24,7 +25,7 @@ struct AboutNorviqaView: View {
             Section {
                 VStack(spacing: 16) {
                     Image(systemName: "chart.line.uptrend.xyaxis.circle.fill")
-                        .font(.system(size: 56))
+                        .font(.largeTitle.bold())
                         .foregroundStyle(
                             LinearGradient(
                                 colors: [
@@ -40,9 +41,10 @@ struct AboutNorviqaView: View {
                         Text("Norviqa")
                             .typography(.hero, weight: .bold)
 
-                        Text("Smart investing, simplified.")
+                        Text("A focused investing workspace for portfolios, watchlists, targets, and market context.")
                             .typography(.caption)
                             .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
                     }
 
                     Text("v\(appVersion) (\(buildNumber))")
@@ -51,6 +53,25 @@ struct AboutNorviqaView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
+            }
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
+            Section("What Norviqa Does") {
+                aboutRow(
+                    title: "Portfolio clarity",
+                    detail: "Track holdings, cost basis, and valuation changes from one place.",
+                    systemImage: "chart.pie.fill"
+                )
+                aboutRow(
+                    title: "Research workflow",
+                    detail: "Keep watchlists, stock insights, targets, and notes close to your decisions.",
+                    systemImage: "doc.text.magnifyingglass"
+                )
+                aboutRow(
+                    title: "Security first",
+                    detail: "MFA, device authentication, and local app-lock controls protect access to your account.",
+                    systemImage: "lock.shield.fill"
+                )
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
@@ -74,6 +95,8 @@ struct AboutNorviqaView: View {
 
             // Connect
             Section("Connect") {
+                socialButton("Follow on Instagram", systemImage: "camera", url: "https://instagram.com/norviqa")
+
                 if let xURL = URL(string: "https://x.com/norviqa") {
                     Link(destination: xURL) {
                         Label("Follow on X", systemImage: "x.circle")
@@ -89,20 +112,40 @@ struct AboutNorviqaView: View {
                 }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-
-            // Footer
-            Section {
-                Text("Made with ❤️ for investors everywhere")
-                    .typography(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .listRowBackground(Color.clear)
-            }
         }
         .scrollContentBackground(.hidden)
         .listStyle(.insetGrouped)
         .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
         .navigationTitle("About Norviqa")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func aboutRow(title: String, detail: String, systemImage: String) -> some View {
+        Label {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .typography(.body, weight: .semibold)
+                    .foregroundStyle(.primary)
+                Text(detail)
+                    .typography(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 3)
+        } icon: {
+            Image(systemName: systemImage)
+                .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+        }
+    }
+
+    @ViewBuilder
+    private func socialButton(_ title: LocalizedStringKey, systemImage: String, url: String) -> some View {
+        if let destination = URL(string: url) {
+            Button {
+                openURL(destination)
+            } label: {
+                Label(title, systemImage: systemImage)
+            }
+            .foregroundStyle(.primary)
+        }
     }
 }

@@ -385,6 +385,20 @@ struct LoginScreen: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(
+            isPresented: Binding(
+                get: { viewModel.pendingMFAChallenge != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        viewModel.dismissMFAFlow()
+                    }
+                }
+            )
+        ) {
+            VaultMFAVerificationView(viewModel: viewModel)
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
         .task(id: viewModel.infoMessage) {
             guard let currentMessage = viewModel.infoMessage else { return }
             try? await Task.sleep(for: .seconds(3))
@@ -798,6 +812,100 @@ private struct VaultPlatinumCard: View {
             .padding(24)
         }
         .frame(height: 180)
+    }
+}
+
+// MARK: - MFA Verification
+private struct VaultMFAVerificationView: View {
+    @ObservedObject var viewModel: LoginViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            VaultColors.background.ignoresSafeArea()
+
+            VStack(alignment: .leading, spacing: 18) {
+                HStack {
+                    Text("Two-Factor Verification")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Button("Close") {
+                        viewModel.dismissMFAFlow()
+                        dismiss()
+                    }
+                    .foregroundStyle(VaultColors.primaryBlue)
+                }
+
+                Text("Enter the 6-digit code sent to \(viewModel.pendingMFAChallenge?.maskedDestination ?? "your email").")
+                    .font(.system(size: 14))
+                    .foregroundStyle(VaultColors.textSecondary)
+
+                TextField("123456", text: $viewModel.mfaCode)
+                    .keyboardType(.numberPad)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .font(.system(size: 22, weight: .semibold, design: .monospaced))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 14)
+                    .foregroundStyle(.white)
+                    .background(VaultColors.cardBackground)
+                    .clipShape(.rect(cornerRadius: 12))
+
+                if let error = viewModel.mfaError, !error.isEmpty {
+                    Text(error)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.red)
+                }
+
+                if let message = viewModel.mfaInfoMessage, !message.isEmpty {
+                    Text(message)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.green)
+                }
+
+                Button(action: { Task { await viewModel.submitMFA() } }) {
+                    HStack {
+                        if viewModel.isVerifyingMFA {
+                            ProgressView().tint(.black)
+                        }
+                        Text(viewModel.isVerifyingMFA ? "Verifying..." : "Verify and Sign In")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    .foregroundStyle(Color(white: 0.1))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(VaultColors.primaryBlue)
+                    .clipShape(.rect(cornerRadius: 12))
+                }
+                .disabled(viewModel.isVerifyingMFA)
+
+                Button(action: { Task { await viewModel.resendMFA() } }) {
+                    HStack(spacing: 6) {
+                        if viewModel.isResendingMFA {
+                            ProgressView().tint(VaultColors.primaryBlue)
+                        }
+                        Text(resendLabel)
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .disabled(viewModel.isResendingMFA || viewModel.mfaResendAvailableIn > 0)
+                .foregroundStyle(
+                    viewModel.mfaResendAvailableIn > 0 ? VaultColors.textSecondary : VaultColors.primaryBlue
+                )
+
+                Spacer()
+            }
+            .padding(24)
+        }
+    }
+
+    private var resendLabel: String {
+        if viewModel.mfaResendAvailableIn > 0 {
+            return "Resend in \(viewModel.mfaResendAvailableIn)s"
+        }
+        return "Resend code"
     }
 }
 

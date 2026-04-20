@@ -129,7 +129,7 @@ private enum PortfolioSegment: String, CaseIterable, Identifiable {
 
   var id: String { rawValue }
 
-  var title: String {
+  var title: LocalizedStringKey {
     switch self {
     case .holdings:
       "Holdings"
@@ -1367,12 +1367,12 @@ private struct InsightsGrid: View {
   let cards: [InsightCard]
 
   private let columns = [
-    GridItem(.flexible(), spacing: 12),
-    GridItem(.flexible(), spacing: 12)
+    GridItem(.flexible(), spacing: 16),
+    GridItem(.flexible(), spacing: 16)
   ]
 
   var body: some View {
-    LazyVGrid(columns: columns, spacing: 12) {
+    LazyVGrid(columns: columns, spacing: 16) {
       ForEach(cards) { card in
         GlassCard(cornerRadius: 22) {
           VStack(alignment: .leading, spacing: 12) {
@@ -1387,7 +1387,7 @@ private struct InsightsGrid: View {
               .typography(.headline, weight: .bold)
 
             Text(card.detail)
-              .typography(.nano)
+              .typography(.caption)
               .foregroundStyle(.secondary)
           }
           .frame(maxWidth: .infinity, alignment: .leading)
@@ -1476,6 +1476,7 @@ private struct FocusListCard: View {
                     .controlSize(.small)
                 }
               }
+              .frame(minHeight: 44)
             }
             .buttonStyle(.plain)
             .disabled(item.statusUpdatedBy == .system && item.status == .completed)

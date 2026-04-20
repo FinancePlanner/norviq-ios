@@ -28,6 +28,17 @@ protocol ExpensesServicing: ExpenseBudgetSetupServicing, Sendable {
     func updateExpense(expenseId: String, payload: ExpenseRequest) async throws -> ExpenseResponse
     func deleteExpense(expenseId: String) async throws
 
+    // Categories
+    func getCategories() async throws -> [ExpenseCategoryResponse]
+    func createCategory(payload: ExpenseCategoryRequest) async throws -> ExpenseCategoryResponse
+    func deleteCategory(categoryId: String) async throws
+
+    // Recurring Templates
+    func getRecurringTemplates() async throws -> [RecurringTemplateResponse]
+    func createRecurringTemplate(payload: RecurringTemplateRequest) async throws -> RecurringTemplateResponse
+    func updateRecurringTemplate(templateId: String, payload: RecurringTemplateRequest) async throws -> RecurringTemplateResponse
+    func deleteRecurringTemplate(templateId: String) async throws
+
     // Reports
     func getReportsOverview(from: String?, to: String?) async throws -> ReportsOverviewResponse
     func getMonthlyExpenseReports(from: String?, to: String?) async throws -> [BudgetMonthSummaryResponse]
@@ -108,6 +119,34 @@ struct ExpensesHTTPService: ExpensesServicing, @unchecked Sendable {
         try await client.deleteExpense(expenseId: expenseId)
     }
 
+    func getCategories() async throws -> [ExpenseCategoryResponse] {
+        try await client.getCategories()
+    }
+
+    func createCategory(payload: ExpenseCategoryRequest) async throws -> ExpenseCategoryResponse {
+        try await client.createCategory(payload: payload)
+    }
+
+    func deleteCategory(categoryId: String) async throws {
+        try await client.deleteCategory(categoryId: categoryId)
+    }
+
+    func getRecurringTemplates() async throws -> [RecurringTemplateResponse] {
+        try await client.getRecurringTemplates()
+    }
+
+    func createRecurringTemplate(payload: RecurringTemplateRequest) async throws -> RecurringTemplateResponse {
+        try await client.createRecurringTemplate(payload: payload)
+    }
+
+    func updateRecurringTemplate(templateId: String, payload: RecurringTemplateRequest) async throws -> RecurringTemplateResponse {
+        try await client.updateRecurringTemplate(templateId: templateId, payload: payload)
+    }
+
+    func deleteRecurringTemplate(templateId: String) async throws {
+        try await client.deleteRecurringTemplate(templateId: templateId)
+    }
+
     func getMonthlyExpenseReports(from: String? = nil, to: String? = nil) async throws -> [BudgetMonthSummaryResponse] {
         try await client.getMonthlyExpenseReports(from: from, to: to)
     }
@@ -147,6 +186,15 @@ struct ExpensesServiceStub: ExpensesServicing {
     func createExpense(request: ExpenseRequest) async throws -> ExpenseResponse { fatalError("Stub not implemented") }
     func updateExpense(expenseId: String, payload: ExpenseRequest) async throws -> ExpenseResponse { fatalError("Stub not implemented") }
     func deleteExpense(expenseId: String) async throws {}
+
+    func getCategories() async throws -> [ExpenseCategoryResponse] { [] }
+    func createCategory(payload: ExpenseCategoryRequest) async throws -> ExpenseCategoryResponse { fatalError("Stub not implemented") }
+    func deleteCategory(categoryId: String) async throws {}
+
+    func getRecurringTemplates() async throws -> [RecurringTemplateResponse] { [] }
+    func createRecurringTemplate(payload: RecurringTemplateRequest) async throws -> RecurringTemplateResponse { fatalError("Stub not implemented") }
+    func updateRecurringTemplate(templateId: String, payload: RecurringTemplateRequest) async throws -> RecurringTemplateResponse { fatalError("Stub not implemented") }
+    func deleteRecurringTemplate(templateId: String) async throws {}
 
     func getReportsOverview(from: String? = nil, to: String? = nil) async throws -> ReportsOverviewResponse {
         ReportsOverviewResponse(

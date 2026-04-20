@@ -57,6 +57,8 @@
 			</dict>
 		</dict>
 	</dict>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Norviqa uses Face ID to unlock your app session.</string>
 	<key>PexelsAPIKey</key>
 	<string>WVDa5RXl1hx8Xw70OH94iXkSKwRvsVeOUopxx8cvvLKVouilEMVMukf2</string>
 	<key>OAuthCallbackScheme</key>
