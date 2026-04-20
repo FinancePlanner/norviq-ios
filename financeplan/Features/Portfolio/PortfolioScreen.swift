@@ -27,6 +27,7 @@ struct PortfolioScreen: View {
   @State private var pushNavigationRoute: PushNavigationRoute?
   @State private var pushFallbackMessage: String?
   @State private var pushFallbackMessageToken: UUID?
+  @State private var targetAlertStock: TargetAlertDraftStock?
 
   enum TimeRange: String, CaseIterable, Identifiable {
       case day = "1D"
@@ -50,6 +51,12 @@ struct PortfolioScreen: View {
     let id = UUID()
     let stockID: String
     let symbol: String
+  }
+
+  private struct TargetAlertDraftStock: Identifiable, Hashable {
+    let id: String
+    let symbol: String
+    let buyPrice: Double
   }
 
   private var scopedStocks: [SDPortfolioStock] {
@@ -175,6 +182,24 @@ struct PortfolioScreen: View {
         await viewModel.load(force: true)
       }
     }
+    .sheet(item: $targetAlertStock) { stock in
+      PortfolioTargetAlertSheet(
+        symbol: stock.symbol,
+        referencePrice: stock.buyPrice,
+        existingAlert: viewModel.targetAlert(for: stock.symbol),
+        isSaving: viewModel.isSavingTargetAlert,
+        onSave: { price, direction in
+          await viewModel.saveTargetAlert(
+            symbol: stock.symbol,
+            price: price,
+            direction: direction
+          )
+        },
+        onDelete: {
+          await viewModel.deleteTargetAlert(symbol: stock.symbol)
+        }
+      )
+    }
     .navigationDestination(item: $pushNavigationRoute) { route in
       StockDetailScreen(stockId: route.stockID, initialSymbol: route.symbol)
     }
@@ -243,7 +268,7 @@ struct PortfolioScreen: View {
               .padding(.horizontal, 4)
 
               InteractiveLineChart(data: chartData, color: .green)
-                .frame(height: 160)
+                .frame(minHeight: 160, maxHeight: .infinity)
                 .padding(.horizontal, -12) // Bleed to edges of card padding
 
               // Time range picker
@@ -312,13 +337,18 @@ struct PortfolioScreen: View {
 
   private func portfolioStockRow(_ stock: SDPortfolioStock) -> some View {
     let editableStock = makeEditableStock(from: stock)
+    let targetAlert = viewModel.targetAlert(for: stock.symbol)
     return NavigationLink {
       StockDetailScreen(stockId: stock.id, initialSymbol: stock.symbol)
     } label: {
-      PortfolioRow(stock: stock)
+      PortfolioRow(stock: stock, targetAlert: targetAlert)
     }
     .buttonStyle(CardButtonStyle())
     .contextMenu {
+      Button(targetAlert == nil ? "Add price alert" : "Edit price alert", systemImage: targetAlert == nil ? "bell.badge" : "bell.fill") {
+        presentTargetAlert(for: stock)
+      }
+
       Button("Edit", systemImage: "pencil") {
         viewModel.beginEdit(editableStock)
       }
@@ -328,6 +358,14 @@ struct PortfolioScreen: View {
         Task { await viewModel.delete(id: stock.id) }
       }
     }
+  }
+
+  private func presentTargetAlert(for stock: SDPortfolioStock) {
+    targetAlertStock = TargetAlertDraftStock(
+      id: stock.id,
+      symbol: stock.symbol,
+      buyPrice: stock.buyPrice
+    )
   }
 
   @ViewBuilder
@@ -494,6 +532,7 @@ struct PortfolioScreen: View {
 
 private struct PortfolioRow: View {
   let stock: SDPortfolioStock
+  let targetAlert: TargetResponse?
 
   var body: some View {
     GlassCard(cornerRadius: 22) {
@@ -526,6 +565,13 @@ private struct PortfolioRow: View {
           Text("\(stock.shares.formatted(.number.precision(.fractionLength(0...2)))) Shares")
             .font(.caption)
             .foregroundStyle(.secondary)
+
+          if let targetAlert {
+            Label(targetAlert.targetPrice.currency, systemImage: "bell.fill")
+              .font(.caption2.weight(.semibold))
+              .foregroundStyle(.orange)
+              .lineLimit(1)
+          }
         }
 
         Spacer()
@@ -543,6 +589,116 @@ private struct PortfolioRow: View {
       }
       .padding(.vertical, 4)
     }
+  }
+}
+
+private struct PortfolioTargetAlertSheet: View {
+  @Environment(\.dismiss) private var dismiss
+
+  let symbol: String
+  let referencePrice: Double
+  let existingAlert: TargetResponse?
+  let isSaving: Bool
+  let onSave: (Double, PortfolioTargetAlertDirection) async -> String?
+  let onDelete: () async -> String?
+
+  @State private var isEnabled: Bool
+  @State private var priceText: String
+  @State private var direction: PortfolioTargetAlertDirection
+  @State private var errorMessage: String?
+
+  init(
+    symbol: String,
+    referencePrice: Double,
+    existingAlert: TargetResponse?,
+    isSaving: Bool,
+    onSave: @escaping (Double, PortfolioTargetAlertDirection) async -> String?,
+    onDelete: @escaping () async -> String?
+  ) {
+    self.symbol = symbol
+    self.referencePrice = referencePrice
+    self.existingAlert = existingAlert
+    self.isSaving = isSaving
+    self.onSave = onSave
+    self.onDelete = onDelete
+    _isEnabled = State(initialValue: existingAlert != nil)
+    _priceText = State(initialValue: Self.initialPriceText(existingAlert: existingAlert, referencePrice: referencePrice))
+    _direction = State(initialValue: existingAlert.map { PortfolioTargetAlertDirection.fromScenario($0.scenario) } ?? .above)
+  }
+
+  var body: some View {
+    NavigationStack {
+      Form {
+        Section {
+          Toggle(isOn: $isEnabled) {
+            Label("Notify at price", systemImage: "bell.badge")
+          }
+
+          Picker("Direction", selection: $direction) {
+            ForEach(PortfolioTargetAlertDirection.allCases) { direction in
+              Text(direction.title).tag(direction)
+            }
+          }
+          .pickerStyle(.segmented)
+          .disabled(!isEnabled)
+
+          TextField("Target price", text: $priceText)
+            .keyboardType(.decimalPad)
+            .disabled(!isEnabled)
+        } header: {
+          Text(symbol)
+        } footer: {
+          Text("Reference price: \(referencePrice.currency)")
+        }
+
+        if let errorMessage {
+          Section {
+            Text(errorMessage)
+              .foregroundStyle(AppTheme.Colors.danger)
+          }
+        }
+      }
+      .navigationTitle("Price Alert")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("Cancel") {
+            dismiss()
+          }
+        }
+        ToolbarItem(placement: .confirmationAction) {
+          Button(isEnabled ? "Save" : "Turn Off") {
+            save()
+          }
+          .disabled(isSaving)
+        }
+      }
+    }
+    .presentationDetents([.medium])
+  }
+
+  private func save() {
+    Task {
+      if isEnabled {
+        guard let price = MoneyInputParser.parse(priceText), price > 0 else {
+          errorMessage = "Enter a valid target price."
+          return
+        }
+        errorMessage = await onSave(price, direction)
+      } else {
+        errorMessage = await onDelete()
+      }
+
+      if errorMessage == nil {
+        dismiss()
+      }
+    }
+  }
+
+  private static func initialPriceText(existingAlert: TargetResponse?, referencePrice: Double) -> String {
+    let price = existingAlert?.targetPrice ?? referencePrice
+    guard price > 0 else { return "" }
+    return price.formatted(.number.precision(.fractionLength(0...2)))
   }
 }
 

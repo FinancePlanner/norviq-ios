@@ -69,6 +69,18 @@ final class StockDetailsViewModel: ObservableObject {
     @Published var isSellingPosition = false
     @Published var errorMessage: String?
 
+    // Price chart state
+    @Published private(set) var chartSeries: PriceChartSeries?
+    @Published private(set) var isChartLoading = false
+    @Published private(set) var chartErrorMessage: String?
+    @Published var selectedChartRange: PriceChartRange = .oneDay
+
+    // Comparison Chart State
+    @Published private(set) var comparisonChartResponse: PriceChartComparisonResponse?
+    @Published private(set) var isComparisonChartLoading = false
+    @Published private(set) var comparisonChartErrorMessage: String?
+    @Published var selectedComparisonChartRange: PriceChartRange = .oneYear
+
     private let service: StockServicing
     private let marketDataService: MarketDataServicing
     private var loadedTabs: Set<StockDetailTab> = []
@@ -326,6 +338,14 @@ final class StockDetailsViewModel: ObservableObject {
             isEarningsLoading = false
             loadedTabs.insert(.earnings)
             loadingTabs.remove(.earnings)
+        case .chart:
+            guard !loadedTabs.contains(.chart), !loadingTabs.contains(.chart) else { return }
+            loadingTabs.insert(.chart)
+            isChartLoading = true
+            await loadPriceChart(symbol: symbol, range: selectedChartRange)
+            isChartLoading = false
+            loadedTabs.insert(.chart)
+            loadingTabs.remove(.chart)
         case .overview, .news:
             return
         }
@@ -421,6 +441,21 @@ final class StockDetailsViewModel: ObservableObject {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             errorMessage = message
             return message
+        }
+    }
+
+    func reloadAnalysisMetrics() {
+        guard let symbol = details?.symbol else { return }
+        Task {
+            loadingTabs.insert(.analysis)
+            let result = await loadAnalysisMetrics(symbol: symbol)
+            
+            await MainActor.run {
+                self.analysisMetrics = result.metrics
+                self.analysisMetricsMessage = result.message
+                self.applyAnalysisMetrics(result.metrics, to: symbol)
+                self.loadingTabs.remove(.analysis)
+            }
         }
     }
 
@@ -565,8 +600,20 @@ final class StockDetailsViewModel: ObservableObject {
             )
         }
 
+        let defaults = UserDefaults.standard
+        let wacc = defaults.object(forKey: "userWACC") as? Double
+        let terminalGrowthRate = defaults.object(forKey: "userTerminalGrowthRate") as? Double
+        let terminalMargin = defaults.object(forKey: "userTerminalMargin") as? Double
+        let fcfMarginAssumption = defaults.object(forKey: "userFCFMarginAssumption") as? Double
+
         do {
-            let metrics = try await marketDataService.fetchAnalysisMetrics(symbol: symbol)
+            let metrics = try await marketDataService.fetchAnalysisMetrics(
+                symbol: symbol,
+                wacc: wacc,
+                terminalGrowthRate: terminalGrowthRate,
+                terminalMargin: terminalMargin,
+                fcfMarginAssumption: fcfMarginAssumption
+            )
             return AnalysisMetricsLoadResult(metrics: metrics, message: nil)
         } catch let error as MarketDataHTTPClient.Error {
             if let message = error.errorDescription,
@@ -807,6 +854,7 @@ final class StockDetailsViewModel: ObservableObject {
                         netIncomeGrowth: $0.netIncomeGrowth,
                         netMargin: $0.netMargin,
                         eps: $0.eps,
+                        freeCashFlow: nil,
                         peLowEstimate: $0.peLowEstimate,
                         peHighEstimate: $0.peHighEstimate,
                         sharePriceLow: $0.sharePriceLow,
@@ -872,6 +920,7 @@ final class StockDetailsViewModel: ObservableObject {
                 netIncomeGrowth: metrics.ttmEPSGrowth ?? 0,
                 netMargin: metrics.netMargin ?? 0.1,
                 eps: ttmNetInc / shares,
+                freeCashFlow: nil,
                 peLowEstimate: peLow,
                 peHighEstimate: peHigh,
                 sharePriceLow: (ttmNetInc / shares) * peLow,
@@ -911,6 +960,7 @@ final class StockDetailsViewModel: ObservableObject {
                     netIncomeGrowth: niGrowth,
                     netMargin: targetMargin,
                     eps: actualEps,
+                    freeCashFlow: proj.fcf,
                     peLowEstimate: currentPELow,
                     peHighEstimate: currentPEHigh,
                     sharePriceLow: priceLow,
@@ -950,6 +1000,7 @@ final class StockDetailsViewModel: ObservableObject {
         comparisonRefreshTask?.cancel()
         comparisonRefreshTask = Task { [weak self] in
             await self?.refreshComparisonMetrics()
+            await self?.loadComparisonChart()
         }
     }
 
@@ -997,6 +1048,78 @@ final class StockDetailsViewModel: ObservableObject {
                 dcfBearPrice: metrics.dcfBearPrice,
                 dcfBullPrice: metrics.dcfBullPrice
             )
+        }
+    }
+
+    // MARK: - Price Chart
+
+    func loadPriceChart(symbol: String, range: PriceChartRange) async {
+        isChartLoading = true
+        chartErrorMessage = nil
+        defer { isChartLoading = false }
+
+        do {
+            let series = try await marketDataService.fetchPriceChart(
+                symbol: symbol, range: range.rawValue
+            )
+            chartSeries = series
+        } catch {
+            chartErrorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            Self.logger.error(
+                "Price chart load failed symbol=\(symbol, privacy: .public) range=\(range.rawValue, privacy: .public) error=\(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
+    func switchChartRange(_ range: PriceChartRange) {
+        guard range != selectedChartRange else { return }
+        selectedChartRange = range
+        guard let symbol = details?.symbol else { return }
+
+        // Always reload when range changes
+        Task {
+            await loadPriceChart(symbol: symbol, range: range)
+        }
+    }
+
+    // MARK: - Price Chart Comparison
+
+    private var allComparisonSymbols: [String] {
+        var symbols = selectedPeerSymbols
+        if let primary = primaryComparisonProfile {
+            symbols.append(primary.symbol)
+        }
+        return symbols.filter { !$0.isEmpty }
+    }
+
+    func loadComparisonChart() async {
+        let symbols = allComparisonSymbols
+        guard !symbols.isEmpty else { return }
+        
+        isComparisonChartLoading = true
+        comparisonChartErrorMessage = nil
+        defer { isComparisonChartLoading = false }
+        
+        do {
+            let response = try await marketDataService.fetchPriceChartComparison(
+                symbols: symbols, range: selectedComparisonChartRange.rawValue
+            )
+            guard !Task.isCancelled else { return }
+            comparisonChartResponse = response
+        } catch {
+            guard !Task.isCancelled else { return }
+            comparisonChartErrorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            Self.logger.error("Comparison chart load failed error=\(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    func switchComparisonChartRange(_ range: PriceChartRange) {
+        guard range != selectedComparisonChartRange else { return }
+        selectedComparisonChartRange = range
+        
+        comparisonRefreshTask?.cancel()
+        comparisonRefreshTask = Task { [weak self] in
+            await self?.loadComparisonChart()
         }
     }
 }

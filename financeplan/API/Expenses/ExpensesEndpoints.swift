@@ -176,9 +176,11 @@ struct CreateExpenseEndpoint: Endpoint {
             "split_mode": payload.splitMode.rawValue,
             "user_share_percent": payload.userSharePercent
         ]
-        if let linkedPlanItemId = payload.linkedPlanItemId {
-            params["linked_plan_item_id"] = linkedPlanItemId
-        }
+        if let linkedPlanItemId = payload.linkedPlanItemId { params["linked_plan_item_id"] = linkedPlanItemId }
+        if let categoryId = payload.categoryId { params["category_id"] = categoryId }
+        if let fa = payload.foreignAmount { params["foreign_amount"] = fa }
+        if let fc = payload.foreignCurrency { params["foreign_currency"] = fc }
+        if let rate = payload.exchangeRate { params["exchange_rate"] = rate }
         return params
     }
 }
@@ -199,9 +201,11 @@ struct UpdateExpenseEndpoint: Endpoint {
             "split_mode": payload.splitMode.rawValue,
             "user_share_percent": payload.userSharePercent
         ]
-        if let linkedPlanItemId = payload.linkedPlanItemId {
-            params["linked_plan_item_id"] = linkedPlanItemId
-        }
+        if let linkedPlanItemId = payload.linkedPlanItemId { params["linked_plan_item_id"] = linkedPlanItemId }
+        if let categoryId = payload.categoryId { params["category_id"] = categoryId }
+        if let fa = payload.foreignAmount { params["foreign_amount"] = fa }
+        if let fc = payload.foreignCurrency { params["foreign_currency"] = fc }
+        if let rate = payload.exchangeRate { params["exchange_rate"] = rate }
         return params
     }
 }
@@ -211,6 +215,98 @@ struct DeleteExpenseEndpoint: Endpoint {
     let expenseId: String
     var method: HTTPMethod { .delete }
     var path: String { "/v1/expenses/\(expenseId)" }
+    var decoder: JSONDecoder { .stockPlanShared }
+    func asParameters() throws -> Parameters { [:] }
+}
+
+// MARK: - Categories
+
+struct GetCategoriesEndpoint: Endpoint {
+    typealias Response = [ExpenseCategoryResponse]
+    var method: HTTPMethod { .get }
+    var path: String { "/v1/expenses/categories" }
+    var decoder: JSONDecoder { .stockPlanShared }
+    func asParameters() throws -> Parameters { [:] }
+}
+
+struct CreateCategoryEndpoint: Endpoint {
+    typealias Response = ExpenseCategoryResponse
+    let payload: ExpenseCategoryRequest
+    var method: HTTPMethod { .post }
+    var path: String { "/v1/expenses/categories" }
+    var decoder: JSONDecoder { .stockPlanShared }
+    func asParameters() throws -> Parameters {
+        var params: Parameters = ["name": payload.name]
+        if let pillar = payload.pillar { params["pillar"] = pillar.rawValue }
+        return params
+    }
+}
+
+struct DeleteCategoryEndpoint: Endpoint {
+    typealias Response = EmptyAPIResponse
+    let categoryId: String
+    var method: HTTPMethod { .delete }
+    var path: String { "/v1/expenses/categories/\(categoryId)" }
+    var decoder: JSONDecoder { .stockPlanShared }
+    func asParameters() throws -> Parameters { [:] }
+}
+
+// MARK: - Recurring Templates
+
+struct GetRecurringTemplatesEndpoint: Endpoint {
+    typealias Response = [RecurringTemplateResponse]
+    var method: HTTPMethod { .get }
+    var path: String { "/v1/expenses/recurring" }
+    var decoder: JSONDecoder { .stockPlanShared }
+    func asParameters() throws -> Parameters { [:] }
+}
+
+struct CreateRecurringTemplateEndpoint: Endpoint {
+    typealias Response = RecurringTemplateResponse
+    let payload: RecurringTemplateRequest
+    var method: HTTPMethod { .post }
+    var path: String { "/v1/expenses/recurring" }
+    var decoder: JSONDecoder { .stockPlanShared }
+    func asParameters() throws -> Parameters {
+        var params: Parameters = [
+            "title": payload.title,
+            "amount": payload.amount,
+            "pillar": payload.pillar.rawValue,
+            "frequency": payload.frequency.rawValue,
+            "split_mode": payload.splitMode.rawValue,
+            "user_share_percent": payload.userSharePercent
+        ]
+        if let categoryId = payload.categoryId { params["category_id"] = categoryId }
+        return params
+    }
+}
+
+struct UpdateRecurringTemplateEndpoint: Endpoint {
+    typealias Response = RecurringTemplateResponse
+    let templateId: String
+    let payload: RecurringTemplateRequest
+    var method: HTTPMethod { .patch }
+    var path: String { "/v1/expenses/recurring/\(templateId)" }
+    var decoder: JSONDecoder { .stockPlanShared }
+    func asParameters() throws -> Parameters {
+        var params: Parameters = [
+            "title": payload.title,
+            "amount": payload.amount,
+            "pillar": payload.pillar.rawValue,
+            "frequency": payload.frequency.rawValue,
+            "split_mode": payload.splitMode.rawValue,
+            "user_share_percent": payload.userSharePercent
+        ]
+        if let categoryId = payload.categoryId { params["category_id"] = categoryId }
+        return params
+    }
+}
+
+struct DeleteRecurringTemplateEndpoint: Endpoint {
+    typealias Response = EmptyAPIResponse
+    let templateId: String
+    var method: HTTPMethod { .delete }
+    var path: String { "/v1/expenses/recurring/\(templateId)" }
     var decoder: JSONDecoder { .stockPlanShared }
     func asParameters() throws -> Parameters { [:] }
 }

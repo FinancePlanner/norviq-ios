@@ -13,7 +13,7 @@ struct BudgetCategoryDetailsScreen: View {
   var body: some View {
     ScrollView {
       VStack(spacing: 20) {
-        ForEach(BudgetPillar.allCases, id: \.self) { pillar in
+        ForEach(viewModel.selectedMonthPillars, id: \.self) { pillar in
           let summary = viewModel.selectedMonthSummaries.first { $0.pillar == pillar }
             ?? PillarPlanningSummary(
               pillar: pillar,
@@ -22,10 +22,13 @@ struct BudgetCategoryDetailsScreen: View {
               actualAmount: 0,
               unplannedActualAmount: 0
             )
+          
+          let previousMonthActual = viewModel.previousMonthPillarActual(for: pillar)
 
           BudgetCategoryCard(
             pillar: pillar,
             summary: summary,
+            previousMonthActual: previousMonthActual,
             onAddPlanItem: {
               onAddPlannedItem(pillar)
             },
@@ -54,6 +57,7 @@ struct BudgetCategoryDetailsScreen: View {
 private struct BudgetCategoryCard: View {
   let pillar: BudgetPillar
   let summary: PillarPlanningSummary
+  let previousMonthActual: Double?
   let onAddPlanItem: () -> Void
   let onRecordExpense: () -> Void
 
@@ -61,6 +65,18 @@ private struct BudgetCategoryCard: View {
 
   private var leftAmount: Double {
     summary.targetAmount - summary.actualAmount
+  }
+  
+  private var progressPercentage: Double {
+    guard summary.targetAmount > 0 else { return 0 }
+    return min((summary.actualAmount / summary.targetAmount) * 100, 100)
+  }
+  
+  private var monthOverMonthChange: (amount: Double, percentage: Double)? {
+    guard let previous = previousMonthActual, previous > 0 else { return nil }
+    let change = summary.actualAmount - previous
+    let percentage = (change / previous) * 100
+    return (change, percentage)
   }
 
   var body: some View {
@@ -106,18 +122,61 @@ private struct BudgetCategoryCard: View {
       Divider()
         .background(Color.white.opacity(0.1))
 
-      HStack(spacing: 0) {
-        MetricItem(title: "Goal", value: summary.targetAmount.currency, color: .primary)
-        Divider().background(Color.white.opacity(0.1))
-        MetricItem(title: "Planned", value: summary.plannedAmount.currency, color: .primary)
-        Divider().background(Color.white.opacity(0.1))
-        MetricItem(title: "Actual", value: summary.actualAmount.currency, color: .primary)
-        Divider().background(Color.white.opacity(0.1))
-        MetricItem(
-          title: "Left",
-          value: leftAmount.currency,
-          color: leftAmount >= 0 ? .green : .red
-        )
+      VStack(spacing: 16) {
+        HStack(spacing: 0) {
+          MetricItem(title: "Goal", value: summary.targetAmount.currency, color: .primary)
+          Divider().background(Color.white.opacity(0.1))
+          MetricItem(title: "Planned", value: summary.plannedAmount.currency, color: .primary)
+          Divider().background(Color.white.opacity(0.1))
+          MetricItem(title: "Actual", value: summary.actualAmount.currency, color: .primary)
+          Divider().background(Color.white.opacity(0.1))
+          MetricItem(
+            title: "Left",
+            value: leftAmount.currency,
+            color: leftAmount >= 0 ? .green : .red
+          )
+        }
+        
+        VStack(alignment: .leading, spacing: 8) {
+          HStack {
+            Text("Budget usage")
+              .font(.caption)
+              .foregroundStyle(.secondary)
+            Spacer()
+            Text("\(Int(progressPercentage))%")
+              .font(.caption.weight(.semibold))
+              .foregroundStyle(progressPercentage > 100 ? .red : .primary)
+          }
+          
+          ProgressBar(
+            value: summary.actualAmount,
+            total: summary.targetAmount,
+            color: progressPercentage > 100 ? .red : pillar.color(for: colorScheme),
+            height: 8
+          )
+          
+          HStack(spacing: 4) {
+            Image(systemName: progressPercentage > 90 ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+              .font(.caption2)
+              .foregroundStyle(progressPercentage > 100 ? .red : progressPercentage > 90 ? .orange : .green)
+            
+            Text(statusMessage)
+              .font(.caption2)
+              .foregroundStyle(.secondary)
+            
+            if let change = monthOverMonthChange {
+              Spacer()
+              HStack(spacing: 2) {
+                Image(systemName: change.amount >= 0 ? "arrow.up.right" : "arrow.down.right")
+                  .font(.system(size: 8))
+                Text("\(abs(Int(change.percentage)))% vs last month")
+                  .font(.caption2)
+              }
+              .foregroundStyle(change.amount >= 0 ? .orange : .green)
+            }
+          }
+        }
+        .padding(.horizontal, 16)
       }
       .padding(.vertical, 12)
     }
@@ -127,6 +186,18 @@ private struct BudgetCategoryCard: View {
       RoundedRectangle(cornerRadius: 16)
         .stroke(Color.white.opacity(0.05), lineWidth: 1)
     )
+  }
+  
+  private var statusMessage: String {
+    if progressPercentage > 100 {
+      return "Over budget by \((summary.actualAmount - summary.targetAmount).currency)"
+    } else if progressPercentage > 90 {
+      return "Approaching limit"
+    } else if summary.actualAmount == 0 {
+      return "No spending yet"
+    } else {
+      return "\(leftAmount.currency) remaining"
+    }
   }
 }
 
@@ -158,30 +229,17 @@ private struct RecordedSpendCard: View {
         .font(.headline)
 
       if activities.isEmpty {
-        VStack(spacing: 16) {
-          Image(systemName: "wallet.pass")
-            .font(.system(size: 64))
-            .foregroundStyle(.gray.opacity(0.5))
-            .padding(.top, 16)
-
-          Text("No spending recorded for this month yet.\nStart tracking your expenses.")
-            .font(.subheadline)
-            .multilineTextAlignment(.center)
-            .foregroundStyle(.secondary)
-
-          Button(action: onAddTransaction) {
-            Text("Add First Transaction")
-              .font(.headline)
-              .frame(maxWidth: .infinity)
-              .padding(.vertical, 14)
-              .background(Color.green)
-              .cornerRadius(12)
-              .foregroundStyle(.white)
+        ContentUnavailableView {
+          Label("No spending recorded", systemImage: "wallet.pass")
+        } description: {
+          Text("Start tracking your expenses to see where your money goes")
+        } actions: {
+          Button("Add First Transaction") {
+            onAddTransaction()
           }
-          .padding(.horizontal, 40)
-          .padding(.bottom, 16)
+          .buttonStyle(.borderedProminent)
         }
-        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
       } else {
         VStack(spacing: 0) {
           ForEach(activities.prefix(5)) { activity in

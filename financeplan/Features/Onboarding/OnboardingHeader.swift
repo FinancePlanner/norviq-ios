@@ -38,7 +38,7 @@ struct OnboardingHeader: View {
           .frame(width: 56, height: 56)
 
         Image(systemName: icon)
-          .font(.system(size: 22, weight: .bold))
+          .font(.title.bold())
           .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
           .modifier(
             MatchedGeometryIfAvailableHeader(id: "onboarding.header.icon", namespace: namespace))

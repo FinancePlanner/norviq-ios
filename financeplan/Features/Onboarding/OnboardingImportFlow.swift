@@ -195,7 +195,7 @@ private struct OnboardingMenuButton: View {
 
             if showSoonBadge {
               Text("Soon")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .typography(.nano, weight: .bold).fontDesign(.rounded)
                 .foregroundStyle(.white)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
@@ -245,7 +245,7 @@ struct SuccessImportScreen: View {
             .frame(width: 100, height: 100)
 
           Image(systemName: "checkmark.seal.fill")
-            .font(.system(size: 48, weight: .bold))
+            .font(.largeTitle.bold())
             .foregroundStyle(AppTheme.Colors.success)
         }
 
@@ -701,7 +701,7 @@ struct CSVImportScreen: View {
                   .frame(width: 72, height: 72)
 
                 Image(systemName: "arrow.up.doc.fill")
-                  .font(.system(size: 28, weight: .bold))
+                  .font(.largeTitle.bold())
                   .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme))
               }
 

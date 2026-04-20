@@ -145,7 +145,7 @@ struct PortfolioAllocationScreen: View {
                 slices: allocationSlices,
                 colorScheme: colorScheme
               )
-              .frame(height: 280)
+              .frame(minHeight: 280)
 
               VStack(alignment: .leading, spacing: 12) {
                 ForEach(Array(allocationSlices.enumerated()), id: \.element.id) {
@@ -282,7 +282,7 @@ private struct PortfolioAllocationShareCard: View {
       }
 
       AllocationDonutChart(slices: slices, colorScheme: colorScheme)
-        .frame(height: 240)
+        .frame(minHeight: 240)
 
       Text(totalValue.currency)
         .font(.title3.weight(.semibold))
@@ -361,14 +361,14 @@ private struct PortfolioAllocationSkeletonView: View {
       VStack(spacing: 20) {
         RoundedRectangle(cornerRadius: 24, style: .continuous)
           .fill(.gray.opacity(0.12))
-          .frame(height: 110)
+          .frame(minHeight: 110)
           .shimmer()
 
         GlassCard {
           VStack(spacing: 20) {
             Circle()
               .stroke(.gray.opacity(0.12), lineWidth: 50)
-              .frame(height: 200)
+              .frame(minHeight: 200)
               .padding()
               .shimmer()
 

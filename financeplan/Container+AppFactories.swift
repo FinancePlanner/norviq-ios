@@ -41,6 +41,14 @@ extension Container {
     self { @MainActor in AppLockManager() }.singleton
   }
 
+  var securityCodeManager: Factory<SecurityCodeManaging> {
+    self { @MainActor in
+      SecurityCodeManager(
+        store: KeychainStringStore(service: "\(Bundle.main.bundleIdentifier ?? "financeplan").security-code")
+      )
+    }.singleton
+  }
+
   var authSessionManager: Factory<AuthSessionManaging> {
     self { @MainActor in
       AuthSessionManager(

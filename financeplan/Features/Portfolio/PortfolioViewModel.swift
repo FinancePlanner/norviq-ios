@@ -18,6 +18,31 @@ struct PortfolioAllocationSlice: Identifiable, Equatable, Sendable {
   let percentage: Double
 }
 
+enum PortfolioTargetAlertDirection: String, CaseIterable, Identifiable {
+  case above
+  case below
+
+  var id: String { rawValue }
+
+  var title: String {
+    switch self {
+    case .above: return "Above"
+    case .below: return "Below"
+    }
+  }
+
+  var scenario: String {
+    switch self {
+    case .above: return "base"
+    case .below: return "bear"
+    }
+  }
+
+  static func fromScenario(_ scenario: String) -> PortfolioTargetAlertDirection {
+    scenario.lowercased() == "bear" ? .below : .above
+  }
+}
+
 @MainActor
 final class PortfolioViewModel: ObservableObject {
   @Published var isLoading = false
@@ -29,6 +54,8 @@ final class PortfolioViewModel: ObservableObject {
   @Published private(set) var portfolioLists: [PortfolioListDTOResponse] = []
   @Published var selectedPortfolioListId: String?
   @Published private(set) var isShowingAllLists: Bool = false
+  @Published private(set) var targetAlertsBySymbol: [String: TargetResponse] = [:]
+  @Published private(set) var isSavingTargetAlert = false
 
   private let service: StockServicing
   private var localStore: (any PortfolioLocalPersisting)?
@@ -67,9 +94,11 @@ final class PortfolioViewModel: ObservableObject {
 
       async let stocksTask = service.fetchPortfolio(portfolioListId: selectedPortfolioListId)
       async let summaryTask = service.fetchPortfolioSummary(portfolioListId: selectedPortfolioListId)
-      let (remoteStocks, summary) = try await (stocksTask, summaryTask)
+      async let targetsTask = service.fetchTargets(symbol: nil)
+      let (remoteStocks, summary, targets) = try await (stocksTask, summaryTask, targetsTask)
       await syncWithSwiftData(remoteStocks, listId: selectedPortfolioListId)
       cashBalance = extractCashBalance(from: summary)
+      targetAlertsBySymbol = Self.makeTargetAlertsBySymbol(targets)
       hasLoadedOnce = true
     } catch {
       errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load portfolio."
@@ -178,6 +207,65 @@ final class PortfolioViewModel: ObservableObject {
     }
   }
 
+  func targetAlert(for symbol: String) -> TargetResponse? {
+    targetAlertsBySymbol[Self.normalizedSymbol(symbol)]
+  }
+
+  func saveTargetAlert(
+    symbol: String,
+    price: Double,
+    direction: PortfolioTargetAlertDirection
+  ) async -> String? {
+    let normalizedSymbol = Self.normalizedSymbol(symbol)
+    guard !normalizedSymbol.isEmpty else { return "Symbol is required." }
+    guard price > 0 else { return "Enter a target price above 0." }
+    guard !isSavingTargetAlert else { return "Already saving alert." }
+
+    isSavingTargetAlert = true
+    defer { isSavingTargetAlert = false }
+
+    do {
+      if let existing = targetAlertsBySymbol[normalizedSymbol] {
+        try await service.deleteTarget(id: existing.id)
+      }
+
+      let created = try await service.createTarget(
+        TargetRequest(
+          symbol: normalizedSymbol,
+          scenario: direction.scenario,
+          targetPrice: price,
+          targetDate: nil,
+          rationale: "Portfolio alert for \(normalizedSymbol)"
+        )
+      )
+      targetAlertsBySymbol[normalizedSymbol] = created
+      return nil
+    } catch {
+      let message = (error as? LocalizedError)?.errorDescription ?? "Failed to save price alert."
+      errorMessage = message
+      return message
+    }
+  }
+
+  func deleteTargetAlert(symbol: String) async -> String? {
+    let normalizedSymbol = Self.normalizedSymbol(symbol)
+    guard let existing = targetAlertsBySymbol[normalizedSymbol] else { return nil }
+    guard !isSavingTargetAlert else { return "Already saving alert." }
+
+    isSavingTargetAlert = true
+    defer { isSavingTargetAlert = false }
+
+    do {
+      try await service.deleteTarget(id: existing.id)
+      targetAlertsBySymbol.removeValue(forKey: normalizedSymbol)
+      return nil
+    } catch {
+      let message = (error as? LocalizedError)?.errorDescription ?? "Failed to remove price alert."
+      errorMessage = message
+      return message
+    }
+  }
+
   private func refreshPortfolioSummary() async {
     do {
       let summary = try await service.fetchPortfolioSummary(portfolioListId: selectedPortfolioListId)
@@ -260,6 +348,20 @@ final class PortfolioViewModel: ObservableObject {
       return allocationCash
     }
     return max(0, reflected ?? 0)
+  }
+
+  private static func normalizedSymbol(_ symbol: String) -> String {
+    symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+  }
+
+  private static func makeTargetAlertsBySymbol(_ targets: [TargetResponse]) -> [String: TargetResponse] {
+    var mapped: [String: TargetResponse] = [:]
+    for target in targets {
+      let symbol = normalizedSymbol(target.symbol)
+      guard !symbol.isEmpty else { continue }
+      mapped[symbol] = target
+    }
+    return mapped
   }
 }
 

@@ -11,6 +11,7 @@ import SwiftUI
 struct ShareFeedbackView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.requestReview) private var requestReview
+    @State private var feedbackTopic: FeedbackTopic?
 
     var body: some View {
         List {
@@ -18,7 +19,7 @@ struct ShareFeedbackView: View {
             Section {
                 VStack(spacing: 12) {
                     Image(systemName: "bubble.left.and.text.bubble.right.fill")
-                        .font(.system(size: 36))
+                        .font(.largeTitle.bold())
                         .foregroundStyle(AppTheme.Colors.tint(for: scheme))
 
                     Text("Your feedback shapes Norviqa")
@@ -62,19 +63,19 @@ struct ShareFeedbackView: View {
 
             // Direct Feedback
             Section("Reach Out") {
-                if let feedbackURL = URL(string: "mailto:feedback@norviqa.com?subject=Norviqa%20Feedback") {
-                    Link(destination: feedbackURL) {
-                        Label("Send Feedback", systemImage: "envelope.fill")
-                    }
-                    .foregroundStyle(.primary)
+                Button {
+                    feedbackTopic = .general
+                } label: {
+                    Label("Send Feedback", systemImage: "envelope.fill")
                 }
+                .foregroundStyle(.primary)
 
-                if let featureURL = URL(string: "mailto:feedback@norviqa.com?subject=Feature%20Request") {
-                    Link(destination: featureURL) {
-                        Label("Request a Feature", systemImage: "sparkles")
-                    }
-                    .foregroundStyle(.primary)
+                Button {
+                    feedbackTopic = .feature
+                } label: {
+                    Label("Request a Feature", systemImage: "sparkles")
                 }
+                .foregroundStyle(.primary)
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
         }
@@ -83,5 +84,24 @@ struct ShareFeedbackView: View {
         .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
         .navigationTitle("Share Feedback")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $feedbackTopic) { topic in
+            FeedbackSheet(initialTopic: topic.title)
+        }
+    }
+}
+
+private enum FeedbackTopic: Identifiable {
+    case general
+    case feature
+
+    var id: String { title }
+
+    var title: String {
+        switch self {
+        case .general:
+            return "General Feedback"
+        case .feature:
+            return "Feature Request"
+        }
     }
 }

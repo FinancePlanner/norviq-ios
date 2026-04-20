@@ -54,12 +54,23 @@ struct GetAnalysisMetricsEndpoint: Endpoint {
   typealias Response = StockAnalysisMetrics
 
   let symbol: String
+  var wacc: Double?
+  var terminalGrowthRate: Double?
+  var terminalMargin: Double?
+  var fcfMarginAssumption: Double?
 
   var method: HTTPMethod { .get }
   var path: String { "/v1/market/analysis/\(symbol.uppercased())" }
   var decoder: JSONDecoder { .stockPlanShared }
 
-  func asParameters() throws -> Parameters { [:] }
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [:]
+    if let wacc { params["wacc"] = wacc }
+    if let terminalGrowthRate { params["terminalGrowthRate"] = terminalGrowthRate }
+    if let terminalMargin { params["terminalMargin"] = terminalMargin }
+    if let fcfMarginAssumption { params["fcfMarginAssumption"] = fcfMarginAssumption }
+    return params
+  }
 }
 
 struct GetMarketCompareEndpoint: Endpoint {
@@ -180,5 +191,35 @@ struct GetAnalystEstimatesEndpoint: Endpoint {
     if let limit { params["limit"] = limit }
     if let period { params["period"] = period }
     return params
+  }
+}
+
+struct GetPriceChartEndpoint: Endpoint {
+  typealias Response = PriceChartSeries
+
+  let symbol: String
+  let range: String
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/price-chart/\(symbol.uppercased())" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    ["range": range]
+  }
+}
+
+struct GetPriceChartComparisonEndpoint: Endpoint {
+  typealias Response = PriceChartComparisonResponse
+
+  let symbols: [String]
+  let range: String
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/price-chart/compare" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    ["symbols": symbols.joined(separator: ","), "range": range]
   }
 }

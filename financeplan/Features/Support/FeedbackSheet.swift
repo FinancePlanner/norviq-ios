@@ -6,13 +6,17 @@ struct FeedbackSheet: View {
   @Environment(\.colorScheme) private var colorScheme
   private var feedbackService: FeedbackService { Container.shared.feedbackService() }
 
-  @State private var topic = "Feature Request"
+  @State private var topic: String
   @State private var message = ""
   @State private var isSubmitting = false
   @State private var errorMessage: String?
   @State private var showSuccessToast = false
 
-  let topics = ["Feature Request", "Bug Report", "UI/UX Feedback", "Other"]
+  let topics = ["General Feedback", "Feature Request", "Bug Report", "UI/UX Feedback", "Other"]
+
+  init(initialTopic: String = "Feature Request") {
+    _topic = State(initialValue: initialTopic)
+  }
 
   var body: some View {
     NavigationStack {

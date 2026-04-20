@@ -16,6 +16,8 @@ private let authHTTPLogger = Logger(
 
 struct AuthHTTPClient {
   private static let decoder: JSONDecoder = .stockPlanShared
+  private static let mfaCapabilityHeader = "X-StockPlan-Client-Capabilities"
+  private static let mfaCapabilityToken = "mfa-auth-v1"
   private static let dbStyleDateFormatter: DateFormatter = {
     let formatter = DateFormatter()
     formatter.calendar = Calendar(identifier: .gregorian)
@@ -45,10 +47,10 @@ struct AuthHTTPClient {
   let baseURL: URL
   let session: AuthURLSessionProtocol
 
-  func login(_ request: AuthLoginRequest) async throws -> AuthResponse {
+  func login(_ request: AuthLoginRequest) async throws -> AuthLoginOutcomePayload {
     let endpoint = LoginEndpoint(email: request.email, password: request.password)
     let data = try await perform(endpoint)
-    return try decodeAuthResponse(from: data)
+    return try decodeLoginOutcome(from: data)
   }
 
   func register(_ request: AuthRegisterRequest, confirmPassword: String? = nil) async throws {
@@ -97,10 +99,21 @@ struct AuthHTTPClient {
   func oauthExchange(
     provider: OAuthProviderKind,
     request: OAuthExchangeRequestPayload
-  ) async throws -> AuthResponse {
+  ) async throws -> AuthLoginOutcomePayload {
     let endpoint = OAuthExchangeEndpoint(provider: provider, payload: request)
     let data = try await perform(endpoint)
+    return try decodeLoginOutcome(from: data)
+  }
+
+  func verifyMFA(_ request: AuthMFAVerifyRequestPayload) async throws -> AuthResponse {
+    let endpoint = MFAVerifyEndpoint(payload: request)
+    let data = try await perform(endpoint)
     return try decodeAuthResponse(from: data)
+  }
+
+  func resendMFA(_ request: AuthMFAResendRequestPayload) async throws -> AuthMFAChallengeResponsePayload {
+    let endpoint = MFAResendEndpoint(payload: request)
+    return try await call(endpoint)
   }
 
   func logout(_ request: AuthRefreshRequest) async throws {
@@ -171,6 +184,11 @@ struct AuthHTTPClient {
     var request = URLRequest(url: url)
     request.httpMethod = endpoint.method.rawValue
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    if endpoint.path == "/v1/auth/login"
+      || (endpoint.path.contains("/oauth/") && endpoint.path.hasSuffix("/exchange"))
+      || endpoint.path == "/v1/auth/mfa/verify" || endpoint.path == "/v1/auth/mfa/resend" {
+      request.setValue(Self.mfaCapabilityToken, forHTTPHeaderField: Self.mfaCapabilityHeader)
+    }
 
     for header in endpoint.headers {
       request.setValue(header.value, forHTTPHeaderField: header.name)
@@ -255,6 +273,61 @@ struct AuthHTTPClient {
 
       throw error
     }
+  }
+
+  private func decodeLoginOutcome(from data: Data) throws -> AuthLoginOutcomePayload {
+    if let outcome = try? Self.decoder.decode(AuthLoginOutcomePayload.self, from: data) {
+      return outcome
+    }
+    if let envelope = try? Self.decoder.decode(APIEnvelope<AuthLoginOutcomePayload>.self, from: data),
+       let payload = envelope.data {
+      return payload
+    }
+
+    if let auth = try? decodeAuthResponse(from: data) {
+      return .authenticated(auth)
+    }
+
+    let jsonObject = try JSONSerialization.jsonObject(with: data)
+    guard let root = jsonObject as? [String: Any] else {
+      throw Error.invalidResponse
+    }
+
+    let payload = (root["data"] as? [String: Any]) ?? root
+    let statusRaw = (payload["status"] as? String ?? payload["kind"] as? String ?? "").lowercased()
+    guard statusRaw == AuthLoginOutcomeStatusPayload.mfaRequired.rawValue else {
+      throw Error.invalidResponse
+    }
+    guard let mfaObject = payload["mfa"] as? [String: Any] ?? payload["challenge"] as? [String: Any] else {
+      throw Error.invalidResponse
+    }
+
+    guard
+      let idRaw = mfaObject["challengeId"] as? String ?? mfaObject["challenge_id"] as? String,
+      let challengeID = UUID(uuidString: idRaw),
+      let channelRaw = mfaObject["channel"] as? String,
+      let channel = AuthMFAChannelPayload(rawValue: channelRaw),
+      let masked = mfaObject["maskedDestination"] as? String ?? mfaObject["masked_destination"] as? String
+    else {
+      throw Error.invalidResponse
+    }
+
+    let expiresIn = (mfaObject["expiresIn"] as? Int)
+      ?? (mfaObject["expires_in"] as? Int)
+      ?? 0
+    let resendAvailableIn = (mfaObject["resendAvailableIn"] as? Int)
+      ?? (mfaObject["resend_available_in"] as? Int)
+      ?? 0
+
+    return .mfaRequired(
+      AuthMFAChallengeResponsePayload(
+        challengeId: challengeID,
+        channel: channel,
+        maskedDestination: masked,
+        expiresIn: expiresIn,
+        resendAvailableIn: resendAvailableIn
+      )
+    )
   }
 
   private func decodeAuthResponseFallback(from data: Data) throws -> AuthResponse {

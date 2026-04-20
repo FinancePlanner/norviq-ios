@@ -70,6 +70,10 @@ protocol StockServicing: Sendable {
   ) async throws -> WatchlistItemResponse
   func deleteWatchlistItem(id: String) async throws
   func sellStock(id: String, request: SellStockRequest) async throws -> StockResponse
+  func fetchTargets(symbol: String?) async throws -> [TargetResponse]
+  @discardableResult
+  func createTarget(_ request: TargetRequest) async throws -> TargetResponse
+  func deleteTarget(id: String) async throws
   func fetchPortfolioLists() async throws -> [PortfolioListDTOResponse]
   func createPortfolioList(name: String) async throws -> PortfolioListDTOResponse
   func updatePortfolioList(id: String, name: String) async throws -> PortfolioListDTOResponse
@@ -107,6 +111,19 @@ extension StockServicing {
 
   func fetchWatchlist() async throws -> [WatchlistItemResponse] {
     try await fetchWatchlist(watchlistListId: nil)
+  }
+
+  func fetchTargets(symbol _: String? = nil) async throws -> [TargetResponse] {
+    throw StockHTTPClient.Error.api("Targets endpoint is unavailable.")
+  }
+
+  @discardableResult
+  func createTarget(_: TargetRequest) async throws -> TargetResponse {
+    throw StockHTTPClient.Error.api("Targets endpoint is unavailable.")
+  }
+
+  func deleteTarget(id _: String) async throws {
+    throw StockHTTPClient.Error.api("Targets endpoint is unavailable.")
   }
 
   func createWatchlistItem(_ request: WatchlistItemRequest) async throws -> WatchlistItemResponse {
@@ -303,6 +320,25 @@ final class StockService: StockServicing, @unchecked Sendable {
   func deleteWatchlistItem(id: String) async throws {
     try await performAuthenticated { client in
       try await client.callWithoutResponse(DeleteWatchlistEndpoint(watchlistId: id))
+    }
+  }
+
+  func fetchTargets(symbol: String? = nil) async throws -> [TargetResponse] {
+    try await performAuthenticated { client in
+      try await client.call(GetTargetsEndpoint(symbol: symbol))
+    }
+  }
+
+  @discardableResult
+  func createTarget(_ request: TargetRequest) async throws -> TargetResponse {
+    try await performAuthenticated { client in
+      try await client.call(CreateTargetEndpoint(payload: request))
+    }
+  }
+
+  func deleteTarget(id: String) async throws {
+    try await performAuthenticated { client in
+      try await client.callWithoutResponse(DeleteTargetEndpoint(targetId: id))
     }
   }
 

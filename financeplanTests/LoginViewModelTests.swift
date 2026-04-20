@@ -11,6 +11,8 @@ final class LoginViewModelTests: XCTestCase {
     var forgotPasswordCalls = 0
     var refreshCalls = 0
     var oauthSignInCalls = 0
+    var verifyMFACalls = 0
+    var resendMFACalls = 0
 
     var lastLoginEmail: String?
     var lastSignupUsername: String?
@@ -19,18 +21,22 @@ final class LoginViewModelTests: XCTestCase {
     var lastSignupDateOfBirth: Date?
     var lastForgotPasswordEmail: String?
     var lastRefreshToken: String?
+    var lastMFAChallengeId: UUID?
+    var lastMFACode: String?
     var lastOAuthProvider: OAuthProviderKind?
     var logoutCalls = 0
     var lastLogoutRefreshToken: String?
     var loginDelayNanoseconds: UInt64 = 0
 
-    var loginResult: Result<AuthResponse, Error> = .failure(MockError.notConfigured)
+    var loginResult: Result<AuthLoginOutcomePayload, Error> = .failure(MockError.notConfigured)
     var signupResult: Result<Void, Error> = .failure(MockError.notConfigured)
     var forgotPasswordResult: Result<AuthForgotPasswordResponse, Error> = .failure(MockError.notConfigured)
     var refreshResult: Result<AuthResponse, Error> = .failure(MockError.notConfigured)
-    var oauthSignInResult: Result<AuthResponse, Error> = .failure(MockError.notConfigured)
+    var oauthSignInResult: Result<AuthLoginOutcomePayload, Error> = .failure(MockError.notConfigured)
+    var verifyMFAResult: Result<AuthResponse, Error> = .failure(MockError.notConfigured)
+    var resendMFAResult: Result<AuthMFAChallengeResponsePayload, Error> = .failure(MockError.notConfigured)
 
-    func login(email: String, password _: String) async throws -> AuthResponse {
+    func login(email: String, password _: String) async throws -> AuthLoginOutcomePayload {
       loginCalls += 1
       lastLoginEmail = email
       if loginDelayNanoseconds > 0 {
@@ -61,6 +67,19 @@ final class LoginViewModelTests: XCTestCase {
       return try forgotPasswordResult.get()
     }
 
+    func verifyMFA(challengeId: UUID, code: String) async throws -> AuthResponse {
+      verifyMFACalls += 1
+      lastMFAChallengeId = challengeId
+      lastMFACode = code
+      return try verifyMFAResult.get()
+    }
+
+    func resendMFA(challengeId: UUID) async throws -> AuthMFAChallengeResponsePayload {
+      resendMFACalls += 1
+      lastMFAChallengeId = challengeId
+      return try resendMFAResult.get()
+    }
+
     func refresh(refreshToken: String) async throws -> AuthResponse {
       refreshCalls += 1
       lastRefreshToken = refreshToken
@@ -73,7 +92,7 @@ final class LoginViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func oauthSignIn(provider: OAuthProviderKind) async throws -> AuthResponse {
+    func oauthSignIn(provider: OAuthProviderKind) async throws -> AuthLoginOutcomePayload {
       oauthSignInCalls += 1
       lastOAuthProvider = provider
       return try oauthSignInResult.get()
@@ -178,7 +197,7 @@ final class LoginViewModelTests: XCTestCase {
       email: "user@example.com",
       dateOfBirth: Date(timeIntervalSince1970: 946684800)
     )
-    service.loginResult = .success(expected)
+    service.loginResult = .success(.authenticated(expected))
 
     viewModel.username = "user@example.com"
     viewModel.password = "Password123!"
@@ -200,7 +219,7 @@ final class LoginViewModelTests: XCTestCase {
     store.loginIsSignup = false
     let viewModel = LoginViewModel(authService: service, sessionStore: store)
     service.loginDelayNanoseconds = 300_000_000
-    service.loginResult = .success(
+    service.loginResult = .success(.authenticated(
       AuthResponse(
         token: "token",
         userId: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
@@ -211,7 +230,7 @@ final class LoginViewModelTests: XCTestCase {
         email: "user@example.com",
         dateOfBirth: Date(timeIntervalSince1970: 946684800)
       )
-    )
+    ))
 
     viewModel.username = "user@example.com"
     viewModel.password = "Password123!"
@@ -304,5 +323,66 @@ final class LoginViewModelTests: XCTestCase {
     XCTAssertEqual(service.lastSignupConfirmPassword, "Password123!")
     XCTAssertEqual(service.lastSignupDateOfBirth, expectedDOB)
     XCTAssertEqual(viewModel.error, "Could not sign up. Please try again.")
+  }
+
+  func testSubmitLogin_WhenMFARequired_PresentsMFAFlow() async {
+    let service = AuthServiceMock()
+    let store = AuthSessionStoreMock()
+    store.loginIsSignup = false
+    let viewModel = LoginViewModel(authService: service, sessionStore: store)
+
+    let challenge = AuthMFAChallengeResponsePayload(
+      challengeId: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
+      channel: .email,
+      maskedDestination: "us***@e***.com",
+      expiresIn: 300,
+      resendAvailableIn: 5
+    )
+    service.loginResult = .success(.mfaRequired(challenge))
+
+    viewModel.username = "user@example.com"
+    viewModel.password = "Password123!"
+
+    await viewModel.submit()
+
+    XCTAssertEqual(service.loginCalls, 1)
+    XCTAssertNotNil(viewModel.pendingMFAChallenge)
+    XCTAssertEqual(viewModel.pendingMFAChallenge?.challengeId, challenge.challengeId)
+    XCTAssertEqual(store.authToken, "")
+  }
+
+  func testSubmitMFA_WhenVerifySucceeds_PersistsSessionAndDismissesMFA() async {
+    let service = AuthServiceMock()
+    let store = AuthSessionStoreMock()
+    let viewModel = LoginViewModel(authService: service, sessionStore: store)
+    let challengeID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+    let expectedAuth = AuthResponse(
+      token: "token-mfa",
+      userId: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+      expiresIn: 3600,
+      refreshToken: "refresh-mfa",
+      refreshExpiresIn: 86_400,
+      username: "valid_user",
+      email: "user@example.com",
+      dateOfBirth: Date(timeIntervalSince1970: 946684800)
+    )
+    service.verifyMFAResult = .success(expectedAuth)
+
+    viewModel.pendingMFAChallenge = AuthMFAChallengeResponsePayload(
+      challengeId: challengeID,
+      channel: .email,
+      maskedDestination: "us***@e***.com",
+      expiresIn: 300,
+      resendAvailableIn: 0
+    )
+    viewModel.mfaCode = "123456"
+
+    await viewModel.submitMFA()
+
+    XCTAssertEqual(service.verifyMFACalls, 1)
+    XCTAssertEqual(service.lastMFAChallengeId, challengeID)
+    XCTAssertEqual(service.lastMFACode, "123456")
+    XCTAssertEqual(store.authToken, "token-mfa")
+    XCTAssertNil(viewModel.pendingMFAChallenge)
   }
 }

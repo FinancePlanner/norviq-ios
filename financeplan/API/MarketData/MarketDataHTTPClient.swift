@@ -77,8 +77,20 @@ struct MarketDataHTTPClient {
     return response.basicFinancials
   }
 
-  func fetchAnalysisMetrics(symbol: String) async throws -> StockAnalysisMetrics {
-    try await call(GetAnalysisMetricsEndpoint(symbol: symbol))
+  func fetchAnalysisMetrics(
+    symbol: String,
+    wacc: Double? = nil,
+    terminalGrowthRate: Double? = nil,
+    terminalMargin: Double? = nil,
+    fcfMarginAssumption: Double? = nil
+  ) async throws -> StockAnalysisMetrics {
+    try await call(GetAnalysisMetricsEndpoint(
+      symbol: symbol,
+      wacc: wacc,
+      terminalGrowthRate: terminalGrowthRate,
+      terminalMargin: terminalMargin,
+      fcfMarginAssumption: fcfMarginAssumption
+    ))
   }
 
   func fetchMarketCompare(symbols: [String]) async throws -> [StockAnalysisMetrics] {
@@ -119,6 +131,14 @@ struct MarketDataHTTPClient {
 
   func fetchMarketNews(limit: Int?) async throws -> [StockNews] {
     try await call(GetGeneralMarketNewsEndpoint(limit: limit))
+  }
+
+  func fetchPriceChart(symbol: String, range: String) async throws -> PriceChartSeries {
+    try await call(GetPriceChartEndpoint(symbol: symbol, range: range))
+  }
+
+  func fetchPriceChartComparison(symbols: [String], range: String) async throws -> PriceChartComparisonResponse {
+    try await call(GetPriceChartComparisonEndpoint(symbols: symbols, range: range))
   }
 
   func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
