@@ -9,6 +9,7 @@ struct LanguageSettingsView: View {
             Section {
                 ForEach(AppLanguage.allCases) { language in
                     Button {
+                        AppLanguage.apply(language)
                         appLanguageRawValue = language.rawValue
                     } label: {
                         HStack {

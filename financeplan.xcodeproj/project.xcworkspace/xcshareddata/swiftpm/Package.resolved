@@ -60,8 +60,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FinancePlanner/FinanceShared.git",
       "state" : {
-        "revision" : "4b23021acd7b419a9a2974bf3039b209b50d368e",
-        "version" : "0.8.9"
+        "revision" : "bdd228b6dcb53e49ff77249042b7639975c150e9",
+        "version" : "0.9.2"
       }
     },
     {
@@ -132,8 +132,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/benedom/SwiftyCrop",
       "state" : {
-        "revision" : "1550afc578eb16bd1f0433981aa91c2ee0bc22de",
-        "version" : "2.1.1"
+        "revision" : "0374ffb9862ccb1473abeedbc24e6c9f9a8d25e4",
+        "version" : "2.2.0"
       }
     }
   ],

@@ -925,9 +925,9 @@ private struct BudgetTrackingCard: View {
       Text(title.uppercased())
         .typography(.nano, weight: .bold)
         .foregroundStyle(.secondary)
-      Text("Plan \(planned.formatted(.currency(code: "USD")))")
+      Text("Plan \(planned.currency)")
         .font(.caption)
-      Text("Actual \(actual.formatted(.currency(code: "USD")))")
+      Text("Actual \(actual.currency)")
         .font(.caption)
         .foregroundStyle(.secondary)
     }
@@ -1329,8 +1329,8 @@ private struct QuickStatsCard: View {
             QuickStatItem(
               icon: "briefcase",
               title: "Portfolio",
-              value: stats?.totalUnrealizedPnl ?? 0 >= 0 ? "+\(Int((stats?.totalUnrealizedPnl ?? 0) / 1000))k" : "\(Int((stats?.totalUnrealizedPnl ?? 0) / 1000))k",
-              color: (stats?.totalUnrealizedPnl ?? 0) >= 0 ? .green : .red
+              value: (stats?.totalMarketValue ?? 0).compactCurrency(),
+              color: .green
             )
             
             Divider()
@@ -1404,7 +1404,7 @@ private struct SmartInsightsCard: View {
         let overspend = summary.actual - summary.planned
         result.append(Insight(
           icon: "exclamationmark.circle.fill",
-          text: "Over budget by \(overspend.formatted(.currency(code: "USD")))",
+          text: "Over budget by \(overspend.currency)",
           color: .red
         ))
       }

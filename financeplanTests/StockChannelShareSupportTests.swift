@@ -26,6 +26,20 @@ final class StockChannelShareSupportTests: XCTestCase {
     XCTAssertTrue(payload.body.contains("Not investment advice."))
   }
 
+  func testPortugueseThesisFormatterKeepsTechnicalSymbol() {
+    let payload = StockSharePayloadFormatter.thesis(
+      symbol: "msft",
+      thesis: "Cloud margins improving.",
+      details: nil,
+      language: .portuguesePortugal,
+      style: .discord
+    )
+
+    XCTAssertEqual(payload.title, "Tese MSFT")
+    XCTAssertTrue(payload.body.contains("Tese de investimento para $MSFT"))
+    XCTAssertTrue(payload.body.contains("Não é aconselhamento financeiro."))
+  }
+
   func testFundamentalsFormatterIncludesCoreMetrics() {
     let profile = StockComparisonProfile(
       symbol: "AAPL",
@@ -69,11 +83,64 @@ final class StockChannelShareSupportTests: XCTestCase {
       currentPrice: 200
     )
 
-    XCTAssertEqual(payload.title, "TSLA base price")
-    XCTAssertTrue(payload.body.contains("Base-price range for $TSLA"))
+    XCTAssertEqual(payload.title, "TSLA price targets")
+    XCTAssertTrue(payload.body.contains("Price targets for $TSLA"))
     XCTAssertTrue(payload.body.contains("Bear:"))
     XCTAssertTrue(payload.body.contains("Base:"))
     XCTAssertTrue(payload.body.contains("Bull:"))
     XCTAssertTrue(payload.body.contains("Base midpoint implied return:"))
+  }
+
+  func testXFormatterIsCharacterLimited() {
+    let payload = StockSharePayloadFormatter.thesis(
+      symbol: "aapl",
+      thesis: String(repeating: "Long thesis sentence. ", count: 40),
+      details: nil,
+      language: .english,
+      style: .x
+    )
+
+    XCTAssertLessThanOrEqual(payload.body.count, 280)
+    XCTAssertTrue(payload.body.contains("$AAPL"))
+  }
+
+  func testPortfolioAllocationFormatterIncludesTopHoldingsAndCash() {
+    let payload = PortfolioAllocationShareFormatter.payload(
+      slices: [
+        PortfolioAllocationSlice(id: "1", symbol: "AAPL", value: 2_000, percentage: 50),
+        PortfolioAllocationSlice(id: "cash-position", symbol: "CASH", value: 1_000, percentage: 25),
+        PortfolioAllocationSlice(id: "2", symbol: "MSFT", value: 1_000, percentage: 25)
+      ],
+      totalValue: 4_000,
+      destination: .discord,
+      language: .english
+    )
+
+    XCTAssertEqual(payload.title, "Portfolio allocation")
+    XCTAssertTrue(payload.body.contains("Total value:"))
+    XCTAssertTrue(payload.body.contains("AAPL: 50"))
+    XCTAssertTrue(payload.body.contains("CASH: 25"))
+    XCTAssertTrue(payload.body.contains("Not investment advice."))
+  }
+
+  func testPortfolioAllocationXFormatterLimitsOutput() {
+    let slices = (0..<10).map {
+      PortfolioAllocationSlice(
+        id: "\($0)",
+        symbol: "S\($0)",
+        value: Double(1_000 - $0),
+        percentage: Double(20 - $0)
+      )
+    }
+
+    let payload = PortfolioAllocationShareFormatter.payload(
+      slices: slices,
+      totalValue: 10_000,
+      destination: .x,
+      language: .english
+    )
+
+    XCTAssertLessThanOrEqual(payload.body.count, 280)
+    XCTAssertTrue(payload.body.contains("+6 more positions"))
   }
 }
