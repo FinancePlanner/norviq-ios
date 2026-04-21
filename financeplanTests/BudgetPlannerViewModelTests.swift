@@ -949,6 +949,29 @@ private final class BudgetPlannerServiceMock: ExpensesServicing {
 
   func deleteExpense(expenseId _: String) async throws {}
 
+  func getCategories() async throws -> [ExpenseCategoryResponse] { [] }
+
+  func createCategory(payload _: ExpenseCategoryRequest) async throws -> ExpenseCategoryResponse {
+    throw MockPlannerError.notConfigured
+  }
+
+  func deleteCategory(categoryId _: String) async throws {}
+
+  func getRecurringTemplates() async throws -> [RecurringTemplateResponse] { [] }
+
+  func createRecurringTemplate(payload _: RecurringTemplateRequest) async throws -> RecurringTemplateResponse {
+    throw MockPlannerError.notConfigured
+  }
+
+  func updateRecurringTemplate(
+    templateId _: String,
+    payload _: RecurringTemplateRequest
+  ) async throws -> RecurringTemplateResponse {
+    throw MockPlannerError.notConfigured
+  }
+
+  func deleteRecurringTemplate(templateId _: String) async throws {}
+
   func getReportsOverview(from _: String?, to _: String?) async throws -> ReportsOverviewResponse {
     ReportsOverviewResponse(
       generatedAt: "",

@@ -26,11 +26,18 @@ struct NorviqaApp: App {
     WindowGroup {
       ContentView()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .id(appLanguage.localeIdentifier)
         .id(environmentManager.current)
         .environmentObject(sessionManager)
         .environment(\.locale, Locale(identifier: appLanguage.localeIdentifier))
         .preferredColorScheme(appAppearance.colorScheme)
         .tint(AppTheme.Colors.tint(for: appAppearance.colorScheme ?? .light))
+        .onAppear {
+          AppLanguage.applyStoredLanguage()
+        }
+        .onChange(of: appLanguageRawValue) { _, newValue in
+          AppLanguage.applyBundleLanguage(AppLanguage.from(newValue))
+        }
     }
     .modelContainer(sharedModelContainer)
   }

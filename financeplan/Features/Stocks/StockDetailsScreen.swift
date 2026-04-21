@@ -49,11 +49,45 @@ struct StockDetailScreen: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 if let shareSnapshot = viewModel.shareSnapshot {
-                    ShareLink(
-                        item: shareSnapshot.body,
-                        subject: Text(shareSnapshot.title),
-                        message: Text("Shared from financeplan")
-                    ) {
+                    Menu {
+                        ShareLink(
+                            item: shareSnapshot.body,
+                            subject: Text(shareSnapshot.title),
+                            message: Text("Shared from financeplan")
+                        ) {
+                            Label("Snapshot", systemImage: "doc.text")
+                        }
+
+                        if let thesisPayload {
+                            ShareLink(
+                                item: thesisPayload.body,
+                                subject: Text(thesisPayload.title),
+                                message: Text("Shared from financeplan")
+                            ) {
+                                Label("Thesis", systemImage: "quote.bubble")
+                            }
+                        }
+
+                        if let fundamentalsPayload {
+                            ShareLink(
+                                item: fundamentalsPayload.body,
+                                subject: Text(fundamentalsPayload.title),
+                                message: Text("Shared from financeplan")
+                            ) {
+                                Label("Fundamentals", systemImage: "chart.line.uptrend.xyaxis")
+                            }
+                        }
+
+                        if let priceTargetsPayload {
+                            ShareLink(
+                                item: priceTargetsPayload.body,
+                                subject: Text(priceTargetsPayload.title),
+                                message: Text("Shared from financeplan")
+                            ) {
+                                Label("Price targets", systemImage: "scope")
+                            }
+                        }
+                    } label: {
                         Image(systemName: "square.and.arrow.up")
                     }
                     .accessibilityLabel("Share stock snapshot")
@@ -217,5 +251,31 @@ struct StockDetailScreen: View {
         .animation(.snappy(duration: 0.24), value: selectedScenario)
         .animation(.snappy(duration: 0.24), value: selectedStatementPeriod)
         .tint(AppTheme.Colors.tint(for: colorScheme))
+    }
+
+    private var thesisPayload: StockSharePayload? {
+        guard let details = viewModel.details else { return nil }
+        let text = details.notes?.trimmingCharacters(in: .whitespacesAndNewlines)
+            ?? viewModel.valuation?.rationale?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let text, !text.isEmpty else { return nil }
+        return StockSharePayloadFormatter.thesis(
+            symbol: details.symbol,
+            thesis: text,
+            details: details
+        )
+    }
+
+    private var fundamentalsPayload: StockSharePayload? {
+        guard let profile = viewModel.primaryComparisonProfile else { return nil }
+        return StockSharePayloadFormatter.fundamentals(profile: profile)
+    }
+
+    private var priceTargetsPayload: StockSharePayload? {
+        guard let details = viewModel.details, let valuation = viewModel.valuation else { return nil }
+        return StockSharePayloadFormatter.priceTargets(
+            symbol: details.symbol,
+            valuation: valuation,
+            currentPrice: viewModel.marketSnapshot?.currentPrice
+        )
     }
 }

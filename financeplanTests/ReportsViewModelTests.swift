@@ -240,6 +240,37 @@ private final class MockExpensesService: ExpensesServicing {
     throw MockExpensesError.notConfigured
   }
 
+  func getCategories() async throws -> [ExpenseCategoryResponse] {
+    throw MockExpensesError.notConfigured
+  }
+
+  func createCategory(payload _: ExpenseCategoryRequest) async throws -> ExpenseCategoryResponse {
+    throw MockExpensesError.notConfigured
+  }
+
+  func deleteCategory(categoryId _: String) async throws {
+    throw MockExpensesError.notConfigured
+  }
+
+  func getRecurringTemplates() async throws -> [RecurringTemplateResponse] {
+    throw MockExpensesError.notConfigured
+  }
+
+  func createRecurringTemplate(payload _: RecurringTemplateRequest) async throws -> RecurringTemplateResponse {
+    throw MockExpensesError.notConfigured
+  }
+
+  func updateRecurringTemplate(
+    templateId _: String,
+    payload _: RecurringTemplateRequest
+  ) async throws -> RecurringTemplateResponse {
+    throw MockExpensesError.notConfigured
+  }
+
+  func deleteRecurringTemplate(templateId _: String) async throws {
+    throw MockExpensesError.notConfigured
+  }
+
   func getMonthlyExpenseReports(
     from _: String?,
     to _: String?

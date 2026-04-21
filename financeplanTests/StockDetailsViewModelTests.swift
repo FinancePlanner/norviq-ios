@@ -340,6 +340,14 @@ final class StockDetailsViewModelTests: XCTestCase {
         estimates: try fetchAnalystEstimatesResult.get()
       )
     }
+
+    func fetchPriceChart(symbol _: String, range _: String) async throws -> financeplan.PriceChartSeries {
+      throw MockError.notConfigured
+    }
+
+    func fetchPriceChartComparison(symbols _: [String], range _: String) async throws -> financeplan.PriceChartComparisonResponse {
+      throw MockError.notConfigured
+    }
   }
 
   private enum MockError: Error {

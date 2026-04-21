@@ -2120,6 +2120,13 @@ private struct StockFundamentalsCard: View {
         StockSharePayloadFormatter.fundamentals(profile: profile)
     }
 
+    private func sharePayload(for destination: StockShareDestination) -> StockSharePayload {
+        StockSharePayloadFormatter.fundamentals(
+            profile: profile,
+            style: shareStyle(for: destination)
+        )
+    }
+
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 16) {
@@ -2167,7 +2174,10 @@ private struct StockFundamentalsCard: View {
                     }
                 }
 
-                StockChannelShareActions(payload: sharePayload)
+                StockChannelShareActions(
+                    payload: sharePayload,
+                    destinationPayload: sharePayload(for:)
+                )
             }
         }
     }
@@ -2226,6 +2236,16 @@ private struct StockThesisCard: View {
         )
     }
 
+    private func destinationSharePayload(for destination: StockShareDestination) -> StockSharePayload? {
+        guard let symbol, let text = normalizedAnalysis ?? normalizedValuationRationale else { return nil }
+        return StockSharePayloadFormatter.thesis(
+            symbol: symbol,
+            thesis: text,
+            details: details,
+            style: shareStyle(for: destination)
+        )
+    }
+
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
@@ -2254,7 +2274,12 @@ private struct StockThesisCard: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 if let sharePayload {
-                    StockChannelShareActions(payload: sharePayload)
+                    StockChannelShareActions(
+                        payload: sharePayload,
+                        destinationPayload: { destination in
+                            destinationSharePayload(for: destination) ?? sharePayload
+                        }
+                    )
                 }
             }
         }
@@ -2669,10 +2694,20 @@ private struct StockValuationSummaryCard: View {
 
     private var sharePayload: StockSharePayload? {
         guard let symbol, let valuation else { return nil }
-        return StockSharePayloadFormatter.basePrice(
+        return StockSharePayloadFormatter.priceTargets(
             symbol: symbol,
             valuation: valuation,
             currentPrice: currentPrice
+        )
+    }
+
+    private func destinationSharePayload(for destination: StockShareDestination) -> StockSharePayload? {
+        guard let symbol, let valuation else { return nil }
+        return StockSharePayloadFormatter.priceTargets(
+            symbol: symbol,
+            valuation: valuation,
+            currentPrice: currentPrice,
+            style: shareStyle(for: destination)
         )
     }
 
@@ -2709,10 +2744,26 @@ private struct StockValuationSummaryCard: View {
                 }
 
                 if let sharePayload {
-                    StockChannelShareActions(payload: sharePayload)
+                    StockChannelShareActions(
+                        payload: sharePayload,
+                        destinationPayload: { destination in
+                            destinationSharePayload(for: destination) ?? sharePayload
+                        }
+                    )
                 }
             }
         }
+    }
+}
+
+private func shareStyle(for destination: StockShareDestination) -> StockShareTextStyle {
+    switch destination {
+    case .x:
+        .x
+    case .stockTwits:
+        .stockTwits
+    case .discord:
+        .discord
     }
 }
 

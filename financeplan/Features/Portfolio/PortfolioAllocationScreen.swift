@@ -1,10 +1,13 @@
 import Charts
-import CoreTransferable
 import ImageIO
 import StockPlanShared
 import SwiftUI
 import UniformTypeIdentifiers
 import SwiftData
+
+#if canImport(UIKit)
+import UIKit
+#endif
 
 @MainActor
 struct PortfolioAllocationScreen: View {
@@ -102,7 +105,12 @@ struct PortfolioAllocationScreen: View {
       }
     }
     .sheet(item: $sharePayload) { payload in
-      AllocationShareReadySheet(pngData: payload.pngData) {
+      AllocationShareReadySheet(
+        pngData: payload.pngData,
+        text: payload.text,
+        slices: payload.slices,
+        totalValue: payload.totalValue
+      ) {
         sharePayload = nil
       }
     }
@@ -198,7 +206,16 @@ struct PortfolioAllocationScreen: View {
     guard let cgImage = renderer.cgImage,
       let data = Self.pngData(from: cgImage)
     else { return }
-    sharePayload = SharePayload(pngData: data)
+    let text = PortfolioAllocationShareFormatter.payload(
+      slices: allocationSlices,
+      totalValue: totalValue
+    )
+    sharePayload = SharePayload(
+      pngData: data,
+      text: text,
+      slices: allocationSlices,
+      totalValue: totalValue
+    )
   }
 
   private static func pngData(from cgImage: CGImage) -> Data? {
@@ -307,21 +324,19 @@ private struct PortfolioAllocationShareCard: View {
 private struct SharePayload: Identifiable {
   let id = UUID()
   let pngData: Data
-}
-
-private struct PNGShareData: Transferable {
-  let data: Data
-
-  static var transferRepresentation: some TransferRepresentation {
-    DataRepresentation(exportedContentType: .png) { item in
-      item.data
-    }
-  }
+  let text: StockSharePayload
+  let slices: [PortfolioAllocationSlice]
+  let totalValue: Double
 }
 
 private struct AllocationShareReadySheet: View {
   let pngData: Data
+  let text: StockSharePayload
+  let slices: [PortfolioAllocationSlice]
+  let totalValue: Double
   let onDismiss: () -> Void
+  @State private var shareSheetItems: [Any] = []
+  @State private var isShareSheetPresented = false
 
   var body: some View {
     NavigationStack {
@@ -332,13 +347,23 @@ private struct AllocationShareReadySheet: View {
           .multilineTextAlignment(.center)
           .padding(.top, 8)
 
-        ShareLink(
-          item: PNGShareData(data: pngData),
-          preview: SharePreview("Portfolio allocation", icon: Image(systemName: "chart.pie.fill"))
-        ) {
-          Label("Share image", systemImage: "square.and.arrow.up")
+        Button {
+          openNativeShareSheet()
+        } label: {
+          Label("Share image and text", systemImage: "square.and.arrow.up")
         }
         .buttonStyle(.borderedProminent)
+
+        StockChannelShareActions(
+          payload: text,
+          destinationPayload: { destination in
+            PortfolioAllocationShareFormatter.payload(
+              slices: slices,
+              totalValue: totalValue,
+              destination: destination
+            )
+          }
+        )
       }
       .padding(24)
       .frame(maxWidth: .infinity)
@@ -350,8 +375,95 @@ private struct AllocationShareReadySheet: View {
         }
       }
     }
+    .sheet(isPresented: $isShareSheetPresented) {
+      AllocationNativeShareSheet(items: shareSheetItems)
+    }
+  }
+
+  private func openNativeShareSheet() {
+    #if canImport(UIKit)
+    if let image = UIImage(data: pngData) {
+      shareSheetItems = [text.body, image]
+    } else {
+      shareSheetItems = [text.body]
+    }
+    #else
+    shareSheetItems = [text.body]
+    #endif
+    isShareSheetPresented = true
   }
 }
+
+enum PortfolioAllocationShareFormatter {
+  static func payload(
+    slices: [PortfolioAllocationSlice],
+    totalValue: Double?,
+    destination: StockShareDestination? = nil,
+    language: AppLanguage = .stored
+  ) -> StockSharePayload {
+    let limit = destination == .x ? 4 : 8
+    let topSlices = slices.prefix(limit)
+    var lines: [String] = []
+    let title: String
+
+    switch language {
+    case .english:
+      title = "Portfolio allocation"
+      lines.append(title)
+      if let totalValue {
+        lines.append("Total value: \(totalValue.currency)")
+      }
+      lines.append(contentsOf: topSlices.map {
+        "\($0.symbol): \($0.percentage.formatted(.number.precision(.fractionLength(1))))% (\($0.value.currency))"
+      })
+      if slices.count > limit {
+        lines.append("+\(slices.count - limit) more positions")
+      }
+      lines.append("Not investment advice.")
+    case .portuguesePortugal:
+      title = "Alocação do portefólio"
+      lines.append(title)
+      if let totalValue {
+        lines.append("Valor total: \(totalValue.currency)")
+      }
+      lines.append(contentsOf: topSlices.map {
+        "\($0.symbol): \($0.percentage.formatted(.number.precision(.fractionLength(1))))% (\($0.value.currency))"
+      })
+      if slices.count > limit {
+        lines.append("+\(slices.count - limit) posições")
+      }
+      lines.append("Não é aconselhamento financeiro.")
+    }
+
+    let body = lines.joined(separator: "\n")
+    if destination == .x, body.count > 280 {
+      return StockSharePayload(title: title, body: String(body.prefix(277)) + "...")
+    }
+    return StockSharePayload(title: title, body: body)
+  }
+
+}
+
+#if canImport(UIKit)
+private struct AllocationNativeShareSheet: UIViewControllerRepresentable {
+  let items: [Any]
+
+  func makeUIViewController(context _: Context) -> UIActivityViewController {
+    UIActivityViewController(activityItems: items, applicationActivities: nil)
+  }
+
+  func updateUIViewController(_: UIActivityViewController, context _: Context) {}
+}
+#else
+private struct AllocationNativeShareSheet: View {
+  let items: [Any]
+
+  var body: some View {
+    Text(items.compactMap { $0 as? String }.joined(separator: "\n\n"))
+      .padding()
+  }
+}
+#endif
 
 // MARK: - Skeleton View
 
