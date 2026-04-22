@@ -30,6 +30,10 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
     category: "BudgetPlannerViewModel"
   )
 
+  private var ownerUserId: String {
+    LocalCacheScope.currentOwnerUserId
+  }
+
   private let dateFormatter: DateFormatter = {
       let formatter = DateFormatter()
       formatter.dateFormat = "yyyy-MM-dd"
@@ -95,11 +99,17 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
 
           // Load from SwiftData
           let context = ExpensesSyncManager.shared.context
+          let currentOwnerUserId = ownerUserId
           let fetchedSnapshots = try context.fetch(FetchDescriptor<LocalBudgetSnapshot>())
+            .filter { LocalCacheScope.isOwnedByCurrentUser($0.ownerUserId, currentUserId: currentOwnerUserId) }
           let fetchedItems = try context.fetch(FetchDescriptor<LocalBudgetPlanItem>())
+            .filter { LocalCacheScope.isOwnedByCurrentUser($0.ownerUserId, currentUserId: currentOwnerUserId) }
           let fetchedExpenses = try context.fetch(FetchDescriptor<LocalExpense>())
+            .filter { LocalCacheScope.isOwnedByCurrentUser($0.ownerUserId, currentUserId: currentOwnerUserId) }
           let fetchedCategories = try context.fetch(FetchDescriptor<LocalExpenseCategory>())
+            .filter { LocalCacheScope.isOwnedByCurrentUser($0.ownerUserId, currentUserId: currentOwnerUserId) }
           let fetchedRecurringTemplates = try context.fetch(FetchDescriptor<LocalRecurringTemplate>())
+            .filter { LocalCacheScope.isOwnedByCurrentUser($0.ownerUserId, currentUserId: currentOwnerUserId) }
 
           self.categories = fetchedCategories.map { cat in
               ExpenseCategoryResponse(id: cat.id, name: cat.name, pillar: cat.pillar)
@@ -145,27 +155,6 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
                   netSalary: snap.netSalary,
                   targetShares: targetShares,
                   items: mappedItems
-              )
-          }
-
-          if newSnapshots.isEmpty {
-              let start = calendar.startOfMonth(for: .now)
-              let newSnap = LocalBudgetSnapshot(
-                  monthStart: start,
-                  netSalary: 2700,
-                  targetShares: [:]
-              )
-              context.insert(newSnap)
-              try? context.save()
-              
-              newSnapshots.append(
-                MonthlyBudgetSnapshot(
-                  id: newSnap.id,
-                  monthStart: start,
-                  netSalary: newSnap.netSalary,
-                  targetShares: BudgetPillar.defaultShares,
-                  items: []
-                )
               )
           }
 
@@ -231,13 +220,6 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
           if let latest = availableMonths.first,
              !availableMonths.contains(where: { self.calendar.isDate($0, equalTo: self.selectedMonthStart, toGranularity: .month) }) {
               self.selectedMonthStart = latest
-          }
-
-          if self.selectedMonthSnapshotIndex == nil {
-              logger.debug(
-                "No snapshot for selected month \(self.dayString(from: self.selectedMonthStart), privacy: .public). Creating one."
-              )
-              _ = try await self.ensureSnapshotExistsForSelectedMonth()
           }
 
           do {
@@ -549,7 +531,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
 
     let template = selectedMonthSnapshot ?? monthlySnapshots.last ?? MonthlyBudgetSnapshot(
       monthStart: calendar.startOfMonth(for: selectedMonthStart),
-      netSalary: 2700,
+      netSalary: 0,
       targetShares: BudgetPillar.defaultShares,
       items: []
     )
@@ -880,6 +862,10 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
 
   private func persistExpense(_ prepared: (title: String, draft: BudgetActivityDraft)) async -> Bool {
     do {
+      guard !ownerUserId.isEmpty else {
+        errorMessage = "Could not record spend: missing user session."
+        return false
+      }
       logger.debug(
         "Attempting expense create title=\(prepared.title, privacy: .public) amount=\(prepared.draft.amount, privacy: .public)"
       )
@@ -888,6 +874,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
       let newId = UUID()
       let expense = LocalExpense(
         id: newId,
+        ownerUserId: ownerUserId,
         title: prepared.title,
         amount: max(prepared.draft.amount, 0),
         pillar: prepared.draft.pillar,
@@ -918,6 +905,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
       
       let payload = try? JSONEncoder().encode(req)
       let action = OfflineSyncAction(
+        ownerUserId: ownerUserId,
         entityId: newId.uuidString,
         entityType: .expense,
         operationType: .create,
@@ -1043,7 +1031,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
     let monthStart = calendar.startOfMonth(for: selectedMonthStart)
     let template = monthlySnapshots.last ?? MonthlyBudgetSnapshot(
       monthStart: monthStart,
-      netSalary: 2700,
+      netSalary: 0,
       targetShares: BudgetPillar.defaultShares,
       items: []
     )

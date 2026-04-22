@@ -1,13 +1,19 @@
 import Charts
 import SwiftUI
 import StockPlanShared
+import UIKit
 
 struct ExpensesComparisonScreen: View {
   @StateObject private var reportsViewModel = ReportsViewModel()
   @StateObject private var dashboardPrefs = ReportsDashboardPreferences()
   @Environment(\.colorScheme) private var colorScheme
+  @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
   @State private var selectedTab: ReportTab = .overview
   @State private var showingCustomize = false
+
+  private var appLanguage: AppLanguage {
+    AppLanguage.from(appLanguageRawValue)
+  }
 
   enum ReportTab: String, CaseIterable {
     case overview = "Overview"
@@ -15,6 +21,15 @@ struct ExpensesComparisonScreen: View {
     case spending = "Spending"
     case trends = "Trends"
     
+    func title(language: AppLanguage) -> String {
+      switch self {
+      case .overview: return language.localized(english: "Overview", portuguese: "Visão Geral")
+      case .portfolio: return language.localized(english: "Portfolio", portuguese: "Portefólio")
+      case .spending: return language.localized(english: "Spending", portuguese: "Gastos")
+      case .trends: return language.localized(english: "Trends", portuguese: "Tendências")
+      }
+    }
+
     var icon: String {
       switch self {
       case .overview: return "chart.bar.fill"
@@ -34,7 +49,7 @@ struct ExpensesComparisonScreen: View {
         VStack(spacing: 0) {
           Picker("Report Section", selection: $selectedTab.animation(.easeInOut(duration: 0.3))) {
             ForEach(ReportTab.allCases, id: \.self) { tab in
-              Label(tab.rawValue, systemImage: tab.icon).tag(tab)
+              Label(tab.title(language: appLanguage), systemImage: tab.icon).tag(tab)
             }
           }
           .pickerStyle(.segmented)
@@ -64,7 +79,7 @@ struct ExpensesComparisonScreen: View {
           }
         }
       }
-      .navigationTitle("Reports")
+      .navigationTitle(LocalizedStringKey("Reports"))
       .navigationBarTitleDisplayMode(.large)
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
@@ -661,6 +676,7 @@ private struct AllocationInsightsSection: View {
             Text("No sector data available")
               .font(.caption)
               .foregroundStyle(.secondary)
+              .frame(maxWidth: .infinity, minHeight: 220)
           }
         }
         .padding(20)
@@ -806,6 +822,7 @@ private struct PerformanceBreakdownCard: View {
               .foregroundStyle(.secondary)
               .frame(maxWidth: .infinity, alignment: .center)
               .padding(.vertical, 40)
+              .frame(minHeight: 180)
           }
         }
         .padding(20)

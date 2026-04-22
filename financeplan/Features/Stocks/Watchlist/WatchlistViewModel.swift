@@ -196,26 +196,31 @@ protocol WatchlistLocalPersisting {
 @MainActor
 struct SwiftDataWatchlistLocalStore: WatchlistLocalPersisting {
   private let modelContext: ModelContext
+  private let ownerUserId: String
 
-  init(context: ModelContext) {
+  init(context: ModelContext, ownerUserId: String = LocalCacheScope.currentOwnerUserId) {
     self.modelContext = context
+    self.ownerUserId = ownerUserId
   }
 
   func reconcile(with remoteItems: [WatchlistItemResponse], in watchlistListId: String?) throws {
+    guard !ownerUserId.isEmpty else { return }
     let remoteIds = remoteItems.map(\.id)
     let listId = watchlistListId ?? ""
+
+    try deleteLegacyRows()
 
     let staleDescriptor: FetchDescriptor<SDWatchlistItem>
     if remoteIds.isEmpty {
       staleDescriptor = FetchDescriptor<SDWatchlistItem>(
         predicate: #Predicate { local in
-          (local.watchlistListId ?? "") == listId
+          local.ownerUserId == ownerUserId && (local.watchlistListId ?? "") == listId
         }
       )
     } else {
       staleDescriptor = FetchDescriptor<SDWatchlistItem>(
         predicate: #Predicate { local in
-          (local.watchlistListId ?? "") == listId && !remoteIds.contains(local.id)
+          local.ownerUserId == ownerUserId && (local.watchlistListId ?? "") == listId && !remoteIds.contains(local.id)
         }
       )
     }
@@ -229,7 +234,7 @@ struct SwiftDataWatchlistLocalStore: WatchlistLocalPersisting {
     } else {
       let touchedDescriptor = FetchDescriptor<SDWatchlistItem>(
         predicate: #Predicate { local in
-          remoteIds.contains(local.id)
+          local.ownerUserId == ownerUserId && remoteIds.contains(local.id)
         }
       )
       let touchedRows = try modelContext.fetch(touchedDescriptor)
@@ -239,9 +244,11 @@ struct SwiftDataWatchlistLocalStore: WatchlistLocalPersisting {
     for remote in remoteItems {
       if let local = existingById[remote.id] {
         local.update(from: remote)
+        local.ownerUserId = ownerUserId
         local.watchlistListId = listId
       } else {
         let local = SDWatchlistItem(from: remote)
+        local.ownerUserId = ownerUserId
         local.watchlistListId = listId
         modelContext.insert(local)
       }
@@ -253,14 +260,20 @@ struct SwiftDataWatchlistLocalStore: WatchlistLocalPersisting {
   }
 
   func upsert(_ item: WatchlistItemResponse, in watchlistListId: String?) throws {
+    guard !ownerUserId.isEmpty else { return }
+    try deleteLegacyRows()
     let id = item.id
     let listId = watchlistListId ?? ""
-    let descriptor = FetchDescriptor<SDWatchlistItem>(predicate: #Predicate { $0.id == id })
+    let descriptor = FetchDescriptor<SDWatchlistItem>(
+      predicate: #Predicate { $0.ownerUserId == ownerUserId && $0.id == id }
+    )
     if let existing = try modelContext.fetch(descriptor).first {
       existing.update(from: item)
+      existing.ownerUserId = ownerUserId
       existing.watchlistListId = listId
     } else {
       let local = SDWatchlistItem(from: item)
+      local.ownerUserId = ownerUserId
       local.watchlistListId = listId
       modelContext.insert(local)
     }
@@ -270,12 +283,23 @@ struct SwiftDataWatchlistLocalStore: WatchlistLocalPersisting {
   }
 
   func delete(id: String) throws {
-    let descriptor = FetchDescriptor<SDWatchlistItem>(predicate: #Predicate { $0.id == id })
+    guard !ownerUserId.isEmpty else { return }
+    let descriptor = FetchDescriptor<SDWatchlistItem>(
+      predicate: #Predicate { $0.ownerUserId == ownerUserId && $0.id == id }
+    )
     if let existing = try modelContext.fetch(descriptor).first {
       modelContext.delete(existing)
     }
     if modelContext.hasChanges {
       try modelContext.save()
     }
+  }
+
+  private func deleteLegacyRows() throws {
+    let descriptor = FetchDescriptor<SDWatchlistItem>(
+      predicate: #Predicate { $0.ownerUserId == nil }
+    )
+    let rows = try modelContext.fetch(descriptor)
+    rows.forEach(modelContext.delete)
   }
 }

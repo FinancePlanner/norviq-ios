@@ -48,7 +48,7 @@ final class WatchlistViewModelTests: XCTestCase {
   func testSwiftDataStoreReconcileAppliesCreateUpdateDelete() throws {
     let container = try makeInMemoryContainer()
     let context = container.mainContext
-    let store = SwiftDataWatchlistLocalStore(context: context)
+    let store = SwiftDataWatchlistLocalStore(context: context, ownerUserId: "user-1")
 
     context.insert(SDWatchlistItem(id: "old", symbol: "OLD", status: "active"))
     context.insert(SDWatchlistItem(id: "aapl", symbol: "AAPL", status: "active"))

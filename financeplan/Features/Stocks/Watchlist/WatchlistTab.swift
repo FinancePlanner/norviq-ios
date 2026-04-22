@@ -14,11 +14,16 @@ struct WatchlistTab: View {
   @State private var removePromptItem: SDWatchlistItem?
   @State private var destructiveFeedbackTrigger = 0
 
+  private var ownedItems: [SDWatchlistItem] {
+    let currentUserId = LocalCacheScope.currentOwnerUserId
+    return items.filter { LocalCacheScope.isOwnedByCurrentUser($0.ownerUserId, currentUserId: currentUserId) }
+  }
+
   private var scopedItems: [SDWatchlistItem] {
     guard let selectedListId = viewModel.selectedWatchlistListId else {
-      return items
+      return ownedItems
     }
-    return items.filter { ($0.watchlistListId ?? "") == selectedListId }
+    return ownedItems.filter { ($0.watchlistListId ?? "") == selectedListId }
   }
 
   init(viewModel: WatchlistViewModel = WatchlistViewModel()) {

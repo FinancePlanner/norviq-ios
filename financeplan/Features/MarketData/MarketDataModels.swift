@@ -2,7 +2,7 @@ import Foundation
 import StockPlanShared
 
 enum FMPFreeTierCoverage {
-  private static let supportedSymbols: Set<String> = [
+  static let supportedSymbols: Set<String> = [
     "AAPL", "TSLA", "AMZN", "MSFT", "NVDA", "GOOGL", "META", "NFLX", "JPM", "V",
     "BAC", "PYPL", "DIS", "T", "PFE", "COST", "INTC", "KO", "TGT", "NKE",
     "SPY", "BA", "BABA", "XOM", "WMT", "GE", "CSCO", "VZ", "JNJ", "CVX",
@@ -18,16 +18,20 @@ enum FMPFreeTierCoverage {
     supportedSymbols.contains(symbol.uppercased())
   }
 
+  static var supportedSymbolsDisplay: String {
+    supportedSymbols.sorted().joined(separator: ", ")
+  }
+
   static func unsupportedConsensusMessage(for symbol: String) -> String {
-    "\(symbol.uppercased()) is outside the consensus coverage available in the current data plan. Analyst consensus is only implemented for the provider's supported ticker list right now."
+    "Analyst consensus is not available for \(symbol.uppercased()) on the current market data coverage. You can still review the parts of this stock profile that are available."
   }
 
   static func unsupportedAnalysisMessage(for symbol: String) -> String {
-    "\(symbol.uppercased()) is outside the analysis coverage available in the current data plan. Current metrics only work for the provider's supported ticker list right now."
+    "Advanced analysis is not available for \(symbol.uppercased()) on the current market data coverage. Try one of the supported symbols, or check Data Availability in Settings."
   }
 
   static func unsupportedStatementsMessage(for symbol: String) -> String {
-    "\(symbol.uppercased()) is outside the financial statements coverage available in the current data plan. Filings, ratios, and estimates only work for the provider's supported ticker list right now."
+    "Financial statements, ratios, and estimates are not available for \(symbol.uppercased()) on the current market data coverage. Try one of the supported symbols, or check Data Availability in Settings."
   }
 }
 

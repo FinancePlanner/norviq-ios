@@ -4,9 +4,10 @@ import StockPlanShared
 
 @Model
 final class SDWatchlistItem {
-    #Index<SDWatchlistItem>([\.symbol], [\.status], [\.watchlistListId])
+    #Index<SDWatchlistItem>([\.symbol], [\.status], [\.watchlistListId], [\.ownerUserId])
 
     @Attribute(.unique) var id: String
+    var ownerUserId: String?
     var symbol: String
     var note: String?
     var status: String
@@ -16,6 +17,7 @@ final class SDWatchlistItem {
 
     init(
         id: String,
+        ownerUserId: String? = nil,
         symbol: String,
         note: String? = nil,
         status: String,
@@ -23,6 +25,7 @@ final class SDWatchlistItem {
         watchlistListId: String? = nil
     ) {
         self.id = id
+        self.ownerUserId = ownerUserId
         self.symbol = symbol
         self.note = note
         self.status = status
@@ -33,6 +36,7 @@ final class SDWatchlistItem {
 
     init(from response: WatchlistItemResponse) {
         self.id = response.id
+        self.ownerUserId = nil
         self.symbol = response.symbol
         self.note = response.note
         self.status = response.status.rawValue

@@ -2,10 +2,6 @@ import Foundation
 import SwiftUI
 import StockPlanShared
 
-#if canImport(UIKit)
-import UIKit
-#endif
-
 struct StockSharePayload: Equatable {
   let title: String
   let body: String
@@ -294,7 +290,7 @@ struct StockChannelShareActions: View {
       }
     }
     .sheet(isPresented: $isShareSheetPresented) {
-      StockTextShareSheet(items: shareSheetItems)
+      ShareSheet(items: shareSheetItems)
     }
     .onDisappear {
       hideBannerTask?.cancel()
@@ -339,10 +335,7 @@ struct StockChannelShareActions: View {
   }
 
   private func copyForDiscordAndOpen() {
-    #if canImport(UIKit)
-    UIPasteboard.general.string = payload.body
-    #endif
-    showBanner("Copied text for Discord. Paste it in your channel.", style: .success)
+    showBanner("Opening Discord. Please paste your text there.", style: .success)
 
     guard let discordAppURL = URL(string: "discord://") else { return }
     openURL(discordAppURL) { accepted in
@@ -374,24 +367,3 @@ struct StockChannelShareActions: View {
     }
   }
 }
-
-#if canImport(UIKit)
-private struct StockTextShareSheet: UIViewControllerRepresentable {
-  let items: [Any]
-
-  func makeUIViewController(context _: Context) -> UIActivityViewController {
-    UIActivityViewController(activityItems: items, applicationActivities: nil)
-  }
-
-  func updateUIViewController(_: UIActivityViewController, context _: Context) {}
-}
-#else
-private struct StockTextShareSheet: View {
-  let items: [Any]
-
-  var body: some View {
-    Text(items.compactMap { $0 as? String }.joined(separator: "\n\n"))
-      .padding()
-  }
-}
-#endif

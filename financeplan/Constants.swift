@@ -23,41 +23,59 @@ enum Constants {
 @Observable
 final class AppEnvironmentManager {
   private(set) var current: AppEnvironment
+  private let defaults: UserDefaults
 
   #if DEBUG
-    let isDebugBuild = true
+    private static let defaultIsDebugBuild = true
   #else
-    let isDebugBuild = false
+    private static let defaultIsDebugBuild = false
   #endif
+
+  let isDebugBuild: Bool
 
   /// Environment forced by scheme (via env var or build-time pre-action)
   let schemeEnvironment: AppEnvironment?
 
-  init() {
+  init(
+    environmentVariables: [String: String] = ProcessInfo.processInfo.environment,
+    infoDictionary: [String: Any]? = Bundle.main.infoDictionary,
+    defaults: UserDefaults = .standard,
+    schemeEnvironmentValue: String? = SchemeEnvironment.value,
+    isDebugBuild: Bool = AppEnvironmentManager.defaultIsDebugBuild
+  ) {
+    self.defaults = defaults
+    self.isDebugBuild = isDebugBuild
     let resolvedEnvironment: AppEnvironment
+    let forcedEnvironment: AppEnvironment?
 
     // 1. Check runtime env var (set by Xcode LaunchAction)
-    if let schemeEnvValue = ProcessInfo.processInfo.environment["NORVIQA_ENVIRONMENT"],
-       let schemeEnv = AppEnvironments.from(key: schemeEnvValue) {
-      schemeEnvironment = schemeEnv
-      resolvedEnvironment = schemeEnv
-    // 2. Check build-time generated value (set by scheme pre-action, works with sweetpad/CLI)
-    } else if let buildEnvValue = SchemeEnvironment.value,
-              let buildEnv = AppEnvironments.from(key: buildEnvValue) {
-      schemeEnvironment = buildEnv
-      resolvedEnvironment = buildEnv
-    // 3. Check persisted user preference
+    if let runtimeEnvironment = Self.environment(from: environmentVariables["NORVIQA_ENVIRONMENT"]) {
+      forcedEnvironment = runtimeEnvironment
+      resolvedEnvironment = runtimeEnvironment
+    // 2. Check build-time Info.plist value (set by build configuration for archives/TestFlight)
+    } else if let bundleEnvironment = Self.environment(
+      from: infoDictionary?["NorviqaAPIEnvironment"] as? String
+    ) {
+      forcedEnvironment = bundleEnvironment
+      resolvedEnvironment = bundleEnvironment
+    // 3. Check legacy generated value (kept for existing local scheme workflows)
+    } else if let buildEnvironment = Self.environment(from: schemeEnvironmentValue) {
+      forcedEnvironment = buildEnvironment
+      resolvedEnvironment = buildEnvironment
+    // 4. Check persisted user preference in debug builds only
     } else if
-      let persistedEnvironment = UserDefaults.standard.string(forKey: "environment"),
+      isDebugBuild,
+      let persistedEnvironment = defaults.string(forKey: "environment"),
       let environment = AppEnvironments.from(key: persistedEnvironment) {
-      schemeEnvironment = nil
+      forcedEnvironment = nil
       resolvedEnvironment = environment
-    // 4. Default based on build type
+    // 5. Default based on build type
     } else {
-      schemeEnvironment = nil
+      forcedEnvironment = nil
       resolvedEnvironment = isDebugBuild ? AppEnvironments.dev : AppEnvironments.production
     }
 
+    schemeEnvironment = forcedEnvironment
     self.current = resolvedEnvironment
   }
 
@@ -68,7 +86,7 @@ final class AppEnvironmentManager {
     current = newEnv
     Container.shared.reloadEnvironmentConfiguration(for: newEnv, onUpdate: {
       self.current = newEnv
-      UserDefaults.standard.set(newEnv.title, forKey: "environment")
+      self.defaults.set(newEnv.title, forKey: "environment")
     })
   }
 
@@ -82,6 +100,13 @@ final class AppEnvironmentManager {
       return isLoggedIn ? AppEnvironments.allEnvironmentsExcludingLocal : []
     }
     return AppEnvironments.allEnvironmentsExcludingLocal
+  }
+
+  private static func environment(from value: String?) -> AppEnvironment? {
+    guard let value else { return nil }
+    let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !normalized.isEmpty else { return nil }
+    return AppEnvironments.from(key: normalized)
   }
 }
 

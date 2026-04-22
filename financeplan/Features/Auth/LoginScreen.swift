@@ -468,7 +468,7 @@ private struct SignInView: View {
                     VStack(alignment: .trailing, spacing: 8) {
                         ZStack(alignment: .topTrailing) {
                             VaultTextField(
-                                label: "Security Code",
+                                label: "Password",
                                 placeholder: "••••••••",
                                 text: $viewModel.password,
                                 icon: "lock.fill",

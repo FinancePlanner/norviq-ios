@@ -22,6 +22,10 @@ struct NorviqaApp: App {
     AppLanguage.from(appLanguageRawValue)
   }
 
+  init() {
+    AppLanguage.applyStoredLanguage()
+  }
+
   var body: some Scene {
     WindowGroup {
       ContentView()

@@ -1911,7 +1911,7 @@ private struct StockConsensusPlaceholderCard: View {
                             Text("Consensus")
                                 .typography(.small, weight: .semibold)
 
-                            Text(message ?? "Analyst consensus is limited by the current data plan.")
+                            Text(message ?? "Analyst consensus is limited by the current market data coverage.")
                                 .typography(.small)
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -2093,7 +2093,7 @@ private struct StockAnalysisPlaceholderCard: View {
                             Text("Current metrics")
                                 .typography(.small, weight: .semibold)
 
-                            Text(message ?? "Current metrics are limited by the current data plan.")
+                            Text(message ?? "Current metrics are limited by the current market data coverage.")
                                 .typography(.small)
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)

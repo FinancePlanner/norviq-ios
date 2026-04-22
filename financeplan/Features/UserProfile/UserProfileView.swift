@@ -17,6 +17,8 @@ private enum UserProfileDestination: Hashable {
     case about
     case language
     case dataHandling
+    case dataAvailability
+    case connect
     case sensitiveActions
 }
 
@@ -26,9 +28,10 @@ public struct UserProfileView: View {
     @StateObject private var pushNotificationsCoordinator: PushNotificationsCoordinator
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
+    @InjectedObservable(\Container.appEnvironment) private var environmentManager
     @State private var path: [UserProfileDestination] = []
     @State private var isEditPresented = false
+    @State private var isAIInfoPresented = false
     @State private var isLoggingOut = false
     @State private var securityCodeEnabled = false
     @State private var faceIDErrorMessage: String?
@@ -53,14 +56,15 @@ public struct UserProfileView: View {
         NavigationStack(path: $path) {
             Group {
                 if viewModel.isLoading && viewModel.profile == nil {
-                    ProgressView("Loading...")
+                    ProgressView(LocalizedStringKey("Loading..."))
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 } else {
                     settingsList(profile: viewModel.profile)
                 }
             }
+            .id(appLanguage.rawValue)
             .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-            .navigationTitle("Settings")
+            .navigationTitle(LocalizedStringKey("Settings"))
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -84,6 +88,9 @@ public struct UserProfileView: View {
                     EditProfileView(viewModel: viewModel, profile: profile)
                 }
             }
+            .sheet(isPresented: $isAIInfoPresented) {
+                AIModelIntegrationsInfoSheet()
+            }
             .navigationDestination(for: UserProfileDestination.self) { destination in
                 switch destination {
                 case .securityCode:
@@ -103,6 +110,10 @@ public struct UserProfileView: View {
                     LanguageSettingsView()
                 case .dataHandling:
                     Text("Data handling")
+                case .dataAvailability:
+                    DataAvailabilityView()
+                case .connect:
+                    ConnectView()
                 case .sensitiveActions:
                     Text("Sensitive actions")
                 }
@@ -119,12 +130,11 @@ public struct UserProfileView: View {
                 } label: {
                     HStack(spacing: 14) {
                         avatarView(profile)
-
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(profile?.username ?? "Unknown User")
+                            Text(profile?.username ?? appLanguage.localized(english: "Unknown User", portuguese: "Utilizador desconhecido"))
                                 .typography(.label, weight: .semibold)
                                 .foregroundStyle(.primary)
-                            Text("View and edit your account")
+                            Text(LocalizedStringKey("View and edit your account"))
                                 .typography(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -142,16 +152,16 @@ public struct UserProfileView: View {
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
             // Security
-            Section("Security") {
+            Section(LocalizedStringKey("Security")) {
                 Toggle(isOn: faceIDToggleBinding) {
                     HStack(spacing: 12) {
-                        Label("Face ID", systemImage: "faceid")
+                        Label(LocalizedStringKey("Face ID"), systemImage: "faceid")
                     }
                 }
 
                 NavigationLink(value: UserProfileDestination.securityCode) {
                     HStack {
-                        Label("Security Code", systemImage: "lock.fill")
+                        Label(LocalizedStringKey("Security Code"), systemImage: "lock.fill")
                         Spacer()
                         Text(securityCodeEnabled ? LocalizedStringKey("On") : LocalizedStringKey("Off"))
                             .typography(.caption)
@@ -161,13 +171,13 @@ public struct UserProfileView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
-            Section("Alerts") {
+            Section(LocalizedStringKey("Alerts")) {
                 Toggle(isOn: notificationsToggleBinding) {
-                    Label("Price target alerts", systemImage: "bell.badge")
+                    Label(LocalizedStringKey("Price target alerts"), systemImage: "bell.badge")
                 }
 
                 HStack(spacing: 12) {
-                    Label("Notification Status", systemImage: "info.circle")
+                    Label(LocalizedStringKey("Notification Status"), systemImage: "info.circle")
                     Spacer()
                     Text(pushNotificationsCoordinator.statusDescription)
                         .typography(.caption)
@@ -178,13 +188,13 @@ public struct UserProfileView: View {
                     Button {
                         Task { await pushNotificationsCoordinator.setNotificationsEnabled(true) }
                     } label: {
-                        Label("Open Notification Settings", systemImage: "gear")
+                        Label(LocalizedStringKey("Open Notification Settings"), systemImage: "gear")
                     }
                 } else if pushNotificationsCoordinator.authorizationStatus == .notDetermined {
                     Button {
                         Task { await pushNotificationsCoordinator.setNotificationsEnabled(true) }
                     } label: {
-                        Label("Enable Notification Alerts", systemImage: "bell")
+                        Label(LocalizedStringKey("Enable Notification Alerts"), systemImage: "bell")
                     }
                 }
 
@@ -197,8 +207,8 @@ public struct UserProfileView: View {
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
             // Appearance
-            Section("Appearance") {
-                Picker("Appearance", selection: appAppearanceBinding) {
+            Section(LocalizedStringKey("Appearance")) {
+                Picker(LocalizedStringKey("Appearance"), selection: appAppearanceBinding) {
                     ForEach(AppAppearance.allCases, id: \.self) { appearance in
                         Text(appearance.title)
                             .tag(appearance)
@@ -213,12 +223,12 @@ public struct UserProfileView: View {
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
             // Language
-            Section("Language") {
+            Section(LocalizedStringKey("Language")) {
                 NavigationLink(value: UserProfileDestination.language) {
                     HStack {
-                        Label("Language", systemImage: "globe")
+                        Label(LocalizedStringKey("Language"), systemImage: "globe")
                         Spacer()
-                        Text(selectedLanguage.displayName)
+                        Text(appLanguage.displayName)
                             .typography(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -227,60 +237,65 @@ public struct UserProfileView: View {
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
             // Achievements
-            Section("Achievements") {
+            Section(LocalizedStringKey("Achievements")) {
                 NavigationLink(value: UserProfileDestination.badges) {
-                    Label("Badges", systemImage: "trophy.fill")
+                    Label(LocalizedStringKey("Badges"), systemImage: "trophy.fill")
                 }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
             // Integrations (Coming Soon)
-            Section("Integrations") {
+            Section(LocalizedStringKey("Integrations")) {
                 HStack {
-                    Label("AI Model Integrations", systemImage: "cpu")
+                    Label(LocalizedStringKey("AI Model Integrations"), systemImage: "cpu")
+                        .opacity(0.6)
                     Spacer()
-                    Text("Soon")
+                    Text(LocalizedStringKey("Soon"))
                         .typography(.nano, weight: .bold).fontDesign(.rounded)
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(Color.red, in: Capsule())
+                    Button {
+                        isAIInfoPresented = true
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .imageScale(.large)
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+                    .accessibilityLabel("Why connect AI models?")
                 }
-                .opacity(0.6)
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
             // About
-            Section("Support") {
+            Section(LocalizedStringKey("Support")) {
                 NavigationLink(value: UserProfileDestination.helpSupport) {
-                    Label("Help & Support", systemImage: "questionmark.circle")
+                    Label(LocalizedStringKey("Help & Support"), systemImage: "questionmark.circle")
+                }
+                NavigationLink(value: UserProfileDestination.dataAvailability) {
+                    Label("Data Availability", systemImage: "chart.line.uptrend.xyaxis")
                 }
                 NavigationLink(value: UserProfileDestination.shareFeedback) {
-                    Label("Share Feedback", systemImage: "quote.bubble")
+                    Label(LocalizedStringKey("Share Feedback"), systemImage: "quote.bubble")
                 }
                 NavigationLink(value: UserProfileDestination.about) {
-                    Label("About Norviqa", systemImage: "info.circle")
+                    Label(LocalizedStringKey("About Norviqa"), systemImage: "info.circle")
                 }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
             // Connect
-            Section("Connect") {
-                Menu {
-                    socialButton("Follow on Instagram", systemImage: "camera", url: "https://instagram.com/norviqa")
-                    socialButton("Follow on X", systemImage: "x.circle", url: "https://x.com/norviqa")
-                    socialButton("Follow on TikTok", systemImage: "music.note", url: "https://tiktok.com/@norviqa")
-                    socialButton("Join Discord", systemImage: "bubble.left.and.bubble.right", url: "https://discord.gg/norviqa")
-                } label: {
+            Section(LocalizedStringKey("Connect")) {
+                NavigationLink(value: UserProfileDestination.connect) {
                     HStack {
-                        Label("Connect", systemImage: "link.circle")
+                        Label(LocalizedStringKey("Connect"), systemImage: "link.circle")
                             .foregroundStyle(.primary)
                         Spacer()
                         Text("Instagram, X, TikTok, Discord")
                             .typography(.caption)
-                            .foregroundStyle(.secondary)
-                        Image(systemName: "chevron.down")
-                            .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -301,7 +316,7 @@ public struct UserProfileView: View {
                         if isLoggingOut {
                             ProgressView()
                         }
-                        Text("Log out")
+                        Text(LocalizedStringKey("Log out"))
                             .typography(.button, weight: .semibold)
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -313,7 +328,12 @@ public struct UserProfileView: View {
 
             // Footer
             Section {
-                Text(versionString)
+                VStack(spacing: 4) {
+                    if environmentManager.current != AppEnvironments.production {
+                        Text("Environment: \(environmentManager.current.title.capitalized) testing")
+                    }
+                    Text(versionString)
+                }
                     .typography(.nano)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -336,7 +356,7 @@ public struct UserProfileView: View {
         AppAppearance.from(appAppearanceRawValue)
     }
 
-    private var selectedLanguage: AppLanguage {
+    private var appLanguage: AppLanguage {
         AppLanguage.from(appLanguageRawValue)
     }
 
@@ -386,17 +406,6 @@ public struct UserProfileView: View {
             .frame(width: 28, height: 28)
             .background(backgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: 6))
-    }
-
-    @ViewBuilder
-    private func socialButton(_ title: LocalizedStringKey, systemImage: String, url: String) -> some View {
-        if let destination = URL(string: url) {
-            Button {
-                openURL(destination)
-            } label: {
-                Label(title, systemImage: systemImage)
-            }
-        }
     }
 
     private func setFaceIDEnabled(_ enabled: Bool) async {
@@ -466,6 +475,189 @@ public struct UserProfileView: View {
             ?? normalized(profile.email)
             ?? "?"
         return String(seed.prefix(1)).uppercased()
+    }
+}
+
+private struct AIModelIntegrationsInfoSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label("Why connect an AI model?", systemImage: "sparkles")
+                            .typography(.headline, weight: .semibold)
+
+                        Text("Connect your AI tools so they can work with your Norviqa data directly.")
+                            .typography(.body)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
+                Section {
+                    valueRow(
+                        title: "Less manual work",
+                        detail: "No exporting files, pasting raw data, or writing small scripts just to prepare a question.",
+                        systemImage: "wand.and.stars"
+                    )
+                    valueRow(
+                        title: "More reliable answers",
+                        detail: "Your assistant can use current market and portfolio data instead of guessing from memory.",
+                        systemImage: "checkmark.seal"
+                    )
+                    valueRow(
+                        title: "Cleaner conversations",
+                        detail: "Ask focused questions without pasting long API notes or large data responses.",
+                        systemImage: "text.bubble"
+                    )
+                }
+                .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+            }
+            .scrollContentBackground(.hidden)
+            .listStyle(.insetGrouped)
+            .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
+            .navigationTitle("AI Model Integrations")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+                }
+            }
+        }
+    }
+
+    private func valueRow(title: String, detail: String, systemImage: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: systemImage)
+                .typography(.label, weight: .semibold)
+                .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+                .frame(width: 28, height: 28)
+                .background(AppTheme.Colors.tint(for: scheme).opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .typography(.label, weight: .semibold)
+                Text(detail)
+                    .typography(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+private struct ConnectView: View {
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        List {
+            Section {
+                socialButton(LocalizedStringKey("Follow on Instagram"), systemImage: "camera", url: "https://instagram.com/norviqa")
+                socialButton(LocalizedStringKey("Follow on X"), systemImage: "x.circle", url: "https://x.com/norviqa")
+                socialButton(LocalizedStringKey("Follow on TikTok"), systemImage: "music.note", url: "https://tiktok.com/@norviqa")
+                socialButton(LocalizedStringKey("Join Discord"), systemImage: "bubble.left.and.bubble.right", url: "https://discord.gg/norviqa")
+            }
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+        }
+        .scrollContentBackground(.hidden)
+        .listStyle(.insetGrouped)
+        .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
+        .navigationTitle(LocalizedStringKey("Connect"))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder
+    private func socialButton(_ title: LocalizedStringKey, systemImage: String, url: String) -> some View {
+        if let destination = URL(string: url) {
+            Button {
+                openURL(destination)
+            } label: {
+                Label(title, systemImage: systemImage)
+            }
+        }
+    }
+}
+
+private struct DataAvailabilityView: View {
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        List {
+            Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Market data coverage", systemImage: "chart.line.uptrend.xyaxis")
+                        .typography(.label, weight: .semibold)
+
+                    Text("Some analysis, statements, consensus, and forecast data depends on the market data coverage currently connected to Norviqa.")
+                        .typography(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+            }
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
+            Section {
+                coverageRow(
+                    title: "Free data coverage",
+                    detail: "Available for the supported symbol list below."
+                )
+                coverageRow(
+                    title: "Starter data coverage",
+                    detail: "Available for US exchanges."
+                )
+                coverageRow(
+                    title: "Premium data coverage",
+                    detail: "Available for US, UK, and Canada exchanges."
+                )
+            } header: {
+                Text("Data Coverage")
+            } footer: {
+                Text("Market data coverage is separate from your Norviqa subscription. If a data source does not cover a symbol or date range, the app keeps the rest of the stock page usable.")
+            }
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
+            Section("App Subscription Limits") {
+                Text("Norviqa subscription limits control app features such as portfolio capacity, imports, alerts, reports, and advanced research access.")
+                    .typography(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
+            Section {
+                DisclosureGroup("Supported symbols on current free data coverage") {
+                    Text(FMPFreeTierCoverage.supportedSymbolsDisplay)
+                        .typography(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                        .padding(.vertical, 6)
+                }
+            }
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+        }
+        .scrollContentBackground(.hidden)
+        .listStyle(.insetGrouped)
+        .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
+        .navigationTitle("Data Availability")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func coverageRow(title: String, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .typography(.label, weight: .semibold)
+            Text(detail)
+                .typography(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 4)
     }
 }
 

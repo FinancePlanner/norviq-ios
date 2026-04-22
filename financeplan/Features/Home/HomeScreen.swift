@@ -118,6 +118,19 @@ private enum HomeTab: Hashable {
   case portfolio
   case expenses
   case reports
+
+  func title(language: AppLanguage) -> String {
+    switch self {
+    case .dashboard:
+      language.localized(english: "Home", portuguese: "Início")
+    case .portfolio:
+      language.localized(english: "Portfolio", portuguese: "Portefólio")
+    case .expenses:
+      language.localized(english: "Expenses", portuguese: "Despesas")
+    case .reports:
+      language.localized(english: "Reports", portuguese: "Relatórios")
+    }
+  }
 }
 
 private enum PortfolioSegment: String, CaseIterable, Identifiable {
@@ -129,18 +142,18 @@ private enum PortfolioSegment: String, CaseIterable, Identifiable {
 
   var id: String { rawValue }
 
-  var title: LocalizedStringKey {
+  func title(language: AppLanguage) -> String {
     switch self {
     case .holdings:
-      "Holdings"
+      return language.localized(english: "Holdings", portuguese: "Posições")
     case .allocation:
-      "Allocation"
+      return language.localized(english: "Allocation", portuguese: "Alocação")
     case .watchlist:
-      "Watchlist"
+      return language.localized(english: "Watchlist", portuguese: "Lista de seguimento")
     case .earnings:
-      "Earnings"
+      return language.localized(english: "Earnings", portuguese: "Resultados")
     case .news:
-      "News"
+      return language.localized(english: "News", portuguese: "Notícias")
     }
   }
 }
@@ -148,11 +161,16 @@ private enum PortfolioSegment: String, CaseIterable, Identifiable {
 @MainActor
 struct HomeScreen: View {
   @Environment(\.colorScheme) private var colorScheme
+  @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
   let onLogout: () async -> Void
   @State private var selectedTab: HomeTab = .dashboard
   @State private var isSettingsPresented = false
   @State private var pendingPortfolioOpenSymbol: String?
   @StateObject private var budgetPlannerViewModel = BudgetPlannerViewModel()
+
+  private var appLanguage: AppLanguage {
+    AppLanguage.from(appLanguageRawValue)
+  }
 
   var body: some View {
     TabView(selection: $selectedTab) {
@@ -162,7 +180,7 @@ struct HomeScreen: View {
         budgetStore: budgetPlannerViewModel
       )
         .tabItem {
-          Label("Home", systemImage: "house")
+          tabLabel(.dashboard, systemImage: "house")
         }
         .tag(HomeTab.dashboard)
 
@@ -171,28 +189,30 @@ struct HomeScreen: View {
         pendingOpenSymbol: $pendingPortfolioOpenSymbol
       )
         .tabItem {
-          Label("Portfolio", systemImage: "chart.line.uptrend.xyaxis")
+          tabLabel(.portfolio, systemImage: "chart.line.uptrend.xyaxis")
         }
         .tag(HomeTab.portfolio)
 
       ExpensesPlannerScreen(isSettingsPresented: $isSettingsPresented, viewModel: budgetPlannerViewModel)
         .tabItem {
-          Label("Expenses", systemImage: "creditcard")
+          tabLabel(.expenses, systemImage: "creditcard")
         }
         .tag(HomeTab.expenses)
 
       ExpensesComparisonScreen()
         .tabItem {
-          Label("Reports", systemImage: "chart.bar.xaxis")
+          tabLabel(.reports, systemImage: "chart.bar.xaxis")
         }
         .tag(HomeTab.reports)
     }
+    .id(appLanguage.rawValue)
     .tint(AppTheme.Colors.tint(for: colorScheme))
     .toolbarBackground(.visible, for: .tabBar)
     .toolbarBackground(AppTheme.Colors.tabBarBackground(for: colorScheme), for: .tabBar)
     .animation(.snappy(duration: 0.28), value: selectedTab)
     .sheet(isPresented: $isSettingsPresented) {
       UserProfileView()
+        .environment(\.locale, Locale(identifier: appLanguage.localeIdentifier))
     }
     .onReceive(NotificationCenter.default.publisher(for: .openStockFromPushNotification)) { notification in
       guard
@@ -209,11 +229,20 @@ struct HomeScreen: View {
       selectedTab = .portfolio
     }
   }
+
+  private func tabLabel(_ tab: HomeTab, systemImage: String) -> some View {
+    Label {
+      Text(tab.title(language: appLanguage))
+    } icon: {
+      Image(systemName: systemImage)
+    }
+  }
 }
 
 @MainActor
 private struct DashboardRoot: View {
   @Environment(\.colorScheme) private var colorScheme
+  @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
   @Binding var selectedTab: HomeTab
   @Binding var isSettingsPresented: Bool
   @ObservedObject var budgetStore: BudgetPlannerViewModel
@@ -237,37 +266,41 @@ private struct DashboardRoot: View {
   private let expensesService: any ExpensesServicing = Container.shared.expensesService()
   private let stockService: any StockServicing = Container.shared.stockService()
 
+  private var appLanguage: AppLanguage {
+    AppLanguage.from(appLanguageRawValue)
+  }
+
   private var insightCards: [InsightCard] {
     guard let insights = dashboardInsights else {
-        return InsightCard.mock
+        return InsightCard.mock(language: appLanguage)
     }
 
     return [
         .init(
-            title: "Savings rate",
+            title: appLanguage.localized(english: "Savings rate", portuguese: "Taxa de poupança"),
             value: "\(Int(insights.savingsRate))%",
-            detail: "Based on monthly planned vs actuals.",
+            detail: appLanguage.localized(english: "Based on monthly planned vs actuals.", portuguese: "Baseado no planeado vs real mensal."),
             symbol: "arrow.down.circle",
             tint: AppTheme.Colors.success
         ),
         .init(
-            title: "Budget streak",
-            value: "\(insights.budgetStreak) months",
-            detail: "Staying under your spending plan.",
+            title: appLanguage.localized(english: "Budget streak", portuguese: "Série de orçamento"),
+            value: appLanguage.localized(english: "\(insights.budgetStreak) months", portuguese: "\(insights.budgetStreak) meses"),
+            detail: appLanguage.localized(english: "Staying under your spending plan.", portuguese: "Mantendo-se abaixo do seu plano de gastos."),
             symbol: "flame",
             tint: .orange
         ),
         .init(
-            title: "Watchlist",
-            value: "\(insights.watchlistCount) names",
-            detail: "Review candidates before earnings.",
+            title: appLanguage.localized(english: "Watchlist", portuguese: "Seguimento"),
+            value: appLanguage.localized(english: "\(insights.watchlistCount) names", portuguese: "\(insights.watchlistCount) ativos"),
+            detail: appLanguage.localized(english: "Review candidates before earnings.", portuguese: "Analise candidatos antes dos resultados."),
             symbol: "star",
             tint: .indigo
         ),
         .init(
-            title: "Cash buffer",
+            title: appLanguage.localized(english: "Cash buffer", portuguese: "Reserva de caixa"),
             value: insights.cashBuffer.formatted(.currency(code: "USD").presentation(.narrow)),
-            detail: "Enough for short-term volatility.",
+            detail: appLanguage.localized(english: "Enough for short-term volatility.", portuguese: "Suficiente para volatilidade de curto prazo."),
             symbol: "shield",
             tint: AppTheme.Colors.tint(for: .light)
         )
@@ -277,10 +310,10 @@ private struct DashboardRoot: View {
   private var greetingText: String {
     let hour = Calendar.current.component(.hour, from: Date())
     switch hour {
-    case 5..<12: return "Good morning"
-    case 12..<17: return "Good afternoon"
-    case 17..<22: return "Good evening"
-    default: return "Good night"
+    case 5..<12: return appLanguage.localized(english: "Good morning", portuguese: "Bom dia")
+    case 12..<17: return appLanguage.localized(english: "Good afternoon", portuguese: "Boa tarde")
+    case 17..<22: return appLanguage.localized(english: "Good evening", portuguese: "Boa noite")
+    default: return appLanguage.localized(english: "Good night", portuguese: "Boa noite")
     }
   }
 
@@ -373,7 +406,7 @@ private struct DashboardRoot: View {
             }
             .buttonStyle(.glass)
             .tint(AppTheme.Colors.tint(for: colorScheme))
-            .accessibilityLabel("Open settings")
+            .accessibilityLabel(LocalizedStringKey("Open settings"))
           } else {
             Button(action: openSettings) {
               Image(systemName: "gearshape")
@@ -382,14 +415,14 @@ private struct DashboardRoot: View {
                 .padding(6)
                 .appGlassEffect(.capsule)
             }
-            .accessibilityLabel("Open settings")
+            .accessibilityLabel(LocalizedStringKey("Open settings"))
           }
         }
       }
       .searchable(
         text: $searchViewModel.query,
         placement: .navigationBarDrawer(displayMode: .always),
-        prompt: "Search stocks, ETFs, or owned assets"
+        prompt: LocalizedStringKey("Search stocks, ETFs, or owned assets")
       )
       .onChange(of: searchViewModel.query) { _, _ in
         handleSearchQueryChange()
@@ -482,10 +515,16 @@ private struct DashboardRoot: View {
           let portfolioPoints = Self.mapPortfolioPoints(from: performance.points)
           let monthlySummaries = reports.monthlySummaries.sorted { $0.monthStart < $1.monthStart }
           let spendingPoints = Self.mapSpendingPoints(from: monthlySummaries)
+          let reportPortfolioValue = reports.portfolioStatistics.totalMarketValue
+          let resolvedPortfolioValue = portfolioPoints.last?.value ?? reportPortfolioValue
+          let shouldUseReportPortfolioFallback = reportPortfolioValue > 0
+            && (portfolioPoints.isEmpty || portfolioPoints.allSatisfy { $0.value == 0 })
 
-          portfolioChartPoints = portfolioPoints
+          portfolioChartPoints = shouldUseReportPortfolioFallback
+            ? [ChartDataPoint(date: Date(), value: reportPortfolioValue)]
+            : portfolioPoints
           spendingChartPoints = spendingPoints
-          portfolioTotalValue = portfolioPoints.last?.value ?? 0
+          portfolioTotalValue = resolvedPortfolioValue > 0 ? resolvedPortfolioValue : reportPortfolioValue
           spendingTotalValue = max(0, monthlySummaries.last?.actual ?? reports.latestMonthSummary?.actual ?? 0)
           portfolioDeltaPercent = Self.deltaPercent(from: portfolioPoints.map(\.value))
           spendingDeltaPercent = Self.deltaPercent(
@@ -623,7 +662,7 @@ private struct DashboardContentSection: View {
 
     QuickAddEntryButton(action: onQuickAddTap)
 
-    DisclosureGroup("More Insights") {
+    DisclosureGroup(LocalizedStringKey("More Insights")) {
       VStack(spacing: 20) {
         InsightsGrid(cards: insightCards)
         FocusListCard(viewModel: focusPointsViewModel)
@@ -641,7 +680,7 @@ private struct QuickAddEntryButton: View {
   var body: some View {
     if #available(iOS 26, *) {
       Button(action: action) {
-        Label("Add Entry", systemImage: "plus.circle.fill")
+        Label(LocalizedStringKey("Add Entry"), systemImage: "plus.circle.fill")
           .font(.headline)
           .frame(maxWidth: .infinity)
           .padding()
@@ -652,7 +691,7 @@ private struct QuickAddEntryButton: View {
       Button(action: action) {
         HStack {
           Image(systemName: "plus.circle.fill")
-          Text("Add Entry")
+          Text(LocalizedStringKey("Add Entry"))
             .font(.headline)
         }
         .frame(maxWidth: .infinity)
@@ -669,10 +708,15 @@ private struct PortfolioRoot: View {
   @Binding var isSettingsPresented: Bool
   @Binding var pendingOpenSymbol: String?
   @Environment(\.colorScheme) private var colorScheme
+  @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
   @StateObject private var portfolioViewModel = PortfolioViewModel()
   @StateObject private var watchlistViewModel = WatchlistViewModel()
   @State private var selectedSegment: PortfolioSegment = .holdings
   @State private var isListManagerPresented = false
+
+  private var appLanguage: AppLanguage {
+    AppLanguage.from(appLanguageRawValue)
+  }
 
   private var shouldShowListSwitcher: Bool {
     selectedSegment == .holdings || selectedSegment == .watchlist
@@ -683,7 +727,7 @@ private struct PortfolioRoot: View {
       VStack(spacing: 16) {
         Picker("Portfolio section", selection: $selectedSegment) {
           ForEach(PortfolioSegment.allCases) { segment in
-            Text(segment.title).tag(segment)
+            Text(segment.title(language: appLanguage)).tag(segment)
           }
         }
         .pickerStyle(.segmented)
@@ -746,7 +790,7 @@ private struct PortfolioRoot: View {
       }
       .environmentObject(portfolioViewModel)
       .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
-      .navigationTitle("Portfolio")
+      .navigationTitle(LocalizedStringKey("Portfolio"))
       .navigationBarTitleDisplayMode(.large)
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
@@ -1266,10 +1310,19 @@ private struct DashboardHeroCard: View {
   let onReportsTap: () -> Void
 
   @Environment(\.colorScheme) private var colorScheme
+  @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
   @State private var showingPortfolio = true
 
+  private var appLanguage: AppLanguage {
+    AppLanguage.from(appLanguageRawValue)
+  }
+
   private var currentTitle: String {
-    showingPortfolio ? "Total Wealth" : "Monthly Spending"
+    if showingPortfolio {
+        return appLanguage.localized(english: "Total Wealth", portuguese: "Riqueza Total")
+    } else {
+        return appLanguage.localized(english: "Monthly Spending", portuguese: "Gastos Mensais")
+    }
   }
 
   private var currentValue: Double {
@@ -1305,10 +1358,13 @@ private struct DashboardHeroCard: View {
   }
 
   private var deltaText: String {
-    guard let currentDeltaPercent else { return "No baseline for trend yet" }
+    guard let currentDeltaPercent else {
+        return appLanguage.localized(english: "No baseline for trend yet", portuguese: "Sem dados para tendência ainda")
+    }
     let sign = currentDeltaPercent > 0 ? "+" : ""
     let percent = (currentDeltaPercent * 100).formatted(.number.precision(.fractionLength(1)))
-    return "\(sign)\(percent)% vs last period"
+    let vsLastPeriod = appLanguage.localized(english: "vs last period", portuguese: "vs período anterior")
+    return "\(sign)\(percent)% \(vsLastPeriod)"
   }
 
   var body: some View {
@@ -1341,7 +1397,7 @@ private struct DashboardHeroCard: View {
             Spacer()
             // Custom segmented picker to look like standard Apple toggle
             HStack(spacing: 0) {
-                Text("Portfolio")
+                Text(appLanguage.localized(english: "Portfolio", portuguese: "Portefólio"))
                     .font(.subheadline)
                     .foregroundStyle(showingPortfolio ? .primary : .secondary)
                     .padding(.trailing, 8)
@@ -1350,7 +1406,7 @@ private struct DashboardHeroCard: View {
                     .labelsHidden()
                     .tint(.white.opacity(0.8))
 
-                Text("Spending")
+                Text(appLanguage.localized(english: "Spending", portuguese: "Gastos"))
                     .font(.subheadline)
                     .foregroundStyle(!showingPortfolio ? .primary : .secondary)
                     .padding(.leading, 8)
@@ -1660,34 +1716,36 @@ private struct InsightCard: Identifiable {
   var id: String { title }
 
   // to fill from endpoint later
-  static let mock: [InsightCard] = [
-    .init(
-      title: "Savings rate",
-      value: "28%",
-      detail: "Holding steady over the last quarter.",
-      symbol: "arrow.down.circle",
-      tint: AppTheme.Colors.success
-    ),
-    .init(
-      title: "Budget streak",
-      value: "4 months",
-      detail: "Staying under your spending plan.",
-      symbol: "flame",
-      tint: .orange
-    ),
-    .init(
-      title: "Watchlist",
-      value: "12 names",
-      detail: "Review candidates before earnings.",
-      symbol: "star",
-      tint: .indigo
-    ),
-    .init(
-      title: "Cash buffer",
-      value: "$9.4K",
-      detail: "Enough for short-term volatility.",
-      symbol: "shield",
-      tint: AppTheme.Colors.tint(for: .light)
-    )
-  ]
+  static func mock(language: AppLanguage) -> [InsightCard] {
+    [
+      .init(
+        title: language.localized(english: "Savings rate", portuguese: "Taxa de poupança"),
+        value: "28%",
+        detail: language.localized(english: "Holding steady over the last quarter.", portuguese: "Mantendo-se estável no último trimestre."),
+        symbol: "arrow.down.circle",
+        tint: AppTheme.Colors.success
+      ),
+      .init(
+        title: language.localized(english: "Budget streak", portuguese: "Série de orçamento"),
+        value: language.localized(english: "4 months", portuguese: "4 meses"),
+        detail: language.localized(english: "Staying under your spending plan.", portuguese: "Mantendo-se abaixo do seu plano de gastos."),
+        symbol: "flame",
+        tint: .orange
+      ),
+      .init(
+        title: language.localized(english: "Watchlist", portuguese: "Seguimento"),
+        value: language.localized(english: "12 names", portuguese: "12 ativos"),
+        detail: language.localized(english: "Review candidates before earnings.", portuguese: "Analise candidatos antes dos resultados."),
+        symbol: "star",
+        tint: .indigo
+      ),
+      .init(
+        title: language.localized(english: "Cash buffer", portuguese: "Reserva de caixa"),
+        value: "$9.4K",
+        detail: language.localized(english: "Enough for short-term volatility.", portuguese: "Suficiente para volatilidade de curto prazo."),
+        symbol: "shield",
+        tint: AppTheme.Colors.tint(for: .light)
+      )
+    ]
+  }
 }

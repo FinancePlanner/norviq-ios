@@ -6,6 +6,7 @@ import StockPlanShared
 final class LocalExpense {
     @Attribute(.unique)
     var id: UUID
+    var ownerUserId: String?
     var title: String
     var amount: Double
     var pillarRawValue: String
@@ -26,6 +27,7 @@ final class LocalExpense {
 
     init(
         id: UUID = UUID(),
+        ownerUserId: String? = nil,
         title: String,
         amount: Double,
         pillar: BudgetPillar,
@@ -41,6 +43,7 @@ final class LocalExpense {
         isPendingSync: Bool = false
     ) {
         self.id = id
+        self.ownerUserId = ownerUserId
         self.title = title
         self.amount = amount
         self.pillarRawValue = pillar.rawValue
@@ -69,6 +72,7 @@ final class LocalExpense {
 final class LocalBudgetSnapshot {
     @Attribute(.unique)
     var id: UUID
+    var ownerUserId: String?
     var monthStart: Date
     var netSalary: Double
     var targetSharesRaw: [String: Double]
@@ -80,6 +84,7 @@ final class LocalBudgetSnapshot {
 
     init(
         id: UUID = UUID(),
+        ownerUserId: String? = nil,
         monthStart: Date,
         netSalary: Double,
         targetShares: [BudgetPillar: Double],
@@ -87,6 +92,7 @@ final class LocalBudgetSnapshot {
         isPendingSync: Bool = false
     ) {
         self.id = id
+        self.ownerUserId = ownerUserId
         self.monthStart = monthStart
         self.netSalary = netSalary
         var raw: [String: Double] = [:]
@@ -111,6 +117,7 @@ final class LocalBudgetSnapshot {
 final class LocalBudgetPlanItem {
     @Attribute(.unique)
     var id: UUID
+    var ownerUserId: String?
     var title: String
     var plannedAmount: Double
     var pillarRawValue: String
@@ -124,6 +131,7 @@ final class LocalBudgetPlanItem {
 
     init(
         id: UUID = UUID(),
+        ownerUserId: String? = nil,
         title: String,
         plannedAmount: Double,
         pillar: BudgetPillar,
@@ -134,6 +142,7 @@ final class LocalBudgetPlanItem {
         isPendingSync: Bool = false
     ) {
         self.id = id
+        self.ownerUserId = ownerUserId
         self.title = title
         self.plannedAmount = plannedAmount
         self.pillarRawValue = pillar.rawValue
@@ -157,6 +166,7 @@ final class LocalBudgetPlanItem {
 final class LocalExpenseCategory {
     @Attribute(.unique)
     var id: String
+    var ownerUserId: String?
     var name: String
     var pillarRawValue: String?
     var isArchived: Bool
@@ -165,6 +175,7 @@ final class LocalExpenseCategory {
     
     init(
         id: String = UUID().uuidString,
+        ownerUserId: String? = nil,
         name: String,
         pillar: BudgetPillar? = nil,
         isArchived: Bool = false,
@@ -172,6 +183,7 @@ final class LocalExpenseCategory {
         isPendingSync: Bool = false
     ) {
         self.id = id
+        self.ownerUserId = ownerUserId
         self.name = name
         self.pillarRawValue = pillar?.rawValue
         self.isArchived = isArchived
@@ -191,6 +203,7 @@ final class LocalExpenseCategory {
 final class LocalRecurringTemplate {
     @Attribute(.unique)
     var id: String
+    var ownerUserId: String?
     var title: String
     var amount: Double
     var pillarRawValue: String
@@ -203,6 +216,7 @@ final class LocalRecurringTemplate {
     
     init(
         id: String = UUID().uuidString,
+        ownerUserId: String? = nil,
         title: String,
         amount: Double,
         pillar: BudgetPillar,
@@ -214,6 +228,7 @@ final class LocalRecurringTemplate {
         isPendingSync: Bool = false
     ) {
         self.id = id
+        self.ownerUserId = ownerUserId
         self.title = title
         self.amount = amount
         self.pillarRawValue = pillar.rawValue
@@ -255,6 +270,7 @@ enum SyncEntityType: String, Codable {
 @Model
 final class OfflineSyncAction {
     var id: UUID
+    var ownerUserId: String?
     var entityId: String
     var entityTypeRawValue: String
     var operationTypeRawValue: String
@@ -263,6 +279,7 @@ final class OfflineSyncAction {
     
     init(
         id: UUID = UUID(),
+        ownerUserId: String? = nil,
         entityId: String,
         entityType: SyncEntityType,
         operationType: SyncOperationType,
@@ -270,6 +287,7 @@ final class OfflineSyncAction {
         timestamp: Date = .now
     ) {
         self.id = id
+        self.ownerUserId = ownerUserId
         self.entityId = entityId
         self.entityTypeRawValue = entityType.rawValue
         self.operationTypeRawValue = operationType.rawValue

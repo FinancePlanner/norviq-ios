@@ -24,8 +24,23 @@ final class AppLanguageTests: XCTestCase {
         XCTAssertEqual(AppLanguage.portuguesePortugal.displayName, "Português")
     }
 
+    func testLocalizedStringUsesSelectedLanguage() {
+        XCTAssertEqual(AppLanguage.english.localized(english: "Home", portuguese: "Início"), "Home")
+        XCTAssertEqual(AppLanguage.portuguesePortugal.localized(english: "Home", portuguese: "Início"), "Início")
+    }
+
     func testApplyEnglishStoresBundleLanguagePreference() {
         AppLanguage.apply(.english)
+
+        XCTAssertEqual(UserDefaults.standard.string(forKey: AppLanguage.storageKey), "en")
+        XCTAssertEqual(UserDefaults.standard.stringArray(forKey: "AppleLanguages"), ["en"])
+    }
+
+    func testApplyStoredLanguageDefaultsFreshInstallToEnglish() {
+        UserDefaults.standard.removeObject(forKey: AppLanguage.storageKey)
+        UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+
+        AppLanguage.applyStoredLanguage()
 
         XCTAssertEqual(UserDefaults.standard.string(forKey: AppLanguage.storageKey), "en")
         XCTAssertEqual(UserDefaults.standard.stringArray(forKey: "AppleLanguages"), ["en"])

@@ -3,6 +3,7 @@ import SwiftUI
 struct ResearchPlaceholderCard: View {
     let title: String
     let bodyText: String
+    var minHeight: CGFloat = 140
 
     var body: some View {
         GlassCard {
@@ -15,6 +16,7 @@ struct ResearchPlaceholderCard: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .center)
         }
     }
 }

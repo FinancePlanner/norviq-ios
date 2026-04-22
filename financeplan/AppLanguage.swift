@@ -6,6 +6,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
   case portuguesePortugal = "pt-PT"
 
   static let storageKey = "app_language"
+  static let defaultLanguage = AppLanguage.english
 
   var id: String { rawValue }
 
@@ -29,12 +30,21 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     }
   }
 
+  func localized(english: String, portuguese: String) -> String {
+    switch self {
+    case .english:
+      english
+    case .portuguesePortugal:
+      portuguese
+    }
+  }
+
   static func from(_ rawValue: String) -> AppLanguage {
-    AppLanguage(rawValue: rawValue) ?? .english
+    AppLanguage(rawValue: rawValue) ?? defaultLanguage
   }
 
   static var stored: AppLanguage {
-    from(UserDefaults.standard.string(forKey: storageKey) ?? AppLanguage.english.rawValue)
+    from(UserDefaults.standard.string(forKey: storageKey) ?? defaultLanguage.rawValue)
   }
 
   static func apply(_ language: AppLanguage, defaults: UserDefaults = .standard) {
@@ -43,7 +53,11 @@ enum AppLanguage: String, CaseIterable, Identifiable {
   }
 
   static func applyStoredLanguage(defaults: UserDefaults = .standard) {
-    applyBundleLanguage(from(defaults.string(forKey: storageKey) ?? AppLanguage.english.rawValue), defaults: defaults)
+    guard let rawValue = defaults.string(forKey: storageKey) else {
+      apply(defaultLanguage, defaults: defaults)
+      return
+    }
+    applyBundleLanguage(from(rawValue), defaults: defaults)
   }
 
   static func applyBundleLanguage(_ language: AppLanguage, defaults: UserDefaults = .standard) {

@@ -112,11 +112,13 @@ struct UnifiedActivityFeed: View {
           if viewModel.isLoading && viewModel.activities.isEmpty {
             ProgressView()
               .padding()
+              .frame(maxWidth: .infinity, minHeight: 160)
           } else if viewModel.activities.isEmpty {
             Text("No recent activity")
               .font(.subheadline)
               .foregroundStyle(.secondary)
               .padding()
+              .frame(maxWidth: .infinity, minHeight: 160)
           } else {
             ForEach(viewModel.activities) { activity in
               HStack(spacing: 16) {
@@ -217,6 +219,7 @@ struct UnifiedActivityFeed: View {
         }
         .padding(.vertical, 4)
       }
+      .frame(maxWidth: .infinity, minHeight: 112)
       .redacted(reason: isFinancialHealthLoading ? .placeholder : [])
       .scaleEffect(isFinancialHealthLoading ? 0.99 : 1)
       .opacity(isFinancialHealthLoading ? 0.9 : 1)

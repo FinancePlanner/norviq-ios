@@ -4,9 +4,10 @@ import StockPlanShared
 
 @Model
 final class SDPortfolioStock {
-    #Index<SDPortfolioStock>([\.symbol], [\.category], [\.portfolioListId])
+    #Index<SDPortfolioStock>([\.symbol], [\.category], [\.portfolioListId], [\.ownerUserId])
 
     @Attribute(.unique) var id: String
+    var ownerUserId: String?
     var symbol: String
     var shares: Double
     var buyPrice: Double
@@ -18,6 +19,7 @@ final class SDPortfolioStock {
 
     init(
         id: String,
+        ownerUserId: String? = nil,
         symbol: String,
         shares: Double,
         buyPrice: Double,
@@ -27,6 +29,7 @@ final class SDPortfolioStock {
         portfolioListId: String? = nil
     ) {
         self.id = id
+        self.ownerUserId = ownerUserId
         self.symbol = symbol
         self.shares = shares
         self.buyPrice = buyPrice
@@ -39,6 +42,7 @@ final class SDPortfolioStock {
 
     init(from response: StockResponse) {
         self.id = response.id
+        self.ownerUserId = nil
         self.symbol = response.symbol
         self.shares = response.shares
         self.buyPrice = response.buyPrice

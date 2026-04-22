@@ -38,7 +38,7 @@ struct MediaPicker: View {
   private func processSelectedItem(_ item: PhotosPickerItem) async {
     // Try loading as video first if video is allowed
     if allowsVideo, let movieURL = try? await item.loadTransferable(type: VideoTransferable.self) {
-      let thumbnail = Self.generateThumbnailData(for: movieURL.url)
+      let thumbnail = await Self.generateThumbnailData(for: movieURL.url)
       onMediaSelected(.video(movieURL.url, thumbnail: thumbnail))
       isPresented = false
       return
@@ -56,14 +56,13 @@ struct MediaPicker: View {
     isPresented = false
   }
 
-  private static func generateThumbnailData(for url: URL) -> Data? {
+  private static func generateThumbnailData(for url: URL) async -> Data? {
     let asset = AVURLAsset(url: url)
     let generator = AVAssetImageGenerator(asset: asset)
     generator.appliesPreferredTrackTransform = true
     generator.maximumSize = CGSize(width: 320, height: 320)
     let time = CMTime(seconds: 0, preferredTimescale: 600)
-    guard let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) else { return nil }
-    // Convert CGImage to PNG data without UIKit
+    guard let (cgImage, _) = try? await generator.image(at: time) else { return nil }
     let bitmapRep = CGImage.pngData(cgImage)
     return bitmapRep
   }

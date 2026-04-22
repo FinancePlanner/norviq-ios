@@ -14,13 +14,19 @@ final class ExpensesSyncManager {
     var context: ModelContext {
         sharedModelContainer.mainContext
     }
+
+    private var ownerUserId: String {
+        LocalCacheScope.currentOwnerUserId
+    }
     
     func pullLatestData(from service: any ExpensesServicing) async throws {
         guard !isSyncing else { return }
+        guard !ownerUserId.isEmpty else { return }
         isSyncing = true
         defer { isSyncing = false }
         
         logger.debug("Starting pullLatestData from API")
+        try cleanupLegacyRows()
         
         async let fetchSnapshots = service.getSnapshots(year: nil, month: nil)
         async let fetchItems = service.getAllPlanItems()
@@ -34,14 +40,17 @@ final class ExpensesSyncManager {
         
         // Update Categories
         let existingCategories = try context.fetch(FetchDescriptor<LocalExpenseCategory>())
+            .filter { LocalCacheScope.isOwnedByCurrentUser($0.ownerUserId, currentUserId: ownerUserId) }
         let existingCategoryMap = Dictionary(uniqueKeysWithValues: existingCategories.map { ($0.id, $0) })
         for cat in fetchedCategories {
             if let existing = existingCategoryMap[cat.id] {
+                existing.ownerUserId = ownerUserId
                 existing.name = cat.name
                 existing.pillarRawValue = cat.pillar?.rawValue
             } else {
                 let newCat = LocalExpenseCategory(
                     id: cat.id,
+                    ownerUserId: ownerUserId,
                     name: cat.name,
                     pillar: cat.pillar
                 )
@@ -51,9 +60,11 @@ final class ExpensesSyncManager {
         
         // Update Recurring Templates
         let existingTemplates = try context.fetch(FetchDescriptor<LocalRecurringTemplate>())
+            .filter { LocalCacheScope.isOwnedByCurrentUser($0.ownerUserId, currentUserId: ownerUserId) }
         let existingTemplateMap = Dictionary(uniqueKeysWithValues: existingTemplates.map { ($0.id, $0) })
         for tpl in fetchedRecurringTemplates {
             if let existing = existingTemplateMap[tpl.id] {
+                existing.ownerUserId = ownerUserId
                 existing.title = tpl.title
                 existing.amount = tpl.amount
                 existing.pillarRawValue = tpl.pillar.rawValue
@@ -64,6 +75,7 @@ final class ExpensesSyncManager {
             } else {
                 let newTpl = LocalRecurringTemplate(
                     id: tpl.id,
+                    ownerUserId: ownerUserId,
                     title: tpl.title,
                     amount: tpl.amount,
                     pillar: tpl.pillar,
@@ -92,6 +104,7 @@ final class ExpensesSyncManager {
         
         // Update Snapshots
         let existingSnapshots = try context.fetch(FetchDescriptor<LocalBudgetSnapshot>())
+            .filter { LocalCacheScope.isOwnedByCurrentUser($0.ownerUserId, currentUserId: ownerUserId) }
         let existingSnapshotMap = Dictionary(uniqueKeysWithValues: existingSnapshots.map { ($0.id.uuidString, $0) })
         var currentSnapshots: [LocalBudgetSnapshot] = []
         for snap in fetchedSnapshots {
@@ -100,6 +113,7 @@ final class ExpensesSyncManager {
             for (k, v) in snap.targetShares { targetSharesRaw[k] = v }
             
             if let existing = existingSnapshotMap[snap.id] {
+                existing.ownerUserId = ownerUserId
                 existing.monthStart = monthStart
                 existing.netSalary = snap.netSalary
                 existing.targetSharesRaw = targetSharesRaw
@@ -111,6 +125,7 @@ final class ExpensesSyncManager {
                 }
                 let newSnap = LocalBudgetSnapshot(
                     id: id,
+                    ownerUserId: ownerUserId,
                     monthStart: monthStart,
                     netSalary: snap.netSalary,
                     targetShares: shares
@@ -123,9 +138,11 @@ final class ExpensesSyncManager {
         
         // Update Plan Items
         let existingItems = try context.fetch(FetchDescriptor<LocalBudgetPlanItem>())
+            .filter { LocalCacheScope.isOwnedByCurrentUser($0.ownerUserId, currentUserId: ownerUserId) }
         let existingItemMap = Dictionary(uniqueKeysWithValues: existingItems.map { ($0.id.uuidString, $0) })
         for item in fetchedItems {
             if let existing = existingItemMap[item.id] {
+                existing.ownerUserId = ownerUserId
                 existing.title = item.title
                 existing.plannedAmount = item.plannedAmount
                 existing.pillarRawValue = item.pillar.rawValue
@@ -138,6 +155,7 @@ final class ExpensesSyncManager {
             } else if let id = UUID(uuidString: item.id) {
                 let newItem = LocalBudgetPlanItem(
                     id: id,
+                    ownerUserId: ownerUserId,
                     title: item.title,
                     plannedAmount: item.plannedAmount,
                     pillar: item.pillar,
@@ -152,10 +170,12 @@ final class ExpensesSyncManager {
         
         // Update Expenses
         let existingExpenses = try context.fetch(FetchDescriptor<LocalExpense>())
+            .filter { LocalCacheScope.isOwnedByCurrentUser($0.ownerUserId, currentUserId: ownerUserId) }
         let existingExpenseMap = Dictionary(uniqueKeysWithValues: existingExpenses.map { ($0.id.uuidString, $0) })
         for exp in fetchedExpenses {
             guard let occurredOn = parseDate(exp.occurredOn) else { continue }
             if let existing = existingExpenseMap[exp.id] {
+                existing.ownerUserId = ownerUserId
                 existing.title = exp.title
                 existing.amount = exp.amount
                 existing.pillarRawValue = exp.pillar.rawValue
@@ -170,6 +190,7 @@ final class ExpensesSyncManager {
             } else if let id = UUID(uuidString: exp.id) {
                 let newExp = LocalExpense(
                     id: id,
+                    ownerUserId: ownerUserId,
                     title: exp.title,
                     amount: exp.amount,
                     pillar: exp.pillar,
@@ -192,11 +213,13 @@ final class ExpensesSyncManager {
     
     func pushPendingActions(to service: any ExpensesServicing) async {
         guard !isSyncing else { return }
+        guard !ownerUserId.isEmpty else { return }
         isSyncing = true
         defer { isSyncing = false }
         
         do {
             let pendingActions = try context.fetch(FetchDescriptor<OfflineSyncAction>(sortBy: [SortDescriptor(\.timestamp, order: .forward)]))
+                .filter { LocalCacheScope.isOwnedByCurrentUser($0.ownerUserId, currentUserId: ownerUserId) }
             for action in pendingActions {
                 do {
                     switch action.operationType {
@@ -226,6 +249,30 @@ final class ExpensesSyncManager {
             try context.save()
         } catch {
             logger.error("Failed to fetch or save pending actions: \(error)")
+        }
+    }
+
+    private func cleanupLegacyRows() throws {
+        for row in try context.fetch(FetchDescriptor<LocalExpense>()).filter({ $0.ownerUserId == nil }) {
+            context.delete(row)
+        }
+        for row in try context.fetch(FetchDescriptor<LocalBudgetSnapshot>()).filter({ $0.ownerUserId == nil }) {
+            context.delete(row)
+        }
+        for row in try context.fetch(FetchDescriptor<LocalBudgetPlanItem>()).filter({ $0.ownerUserId == nil }) {
+            context.delete(row)
+        }
+        for row in try context.fetch(FetchDescriptor<LocalExpenseCategory>()).filter({ $0.ownerUserId == nil }) {
+            context.delete(row)
+        }
+        for row in try context.fetch(FetchDescriptor<LocalRecurringTemplate>()).filter({ $0.ownerUserId == nil }) {
+            context.delete(row)
+        }
+        for row in try context.fetch(FetchDescriptor<OfflineSyncAction>()).filter({ $0.ownerUserId == nil }) {
+            context.delete(row)
+        }
+        if context.hasChanges {
+            try context.save()
         }
     }
 }

@@ -375,26 +375,31 @@ protocol PortfolioLocalPersisting {
 @MainActor
 struct SwiftDataPortfolioLocalStore: PortfolioLocalPersisting {
   private let modelContext: ModelContext
+  private let ownerUserId: String
 
-  init(context: ModelContext) {
+  init(context: ModelContext, ownerUserId: String = LocalCacheScope.currentOwnerUserId) {
     self.modelContext = context
+    self.ownerUserId = ownerUserId
   }
 
   func reconcile(with remoteStocks: [StockResponse], in portfolioListId: String?) throws {
+    guard !ownerUserId.isEmpty else { return }
     let remoteIds = remoteStocks.map(\.id)
     let listId = portfolioListId ?? ""
+
+    try deleteLegacyRows()
 
     let staleDescriptor: FetchDescriptor<SDPortfolioStock>
     if remoteIds.isEmpty {
       staleDescriptor = FetchDescriptor<SDPortfolioStock>(
         predicate: #Predicate { local in
-          (local.portfolioListId ?? "") == listId
+          local.ownerUserId == ownerUserId && (local.portfolioListId ?? "") == listId
         }
       )
     } else {
       staleDescriptor = FetchDescriptor<SDPortfolioStock>(
         predicate: #Predicate { local in
-          (local.portfolioListId ?? "") == listId && !remoteIds.contains(local.id)
+          local.ownerUserId == ownerUserId && (local.portfolioListId ?? "") == listId && !remoteIds.contains(local.id)
         }
       )
     }
@@ -408,7 +413,7 @@ struct SwiftDataPortfolioLocalStore: PortfolioLocalPersisting {
     } else {
       let touchedDescriptor = FetchDescriptor<SDPortfolioStock>(
         predicate: #Predicate { local in
-          remoteIds.contains(local.id)
+          local.ownerUserId == ownerUserId && remoteIds.contains(local.id)
         }
       )
       let touchedRows = try modelContext.fetch(touchedDescriptor)
@@ -418,9 +423,11 @@ struct SwiftDataPortfolioLocalStore: PortfolioLocalPersisting {
     for remote in remoteStocks {
       if let local = existingById[remote.id] {
         local.update(from: remote)
+        local.ownerUserId = ownerUserId
         local.portfolioListId = listId
       } else {
         let local = SDPortfolioStock(from: remote)
+        local.ownerUserId = ownerUserId
         local.portfolioListId = listId
         modelContext.insert(local)
       }
@@ -432,14 +439,20 @@ struct SwiftDataPortfolioLocalStore: PortfolioLocalPersisting {
   }
 
   func upsert(_ stock: StockResponse, in portfolioListId: String?) throws {
+    guard !ownerUserId.isEmpty else { return }
+    try deleteLegacyRows()
     let id = stock.id
     let listId = portfolioListId ?? ""
-    let descriptor = FetchDescriptor<SDPortfolioStock>(predicate: #Predicate { $0.id == id })
+    let descriptor = FetchDescriptor<SDPortfolioStock>(
+      predicate: #Predicate { $0.ownerUserId == ownerUserId && $0.id == id }
+    )
     if let existing = try modelContext.fetch(descriptor).first {
       existing.update(from: stock)
+      existing.ownerUserId = ownerUserId
       existing.portfolioListId = listId
     } else {
       let local = SDPortfolioStock(from: stock)
+      local.ownerUserId = ownerUserId
       local.portfolioListId = listId
       modelContext.insert(local)
     }
@@ -449,12 +462,23 @@ struct SwiftDataPortfolioLocalStore: PortfolioLocalPersisting {
   }
 
   func delete(id: String) throws {
-    let descriptor = FetchDescriptor<SDPortfolioStock>(predicate: #Predicate { $0.id == id })
+    guard !ownerUserId.isEmpty else { return }
+    let descriptor = FetchDescriptor<SDPortfolioStock>(
+      predicate: #Predicate { $0.ownerUserId == ownerUserId && $0.id == id }
+    )
     if let existing = try modelContext.fetch(descriptor).first {
       modelContext.delete(existing)
     }
     if modelContext.hasChanges {
       try modelContext.save()
     }
+  }
+
+  private func deleteLegacyRows() throws {
+    let descriptor = FetchDescriptor<SDPortfolioStock>(
+      predicate: #Predicate { $0.ownerUserId == nil }
+    )
+    let rows = try modelContext.fetch(descriptor)
+    rows.forEach(modelContext.delete)
   }
 }

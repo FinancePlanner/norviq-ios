@@ -185,7 +185,7 @@ final class PortfolioViewModelTests: XCTestCase {
   func testSwiftDataStoreReconcileAppliesCreateUpdateDelete() throws {
     let container = try makeInMemoryContainer()
     let context = container.mainContext
-    let store = SwiftDataPortfolioLocalStore(context: context)
+    let store = SwiftDataPortfolioLocalStore(context: context, ownerUserId: "user-1")
 
     context.insert(SDPortfolioStock(id: "old", symbol: "OLD", shares: 1, buyPrice: 1, buyDate: "2025-01-01"))
     context.insert(SDPortfolioStock(id: "aapl", symbol: "AAPL", shares: 1, buyPrice: 100, buyDate: "2025-01-01"))
@@ -205,7 +205,7 @@ final class PortfolioViewModelTests: XCTestCase {
   func testSwiftDataStoreReconcileUsesServerAsSourceOfTruth() throws {
     let container = try makeInMemoryContainer()
     let context = container.mainContext
-    let store = SwiftDataPortfolioLocalStore(context: context)
+    let store = SwiftDataPortfolioLocalStore(context: context, ownerUserId: "user-1")
 
     context.insert(SDPortfolioStock(id: "aapl", symbol: "AAPL", shares: 1, buyPrice: 99, buyDate: "2025-01-01"))
     try context.save()

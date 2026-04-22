@@ -16,6 +16,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CFBundleDisplayName</key>
 	<string>Norviqa</string>
+	<key>NorviqaAPIEnvironment</key>
+	<string>$(NORVIQA_API_ENVIRONMENT)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

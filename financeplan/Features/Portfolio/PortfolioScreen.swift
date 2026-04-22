@@ -59,11 +59,19 @@ struct PortfolioScreen: View {
     let buyPrice: Double
   }
 
+  private var currentOwnerUserId: String {
+    LocalCacheScope.currentOwnerUserId
+  }
+
+  private var ownedStocks: [SDPortfolioStock] {
+    stocks.filter { LocalCacheScope.isOwnedByCurrentUser($0.ownerUserId, currentUserId: currentOwnerUserId) }
+  }
+
   private var scopedStocks: [SDPortfolioStock] {
     guard let selectedListId = viewModel.selectedPortfolioListId else {
-      return stocks
+      return ownedStocks
     }
-    return stocks.filter { ($0.portfolioListId ?? "") == selectedListId }
+    return ownedStocks.filter { ($0.portfolioListId ?? "") == selectedListId }
   }
 
   private var holdingsValue: Double {
@@ -215,14 +223,14 @@ struct PortfolioScreen: View {
   }
 
   private var rootContent: AnyView {
-    if viewModel.isLoading && stocks.isEmpty {
+    if viewModel.isLoading && scopedStocks.isEmpty {
       return AnyView(
         PortfolioSkeletonView()
           .transition(.opacity)
       )
     }
 
-    if let error = viewModel.errorMessage, stocks.isEmpty {
+    if let error = viewModel.errorMessage, scopedStocks.isEmpty {
       return AnyView(
         ContentUnavailableView {
           Label("Unable to Load Portfolio", systemImage: "exclamationmark.triangle")
@@ -259,11 +267,11 @@ struct PortfolioScreen: View {
                 }
 
                 HStack(spacing: 4) {
-                  Image(systemName: "arrow.up.right")
-                  Text("+2.31% ($2,816.32)")
+                  Image(systemName: totalValue > 0 ? "arrow.up.right" : "minus")
+                  Text(totalValue > 0 ? "+2.31% ($2,816.32)" : "No portfolio trend yet")
                 }
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.green)
+                .foregroundStyle(totalValue > 0 ? .green : .secondary)
               }
               .padding(.horizontal, 4)
 
@@ -464,7 +472,7 @@ struct PortfolioScreen: View {
       return
     }
 
-    guard let stock = stocks.first(where: { $0.symbol.uppercased() == normalizedSymbol }) else {
+    guard let stock = scopedStocks.first(where: { $0.symbol.uppercased() == normalizedSymbol }) else {
       Self.pushLogger.warning("push.analytics routed_failure destination=stock_detail reason=symbol_not_found symbol=\(normalizedSymbol, privacy: .public)")
       showPushFallbackMessage("No holding found for \(normalizedSymbol). Open Portfolio to review positions.")
       return
@@ -494,7 +502,10 @@ struct PortfolioScreen: View {
   private static func makeChartData(totalValue: Double, timeRange: TimeRange) -> [ChartDataPoint] {
     let calendar = Calendar.current
     let today = Date()
-    let baseValue = totalValue == 0 ? 100_000.0 : totalValue
+    guard totalValue > 0 else {
+      return []
+    }
+    let baseValue = totalValue
 
     let (count, component): (Int, Calendar.Component) = {
       switch timeRange {
@@ -581,10 +592,9 @@ private struct PortfolioRow: View {
             .font(.headline)
             .foregroundStyle(.primary)
 
-          // Hardcoded for presentation matching screenshot until live price is loaded
-          Text("+1.20%")
+          Text("No trend")
             .font(.subheadline.weight(.medium))
-            .foregroundStyle(.green)
+            .foregroundStyle(.secondary)
         }
       }
       .padding(.vertical, 4)

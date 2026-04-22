@@ -617,7 +617,8 @@ final class StockDetailsViewModel: ObservableObject {
             return AnalysisMetricsLoadResult(metrics: metrics, message: nil)
         } catch let error as MarketDataHTTPClient.Error {
             if let message = error.errorDescription,
-               message.localizedCaseInsensitiveContains("free-tier coverage")
+               message.localizedCaseInsensitiveContains("market data coverage")
+                || message.localizedCaseInsensitiveContains("free-tier coverage")
                 || message.localizedCaseInsensitiveContains("premium")
                 || message.localizedCaseInsensitiveContains("subscription") {
                 return AnalysisMetricsLoadResult(
@@ -752,7 +753,8 @@ final class StockDetailsViewModel: ObservableObject {
     }
 
     private func isUnsupportedStatementsError(message: String) -> Bool {
-        message.localizedCaseInsensitiveContains("free-tier coverage")
+        message.localizedCaseInsensitiveContains("market data coverage")
+            || message.localizedCaseInsensitiveContains("free-tier coverage")
             || message.localizedCaseInsensitiveContains("premium")
             || message.localizedCaseInsensitiveContains("subscription")
             || message.localizedCaseInsensitiveContains("unsupported symbol")
