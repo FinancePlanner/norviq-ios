@@ -1,438 +1,568 @@
-# FinancePlan iOS Study Guide
+# Norviqa iOS SwiftUI Client Study Guide
 
 ## Purpose
 
-This document is a deep study guide for the full iOS application.
+This document is a study guide for the SwiftUI client project. It explains the app architecture, the important Swift and SwiftUI structures, local persistence, networking, concurrency, UI composition, and the major feature modules.
 
-It is meant to help you study:
+Use it as a map when reading the codebase. The app is useful to study because it is not a tiny sample project: it has authenticated API calls, local SwiftData caching, token refresh, feature view models, charts, settings, onboarding, push notifications, reports, and reusable design components.
 
-- SwiftUI app structure
-- MVVM in a real app
-- dependency injection with `Factory`
-- async networking in Swift
-- authentication and session restoration
-- feature composition
-- reusable styling systems
-- state management patterns
-- accessibility, feedback, and modern Apple-style UI decisions
+## Current App Shape
 
-This app is not a toy example. It already mixes:
+Norviqa is an iOS finance app with two main product areas:
 
-- API-backed features
-- local-first planning state
-- mocked future research features
-- reusable design primitives
-- unit-tested business logic
+- personal finance: expenses, budgets, recurring spend, reports, dashboard insights
+- investing: portfolio holdings, allocation, watchlist, stock research, valuations, market data
 
-That makes it a good codebase to study both SwiftUI and app architecture.
+The client is a SwiftUI app backed by a Vapor API. The app uses:
 
-## 1. What the App Is
+- SwiftUI for UI and app lifecycle
+- SwiftData for local cache and offline-style expense writes
+- `Factory` for dependency injection
+- `URLSession` through feature HTTP clients
+- `async/await` for networking and view-model loading
+- `NotificationCenter` for cross-feature refresh events
+- Swift Charts for finance visualizations
+- Sentry for observability
+- shared DTOs from `StockPlanShared`
 
-FinancePlan is a dual-purpose app:
+## Recent Data-Isolation Changes
 
-- a personal financial planning tool for salary, expenses, and reports
-- a stock portfolio and stock research tool
+The local cache now has explicit user ownership. This matters because the same simulator or physical device can log into multiple accounts.
 
-At a high level the app supports:
+The bug fixed here was:
 
-- authentication
-- onboarding and stock import
-- dashboard
-- portfolio holdings
-- portfolio allocation
-- watchlist
-- monthly expense planning
-- reports and analytics
-- stock detail research
-- stock valuation drafting
-- profile management
+- a new user could see stale portfolio, allocation, recent spend, and budget data from a previous signed-in user
+- backend responses were user-scoped, but local SwiftData rows were not
+- Portfolio and Expenses views read every local row from SwiftData
+- some UI showed fake positive portfolio trends for an empty account
 
-Some features are already live against the backend. Others are intentionally mocked on the client and marked with `// to fill from endpoint later`.
+The fix added:
 
-## 2. Repository Layout
+- `ownerUserId` to local SwiftData models
+- `LocalCacheScope.currentOwnerUserId`
+- user-scoped local fetches in Portfolio, Allocation, Watchlist, Expenses, and sync code
+- cleanup/ignore behavior for legacy unowned local rows
+- no automatic budget snapshot creation while loading a blank account
+- zero-state portfolio chart behavior
+- neutral empty portfolio trend copy instead of fake green gains
+- more stable empty-state card heights
 
-The working app repo is:
+Study these files for the fix:
+
+- `Models/Local/LocalCacheScope.swift`
+- `Models/Local/SDPortfolioStock.swift`
+- `Models/Local/SDWatchlistItem.swift`
+- `Features/Expenses/ExpensesSwiftDataModels.swift`
+- `Features/Expenses/ExpensesSyncManager.swift`
+- `Features/Expenses/BudgetPlannerViewModel.swift`
+- `Features/Portfolio/PortfolioViewModel.swift`
+- `Features/Portfolio/PortfolioScreen.swift`
+- `Features/Portfolio/PortfolioAllocationScreen.swift`
+- `Features/Stocks/Watchlist/WatchlistViewModel.swift`
+- `Features/Stocks/Watchlist/WatchlistTab.swift`
+
+## Repository Layout
+
+The app target lives under:
 
 ```text
 financeplan/
-├── Info.plist
-├── LaunchScreen.storyboard
-├── financeplan.xcodeproj
-├── financeplan/                  # App target source
-│   ├── API/
-│   ├── Components/
-│   ├── Documentation/
-│   ├── Features/
-│   ├── Typography/
-│   ├── Utilities/
-│   ├── AppEnvironment.swift
-│   ├── Constants.swift
-│   ├── Container+AppFactories.swift
-│   ├── ContentView.swift
-│   ├── NorviqaApp.swift
-│   └── SessionManager.swift
-├── financeplanTests/
-└── financeplanUITests/
+├── API/                  # HTTP clients, endpoints, feature networking factories
+├── Components/           # reusable SwiftUI components
+├── Documentation/        # architecture and implementation notes
+├── Extensions/           # reusable SwiftUI compatibility/helper modifiers
+├── Features/             # feature modules
+├── Models/Local/         # SwiftData models and shared ModelContainer
+├── Typography/           # typography system
+├── Utilities/            # generic helpers, parsers, image/chart utilities
+├── AppEnvironment.swift
+├── AppLanguage.swift
+├── AppTheme.swift
+├── Constants.swift
+├── ContentView.swift
+├── NorviqaApp.swift
+└── SessionManager.swift
 ```
 
-The code is organized by responsibility:
+Feature folders usually follow this shape:
 
-- `API/`: HTTP clients, endpoint definitions, transport helpers
-- `Features/`: feature modules, usually view + view model + service/model
-- `Components/`: reusable SwiftUI building blocks
-- `Typography/`: font and text style abstractions
-- `Utilities/`: generic helpers and modifiers
-- root app files: bootstrapping, environment, app-wide dependency registration
+```text
+Features/<Feature>/
+├── <Feature>Screen.swift
+├── <Feature>ViewModel.swift
+├── <Feature>Service.swift
+└── <Feature>Models.swift
+```
 
-## 3. App Startup and Root Flow
+The app is not perfectly uniform, but the common pattern is:
 
-The app entry point is `financeplan/NorviqaApp.swift`.
+```text
+SwiftUI View -> ViewModel -> Service -> HTTP Client -> Endpoint -> API
+```
 
-### App shell
+## App Lifecycle
 
-`NorviqaApp` does four important things:
+The entry point is `NorviqaApp`.
 
-1. creates the shared `SessionManager` as a `@StateObject`
-2. injects the session manager into the environment
-3. reads persisted appearance with `@AppStorage`
-4. mounts `ContentView()` as the root screen
+Important structures:
 
-Important concepts here:
+- `@main struct NorviqaApp: App`
+- `WindowGroup`
+- `ContentView`
+- `.modelContainer(sharedModelContainer)`
+- `.environmentObject(sessionManager)`
+- `.preferredColorScheme(...)`
+- `.tint(...)`
+- `@UIApplicationDelegateAdaptor(PushNotificationsAppDelegate.self)`
 
-- `@main` declares the SwiftUI app entry
-- `WindowGroup` is the main scene container
-- `.preferredColorScheme(...)` centralizes theme selection
-- `.tint(...)` sets a global accent color
+`NorviqaApp` is responsible for global app setup:
 
-### Root state machine
+- creates the root `SessionManager`
+- injects SwiftData's shared model container
+- injects session state into SwiftUI's environment
+- applies stored language and appearance preferences
+- wires push-notification delegate behavior
+- applies the current app environment identity
 
-`financeplan/ContentView.swift` acts like a small app router.
+`ContentView` is the root flow controller. It chooses which major experience to show:
 
-It manages these phases:
+- splash
+- login/signup
+- onboarding/import flow
+- authenticated main app
+- locked app state when security lock is active
 
-1. splash
-2. authentication
-3. mandatory first stock import
-4. main app shell
+This is a SwiftUI state-machine pattern: instead of imperatively pushing root controllers, the root view derives the visible app flow from state.
 
-The root flow is state-driven:
+## Environment And Configuration
 
-- before launch completes: show `SplashScreen`
-- authenticated but onboarding incomplete: show `OnboardingImportFlow`
-- authenticated and onboarding complete: show `HomeScreen`
-- otherwise: show `LoginScreen`
+Important files:
 
-This is a common SwiftUI pattern: instead of a central imperative navigator, the UI is derived from a few state values.
+- `AppEnvironment.swift`
+- `Constants.swift`
+- `SchemeEnvironment.swift`
+- `Container+AppFactories.swift`
 
-### Testing hooks at startup
+`AppEnvironment` contains:
 
-`ContentView` also supports UI-test launch arguments.
+- title
+- REST API base URL
+- websocket base URL
 
-Examples:
+The supported environments are:
 
-- `-ui_test_skip_splash`
-- `-ui_test_reset_session`
-- forced auth token, refresh token, username, and imported-user state
+- local
+- dev
+- production
 
-This is a strong testing pattern: the app can be launched into deterministic states without tapping through the whole UI.
+Environment selection can come from:
 
-## 4. Environment and Configuration
+- `NORVIQA_ENVIRONMENT`
+- Xcode scheme configuration
+- persisted user defaults
+- build defaults
 
-The environment system is split across:
+`AppEnvironmentManager` uses modern Swift observation with `@Observable`. This is different from `ObservableObject`; SwiftUI can track property reads more precisely.
 
-- `financeplan/AppEnvironment.swift`
-- `financeplan/Constants.swift`
-- `financeplan/SchemeEnvironment.swift`
+## Dependency Injection
 
-### Environment model
+The app uses `Factory`.
 
-`AppEnvironment` stores:
+Common registration pattern:
 
-- `title`
-- `apiBaseUrl`
-- `wsBaseUrl`
+```swift
+extension Container {
+  var stockService: Factory<StockServicing> {
+    self { StockService(...) }
+  }
+}
+```
 
-Defined environments are:
+Important injection styles used in the app:
 
-- `local`
-- `dev`
-- `production`
+- `@InjectedObservable(\Container.appEnvironment)` for observable app-wide state
+- `@StateObject` for view-owned view models
+- direct `Container.shared.someService()` for service construction inside view models
+- feature-specific `Container+...Factories.swift` files for modular dependencies
 
-### AppEnvironmentManager
+Study:
 
-`AppEnvironmentManager` is declared with the `@Observable` macro in `Constants.swift`.
-
-That is important for study because it shows modern Swift observation, not only `ObservableObject`.
-
-Environment resolution order is:
-
-1. runtime env var `NORVIQA_ENVIRONMENT`
-2. generated scheme value from `SchemeEnvironment`
-3. persisted user defaults selection
-4. build-based default: `dev` in debug, `production` in release
-
-This design is good because:
-
-- it supports local development
-- it supports Xcode schemes
-- it supports persistent manual switching
-- it keeps network base URLs centralized
-
-## 5. Dependency Injection with Factory
-
-This app uses the `Factory` package for DI.
-
-Main registration file:
-
-- `financeplan/Container+AppFactories.swift`
-
-Additional feature-specific factories:
-
+- `Container+AppFactories.swift`
+- `API/Expenses/Container+ExpensesFactories.swift`
+- `API/Dashboard/Container+DashboardFactories.swift`
+- `API/MarketData/Container+MarketDataFactories.swift`
 - `API/UserProfile/Container+UserProfileFactories.swift`
-- `API/Assets/Container+AssetSearchFactories.swift`
 
-### Why this matters
+The main benefit is testability. View models can receive mock services, while production uses real services from the container.
 
-Instead of constructing services everywhere in views, the app centralizes object creation inside `Container`.
+## State Management
 
-Examples of registered dependencies:
-
-- `appEnvironment`
-- `windowSize`
-- `authService`
-- `authSessionStore`
-- `authSessionManager`
-- `stockService`
-- `userProfileService`
-
-### Benefits
-
-- better testability
-- easier swapping between real and stub implementations
-- less coupling between UI and infrastructure
-
-### Property wrapper usage
-
-The app uses several injection-related wrappers:
-
-- `@InjectedObject`
-- `@InjectedObservable`
-- direct `Container.shared.someDependency()`
-
-This is worth studying because the code does not use a single DI style everywhere. It uses the right tool for the ownership model of each object.
-
-## 6. State Management Patterns
-
-This codebase is a good survey of SwiftUI state tools.
+The app uses several SwiftUI state tools. Study where each appears.
 
 ### `@State`
 
-Used for local ephemeral view state:
+Used for value state owned by a view:
 
-- selected tabs
+- selected tab
+- selected segment
 - sheet visibility
-- dialogs
-- selected scenario
-- toast visibility
+- selected item for a sheet
+- temporary form input
+- animation flags
+- chart selection
+
+Examples:
+
+- `HomeScreen`
+- `PortfolioScreen`
+- `ExpensesComparisonScreen`
+- `LoginScreen`
 
 ### `@StateObject`
 
-Used when the view owns the lifecycle of a reference type:
+Used when a view owns a reference model lifecycle:
 
-- `LoginViewModel`
 - `BudgetPlannerViewModel`
+- `ReportsViewModel`
 - `PortfolioViewModel`
-- `UserProfileViewModel`
+- `LoginViewModel`
+- `BadgesViewModel`
 
 ### `@ObservedObject`
 
-Used when a parent owns the view model and passes it down:
+Used when a parent owns the object and a child observes it:
 
 - `ExpensesPlannerScreen(viewModel:)`
-- `ExpensesComparisonScreen(viewModel:)`
-- `StockCompareTab(viewModel:)`
+- `WatchlistTab(viewModel:)`
+- settings/profile subviews
 
 ### `@EnvironmentObject`
 
-Used for truly shared root state:
+Used for broad app-level or feature-root shared state:
 
 - `SessionManager`
-- `PortfolioViewModel` inside the portfolio root branch
+- `PortfolioViewModel` inside portfolio screens
+
+### `@Environment`
+
+Used for SwiftUI environment values:
+
+- `colorScheme`
+- `dismiss`
+- `modelContext`
+- `openURL`
+- locale-dependent rendering
 
 ### `@AppStorage`
 
-Used for lightweight persistence:
+Used for small persisted preferences:
 
-- selected app appearance
+- app language
+- app appearance
+- reports dashboard card preferences
 
-### `@FocusState`
+### `@Query`
 
-Used for form focus management:
+Used to read SwiftData collections directly in SwiftUI views:
 
-- auth form fields
+- portfolio holdings
+- allocation holdings
+- watchlist rows
 
-### `@AccessibilityFocusState`
+Important rule in this project: raw `@Query` rows must be filtered by `LocalCacheScope` before rendering, because the shared model container can contain rows for multiple users.
 
-Used for VoiceOver focus:
+## SwiftData Architecture
 
-- `ToastBanner`
+Important files:
 
-### `@Observable`
+- `Models/Local/SharedModelContainer.swift`
+- `Models/Local/LocalCacheScope.swift`
+- `Models/Local/SDPortfolioStock.swift`
+- `Models/Local/SDWatchlistItem.swift`
+- `Features/Expenses/ExpensesSwiftDataModels.swift`
+- `Features/Expenses/ExpensesSyncManager.swift`
 
-Used for:
+The shared model container includes:
 
-- `AppEnvironmentManager`
+- `SDPortfolioStock`
+- `SDWatchlistItem`
+- `LocalExpense`
+- `LocalBudgetSnapshot`
+- `LocalBudgetPlanItem`
+- `LocalExpenseCategory`
+- `LocalRecurringTemplate`
+- `OfflineSyncAction`
 
-This is the new Swift observation model and is worth comparing with `ObservableObject`.
+### Local ownership
 
-## 7. Session and Authentication Architecture
+Most local models now include:
 
-The auth stack is one of the stronger architectural parts of the app.
+```swift
+var ownerUserId: String?
+```
 
-Main files:
+Use:
+
+```swift
+LocalCacheScope.currentOwnerUserId
+LocalCacheScope.isOwnedByCurrentUser(...)
+```
+
+This prevents cross-account local data leakage.
+
+### Portfolio local model
+
+`SDPortfolioStock` stores cached holdings:
+
+- `id`
+- `ownerUserId`
+- `symbol`
+- `shares`
+- `buyPrice`
+- `buyDate`
+- `notes`
+- `category`
+- `portfolioListId`
+- `lastSyncedAt`
+
+`SwiftDataPortfolioLocalStore` reconciles API portfolio responses into SwiftData. It:
+
+- deletes stale rows for the current user/list
+- updates matching rows
+- inserts new rows
+- ignores or deletes legacy unowned rows
+
+### Watchlist local model
+
+`SDWatchlistItem` stores cached watchlist items:
+
+- `id`
+- `ownerUserId`
+- `symbol`
+- `note`
+- `status`
+- `nextReviewAt`
+- `watchlistListId`
+- `lastSyncedAt`
+
+It follows the same current-user scoping pattern as portfolio.
+
+### Expenses local models
+
+Expense/budget local models include:
+
+- `LocalExpense`
+- `LocalBudgetSnapshot`
+- `LocalBudgetPlanItem`
+- `LocalExpenseCategory`
+- `LocalRecurringTemplate`
+- `OfflineSyncAction`
+
+`ExpensesSyncManager` pulls from the API and updates SwiftData. It also pushes pending offline actions.
+
+The sync flow:
+
+```text
+Expenses API -> ExpensesSyncManager.pullLatestData -> SwiftData rows -> BudgetPlannerViewModel.load -> SwiftUI screens
+```
+
+For offline-style local writes:
+
+```text
+BudgetPlannerViewModel.recordExpenseAndWait
+-> insert LocalExpense
+-> insert OfflineSyncAction
+-> update in-memory activities
+-> pushPendingActions
+-> API create/update/delete
+```
+
+The app intentionally does not create budget data during a plain read/load. A blank account remains blank until the user explicitly creates budget or expense data.
+
+## Networking Architecture
+
+Networking is feature-specific. The common shape is:
+
+```text
+Endpoint type -> HTTP client -> Service -> ViewModel
+```
+
+Important endpoint folders:
+
+- `API/Auth`
+- `API/Stocks`
+- `API/Expenses`
+- `API/Dashboard`
+- `API/MarketData`
+- `API/UserProfile`
+- `API/Notifications`
+- `API/Badges`
+- `API/Goals`
+
+### Endpoint pattern
+
+Endpoint structs usually define:
+
+- path
+- HTTP method
+- request body
+- query items
+- expected response type
+
+This keeps URL construction and response decoding out of views.
+
+### HTTP clients
+
+Examples:
+
+- `AuthHTTPClient`
+- `StockHTTPClient`
+- `ExpensesHTTPClient`
+- `DashboardHTTPClient`
+- `MarketDataHTTPClient`
+- `UserProfileHTTPClient`
+
+HTTP clients usually:
+
+- build a `URLRequest`
+- attach auth headers when needed
+- run `URLSession.data(for:)`
+- validate status codes
+- decode API envelopes or DTOs
+- map server errors to typed client errors
+- log useful debug info
+
+### Service layer
+
+Services hide networking details from view models.
+
+Examples:
+
+- `AuthService`
+- `StockService`
+- `ExpensesService`
+- `DashboardService`
+- `MarketDataService`
+- `UserProfileService`
+- `ActivityService`
+
+Services often handle:
+
+- current environment base URL
+- auth token retrieval
+- session invalidation on `401`
+- retry or fallback behavior
+- domain-friendly method names
+
+## Authentication And Session Management
+
+Important files:
 
 - `Features/Auth/AuthService.swift`
 - `Features/Auth/AuthSessionManager.swift`
 - `Features/Auth/LoginViewModel.swift`
 - `Features/Auth/LoginScreen.swift`
+- `Features/Auth/SecureStringStore.swift`
+- `Features/Auth/JWTTokenInspector.swift`
+- `Features/Auth/OAuthWebAuthenticator.swift`
 - `API/Auth/AuthHTTPClient.swift`
-- `API/Auth/AuthEndpoints.swift`
 
-### Layers
-
-The auth stack follows a clear layered shape:
-
-1. view
-2. view model
-3. domain service
-4. HTTP client
-5. endpoint definitions
-6. persistent session store
-
-### AuthSessionStore
+### Auth storage
 
 `UserDefaultsAuthSessionStore` stores:
 
-- access token
+- auth token
 - refresh token
 - token expirations
 - current user id
 - current username
-- login/signup UI mode
-- whether onboarding import was completed for a user
+- login/signup preference
+- onboarding import completion by user id
 
-It uses a secure string store and falls back to `UserDefaults` if needed.
+Tokens are stored through `SecureStringStore` where possible. User defaults are used for simple metadata.
 
-This is a nice study example because it combines:
+### Auth session manager
 
-- security-conscious storage
-- migration support
-- simple app-state persistence
+`AuthSessionManager` handles:
 
-### AuthSessionManager
+- restoring a session on launch
+- checking access token expiry
+- refreshing with the refresh token
+- invalidating the session
+- broadcasting invalidation notifications
 
-`AuthSessionManager` is the logic layer for token validity.
+Concurrency detail: refresh requests are deduplicated with a shared `Task` protected by a lock. This prevents several API calls from all refreshing the token at the same time.
 
-Responsibilities:
+### OAuth
 
-- restore session on app launch
-- return a valid access token
-- refresh token when needed
-- clear invalid sessions
-- broadcast invalidation through `NotificationCenter`
+OAuth sign-in uses:
 
-Important design detail:
+- backend OAuth start endpoint
+- `OAuthWebAuthenticator`
+- callback URL parsing
+- backend OAuth exchange endpoint
 
-- it deduplicates refresh work with a shared `Task` protected by `NSLock`
+The API now supports linking Google, Apple, and X identities to an existing account when the provider returns the same verified email.
 
-That avoids multiple concurrent refresh requests.
+## Concurrency Patterns
 
-### LoginViewModel
+The codebase is mostly `async/await`.
 
-`LoginViewModel` is a textbook `@MainActor` view model.
+Patterns to study:
 
-Responsibilities:
-
-- own text field state
-- validate fields
-- switch between login and signup
-- submit auth requests
-- map errors to user-facing messages
-- persist auth response on success
-
-This is a good example of keeping business and submission logic out of the view.
-
-### LoginScreen
-
-`LoginScreen` focuses on composition and interaction:
-
-- text field layout
-- focus order
-- sheets
-- confirmation dialog
-- toast banner
-- error display
-
-The view delegates logic to the view model, which is exactly what you want in MVVM.
-
-## 8. Networking Pattern
-
-The networking pattern is feature-specific but consistent.
+- `@MainActor` view models
+- `.task { await viewModel.load() }`
+- `.refreshable { await viewModel.load(force: true) }`
+- `async let` for parallel independent requests
+- `Task { ... }` for fire-and-forget UI actions
+- cancellation-tolerant UI loading
+- `defer` to reset loading flags
+- lock-protected token refresh state
 
 Examples:
 
-- `AuthHTTPClient`
-- `UserProfileHTTPClient`
-- `StockHTTPClient`
+- `DashboardRoot.loadContent()` loads metrics, insights, activity, focus points, and budget in parallel.
+- `BudgetPlannerViewModel.load()` pulls API data, reads SwiftData, maps summaries, and fetches reports.
+- `ReportsViewModel.load()` fetches report overview and partner data.
+- `AuthSessionManager.validAccessToken()` deduplicates refresh.
 
-### Common shape
+Important style:
 
-Each HTTP client usually does the following:
+- UI mutation happens on main actor.
+- Services and HTTP clients perform async I/O.
+- View bodies do not perform networking directly.
 
-1. receives a typed endpoint
-2. builds a `URLRequest`
-3. executes via `URLSession` abstraction
-4. checks HTTP status codes
-5. decodes typed responses
-6. maps server errors into app errors
+## Cross-Feature Refresh
 
-### Why this is good for study
+The app uses `NotificationCenter` for broad refresh events.
 
-It shows a practical middle ground between:
+Important notifications:
 
-- one huge generic networking layer
-- and fully duplicated per-feature networking
+- `.budgetPlannerDataDidChange`
+- `.portfolioDataDidChange`
+- `.authSessionDidInvalidate`
+- `.authSessionWillInvalidate`
+- push-notification route notifications
 
-Each feature gets:
+Example:
 
-- its own transport errors
-- its own session abstraction for tests
-- its own auth rules if necessary
+- recording an expense posts `.budgetPlannerDataDidChange`
+- Home and Reports observe it and reload
+- updating portfolio posts `.portfolioDataDidChange`
+- Home and Portfolio refresh related metrics
 
-### Service layer on top of HTTP client
+This is pragmatic for sibling tabs that need to refresh without passing callbacks through many layers.
 
-The app uses service objects above HTTP clients:
+## Navigation
 
-- `AuthService`
-- `StockService`
-- `UserProfileHTTPService`
+The top-level app uses:
 
-That layer:
+- `TabView` in `HomeScreen`
+- `NavigationStack` inside feature roots
+- sheets for modal editing
+- segmented controls for related sub-views
 
-- resolves the current environment
-- injects auth/session dependencies
-- retries unauthorized requests after refresh
-- exposes domain-friendly methods to view models
-
-This separation is one of the most useful architectural lessons in the codebase.
-
-## 9. Navigation Architecture
-
-Navigation is intentionally simple and mostly local.
-
-### Top-level navigation
-
-`HomeScreen` owns the main `TabView` with five tabs:
+Main tabs:
 
 - Home
 - Portfolio
@@ -440,603 +570,591 @@ Navigation is intentionally simple and mostly local.
 - Reports
 - Settings
 
-### Feature-local navigation
+Portfolio uses local segmented navigation:
 
-Inside tabs, features use `NavigationStack`.
+- Holdings
+- Allocation
+- Watchlist
 
-Examples:
+Reports uses segmented navigation:
 
-- dashboard stack
-- portfolio stack
-- settings stack
-- user profile modal stack
+- Overview
+- Portfolio
+- Spending
+- Trends
 
-### Segmented navigation
+Stock detail uses internal sections/tabs for research, projections, comparison, and related content.
 
-Within some screens, the app uses segmented `Picker`s as local sub-navigation.
+## Main Feature Modules
 
-Examples:
+### Home Dashboard
 
-- portfolio segments: `Holdings`, `Allocation`, `Watchlist`
-- stock detail tabs: `Overview`, `Projections`, `Compare`
-- report mode: `Months` vs `Years`
-
-This is very Apple-like: top-level tabs for major areas, segmented controls for closely related sub-areas.
-
-## 10. Feature Architecture by Module
-
-### Dashboard
-
-Main file:
+Important files:
 
 - `Features/Home/HomeScreen.swift`
+- `Features/Home/DashboardService.swift`
+- `Features/Home/UnifiedActivityFeed.swift`
+- `Features/Home/HomeQuickExpenseSheet.swift`
+- `Features/Home/AssetSearchViewModel.swift`
 
-The dashboard mixes:
+The dashboard composes:
 
-- greeting logic
-- search
-- summary cards
-- charts
+- hero wealth/spending card
+- dashboard metrics
+- stock search
+- activity feed
+- recent spend
+- financial health
+- quick expense entry
 - insight cards
-- entry points into other tabs
+- focus points
 
-It currently contains mocked data for:
+SwiftUI concepts used:
 
-- trend points
-- spending points
-- insight cards
+- `NavigationStack`
+- `ScrollView`
+- `GlassEffectContainer`
+- `.searchable`
+- `.refreshable`
+- `.task`
+- `.onReceive`
+- `@State` dashboard state
+- `@ObservedObject` shared budget store
 
-Those are explicitly marked to be replaced by endpoints later.
+Concurrency detail: `loadContent()` uses `async let` to load independent data in parallel.
 
 ### Portfolio
 
-Main files:
+Important files:
 
 - `Features/Portfolio/PortfolioViewModel.swift`
 - `Features/Portfolio/PortfolioScreen.swift`
 - `Features/Portfolio/PortfolioAllocationScreen.swift`
+- `Models/Local/SDPortfolioStock.swift`
 
-The portfolio module is a good MVVM example.
+The portfolio module:
 
-#### `PortfolioViewModel`
+- fetches portfolio lists
+- fetches holdings
+- syncs holdings into SwiftData
+- displays current-user scoped cached rows
+- supports add/edit/delete positions
+- supports target alerts
+- shows allocation chart
 
-Responsibilities:
+SwiftUI concepts used:
 
-- fetch holdings
-- compute totals
-- compute allocation slices
-- create/update/delete positions
-- expose UI state like `isLoading`, `isSaving`, `errorMessage`
+- `@EnvironmentObject PortfolioViewModel`
+- `@Query` for cached holdings
+- `NavigationLink`
+- `.sheet`
+- `.contextMenu`
+- `.toolbar`
+- `.refreshable`
+- Swift Charts `SectorMark`
+- `ShareLink`
 
-Computed properties like `totalValue` and `allocationSlices` keep the view thin.
+Important implementation detail: `@Query` returns all cached rows, so the view filters rows with `LocalCacheScope` before computing totals or rendering.
 
-#### `PortfolioScreen`
+### Watchlist
 
-Responsibilities:
+Important files:
 
-- render summary
-- render list of holdings
-- present add/edit sheets
-- send user actions to the view model
+- `Features/Stocks/Watchlist/WatchlistViewModel.swift`
+- `Features/Stocks/Watchlist/WatchlistTab.swift`
+- `Models/Local/SDWatchlistItem.swift`
 
-This is a strong pattern to study:
+The watchlist module mirrors portfolio cache architecture:
 
-- view model holds the data and mutation logic
-- view holds presentation and user interaction
+- API-backed remote source of truth
+- SwiftData local cache
+- current-user scoped reads
+- list selection
+- add/delete watchlist items
+- convert watchlist item into portfolio position
 
-#### `PortfolioAllocationScreen`
+SwiftUI concepts used:
 
-This screen is particularly valuable to study because it combines:
+- `List`
+- `Section`
+- `ContentUnavailableView`
+- swipe actions
+- confirmation dialog
+- sheet-driven add/convert flows
 
-- `Swift Charts` sector chart
-- legend rendering
-- image rendering with `ImageRenderer`
-- share sheet integration
-- social-sharing use case
+### Expenses And Budget Planner
 
-It is a practical example of turning a SwiftUI view into a shareable image.
-
-### Expenses Planner
-
-Main files:
+Important files:
 
 - `Features/Expenses/BudgetPlannerModels.swift`
 - `Features/Expenses/BudgetPlannerViewModel.swift`
 - `Features/Expenses/ExpensesPlannerScreen.swift`
+- `Features/Expenses/ExpensesSyncManager.swift`
+- `Features/Expenses/ExpensesSwiftDataModels.swift`
+- `API/Expenses/ExpensesHTTPClient.swift`
+- `API/Expenses/ExpensesEndpoints.swift`
 
-This is the most domain-heavy feature on the finance side.
+The expenses feature has three layers:
 
-#### Domain model
+```text
+API DTOs -> SwiftData cache -> BudgetPlanner domain models -> SwiftUI screens
+```
 
-The budget system is built on three pillars:
+Important domain types:
 
-- `Fundamentals`
-- `Future You`
-- `Fun`
-
-The core model types are:
-
+- `BudgetPillar`
 - `MonthlyBudgetSnapshot`
 - `BudgetPlanItem`
 - `BudgetActivity`
 - `BudgetMonthSummary`
 - `BudgetYearSummary`
-- `PillarPlanningSummary`
+- `BudgetActivityDraft`
+- `BudgetPlanItemDraft`
 
-This is a useful study example because the feature has an explicit domain vocabulary rather than passing raw dictionaries around.
+Important local types:
 
-#### `BudgetPlannerViewModel`
+- `LocalExpense`
+- `LocalBudgetSnapshot`
+- `LocalBudgetPlanItem`
+- `LocalExpenseCategory`
+- `LocalRecurringTemplate`
+- `OfflineSyncAction`
 
-This view model is one of the most educational files in the app.
+Important behavior:
 
-It shows how to:
+- `load(force:)` pulls latest data from API and maps local SwiftData rows into domain state.
+- local rows are filtered by current `ownerUserId`.
+- a blank user does not get default rent, Netflix, salary, or budget data.
+- expense create writes locally first, then queues an offline sync action.
+- successful mutations post `.budgetPlannerDataDidChange`.
 
-- derive multiple UI summaries from one source of truth
-- compute per-pillar targets from salary
-- compute planned vs actual amounts
-- clone a month forward
-- normalize target shares
-- ensure a month exists before recording activity
-
-The current data is local and mock-seeded by default. That is clearly marked in the initializer.
-
-#### `ExpensesPlannerScreen`
-
-This screen uses many modern SwiftUI pieces:
+SwiftUI concepts used in `ExpensesPlannerScreen`:
 
 - `NavigationStack`
 - `ScrollView`
 - `GlassCard`
-- `toolbarTitleMenu`
 - `Menu`
-- `sheet`
-- `confirmationDialog`
-- `Grid`
-- `Charts`
-
-It is a good screen to study for dense but still structured financial UI.
+- `.toolbar`
+- `.sheet`
+- `.confirmationDialog`
+- custom form components
+- currency parsing
+- progress cards
+- grouped lists
 
 ### Reports
 
-Main file:
+Important files:
 
+- `Features/Reports/ReportsViewModel.swift`
+- `Features/Reports/ReportsDashboardPreferences.swift`
 - `Features/Expenses/ExpensesComparisonScreen.swift`
 
-Reports are intentionally read-only analytics over the same planner state.
+Reports are mostly API-backed read models:
 
-This is an important architectural idea:
+- expense overview
+- monthly summaries
+- yearly summaries
+- pillar summaries
+- cash flow
+- portfolio statistics
 
-- `Expenses` writes state
-- `Reports` reads and visualizes derived summaries
+`ReportsViewModel` fetches report overview and household partner data. If the report portfolio stats are empty, it can fall back to stock-service portfolio data for the active account.
 
-The same `BudgetPlannerViewModel` instance is passed to both tabs from `HomeScreen`.
+SwiftUI concepts used:
 
-That means:
+- segmented `Picker`
+- user-customizable dashboard card order
+- `@AppStorage`
+- Swift Charts
+- `ShareableChartButton`
+- placeholder cards for empty data
 
-- no duplicated analytics state
-- edits in expenses instantly affect reports
+### Stock Research
 
-This is a strong example of sharing a domain view model across sibling screens.
-
-### Stock Detail Research
-
-Main files:
+Important files:
 
 - `Features/Stocks/StockDetailsScreen.swift`
 - `Features/Stocks/StockDetailsScreenViewModel.swift`
-- `Features/Stocks/StockInsightsModels.swift`
 - `Features/Stocks/StockInsightsViews.swift`
+- `Features/MarketData/MarketDataService.swift`
+- `Features/MarketData/MarketDataModels.swift`
 
-This is the most layered feature in the app.
+This module mixes:
 
-#### Overview
-
-The overview tab combines:
-
-- position summary
-- valuation summary
-- current metrics
-- price history
+- stock profile data
+- market snapshots
+- historical chart data
 - news
-- placeholder research sections
+- analyst consensus
+- financial statements
+- DCF valuation
+- projections
+- comparison views
 
-Some sections are real, others are placeholders for later endpoint work.
+SwiftUI concepts used:
 
-#### Projections
+- nested composed cards
+- chart-heavy sections
+- placeholder cards for unavailable data
+- sheet-based editing
+- async loading per section
+- share/export formatting
 
-The projections tab models:
+### Settings And Profile
 
-- current stock context
-- scenario selection
-- 5-year financial forecasts
-- valuation ranges
-- projected CAGR
+Important files:
 
-The current UI is structured like a real analysis screen, but the projection data is still mocked on the client through `StockInsightsMockStore`.
+- `Features/UserProfile/UserProfileView.swift`
+- `Features/UserProfile/UserProfileViewModel.swift`
+- `Features/UserProfile/UserProfileService.swift`
+- `Features/UserProfile/LanguageSettingsView.swift`
+- `Features/UserProfile/HelpSupportView.swift`
+- `Features/UserProfile/AboutNorviqaView.swift`
 
-#### Compare
+The settings/profile module demonstrates:
 
-The compare tab allows:
+- `List`
+- `Section`
+- `NavigationLink`
+- settings-style rows
+- sheets
+- language and appearance preferences
+- LLM connector UI
+- account/logout actions
+- profile API integration
 
-- one primary stock
-- two peer stocks
-- mandatory metric comparison
-- advanced metric comparison
-
-This is a nice example of keeping the screen declarative while centralizing peer-selection logic inside the view model.
-
-#### Mixed data strategy
-
-This feature is important to study because it mixes three data modes:
-
-- API-backed stock details, history, news, valuation
-- locally mocked comparison/projection data
-- derived share/export formatting
-
-That is realistic product evolution: not everything ships with full backend support at the same time.
+Settings is a good place to study Apple-style information architecture: grouped sections, clear labels, native navigation, and simple disclosure.
 
 ### Onboarding
 
-Main files:
+Important files:
 
 - `Features/Onboarding/OnboardingImportFlow.swift`
 - `Features/Onboarding/OnboardingImportViewModel.swift`
 - `Features/Onboarding/InitialStockImportScreen.swift`
+- `Features/Onboarding/CSVImportViewModel.swift`
+- `Features/Onboarding/ManualImportViewModel.swift`
 
-The onboarding flow is built like a local state machine.
+Onboarding is a state-machine style feature. It supports:
 
-`OnboardingImportViewModel.Step` drives:
-
-- choose method
+- manual entries
 - CSV import
-- manual import
-- API import
-- done
+- broker/API import flows
+- portfolio import completion
 
-That is a clean SwiftUI pattern for wizard-like flows.
+Study this for wizard-like SwiftUI flows controlled by enum state.
 
-### User Profile
+### Notifications
 
-Main files:
+Important files:
 
-- `Features/UserProfile/UserProfileViewModel.swift`
-- `Features/UserProfile/UserProfileView.swift`
-- `Features/UserProfile/UserProfileService.swift`
+- `Features/Notifications/PushNotificationsAppDelegate.swift`
+- `Features/Notifications/PushNotificationsCoordinator.swift`
+- `Features/Notifications/PushNotificationsService.swift`
+- `Features/Notifications/PushNotificationsExplainerSheet.swift`
+- `API/Notifications/PushNotificationsHTTPClient.swift`
 
-This module is a straightforward API-backed MVVM feature.
+This app still uses UIKit interop where iOS requires it:
 
-It is a useful contrast with the mocked budget planner:
+- `UIApplicationDelegateAdaptor`
+- remote notification registration
+- notification action handling
 
-- profile is backend-first
-- planner is currently local-first
+SwiftUI owns the app UI, but push registration and notification callbacks require system delegate integration.
 
-Studying both modules together helps you understand how the same UI architecture works over different data sources.
+## Design System
 
-## 11. Styling and Design System
-
-The app has a light internal design system rather than raw ad hoc styling.
-
-Main files:
+Important files:
 
 - `AppTheme.swift`
-- `Typography/*`
 - `Components/GlassCard.swift`
 - `Components/MeshGradientBackground.swift`
-- `Components/GlowingButton.swift`
+- `Components/InteractiveLineChart.swift`
+- `Components/FormComponents.swift`
+- `Components/ToastBanner.swift`
+- `Typography/View+Typography.swift`
+- `Extensions/GlassEffect+Compat.swift`
 
-### Color system
+### AppTheme
 
-`AppTheme.Colors` centralizes:
+`AppTheme` centralizes:
 
 - tint colors
-- soft tints
-- secondary accent
-- page backgrounds
-- card backgrounds
-- elevated surfaces
+- secondary tint
+- success/warning/danger colors
+- background colors
+- elevated card backgrounds
 - separators
-- nav and tab backgrounds
-- semantic colors
+- navigation/tab colors
 
-This is a good pattern because:
+Use this instead of scattering raw colors through feature views.
 
-- colors adapt to light/dark mode
-- visual decisions are centralized
-- feature views stay focused on composition
+### Typography
 
-### Typography system
+The typography system gives semantic text roles:
 
-The app defines semantic text roles through:
+- `.display`
+- `.hero`
+- `.title`
+- `.label`
+- `.small`
+- `.nano`
 
-- `Typography`
-- `TypographyStyle`
-- `View.typography(...)`
-
-Instead of scattering raw `.font(...)` calls everywhere, the UI often uses:
-
-- `.typography(.hero, weight: .bold)`
-- `.typography(.small)`
-- `.typography(.caption)`
-
-This is useful to study because it introduces semantic typography without building a huge custom framework.
-
-### Reusable surfaces
-
-`GlassCard` is the main reusable surface primitive.
-
-It wraps content with:
-
-- padding
-- rounded rectangle fill
-- subtle stroke
-- shadow
-
-The benefit is consistency. Many screens look cohesive because they all compose the same surface primitive.
-
-### Background system
-
-`MeshGradientBackground` provides the ambient animated background used on several screens.
-
-Notable points:
-
-- it respects `Reduce Motion`
-- it uses soft blurred gradients
-- it stays behind content using `ignoresSafeArea`
-
-This is a good example of controlled visual polish without turning the whole app into a special-effects demo.
-
-## 12. SwiftUI Modifiers Worth Studying
-
-This app contains many useful modifier patterns.
-
-### Layout and presentation
-
-- `.background(... .ignoresSafeArea())`
-- `.frame(maxWidth: .infinity, maxHeight: .infinity)`
-- `.safeAreaInset(edge:)`
-- `.scrollBounceBehavior(.basedOnSize)`
-- `.scrollDismissesKeyboard(.interactively)`
-- `.toolbarBackground(...)`
-- `.toolbarTitleMenu`
-
-### Async and lifecycle
-
-- `.task`
-- `.onAppear`
-- `.onReceive`
-- `.refreshable`
-- `.onChange`
-
-### Navigation and modals
-
-- `.sheet`
-- `.confirmationDialog`
-- `.searchable`
-- `.navigationBarTitleDisplayMode`
-
-### Animation
-
-- `.animation(.snappy(...), value: ...)`
-- `.transition(.opacity.combined(with: .move(edge: ...)))`
-- spring-style onboarding transitions
-
-### Accessibility
-
-- `.accessibilityLabel`
-- `.accessibilityHint`
-- `.accessibilityFocused`
-- `.accessibilityAddTraits`
-
-### Feedback
-
-- `.appSensoryFeedback(...)`
-
-That last one is a custom helper that wraps SwiftUI `sensoryFeedback` for success and destructive actions.
-
-## 13. Utility Patterns
-
-### Window size synchronization
-
-Files:
-
-- `WindowSizeSyncView.swift`
-- `Container+AppFactories.swift`
-
-`WindowSizeSyncView` writes the current rendered size into a shared `WindowSize` object.
-
-That object computes `effectiveFormMaxWidth`, which is then used by forms like the login screen.
-
-This is a practical pattern for:
-
-- responsive iPhone vs iPad layout tuning
-- keeping sizing logic outside individual screens
-
-### FrameReader utilities
-
-Files:
-
-- `Utilities/FrameReader/*`
-
-These provide helpers like:
-
-- `readSize(into:)`
-- `readFrame(into:)`
-- `readWidth(into:)`
-
-This is useful for advanced layout observation when plain SwiftUI stacks are not enough.
-
-### Toast and accessibility
-
-`ToastBanner` is worth reading carefully.
-
-It combines:
-
-- semantic styling
-- transient UI
-- VoiceOver focus management with `@AccessibilityFocusState`
-
-This is a good example of accessibility-aware component design.
-
-## 14. Apple-Style UI Decisions
-
-The app has been pushed toward Apple Human Interface Guidelines in several ways:
-
-- top-level `TabView` for major product areas
-- `NavigationStack` with large titles
-- segmented controls for closely related content
-- grouped/settings-style lists where appropriate
-- native sheets and confirmation dialogs
-- semantic SF Symbols
-- strong light/dark support
-- restrained use of motion
-- content-first layout with subtle chrome
-
-At the same time, the app keeps a branded visual layer:
-
-- custom tints
-- mesh gradients
-- glass cards
-- valuation/share cards
-
-That balance is worth studying: native structure first, brand second.
-
-## 15. Testing Strategy
-
-The test suite covers business logic and HTTP behavior more than pixel-perfect UI.
-
-Key tests include:
-
-- `AuthSessionManagerTests`
-- `AuthSessionStoreTests`
-- `LoginViewModelTests`
-- `AuthHTTPClientTests`
-- `StockServiceTests`
-- `PortfolioViewModelTests`
-- `BudgetPlannerViewModelTests`
-- `StockDetailsViewModelTests`
-- `ManualImportViewModelTests`
-- `UserProfileHTTPClientTests`
-
-### What this tells you
-
-The team is testing:
-
-- auth/session correctness
-- request building and error decoding
-- view model calculations
-- feature business rules
-
-That is a solid strategy for SwiftUI apps, where UI layout itself changes often but core logic should stay stable.
-
-## 16. Mocked vs API-Backed Areas
-
-This is important to understand before studying the app.
-
-### Already API-backed
-
-- authentication
-- stock CRUD
-- stock details
-- stock history
-- stock news
-- stock valuation CRUD
-- user profile
-- watchlist
-
-### Still mocked or local-first
-
-- dashboard summary cards and trend data
-- asset search
-- expenses planner persistence
-- reports persistence
-- stock projections
-- stock comparison metrics
-- onboarding API import flow
-- some fundamentals and earnings sections
-
-The codebase is explicit about this. Many files include:
+Example:
 
 ```swift
-// to fill from endpoint later
+Text(totalValue.currency)
+  .typography(.hero, weight: .bold)
 ```
 
-That makes the current architecture easier to follow because you can see exactly where the client stops and where backend integration is meant to begin.
+This keeps the visual language consistent.
 
-## 17. How the App Is Built Internally
+### GlassCard
 
-If you want the mental model in one sentence:
+`GlassCard` is the main surface primitive. It wraps content in:
 
-> The app is a SwiftUI root shell that chooses the current app phase, injects shared services through `Factory`, loads feature-specific state in `@StateObject` view models, and renders branded Apple-style finance screens from derived domain data.
+- padding
+- optional background color
+- rounded clipping
+- Liquid Glass compatibility via `.appGlassEffect`
 
-In more concrete terms:
+It appears across Home, Portfolio, Expenses, Reports, Stock Research, and Settings.
 
-1. `NorviqaApp` boots the app and global preferences.
-2. `ContentView` decides which major flow to show.
-3. feature roots own their view models
-4. view models call services
-5. services call feature-specific HTTP clients
-6. HTTP clients execute endpoint-driven requests
-7. shared design primitives keep screens visually consistent
-8. tests protect the business logic
+### Empty states
 
-That is the internal spine of the whole application.
+The app uses:
 
-## 18. Best Files to Study First
+- `ContentUnavailableView`
+- `ResearchPlaceholderCard`
+- stable min-height frames for dashboard/report cards
 
-If you want to learn this codebase efficiently, read in this order:
+For finance dashboards, stable card sizes matter because otherwise empty widgets collapse and make the page feel broken.
 
-1. `financeplan/NorviqaApp.swift`
-2. `financeplan/ContentView.swift`
-3. `financeplan/Container+AppFactories.swift`
-4. `financeplan/Constants.swift`
-5. `financeplan/AppTheme.swift`
-6. `financeplan/Typography/View+Typography.swift`
-7. `financeplan/Features/Auth/LoginViewModel.swift`
-8. `financeplan/Features/Auth/LoginScreen.swift`
-9. `financeplan/Features/Auth/AuthSessionManager.swift`
-10. `financeplan/Features/Portfolio/PortfolioViewModel.swift`
-11. `financeplan/Features/Expenses/BudgetPlannerViewModel.swift`
-12. `financeplan/Features/Stocks/StockDetailsScreenViewModel.swift`
-13. `financeplan/Components/GlassCard.swift`
-14. `financeplan/Components/ToastBanner.swift`
-15. `financeplanTests/BudgetPlannerViewModelTests.swift`
-16. `financeplanTests/StockDetailsViewModelTests.swift`
+## SwiftUI Modifiers To Study
 
-That reading order gives you:
+Common layout modifiers:
+
+- `.frame(maxWidth: .infinity)`
+- `.frame(minHeight:)`
+- `.padding(...)`
+- `.background(...)`
+- `.clipShape(...)`
+- `.safeAreaInset(...)`
+- `.ignoresSafeArea()`
+
+Common navigation/presentation modifiers:
+
+- `.navigationTitle(...)`
+- `.navigationBarTitleDisplayMode(...)`
+- `.toolbar { ... }`
+- `.sheet(...)`
+- `.confirmationDialog(...)`
+- `.navigationDestination(...)`
+- `.searchable(...)`
+
+Common lifecycle/data modifiers:
+
+- `.task { ... }`
+- `.onAppear { ... }`
+- `.onChange(of:)`
+- `.onReceive(...)`
+- `.refreshable { ... }`
+
+Common animation/feedback modifiers:
+
+- `.animation(..., value:)`
+- `.transition(...)`
+- `.contentTransition(.numericText())`
+- `.sensoryFeedback(...)` through `appSensoryFeedback`
+
+Common accessibility modifiers:
+
+- `.accessibilityLabel(...)`
+- `.accessibilityHint(...)`
+- `.accessibilityIdentifier(...)`
+- `.accessibilityFocused(...)`
+
+## Swift Structures And Patterns Worth Studying
+
+### Protocol-oriented services
+
+Examples:
+
+- `StockServicing`
+- `ExpensesServicing`
+- `AuthServicing`
+- `DashboardServicing`
+- `ActivityServicing`
+
+This lets tests inject fake implementations.
+
+### DTO mapping
+
+The app maps between:
+
+- API response DTOs from `StockPlanShared`
+- SwiftData local models
+- domain models for UI
+- view-specific display structs
+
+This is common in production apps. Do not try to use one model type everywhere.
+
+### Draft structs
+
+The app uses draft structs for forms:
+
+- `AddPositionDraft`
+- `BudgetActivityDraft`
+- `BudgetPlanItemDraft`
+- `HomeQuickExpenseDraft`
+
+Drafts separate incomplete form input from validated/persisted domain models.
+
+### Enums for UI modes
+
+Examples:
+
+- `HomeTab`
+- `ReportTab`
+- `BudgetPillar`
+- `ExpenseSplitMode`
+- `PortfolioTargetAlertDirection`
+- onboarding step enums
+
+Enums make UI state explicit and reduce invalid combinations.
+
+### View models as `@MainActor`
+
+Most view models that mutate UI state are `@MainActor`.
+
+This means:
+
+- `@Published` updates are safe for SwiftUI
+- async methods can update state directly
+- background work should stay in service/client layers
+
+## Testing Strategy
+
+The app has unit tests for:
+
+- auth session behavior
+- auth validation
+- HTTP client request construction
+- portfolio view-model behavior
+- budget planner behavior
+- reports view-model behavior
+- dashboard logic
+- language behavior
+- push-notification coordination
+
+Useful test files:
+
+- `financeplanTests/AuthSessionManagerTests.swift`
+- `financeplanTests/AuthSessionStoreTests.swift`
+- `financeplanTests/PortfolioViewModelTests.swift`
+- `financeplanTests/BudgetPlannerViewModelTests.swift`
+- `financeplanTests/ReportsViewModelTests.swift`
+- `financeplanTests/DashboardLogicTests.swift`
+- `financeplanTests/ExpensesHTTPClientTests.swift`
+
+Testing focus:
+
+- business logic
+- state transitions
+- request construction
+- error handling
+- persistence behavior
+
+The available shared scheme may not always be configured for test execution, so test-running depends on Xcode scheme setup.
+
+## Files To Study First
+
+Read in this order:
+
+1. `NorviqaApp.swift`
+2. `ContentView.swift`
+3. `Container+AppFactories.swift`
+4. `Constants.swift`
+5. `AppTheme.swift`
+6. `Models/Local/SharedModelContainer.swift`
+7. `Models/Local/LocalCacheScope.swift`
+8. `Features/Auth/AuthSessionManager.swift`
+9. `Features/Auth/AuthService.swift`
+10. `Features/Auth/LoginViewModel.swift`
+11. `Features/Home/HomeScreen.swift`
+12. `Features/Portfolio/PortfolioViewModel.swift`
+13. `Features/Portfolio/PortfolioScreen.swift`
+14. `Features/Expenses/BudgetPlannerViewModel.swift`
+15. `Features/Expenses/ExpensesSyncManager.swift`
+16. `Features/Reports/ReportsViewModel.swift`
+17. `Features/Stocks/StockDetailsScreenViewModel.swift`
+18. `Components/GlassCard.swift`
+19. `Components/FormComponents.swift`
+20. `Components/ToastBanner.swift`
+
+That order teaches:
 
 - app shell
 - dependency injection
-- styling system
-- one API-backed feature
-- one local-first feature
-- one mixed-data feature
-- tests for understanding behavior
+- local persistence
+- auth/session
+- dashboard composition
+- one API-backed local-cache feature
+- one heavier domain feature
+- reusable UI primitives
 
-## 19. What Makes This a Good SwiftUI Study Project
+## Practical Mental Model
 
-This app is a strong study target because it includes:
+The app works like this:
 
-- real async API calls
-- token refresh and session recovery
-- view-model-driven forms
-- feature-local state machines
-- chart-heavy finance UI
-- reusable design primitives
-- light-weight design system patterns
-- accessibility work
-- modern SwiftUI-only feedback and sharing
-- both backend-first and local-first modules
+```text
+NorviqaApp
+-> ContentView root state machine
+-> HomeScreen TabView
+-> feature SwiftUI views
+-> @StateObject/@ObservedObject view models
+-> services from Factory
+-> HTTP clients/endpoints
+-> backend API
+-> DTOs mapped back to domain/local/display models
+```
 
-That combination is much more educational than a small sample app.
+For cached features:
 
-## 20. Final Takeaway
+```text
+Backend API
+-> service
+-> sync/local store
+-> SwiftData rows with ownerUserId
+-> view model domain arrays
+-> SwiftUI cards/lists/charts
+```
 
-If you study this project well, the main things to learn are:
+For local-first writes:
 
-- how to keep SwiftUI views declarative
-- how to keep feature logic in view models
-- how to separate transport, service, and presentation layers
-- how to build a reusable visual system without overengineering it
-- how to evolve an app while some features are still mocked
+```text
+SwiftUI form
+-> draft struct
+-> view model validation
+-> local SwiftData insert/update
+-> offline sync action
+-> API push
+-> notification refresh
+```
 
-The architecture is not “pure” in a theoretical sense, but it is practical, readable, and product-driven. That makes it a valuable Swift and SwiftUI reference.
+## Final Takeaway
+
+The most important SwiftUI lessons in this client are:
+
+- keep root app flow state-driven
+- keep network calls out of view bodies
+- let feature view models own loading and mutation
+- use services and HTTP clients as separate layers
+- scope local persistence by authenticated user
+- map DTOs into domain/display models instead of leaking API shape into every view
+- use native SwiftUI controls first, then add brand styling through reusable components
+- use stable empty states for dashboard UIs
+- use `async/await` and `@MainActor` deliberately
+
+The architecture is pragmatic: it uses native SwiftUI, local SwiftData caching, feature-oriented services, and a small design system without trying to make everything abstract.
