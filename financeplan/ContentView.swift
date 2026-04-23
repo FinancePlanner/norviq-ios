@@ -352,7 +352,7 @@ private struct AppLockOverlay: View {
           }
           .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(.glassProminent)
         .disabled(isUnlocking)
 
         if isSecurityCodeEnabled {
@@ -364,7 +364,7 @@ private struct AppLockOverlay: View {
               .font(.title3.monospacedDigit())
               .padding(.horizontal, 12)
               .padding(.vertical, 10)
-              .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+              .appGlassEffect(.rect(cornerRadius: 8), interactive: true)
               .onChange(of: securityCodeInput) { _, newValue in
                 securityCodeInput = String(newValue.filter(\.isNumber).prefix(6))
               }
@@ -376,7 +376,7 @@ private struct AppLockOverlay: View {
             }
 
             Button("Unlock with Security Code", action: onSecurityCodeUnlock)
-              .buttonStyle(.bordered)
+              .buttonStyle(.glass)
               .frame(maxWidth: .infinity)
               .disabled(securityCodeInput.count != 6)
           }
@@ -390,12 +390,12 @@ private struct AppLockOverlay: View {
           Text("Sign Out")
             .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(.glass)
       }
       .padding(24)
       .frame(maxWidth: 320)
-      .background(.ultraThinMaterial)
       .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+      .appGlassEffect(.rect(cornerRadius: 20))
       .padding(.horizontal, 24)
     }
     .transition(.opacity)

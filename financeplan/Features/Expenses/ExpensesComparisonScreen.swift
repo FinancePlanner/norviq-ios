@@ -88,6 +88,7 @@ struct ExpensesComparisonScreen: View {
           } label: {
             Image(systemName: "slider.horizontal.3")
           }
+          .buttonStyle(.glass)
         }
       }
       .refreshable {
