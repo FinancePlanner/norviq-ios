@@ -32,10 +32,7 @@ struct FormSheetHeader: View {
             .font(.system(size: 12, weight: .bold))
             .foregroundStyle(.secondary)
             .frame(width: 30, height: 30)
-            .background(
-              Circle()
-                .fill(AppTheme.Colors.elevatedCardBackground(for: colorScheme))
-            )
+            .appGlassEffect(.circle, interactive: true)
         }
         .accessibilityLabel("Dismiss")
 
@@ -231,21 +228,9 @@ struct FormActionBar: View {
           .foregroundStyle(.white)
           .padding(.horizontal, 24)
           .padding(.vertical, 12)
-          .background(
-            Capsule()
-              .fill(
-                isDisabled
-                  ? AppTheme.Colors.disabled
-                  : AppTheme.Colors.tint(for: colorScheme)
-              )
-          )
-          .shadow(
-            color: isDisabled
-              ? .clear
-              : AppTheme.Colors.tint(for: colorScheme).opacity(0.25),
-            radius: 8, x: 0, y: 4
-          )
         }
+        .buttonStyle(.glassProminent)
+        .tint(isDisabled ? AppTheme.Colors.disabled : AppTheme.Colors.tint(for: colorScheme))
         .disabled(isDisabled || isLoading)
         .animation(.easeInOut(duration: 0.2), value: isDisabled)
       }
