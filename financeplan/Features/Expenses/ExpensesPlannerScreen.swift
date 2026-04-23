@@ -179,10 +179,9 @@ struct ExpensesPlannerScreen: View {
             } label: {
               Image(systemName: "plus.circle")
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-                .padding(6)
-                .appGlassEffect(.capsule)
             }
+            .buttonStyle(.glass)
+            .tint(AppTheme.Colors.tint(for: colorScheme))
             .accessibilityLabel("Record spend")
 
             Menu {
@@ -219,10 +218,9 @@ struct ExpensesPlannerScreen: View {
             } label: {
               Image(systemName: "ellipsis.circle")
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-                .padding(6)
-                .appGlassEffect(.capsule)
             }
+            .buttonStyle(.glass)
+            .tint(AppTheme.Colors.tint(for: colorScheme))
             .accessibilityLabel("Expense actions")
 
             Button {
@@ -230,10 +228,9 @@ struct ExpensesPlannerScreen: View {
             } label: {
               Image(systemName: "gearshape")
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-                .padding(6)
-                .appGlassEffect(.capsule)
             }
+            .buttonStyle(.glass)
+            .tint(AppTheme.Colors.tint(for: colorScheme))
             .accessibilityLabel("Open settings")
           }
         }

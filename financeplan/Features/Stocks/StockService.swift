@@ -7,6 +7,7 @@ private let stockServiceLogger = Logger(
   category: "StockService"
 )
 
+@MainActor
 protocol StockServicing: Sendable {
   @discardableResult
   func create(stock: StockRequest, portfolioListId: String?) async throws -> StockResponse
@@ -170,7 +171,7 @@ extension StockServicing {
   }
 }
 
-final class StockService: StockServicing, @unchecked Sendable {
+final class StockService: StockServicing {
   private let environmentManager: AppEnvironmentManager
   private let session: StockURLSessionProtocol
   private let authSessionManager: AuthSessionManaging

@@ -280,9 +280,11 @@ struct PortfolioScreen: View {
                 .padding(.horizontal, -12) // Bleed to edges of card padding
 
               // Time range picker
-              HStack(spacing: 0) {
-                ForEach(Array(TimeRange.allCases), id: \.self) { range in
-                  timeRangeButton(range)
+              GlassEffectContainer(spacing: 8) {
+                HStack(spacing: 8) {
+                  ForEach(Array(TimeRange.allCases), id: \.self) { range in
+                    timeRangeButton(range)
+                  }
                 }
               }
 
@@ -308,14 +310,13 @@ struct PortfolioScreen: View {
           .foregroundStyle(.primary)
 
           // Asset Filter
-          HStack(spacing: 0) {
-            ForEach(assetFilters.indices, id: \.self) { index in
-              assetFilterButton(assetFilters[index])
+          GlassEffectContainer(spacing: 8) {
+            HStack(spacing: 8) {
+              ForEach(assetFilters.indices, id: \.self) { index in
+                assetFilterButton(assetFilters[index])
+              }
             }
           }
-          .padding(4)
-          .background(Color(uiColor: .secondarySystemGroupedBackground))
-          .cornerRadius(14)
 
           portfolioPositionsSection
         }
@@ -430,9 +431,13 @@ struct PortfolioScreen: View {
         .font(.caption.weight(.semibold))
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity)
-        .background(isSelected ? Color.white.opacity(0.15) : Color.clear)
-        .cornerRadius(8)
         .foregroundStyle(isSelected ? .primary : .secondary)
+        .glassEffect(
+          isSelected
+            ? .regular.tint(AppTheme.Colors.tint(for: colorScheme)).interactive()
+            : .regular.interactive(),
+          in: .rect(cornerRadius: 8)
+        )
     }
     return AnyView(button)
   }
@@ -446,9 +451,13 @@ struct PortfolioScreen: View {
         .font(.subheadline.weight(.medium))
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity)
-        .background(isSelected ? Color.white.opacity(0.15) : Color.clear)
-        .cornerRadius(10)
         .foregroundStyle(isSelected ? .primary : .secondary)
+        .glassEffect(
+          isSelected
+            ? .regular.tint(AppTheme.Colors.tint(for: colorScheme)).interactive()
+            : .regular.interactive(),
+          in: .rect(cornerRadius: 10)
+        )
     }
     return AnyView(button)
   }

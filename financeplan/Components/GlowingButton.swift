@@ -8,11 +8,11 @@ public struct GlowingButtonStyle: ButtonStyle {
       .foregroundStyle(.white)
       .frame(maxWidth: .infinity)
       .padding(.vertical, 15)
-      .background(
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
-          .fill(AppTheme.Colors.tint(for: colorScheme))
+      .appGlassEffect(
+        .rect(cornerRadius: 16),
+        tint: AppTheme.Colors.tint(for: colorScheme),
+        interactive: true
       )
-      .appGlassEffect(.rect(cornerRadius: 16))
       .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
       .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
   }

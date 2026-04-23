@@ -76,7 +76,7 @@ struct UserMenuDrawer: View {
           Image(systemName: "xmark")
             .font(.system(size: 12, weight: .semibold))
             .padding(10)
-            .background(Circle().fill(.secondary.opacity(0.12)))
+            .appGlassEffect(.circle, tint: .secondary.opacity(0.12), interactive: true)
         }
         .buttonStyle(.plain)
       }
@@ -160,7 +160,11 @@ struct UserMenuDrawer: View {
       }
       .padding(.horizontal, 12)
       .padding(.vertical, 12)
-      .appGlassEffect(.rect(cornerRadius: 16), tint: .secondary.opacity(colorScheme == .dark ? 0.16 : 0.10))
+      .appGlassEffect(
+        .rect(cornerRadius: 16),
+        tint: .secondary.opacity(colorScheme == .dark ? 0.16 : 0.10),
+        interactive: true
+      )
     }
     .buttonStyle(.plain)
   }

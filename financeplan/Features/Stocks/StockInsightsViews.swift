@@ -1182,6 +1182,7 @@ private struct FinancialStatementsIntroCard: View {
 
 private struct FinancialStatementPeriodPicker: View {
     @Binding var selectedPeriod: StockFinancialStatementPeriod
+    @Environment(\.colorScheme) private var colorScheme
     @Namespace private var selectionNamespace
 
     var body: some View {
@@ -1194,31 +1195,30 @@ private struct FinancialStatementPeriodPicker: View {
                     .typography(.nano)
                     .foregroundStyle(.secondary)
 
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(StockFinancialStatementPeriod.allCases) { period in
-                            Button {
-                                withAnimation(.snappy(duration: 0.22)) {
-                                    selectedPeriod = period
-                                }
-                            } label: {
-                                Text(period.title)
-                                    .typography(.caption, weight: .semibold)
-                                    .foregroundStyle(selectedPeriod == period ? .primary : .secondary)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 10)
-                                    .background {
-                                        if selectedPeriod == period {
-                                            Capsule()
-                                                .fill(Color.secondary.opacity(0.12))
-                                                .matchedGeometryEffect(id: "financial-statement-period", in: selectionNamespace)
-                                        } else {
-                                            Capsule()
-                                                .fill(Color.secondary.opacity(0.06))
-                                        }
+                GlassEffectContainer(spacing: 8) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(StockFinancialStatementPeriod.allCases) { period in
+                                Button {
+                                    withAnimation(.snappy(duration: 0.22)) {
+                                        selectedPeriod = period
                                     }
+                                } label: {
+                                    Text(period.title)
+                                        .typography(.caption, weight: .semibold)
+                                        .foregroundStyle(selectedPeriod == period ? .primary : .secondary)
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 10)
+                                        .glassEffect(
+                                            selectedPeriod == period
+                                                ? .regular.tint(AppTheme.Colors.tint(for: colorScheme)).interactive()
+                                                : .regular.interactive(),
+                                            in: .capsule
+                                        )
+                                        .glassEffectID(period.id, in: selectionNamespace)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -1229,37 +1229,37 @@ private struct FinancialStatementPeriodPicker: View {
 
 struct StockDetailTabBar: View {
     @Binding var selectedTab: StockDetailTab
+    @Environment(\.colorScheme) private var colorScheme
     @Namespace private var selectionNamespace
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(StockDetailTab.allCases) { tab in
-                    Button {
-                        withAnimation(.snappy(duration: 0.22)) {
-                            selectedTab = tab
-                        }
-                    } label: {
-                        Text(tab.title)
-                            .typography(.caption, weight: .semibold)
-                            .foregroundStyle(selectedTab == tab ? .primary : .secondary)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 10)
-                            .background {
-                                if selectedTab == tab {
-                                    Capsule()
-                                        .fill(Color.secondary.opacity(0.12))
-                                        .matchedGeometryEffect(id: "stock-detail-tab", in: selectionNamespace)
-                                } else {
-                                    Capsule()
-                                        .fill(Color.secondary.opacity(0.06))
-                                }
+        GlassEffectContainer(spacing: 8) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(StockDetailTab.allCases) { tab in
+                        Button {
+                            withAnimation(.snappy(duration: 0.22)) {
+                                selectedTab = tab
                             }
+                        } label: {
+                            Text(tab.title)
+                                .typography(.caption, weight: .semibold)
+                                .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .glassEffect(
+                                    selectedTab == tab
+                                        ? .regular.tint(AppTheme.Colors.tint(for: colorScheme)).interactive()
+                                        : .regular.interactive(),
+                                    in: .capsule
+                                )
+                                .glassEffectID(tab.id, in: selectionNamespace)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(4)
             }
-            .padding(4)
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Stock detail sections")
