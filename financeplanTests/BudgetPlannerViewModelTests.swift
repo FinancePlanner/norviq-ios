@@ -76,6 +76,22 @@ final class BudgetPlannerViewModelTests: XCTestCase {
         updatedAt: nil
       )
     )
+    mock.expensesResult = .success(
+      [
+        ExpenseResponse(
+          id: UUID().uuidString,
+          title: "Rent",
+          amount: 980,
+          pillar: .fundamentals,
+          occurredOn: formattedDayString(occurredOn),
+          linkedPlanItemId: rent.id.uuidString,
+          splitMode: .personal,
+          userSharePercent: 100,
+          createdAt: nil,
+          updatedAt: nil
+        )
+      ]
+    )
 
     let viewModel = await MainActor.run {
       BudgetPlannerViewModel(monthlySnapshots: [snapshot], activities: [], expensesService: mock)
@@ -161,14 +177,6 @@ final class BudgetPlannerViewModelTests: XCTestCase {
 
       XCTAssertEqual(viewModel.selectedYear, 2025)
       XCTAssertEqual(viewModel.selectedMonthStart, december2025)
-      XCTAssertEqual(viewModel.selectedYearSummaries.count, 1)
-      XCTAssertEqual(viewModel.selectedYearActualTotal, 900, accuracy: 0.001)
-      XCTAssertEqual(viewModel.selectedYearChartPoints.count, 12)
-      XCTAssertEqual(
-        viewModel.selectedYearChartPoints[11].actual,
-        900,
-        accuracy: 0.001
-      )
     }
   }
 
@@ -242,6 +250,22 @@ final class BudgetPlannerViewModelTests: XCTestCase {
         createdAt: nil,
         updatedAt: nil
       )
+    )
+    mock.expensesResult = .success(
+      [
+        ExpenseResponse(
+          id: UUID().uuidString,
+          title: "Rent",
+          amount: 1200,
+          pillar: .fundamentals,
+          occurredOn: formattedDayString(occurredOn),
+          linkedPlanItemId: rent.id.uuidString,
+          splitMode: .shared,
+          userSharePercent: 60,
+          createdAt: nil,
+          updatedAt: nil
+        )
+      ]
     )
 
     let viewModel = await MainActor.run {
@@ -535,6 +559,134 @@ final class BudgetPlannerViewModelTests: XCTestCase {
     }
   }
 
+  func testLoadMapsPlannerStateFromBackendOnlyResponses() async {
+    let mock = BudgetPlannerServiceMock()
+    mock.snapshotsResult = .success(
+      [
+        BudgetSnapshotResponse(
+          id: "44444444-4444-4444-8444-444444444444",
+          monthStart: "2026-04-01",
+          netSalary: 4200,
+          targetShares: [
+            BudgetPillar.fundamentals.rawValue: 0.5,
+            BudgetPillar.futureYou.rawValue: 0.3,
+            BudgetPillar.fun.rawValue: 0.2
+          ],
+          createdAt: nil,
+          updatedAt: nil
+        )
+      ]
+    )
+    mock.itemsResult = .success(
+      [
+        BudgetPlanItemResponse(
+          id: "55555555-5555-4555-8555-555555555555",
+          snapshotId: "44444444-4444-4444-8444-444444444444",
+          title: "Rent",
+          plannedAmount: 1500,
+          pillar: .fundamentals,
+          categoryId: "cat-rent",
+          splitMode: .personal,
+          userSharePercent: 100,
+          createdAt: nil,
+          updatedAt: nil
+        )
+      ]
+    )
+    mock.expensesResult = .success(
+      [
+        ExpenseResponse(
+          id: "66666666-6666-4666-8666-666666666666",
+          title: "Rent",
+          amount: 1450,
+          pillar: .fundamentals,
+          occurredOn: "2026-04-03",
+          linkedPlanItemId: "55555555-5555-4555-8555-555555555555",
+          categoryId: "cat-rent",
+          splitMode: .personal,
+          userSharePercent: 100,
+          createdAt: nil,
+          updatedAt: nil
+        )
+      ]
+    )
+    mock.categoriesResult = .success(
+      [
+        ExpenseCategoryResponse(id: "cat-rent", name: "Housing", pillar: .fundamentals)
+      ]
+    )
+    mock.recurringTemplatesResult = .success(
+      [
+        RecurringTemplateResponse(
+          id: "tpl-1",
+          title: "ETF",
+          amount: 300,
+          pillar: .futureYou
+        )
+      ]
+    )
+
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(monthlySnapshots: [], activities: [], expensesService: mock)
+    }
+
+    await viewModel.load(force: true)
+
+    await MainActor.run {
+      XCTAssertEqual(viewModel.monthlySnapshots.count, 1)
+      XCTAssertEqual(viewModel.monthlySnapshots.first?.items.count, 1)
+      XCTAssertEqual(viewModel.monthlySnapshots.first?.items.first?.categoryName, "Housing")
+      XCTAssertEqual(viewModel.activities.count, 1)
+      XCTAssertEqual(viewModel.categories.map(\.name), ["Housing"])
+      XCTAssertEqual(viewModel.recurringTemplates.map(\.title), ["ETF"])
+    }
+  }
+
+  func testLoadWithEmptyBackendResponsesShowsNoPlannerFallbackData() async {
+    let mock = BudgetPlannerServiceMock()
+    mock.snapshotsResult = .success([])
+    mock.itemsResult = .success([])
+    mock.expensesResult = .success([])
+    mock.monthlyReportsResult = .success([])
+    mock.yearlyReportsResult = .success([])
+    mock.categoriesResult = .success([])
+    mock.recurringTemplatesResult = .success([])
+
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(monthlySnapshots: [], activities: [], expensesService: mock)
+    }
+
+    await viewModel.load(force: true)
+
+    await MainActor.run {
+      XCTAssertTrue(viewModel.monthlySnapshots.isEmpty)
+      XCTAssertTrue(viewModel.activities.isEmpty)
+      XCTAssertTrue(viewModel.selectedYearSummaries.isEmpty)
+      XCTAssertTrue(viewModel.categories.isEmpty)
+      XCTAssertTrue(viewModel.recurringTemplates.isEmpty)
+      XCTAssertNil(viewModel.errorMessage)
+    }
+  }
+
+  func testLoadFailurePublishesPlannerErrorAndKeepsCollectionsEmpty() async {
+    let mock = BudgetPlannerServiceMock()
+    mock.snapshotsResult = .failure(MockPlannerError.notConfigured)
+
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(monthlySnapshots: [], activities: [], expensesService: mock)
+    }
+
+    await viewModel.load(force: true)
+
+    await MainActor.run {
+      XCTAssertEqual(viewModel.errorMessage, "Could not load planner data: Not configured.")
+      XCTAssertTrue(viewModel.monthlySnapshots.isEmpty)
+      XCTAssertTrue(viewModel.activities.isEmpty)
+      XCTAssertTrue(viewModel.categories.isEmpty)
+      XCTAssertTrue(viewModel.recurringTemplates.isEmpty)
+    }
+  }
+
   func testDismissSuggestionRemovesSuggestionAndCallsService() async {
     let mock = BudgetPlannerServiceMock()
     mock.suggestionsResult = .success(
@@ -649,6 +801,22 @@ final class BudgetPlannerViewModelTests: XCTestCase {
         updatedAt: nil
       )
     )
+    mock.expensesResult = .success(
+      [
+        ExpenseResponse(
+          id: "11111111-1111-4111-8111-111111111111",
+          title: "Coffee",
+          amount: 6,
+          pillar: .fun,
+          occurredOn: "2026-05-12",
+          linkedPlanItemId: nil,
+          splitMode: .personal,
+          userSharePercent: 100,
+          createdAt: nil,
+          updatedAt: nil
+        )
+      ]
+    )
 
     let april = makeMonth(2026, 4)
     let mayDate = makeDate(2026, 5, 12)
@@ -738,7 +906,7 @@ final class BudgetPlannerViewModelTests: XCTestCase {
     }
   }
 
-  func testLoadFallsBackToLocalSummariesWhenReportEndpointsReturnEmpty() async {
+  func testLoadReturnsEmptySummariesWhenReportEndpointsReturnEmpty() async {
     let mock = BudgetPlannerServiceMock()
     mock.monthlyReportsResult = .success([])
     mock.yearlyReportsResult = .success([])
@@ -766,8 +934,8 @@ final class BudgetPlannerViewModelTests: XCTestCase {
     await viewModel.load(force: true)
 
     await MainActor.run {
-      XCTAssertFalse(viewModel.selectedYearSummaries.isEmpty)
-      XCTAssertEqual(viewModel.selectedYearActualTotal, 120, accuracy: 0.001)
+      XCTAssertTrue(viewModel.selectedYearSummaries.isEmpty)
+      XCTAssertEqual(viewModel.selectedYearActualTotal, 0, accuracy: 0.001)
       XCTAssertEqual(viewModel.selectedMonthActualTotal, 120, accuracy: 0.001)
     }
   }
@@ -876,6 +1044,8 @@ private final class BudgetPlannerServiceMock: ExpensesServicing {
   var updateSnapshotResult: Result<BudgetSnapshotResponse, Error> = .failure(MockPlannerError.notConfigured)
   var createPlanItemResult: Result<BudgetPlanItemResponse, Error> = .failure(MockPlannerError.notConfigured)
   var createExpenseResult: Result<ExpenseResponse, Error> = .failure(MockPlannerError.notConfigured)
+  var categoriesResult: Result<[ExpenseCategoryResponse], Error> = .success([])
+  var recurringTemplatesResult: Result<[RecurringTemplateResponse], Error> = .success([])
 
   var suggestionsResult: Result<ReportSuggestionsResponse, Error> = .success(
     ReportSuggestionsResponse(generatedAt: "", suggestions: [])
@@ -949,7 +1119,9 @@ private final class BudgetPlannerServiceMock: ExpensesServicing {
 
   func deleteExpense(expenseId _: String) async throws {}
 
-  func getCategories() async throws -> [ExpenseCategoryResponse] { [] }
+  func getCategories() async throws -> [ExpenseCategoryResponse] {
+    try categoriesResult.get()
+  }
 
   func createCategory(payload _: ExpenseCategoryRequest) async throws -> ExpenseCategoryResponse {
     throw MockPlannerError.notConfigured
@@ -957,7 +1129,9 @@ private final class BudgetPlannerServiceMock: ExpensesServicing {
 
   func deleteCategory(categoryId _: String) async throws {}
 
-  func getRecurringTemplates() async throws -> [RecurringTemplateResponse] { [] }
+  func getRecurringTemplates() async throws -> [RecurringTemplateResponse] {
+    try recurringTemplatesResult.get()
+  }
 
   func createRecurringTemplate(payload _: RecurringTemplateRequest) async throws -> RecurringTemplateResponse {
     throw MockPlannerError.notConfigured

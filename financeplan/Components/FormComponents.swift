@@ -128,6 +128,7 @@ struct FormTextField: View {
   var keyboardType: UIKeyboardType = .default
   var autocapitalization: TextInputAutocapitalization = .sentences
   var disableAutocorrection: Bool = false
+  var accessibilityIdentifier: String? = nil
 
   @Environment(\.colorScheme) private var colorScheme
 
@@ -138,7 +139,8 @@ struct FormTextField: View {
     text: Binding<String>,
     keyboardType: UIKeyboardType = .default,
     autocapitalization: TextInputAutocapitalization = .sentences,
-    disableAutocorrection: Bool = false
+    disableAutocorrection: Bool = false,
+    accessibilityIdentifier: String? = nil
   ) {
     self.icon = icon
     self.iconColor = iconColor
@@ -147,6 +149,7 @@ struct FormTextField: View {
     self.keyboardType = keyboardType
     self.autocapitalization = autocapitalization
     self.disableAutocorrection = disableAutocorrection
+    self.accessibilityIdentifier = accessibilityIdentifier
   }
 
   var body: some View {
@@ -163,6 +166,7 @@ struct FormTextField: View {
         .keyboardType(keyboardType)
         .textInputAutocapitalization(autocapitalization)
         .autocorrectionDisabled(disableAutocorrection)
+        .accessibilityIdentifier(accessibilityIdentifier ?? "")
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 13)
@@ -193,6 +197,7 @@ struct FormActionBar: View {
   var secondaryText: String?
   var isLoading: Bool = false
   var isDisabled: Bool = false
+  var accessibilityIdentifier: String? = nil
   let onPrimary: () -> Void
 
   @Environment(\.colorScheme) private var colorScheme
@@ -233,6 +238,7 @@ struct FormActionBar: View {
         .tint(isDisabled ? AppTheme.Colors.disabled : AppTheme.Colors.tint(for: colorScheme))
         .disabled(isDisabled || isLoading)
         .animation(.easeInOut(duration: 0.2), value: isDisabled)
+        .accessibilityIdentifier(accessibilityIdentifier ?? "")
       }
       .padding(.horizontal, 20)
       .padding(.vertical, 14)

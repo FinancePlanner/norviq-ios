@@ -6,8 +6,8 @@ protocol BrokerServicing {
   func listConnections() async throws -> [BrokerConnectionResponse]
   func getConnection(provider: String) async throws -> BrokerConnectionResponse
   func syncIBKR() async throws -> BrokerSyncResponse
-  func previewCsvImport(provider: String, csvData: Data) async throws -> CsvImportPreviewResponse
-  func commitCsvImport(provider: String, csvData: Data) async throws -> CsvImportCommitResponse
+  func previewCsvImport(provider: String, portfolioListId: String?, csvData: Data) async throws -> CsvImportPreviewResponse
+  func commitCsvImport(provider: String, portfolioListId: String?, csvData: Data) async throws -> CsvImportCommitResponse
 }
 
 struct BrokerService: BrokerServicing {
@@ -43,15 +43,31 @@ struct BrokerService: BrokerServicing {
     }
   }
 
-  func previewCsvImport(provider: String, csvData: Data) async throws -> CsvImportPreviewResponse {
+  func previewCsvImport(
+    provider: String,
+    portfolioListId: String?,
+    csvData: Data
+  ) async throws -> CsvImportPreviewResponse {
     try await performAuthenticated { client in
-      try await client.previewCsvImport(provider: provider, csvData: csvData)
+      try await client.previewCsvImport(
+        provider: provider,
+        portfolioListId: portfolioListId,
+        csvData: csvData
+      )
     }
   }
 
-  func commitCsvImport(provider: String, csvData: Data) async throws -> CsvImportCommitResponse {
+  func commitCsvImport(
+    provider: String,
+    portfolioListId: String?,
+    csvData: Data
+  ) async throws -> CsvImportCommitResponse {
     try await performAuthenticated { client in
-      try await client.commitCsvImport(provider: provider, csvData: csvData)
+      try await client.commitCsvImport(
+        provider: provider,
+        portfolioListId: portfolioListId,
+        csvData: csvData
+      )
     }
   }
 
@@ -109,11 +125,19 @@ struct BrokerServiceStub: BrokerServicing {
     BrokerSyncResponse(runId: UUID().uuidString, status: "accepted")
   }
 
-  func previewCsvImport(provider: String, csvData: Data) async throws -> CsvImportPreviewResponse {
+  func previewCsvImport(
+    provider: String,
+    portfolioListId: String?,
+    csvData: Data
+  ) async throws -> CsvImportPreviewResponse {
     CsvImportPreviewResponse(provider: provider, items: [], errors: [])
   }
 
-  func commitCsvImport(provider: String, csvData: Data) async throws -> CsvImportCommitResponse {
+  func commitCsvImport(
+    provider: String,
+    portfolioListId: String?,
+    csvData: Data
+  ) async throws -> CsvImportCommitResponse {
     CsvImportCommitResponse(provider: provider, inserted: [], updated: [], errors: [])
   }
 }

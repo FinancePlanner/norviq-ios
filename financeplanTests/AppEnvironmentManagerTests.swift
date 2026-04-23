@@ -67,9 +67,60 @@ final class AppEnvironmentManagerTests: XCTestCase {
       infoDictionary: [:],
       defaults: defaults,
       schemeEnvironmentValue: nil,
-      isDebugBuild: false
+      isDebugBuild: false,
+      isTestFlight: false
     )
 
     XCTAssertEqual(manager.current, AppEnvironments.production)
+  }
+
+  func testDebugBuildDefaultsToLocal() {
+    let manager = AppEnvironmentManager(
+      environmentVariables: [:],
+      infoDictionary: [:],
+      defaults: defaults,
+      schemeEnvironmentValue: nil,
+      isDebugBuild: true,
+      isTestFlight: false
+    )
+
+    XCTAssertEqual(manager.current, AppEnvironments.local)
+  }
+
+  func testTestFlightDefaultsToDev() {
+    let manager = AppEnvironmentManager(
+      environmentVariables: [:],
+      infoDictionary: [:],
+      defaults: defaults,
+      schemeEnvironmentValue: nil,
+      isDebugBuild: false,
+      isTestFlight: true
+    )
+
+    XCTAssertEqual(manager.current, AppEnvironments.dev)
+  }
+
+  func testAllowedEnvironmentsReturnsAllCasesWhenLocal() {
+    let manager = AppEnvironmentManager(
+      environmentVariables: [:],
+      infoDictionary: [:],
+      defaults: defaults,
+      schemeEnvironmentValue: nil,
+      isDebugBuild: true,
+      isTestFlight: false
+    )
+    XCTAssertEqual(manager.allowedEnvironmentsWhen(isLoggedIn: false), AppEnvironments.allCases)
+  }
+
+  func testAllowedEnvironmentsReturnsEmptyWhenProduction() {
+    let manager = AppEnvironmentManager(
+      environmentVariables: ["NORVIQA_ENVIRONMENT": "production"],
+      infoDictionary: [:],
+      defaults: defaults,
+      schemeEnvironmentValue: nil,
+      isDebugBuild: true,
+      isTestFlight: false
+    )
+    XCTAssertTrue(manager.allowedEnvironmentsWhen(isLoggedIn: false).isEmpty)
   }
 }

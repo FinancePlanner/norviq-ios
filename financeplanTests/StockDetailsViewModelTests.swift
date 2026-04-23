@@ -1196,6 +1196,18 @@ final class StockDetailsViewModelTests: XCTestCase {
     let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
 
     service.fetchStockDetailsResult = .success(makeDetails(symbol: "AAPL"))
+    marketDataService.fetchStockEarningsResult = .success([
+      EarningsEvent(
+        symbol: "AAPL",
+        date: "2026-01-30",
+        epsActual: 2.41,
+        epsEstimated: 2.35,
+        revenueActual: 124_000_000_000,
+        revenueEstimated: 122_000_000_000,
+        surprisePercent: 2.6,
+        hasTranscript: true
+      )
+    ])
 
     await viewModel.load(stockId: "stock-1")
     await viewModel.loadSupplementaryDataIfNeeded(for: .earnings)
@@ -1203,6 +1215,8 @@ final class StockDetailsViewModelTests: XCTestCase {
 
     XCTAssertEqual(marketDataService.fetchStockEarningsCalls, 1)
     XCTAssertEqual(marketDataService.lastFetchStockEarningsSymbol, "AAPL")
+    XCTAssertEqual(viewModel.stockEarnings.first?.surprisePercent, 2.6)
+    XCTAssertEqual(viewModel.stockEarnings.first?.hasTranscript, true)
   }
 
   func testMarketSnapshot_WhenChangeFieldsMissing_ComputesChangeAndPercent() throws {

@@ -1,0 +1,61 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: macos-latest
+    
+    defaults:
+      run:
+        working-directory: StockPlanIOSApp/financeplan
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Cache derived data
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-xcode-derived-data-${{ hashFiles('StockPlanIOSApp/financeplan/financeplan.xcodeproj/project.xcworkspace/contents.xcworkspacedata') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-derived-data-
+
+      - name: Resolve Package Dependencies
+        run: xcodebuild -project financeplan.xcodeproj -scheme financeplan -resolvePackageDependencies
+
+      - name: Run Unit Tests
+        run: |
+          xcodebuild test \
+            -project financeplan.xcodeproj \
+            -scheme financeplan \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+            -only-testing:financeplanTests/StockComparisonFormattingTests \
+            -only-testing:financeplanTests/StockComparisonSortingTests \
+            -quiet
+
+      - name: Run UI Smoke Tests
+        run: |
+          xcodebuild test \
+            -project financeplan.xcodeproj \
+            -scheme financeplan \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+            -only-testing:financeplanUITests/StockDetailTabTests \
+            -quiet
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/**/Logs/Test/*.xcresult

@@ -7,7 +7,6 @@ struct ExpensesPlannerScreen: View {
   @ObservedObject var viewModel: BudgetPlannerViewModel
 
   @Environment(\.colorScheme) private var colorScheme
-  @State private var isProfilePresented = false
   @State private var isSalaryEditorPresented = false
   @State private var isTargetEditorPresented = false
   @State private var isActivitySheetPresented = false
@@ -23,147 +22,43 @@ struct ExpensesPlannerScreen: View {
   @State private var recordSpendInitialPillar: BudgetPillar = .fundamentals
   @State private var destructiveFeedbackTrigger = 0
 
+  private var isShowingLoadingState: Bool {
+    viewModel.isLoading && viewModel.monthlySnapshots.isEmpty
+  }
+
+  private var loadErrorMessage: String? {
+    guard viewModel.monthlySnapshots.isEmpty else { return nil }
+    return viewModel.errorMessage
+  }
+
+  private var shouldShowEmptyState: Bool {
+    !viewModel.isLoading && viewModel.monthlySnapshots.isEmpty
+  }
+
+  private var itemDeleteBinding: Binding<Bool> {
+    Binding(
+      get: { itemToDelete != nil },
+      set: { if !$0 { itemToDelete = nil } }
+    )
+  }
+
+  private var expenseDeleteBinding: Binding<Bool> {
+    Binding(
+      get: { activityToDelete != nil },
+      set: { if !$0 { activityToDelete = nil } }
+    )
+  }
+
   var body: some View {
     NavigationStack {
-      ScrollView {
-        VStack(spacing: 24) {
-          ExpensesCircularOverviewCard(
-            leftAmount: viewModel.selectedMonthLeftAfterSpending,
-            totalAmount: viewModel.selectedMonthSnapshot?.netSalary ?? 0
-          )
-          .padding(.top, 10)
-
-          PlannerSalaryCard(
-            monthTitle: viewModel.selectedMonthDisplayTitle,
-            netSalary: viewModel.selectedMonthSnapshot?.netSalary ?? 0,
-            allocated: viewModel.selectedMonthPlannedTotal,
-            spent: viewModel.selectedMonthActualTotal,
-            myPlanned: viewModel.selectedMonthMyPlannedTotal,
-            partnerPlanned: viewModel.selectedMonthPartnerPlannedTotal,
-            mySpent: viewModel.selectedMonthMyActualTotal,
-            partnerSpent: viewModel.selectedMonthPartnerActualTotal,
-            partnerName: viewModel.partnerDisplayName,
-            leftToAllocate: viewModel.selectedMonthAvailableAfterPillarPlan,
-            leftAfterSpending: viewModel.selectedMonthLeftAfterSpending,
-            onEditMonthlyBudget: { isSalaryEditorPresented = true }
-          )
-          .padding(.horizontal, 16)
-
-          missingBudgetAlert
-          
-          MonthlyPlanItemsCard(
-            monthTitle: viewModel.selectedMonthDisplayTitle,
-            items: (viewModel.selectedMonthSnapshot?.items ?? []).sorted {
-              if $0.pillar == $1.pillar {
-                return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
-              }
-              return $0.pillar.rawValue < $1.pillar.rawValue
-            },
-            recurringTemplates: viewModel.recurringTemplates,
-            onAdd: { presentNewPlanItemDraft(pillar: viewModel.preferredInitialPillar) },
-            onEdit: { item in presentExistingPlanItemDraft(item) },
-            onDelete: { item in itemToDelete = item },
-            onLogRecurring: { template in recurringTemplateToLog = template },
-            onManageRecurring: { isRecurringManagerPresented = true }
-          )
-          .padding(.horizontal, 16)
-
-          ExpensesYearOverviewCard(
-            selectedYear: selectedYearBinding,
-            availableYears: viewModel.availableYears,
-            totalSpent: viewModel.selectedYearActualTotal,
-            averageSpent: viewModel.selectedYearAverageActual,
-            lastMonthLabel: viewModel.selectedYearLastMonthLabel,
-            chartPoints: viewModel.selectedYearChartPoints
-          )
-          .padding(.horizontal, 16)
-
-          PillarAllocationTableCard(
-            monthTitle: viewModel.selectedMonthDisplayTitle,
-            summaries: viewModel.selectedMonthSummaries
-          )
-          .padding(.horizontal, 16)
-
-          SmartSuggestionsCard(
-            suggestion: viewModel.topReportSuggestion,
-            isLoading: viewModel.isSuggestionsLoading,
-            isUnavailable: viewModel.suggestionsUnavailable,
-            onDismiss: { suggestion in
-              viewModel.dismissSuggestion(suggestion)
-            }
-          )
-            .padding(.horizontal, 16)
-
-          ExpensesByCategoryCard(
-            monthTitle: viewModel.selectedMonthDisplayTitle,
-            activities: viewModel.selectedMonthActivities,
-            summaries: viewModel.selectedMonthSummaries,
-            onEdit: { activity in
-              activityToEdit = activity
-            },
-            onDelete: { activity in
-              activityToDelete = activity
-            }
-          )
-          .padding(.horizontal, 16)
-
-          NavigationLink {
-            BudgetCategoryDetailsScreen(
-              viewModel: viewModel,
-              isProfilePresented: $isProfilePresented,
-              isActivitySheetPresented: $isActivitySheetPresented,
-              onAddPlannedItem: { pillar in
-                presentNewPlanItemDraft(pillar: pillar)
-              },
-              onRecordExpense: { pillar in
-                recordSpendInitialPillar = pillar
-                isActivitySheetPresented = true
-              }
-            )
-          } label: {
-            HStack {
-              Image(systemName: "square.grid.2x2.fill")
-                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-              Text("Budget Category Details")
-                .font(.headline)
-                .foregroundStyle(.primary)
-              Spacer()
-              Image(systemName: "chevron.right")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
-            }
-            .padding()
-            .background(Color(uiColor: .secondarySystemGroupedBackground))
-            .clipShape(.rect(cornerRadius: 16))
-            .overlay(
-              RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
-            )
-          }
-          .padding(.horizontal, 16)
-          .padding(.bottom, 40)
-        }
-        .padding(.vertical, 10)
-      }
+      rootContent
       .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
       .navigationTitle("Expenses and Budgeting")
       .navigationBarTitleDisplayMode(.inline)
-      .overlay(alignment: .top) {
-        if let errorMessage = viewModel.errorMessage {
-          Text(errorMessage)
-            .font(.caption)
-            .foregroundStyle(.white)
-            .padding()
-            .background(Color.red)
-            .clipShape(.rect(cornerRadius: 8))
-            .padding()
-        }
-      }
       .task {
-        await viewModel.load()
+        await initialLoad()
       }
       .toolbarTitleMenu {
-
         Picker("Month", selection: selectedMonthBinding) {
           ForEach(viewModel.availableMonths, id: \.self) { date in
             Text(date.formatted(.dateTime.month(.wide).year())).tag(date)
@@ -172,196 +67,369 @@ struct ExpensesPlannerScreen: View {
       }
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
-          HStack(spacing: 8) {
-            Button {
-              recordSpendInitialPillar = viewModel.preferredInitialPillar
-              isActivitySheetPresented = true
-            } label: {
-              Image(systemName: "plus.circle")
-                .font(.system(size: 16, weight: .semibold))
-            }
-            .buttonStyle(.glass)
-            .tint(AppTheme.Colors.tint(for: colorScheme))
-            .accessibilityLabel("Record spend")
-
-            Menu {
-              Button("Plan next month", systemImage: "calendar.badge.plus") {
-                viewModel.createNextMonthPlan()
-              }
-
-              Button("Adjust monthly budget", systemImage: "eurosign.circle") {
-                isSalaryEditorPresented = true
-              }
-
-              Button("Adjust pillar targets", systemImage: "slider.horizontal.3") {
-                isTargetEditorPresented = true
-              }
-
-              Button("Add pillar", systemImage: "square.stack.3d.up") {
-                isTargetEditorPresented = true
-              }
-
-              Button("Record spend", systemImage: "plus.circle") {
-                recordSpendInitialPillar = viewModel.preferredInitialPillar
-                isActivitySheetPresented = true
-              }
-
-              Button("Household partner", systemImage: "person.2") {
-                isPartnerEditorPresented = true
-              }
-
-              Divider()
-
-              Button("Delete this month plan", systemImage: "trash", role: .destructive) {
-                viewModel.deleteCurrentSnapshot()
-              }
-            } label: {
-              Image(systemName: "ellipsis.circle")
-                .font(.system(size: 16, weight: .semibold))
-            }
-            .buttonStyle(.glass)
-            .tint(AppTheme.Colors.tint(for: colorScheme))
-            .accessibilityLabel("Expense actions")
-
-            Button {
-              isSettingsPresented = true
-            } label: {
-              Image(systemName: "gearshape")
-                .font(.system(size: 16, weight: .semibold))
-            }
-            .buttonStyle(.glass)
-            .tint(AppTheme.Colors.tint(for: colorScheme))
-            .accessibilityLabel("Open settings")
-          }
+          toolbarActions
         }
       }
-      .sheet(isPresented: $isProfilePresented) {
-        UserProfileView()
+      .sheet(isPresented: $isSalaryEditorPresented, content: salaryEditorSheet)
+      .sheet(isPresented: $isTargetEditorPresented, content: targetEditorSheet)
+      .sheet(item: $itemDraft, onDismiss: handlePlanItemDismiss) { draft in
+        planItemEditorSheet(for: draft)
       }
-      .sheet(isPresented: $isSalaryEditorPresented) {
-        NetSalaryEditorSheet(
-          currentValue: viewModel.selectedMonthSnapshot?.netSalary ?? 0,
-          monthTitle: viewModel.selectedMonthDisplayTitle,
-          onSave: viewModel.updateNetSalary
-        )
-      }
-      .sheet(isPresented: $isTargetEditorPresented) {
-        PillarTargetsEditorSheet(
-          monthTitle: viewModel.selectedMonthDisplayTitle,
-          currentShares: viewModel.selectedMonthSnapshot?.targetShares ?? [:],
-          onSave: viewModel.updateTargetShares
-        )
-      }
-      .sheet(
-        item: $itemDraft,
-        onDismiss: {
-          if !didSavePresentedPlanItemDraft, let draft = presentedPlanItemDraft {
-            viewModel.cancelPlanItemDraft(draft)
-          }
-          didSavePresentedPlanItemDraft = false
-          presentedPlanItemDraft = nil
-        }
-      ) { draft in
-        PlanItemEditorSheet(
-          draft: draft,
-          availablePillars: viewModel.selectedMonthPillars,
-          availableCategories: viewModel.categories
-        ) { updatedDraft in
-          didSavePresentedPlanItemDraft = true
-          viewModel.addOrUpdatePlanItem(updatedDraft)
-        }
-      }
-      .sheet(isPresented: $isActivitySheetPresented, onDismiss: {
-        recordSpendInitialPillar = viewModel.preferredInitialPillar
-      }) {
-        RecordSpendSheet(
-          monthTitle: viewModel.selectedMonthDisplayTitle,
-          selectedMonthStart: viewModel.selectedMonthStart,
-          editingActivity: nil,
-          initialPillar: recordSpendInitialPillar,
-          availablePillars: viewModel.selectedMonthPillars,
-          availableItems: viewModel.selectedMonthSnapshot?.items ?? [],
-          availableCategories: viewModel.categories
-        ) { draft in
-          await viewModel.recordExpenseAndWait(draft)
-        }
-      }
+      .sheet(isPresented: $isActivitySheetPresented, onDismiss: resetRecordSpendInitialPillar, content: recordSpendSheet)
       .sheet(item: $activityToEdit) { activity in
-        RecordSpendSheet(
-          monthTitle: viewModel.selectedMonthDisplayTitle,
-          selectedMonthStart: viewModel.selectedMonthStart,
-          editingActivity: activity,
-          initialPillar: activity.pillar,
-          availablePillars: viewModel.selectedMonthPillars,
-          availableItems: viewModel.selectedMonthSnapshot?.items ?? [],
-          availableCategories: viewModel.categories
-        ) { draft in
-          await viewModel.updateExpenseAndWait(expenseID: activity.id, draft)
-        }
+        editActivitySheet(for: activity)
       }
-      .sheet(isPresented: $isPartnerEditorPresented) {
-        HouseholdPartnerEditorSheet(
-          currentName: viewModel.partnerDisplayName == "Partner" ? "" : viewModel.partnerDisplayName
-        ) { name in
-          viewModel.updatePartnerDisplayName(name)
-        }
-      }
+      .sheet(isPresented: $isPartnerEditorPresented, content: householdPartnerSheet)
       .sheet(item: $recurringTemplateToLog) { template in
-        let draft = viewModel.draftFromRecurringTemplate(template)
-        RecordSpendSheet(
-          monthTitle: viewModel.selectedMonthDisplayTitle,
-          selectedMonthStart: viewModel.selectedMonthStart,
-          editingActivity: nil,
-          initialPillar: template.pillar,
-          availablePillars: viewModel.selectedMonthPillars,
-          availableItems: viewModel.selectedMonthSnapshot?.items ?? [],
-          availableCategories: viewModel.categories,
-          prefillDraft: draft
-        ) { saveDraft in
-          await viewModel.recordExpenseAndWait(saveDraft)
-        }
+        recurringTemplateSheet(for: template)
       }
-      .sheet(isPresented: $isRecurringManagerPresented) {
-        RecurringTemplatesManagerSheet(
-          templates: viewModel.recurringTemplates,
-          availableCategories: viewModel.categories,
-          availablePillars: viewModel.selectedMonthPillars,
-          onSave: { req, id in viewModel.saveRecurringTemplate(req, templateId: id) },
-          onDelete: { id in viewModel.deleteRecurringTemplate(id) }
-        )
-      }
+      .sheet(isPresented: $isRecurringManagerPresented, content: recurringManagerSheet)
       .confirmationDialog(
         "Delete planned item?",
-        isPresented: Binding(
-          get: { itemToDelete != nil },
-          set: { if !$0 { itemToDelete = nil } }
-        ),
+        isPresented: itemDeleteBinding,
         presenting: itemToDelete
       ) { item in
         Button("Delete", role: .destructive) {
-          destructiveFeedbackTrigger += 1
-          viewModel.removePlanItem(item.id)
+          deletePlannedItem(item)
         }
       } message: { item in
         Text("Remove \(item.title) from the \(item.pillar.title) plan for \(viewModel.selectedMonthDisplayTitle).")
       }
       .confirmationDialog(
         "Delete expense?",
-        isPresented: Binding(
-          get: { activityToDelete != nil },
-          set: { if !$0 { activityToDelete = nil } }
-        ),
+        isPresented: expenseDeleteBinding,
         presenting: activityToDelete
       ) { activity in
         Button("Delete", role: .destructive) {
-          destructiveFeedbackTrigger += 1
-          viewModel.removeExpense(activity.id)
+          deleteExpense(activity)
         }
       } message: { activity in
         Text("Remove \(activity.title) from \(viewModel.selectedMonthDisplayTitle).")
       }
     }
     .appSensoryFeedback(destructive: destructiveFeedbackTrigger)
+  }
+
+  @ViewBuilder
+  private var rootContent: some View {
+    if isShowingLoadingState {
+          ExpensesSkeletonView()
+    } else if let loadErrorMessage {
+      ErrorRetryView(message: loadErrorMessage, onRetry: retryLoad)
+    } else if shouldShowEmptyState {
+      EmptyStateView(
+        icon: "chart.bar.doc.horizontal",
+        title: "No budget yet",
+        message: "Set up your first monthly budget to get started.",
+        ctaLabel: "Add Budget",
+        onCTA: presentSalaryEditor
+      )
+    } else {
+      mainScrollView
+    }
+  }
+
+  private var toolbarActions: some View {
+    HStack(spacing: 8) {
+      Button(action: presentRecordSpend) {
+        Image(systemName: "plus.circle")
+          .font(.system(size: 16, weight: .semibold))
+      }
+      .buttonStyle(.glass)
+      .tint(AppTheme.Colors.tint(for: colorScheme))
+      .accessibilityLabel("Record spend")
+      .accessibilityIdentifier("expenses.recordSpendButton")
+
+      Menu {
+        Button("Plan next month", systemImage: "calendar.badge.plus", action: viewModel.createNextMonthPlan)
+        Button("Adjust monthly budget", systemImage: "eurosign.circle", action: presentSalaryEditor)
+        Button("Adjust pillar targets", systemImage: "slider.horizontal.3", action: presentTargetEditor)
+        Button("Add pillar", systemImage: "square.stack.3d.up", action: presentTargetEditor)
+        Button("Record spend", systemImage: "plus.circle", action: presentRecordSpend)
+        Button("Household partner", systemImage: "person.2", action: presentPartnerEditor)
+        Divider()
+        Button("Delete this month plan", systemImage: "trash", role: .destructive, action: viewModel.deleteCurrentSnapshot)
+      } label: {
+        Image(systemName: "ellipsis.circle")
+          .font(.system(size: 16, weight: .semibold))
+      }
+      .buttonStyle(.glass)
+      .tint(AppTheme.Colors.tint(for: colorScheme))
+      .accessibilityLabel("Expense actions")
+
+      Button(action: openSettings) {
+        Image(systemName: "gearshape")
+          .font(.system(size: 16, weight: .semibold))
+      }
+      .buttonStyle(.glass)
+      .tint(AppTheme.Colors.tint(for: colorScheme))
+      .accessibilityLabel("Open settings")
+    }
+  }
+
+  private var mainScrollView: some View {
+    ScrollView {
+      VStack(spacing: 24) {
+        ExpensesCircularOverviewCard(
+          leftAmount: viewModel.selectedMonthLeftAfterSpending,
+          totalAmount: viewModel.selectedMonthSnapshot?.netSalary ?? 0
+        )
+        .padding(.top, 10)
+
+        PlannerSalaryCard(
+          monthTitle: viewModel.selectedMonthDisplayTitle,
+          netSalary: viewModel.selectedMonthSnapshot?.netSalary ?? 0,
+          allocated: viewModel.selectedMonthPlannedTotal,
+          spent: viewModel.selectedMonthActualTotal,
+          myPlanned: viewModel.selectedMonthMyPlannedTotal,
+          partnerPlanned: viewModel.selectedMonthPartnerPlannedTotal,
+          mySpent: viewModel.selectedMonthMyActualTotal,
+          partnerSpent: viewModel.selectedMonthPartnerActualTotal,
+          partnerName: viewModel.partnerDisplayName,
+          leftToAllocate: viewModel.selectedMonthAvailableAfterPillarPlan,
+          leftAfterSpending: viewModel.selectedMonthLeftAfterSpending,
+          onEditMonthlyBudget: { isSalaryEditorPresented = true }
+        )
+        .padding(.horizontal, 16)
+
+        missingBudgetAlert
+
+        MonthlyPlanItemsCard(
+          monthTitle: viewModel.selectedMonthDisplayTitle,
+          items: (viewModel.selectedMonthSnapshot?.items ?? []).sorted {
+            if $0.pillar == $1.pillar {
+              return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
+            }
+            return $0.pillar.rawValue < $1.pillar.rawValue
+          },
+          recurringTemplates: viewModel.recurringTemplates,
+          onAdd: { presentNewPlanItemDraft(pillar: viewModel.preferredInitialPillar) },
+          onEdit: { item in presentExistingPlanItemDraft(item) },
+          onDelete: { item in itemToDelete = item },
+          onLogRecurring: { template in recurringTemplateToLog = template },
+          onManageRecurring: { isRecurringManagerPresented = true }
+        )
+        .padding(.horizontal, 16)
+
+        ExpensesYearOverviewCard(
+          selectedYear: selectedYearBinding,
+          availableYears: viewModel.availableYears,
+          totalSpent: viewModel.selectedYearActualTotal,
+          averageSpent: viewModel.selectedYearAverageActual,
+          lastMonthLabel: viewModel.selectedYearLastMonthLabel,
+          chartPoints: viewModel.selectedYearChartPoints
+        )
+        .padding(.horizontal, 16)
+
+        PillarAllocationTableCard(
+          monthTitle: viewModel.selectedMonthDisplayTitle,
+          summaries: viewModel.selectedMonthSummaries
+        )
+        .padding(.horizontal, 16)
+
+        SmartSuggestionsCard(
+          suggestion: viewModel.topReportSuggestion,
+          isLoading: viewModel.isSuggestionsLoading,
+          isUnavailable: viewModel.suggestionsUnavailable,
+          onDismiss: { suggestion in
+            viewModel.dismissSuggestion(suggestion)
+          }
+        )
+        .padding(.horizontal, 16)
+
+        ExpensesByCategoryCard(
+          monthTitle: viewModel.selectedMonthDisplayTitle,
+          activities: viewModel.selectedMonthActivities,
+          summaries: viewModel.selectedMonthSummaries,
+          onEdit: { activity in
+            activityToEdit = activity
+          },
+          onDelete: { activity in
+            activityToDelete = activity
+          }
+        )
+        .padding(.horizontal, 16)
+
+        NavigationLink {
+          BudgetCategoryDetailsScreen(
+            viewModel: viewModel,
+            isActivitySheetPresented: $isActivitySheetPresented,
+            onAddPlannedItem: { pillar in
+              presentNewPlanItemDraft(pillar: pillar)
+            },
+            onRecordExpense: { pillar in
+              recordSpendInitialPillar = pillar
+              isActivitySheetPresented = true
+            }
+          )
+        } label: {
+          HStack {
+            Image(systemName: "square.grid.2x2.fill")
+              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+            Text("Budget Category Details")
+              .font(.headline)
+              .foregroundStyle(.primary)
+            Spacer()
+            Image(systemName: "chevron.right")
+              .font(.subheadline.weight(.semibold))
+              .foregroundStyle(.secondary)
+          }
+          .padding()
+          .background(Color(uiColor: .secondarySystemGroupedBackground))
+          .clipShape(.rect(cornerRadius: 16))
+          .overlay(
+            RoundedRectangle(cornerRadius: 16)
+              .stroke(Color.white.opacity(0.05), lineWidth: 1)
+          )
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 40)
+      }
+      .padding(.vertical, 10)
+    }
+    .refreshable {
+      await viewModel.load(force: true)
+    }
+  }
+
+  private func initialLoad() async {
+    await viewModel.load()
+  }
+
+  private func retryLoad() {
+    Task { await viewModel.load(force: true) }
+  }
+
+  private func openSettings() {
+    isSettingsPresented = true
+  }
+
+  private func presentSalaryEditor() {
+    isSalaryEditorPresented = true
+  }
+
+  private func presentTargetEditor() {
+    isTargetEditorPresented = true
+  }
+
+  private func presentPartnerEditor() {
+    isPartnerEditorPresented = true
+  }
+
+  private func presentRecordSpend() {
+    recordSpendInitialPillar = viewModel.preferredInitialPillar
+    isActivitySheetPresented = true
+  }
+
+  private func resetRecordSpendInitialPillar() {
+    recordSpendInitialPillar = viewModel.preferredInitialPillar
+  }
+
+  private func handlePlanItemDismiss() {
+    if !didSavePresentedPlanItemDraft, let draft = presentedPlanItemDraft {
+      viewModel.cancelPlanItemDraft(draft)
+    }
+    didSavePresentedPlanItemDraft = false
+    presentedPlanItemDraft = nil
+  }
+
+  private func deletePlannedItem(_ item: BudgetPlanItem) {
+    destructiveFeedbackTrigger += 1
+    viewModel.removePlanItem(item.id)
+  }
+
+  private func deleteExpense(_ activity: BudgetActivity) {
+    destructiveFeedbackTrigger += 1
+    viewModel.removeExpense(activity.id)
+  }
+
+  private func salaryEditorSheet() -> some View {
+    NetSalaryEditorSheet(
+      currentValue: viewModel.selectedMonthSnapshot?.netSalary ?? 0,
+      monthTitle: viewModel.selectedMonthDisplayTitle,
+      onSave: viewModel.updateNetSalary
+    )
+  }
+
+  private func targetEditorSheet() -> some View {
+    PillarTargetsEditorSheet(
+      monthTitle: viewModel.selectedMonthDisplayTitle,
+      currentShares: viewModel.selectedMonthSnapshot?.targetShares ?? [:],
+      onSave: viewModel.updateTargetShares
+    )
+  }
+
+  private func planItemEditorSheet(for draft: BudgetPlanItemDraft) -> some View {
+    PlanItemEditorSheet(
+      draft: draft,
+      availablePillars: viewModel.selectedMonthPillars,
+      availableCategories: viewModel.categories
+    ) { updatedDraft in
+      didSavePresentedPlanItemDraft = true
+      viewModel.addOrUpdatePlanItem(updatedDraft)
+    }
+  }
+
+  private func recordSpendSheet() -> some View {
+    RecordSpendSheet(
+      monthTitle: viewModel.selectedMonthDisplayTitle,
+      selectedMonthStart: viewModel.selectedMonthStart,
+      editingActivity: nil,
+      initialPillar: recordSpendInitialPillar,
+      availablePillars: viewModel.selectedMonthPillars,
+      availableItems: viewModel.selectedMonthSnapshot?.items ?? [],
+      availableCategories: viewModel.categories
+    ) { draft in
+      await viewModel.recordExpenseAndWait(draft)
+    }
+  }
+
+  private func editActivitySheet(for activity: BudgetActivity) -> some View {
+    RecordSpendSheet(
+      monthTitle: viewModel.selectedMonthDisplayTitle,
+      selectedMonthStart: viewModel.selectedMonthStart,
+      editingActivity: activity,
+      initialPillar: activity.pillar,
+      availablePillars: viewModel.selectedMonthPillars,
+      availableItems: viewModel.selectedMonthSnapshot?.items ?? [],
+      availableCategories: viewModel.categories
+    ) { draft in
+      await viewModel.updateExpenseAndWait(expenseID: activity.id, draft)
+    }
+  }
+
+  private func householdPartnerSheet() -> some View {
+    HouseholdPartnerEditorSheet(
+      currentName: viewModel.partnerDisplayName == "Partner" ? "" : viewModel.partnerDisplayName
+    ) { name in
+      viewModel.updatePartnerDisplayName(name)
+    }
+  }
+
+  private func recurringTemplateSheet(for template: RecurringTemplateResponse) -> some View {
+    let draft = viewModel.draftFromRecurringTemplate(template)
+    return RecordSpendSheet(
+      monthTitle: viewModel.selectedMonthDisplayTitle,
+      selectedMonthStart: viewModel.selectedMonthStart,
+      editingActivity: nil,
+      initialPillar: template.pillar,
+      availablePillars: viewModel.selectedMonthPillars,
+      availableItems: viewModel.selectedMonthSnapshot?.items ?? [],
+      availableCategories: viewModel.categories,
+      prefillDraft: draft
+    ) { saveDraft in
+      await viewModel.recordExpenseAndWait(saveDraft)
+    }
+  }
+
+  private func recurringManagerSheet() -> some View {
+    RecurringTemplatesManagerSheet(
+      templates: viewModel.recurringTemplates,
+      availableCategories: viewModel.categories,
+      availablePillars: viewModel.selectedMonthPillars,
+      onSave: { req, id in viewModel.saveRecurringTemplate(req, templateId: id) },
+      onDelete: { id in viewModel.deleteRecurringTemplate(id) }
+    )
   }
 
   private var selectedMonthBinding: Binding<Date> {
@@ -650,6 +718,7 @@ private struct PlannerSalaryCard: View {
         Button("Edit monthly budget", action: onEditMonthlyBudget)
           .buttonStyle(.borderedProminent)
           .controlSize(.small)
+          .accessibilityIdentifier("expenses.editSalaryButton")
 
         Divider()
 
@@ -801,6 +870,7 @@ private struct MonthlyPlanItemsCard: View {
               onAdd()
             }
             .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("expenses.addFirstPlanItemButton")
           }
           .padding(.vertical, 8)
           .transition(.opacity.combined(with: .scale(scale: 0.95)))
@@ -999,6 +1069,7 @@ private struct MonthlyPlanItemsCard: View {
           Button("Add planned item", action: onAdd)
             .buttonStyle(.bordered)
             .controlSize(.small)
+            .accessibilityIdentifier("expenses.addPlanItemButton")
           Spacer()
           Button {
             onManageRecurring()
@@ -1290,6 +1361,7 @@ private struct NetSalaryEditorSheet: View {
           TextField("Monthly budget", text: $value)
             .keyboardType(.decimalPad)
             .focused($isValueFocused)
+            .accessibilityIdentifier("expenses.salaryAmountField")
 
           Text("You can include take-home salary and extra monthly income sources.")
             .font(.footnote)
@@ -1311,6 +1383,7 @@ private struct NetSalaryEditorSheet: View {
             successFeedbackTrigger += 1
             dismiss()
           }
+          .accessibilityIdentifier("expenses.salarySaveButton")
         }
         ToolbarItemGroup(placement: .keyboard) {
           Spacer()
@@ -1537,7 +1610,8 @@ private struct PlanItemEditorSheet: View {
               iconColor: AppTheme.Colors.tint(for: colorScheme),
               placeholder: "Name",
               text: $title,
-              autocapitalization: .words
+              autocapitalization: .words,
+              accessibilityIdentifier: "expenses.planItemTitleField"
             )
             .focused($isTitleFocused)
 
@@ -1548,7 +1622,8 @@ private struct PlanItemEditorSheet: View {
               iconColor: AppTheme.Colors.secondaryTint(for: colorScheme),
               placeholder: "Planned amount",
               text: $plannedAmount,
-              keyboardType: .decimalPad
+              keyboardType: .decimalPad,
+              accessibilityIdentifier: "expenses.planItemAmountField"
             )
             .focused($isAmountFocused)
 
@@ -1570,6 +1645,7 @@ private struct PlanItemEditorSheet: View {
                 }
               }
               .labelsHidden()
+              .accessibilityIdentifier("expenses.planItemPillarPicker")
             }
 
             if !filteredCategories.isEmpty {
@@ -1638,7 +1714,8 @@ private struct PlanItemEditorSheet: View {
 
       FormActionBar(
         primaryLabel: "Save",
-        isDisabled: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        isDisabled: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+        accessibilityIdentifier: "expenses.planItemSaveButton"
       ) {
         let normalizedAmount = plannedAmount.trimmingCharacters(in: .whitespacesAndNewlines)
         let amount: Double
@@ -1763,7 +1840,8 @@ private struct RecordSpendSheet: View {
               placeholder: "Title",
               text: $title,
               autocapitalization: .words,
-              disableAutocorrection: true
+              disableAutocorrection: true,
+              accessibilityIdentifier: "expenses.expenseTitleField"
             )
 
             FormDivider()
@@ -1817,7 +1895,8 @@ private struct RecordSpendSheet: View {
                 iconColor: AppTheme.Colors.secondaryTint(for: colorScheme),
                 placeholder: "Amount",
                 text: $amount,
-                keyboardType: .decimalPad
+                keyboardType: .decimalPad,
+                accessibilityIdentifier: "expenses.expenseAmountField"
               )
               .focused($isAmountFocused)
             }
@@ -1868,6 +1947,7 @@ private struct RecordSpendSheet: View {
                   }
                 }
                 .labelsHidden()
+                .accessibilityIdentifier("expenses.expenseCategoryPicker")
               }
             }
 
@@ -1926,7 +2006,8 @@ private struct RecordSpendSheet: View {
           }
           return parseMonetaryValue(amount) == nil
             || (title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && linkedPlanItemID == nil)
-        }()
+        }(),
+        accessibilityIdentifier: "expenses.expenseSaveButton"
       ) {
         guard !isSaving else { return }
 
@@ -2603,4 +2684,21 @@ private struct RecurringTemplateEditorSheet: View {
       .onChange(of: pillar) { _, _ in categoryId = nil }
     }
   }
+}
+
+private struct ExpensesSkeletonView: View {
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                ForEach(0..<3, id: \.self) { _ in
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.secondary.opacity(0.15))
+                        .frame(height: 120)
+                        .shimmer()
+                        .padding(.horizontal, 16)
+                }
+            }
+            .padding(.vertical, 20)
+        }
+    }
 }

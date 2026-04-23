@@ -464,6 +464,18 @@ Important files:
 - `Features/Auth/AuthSessionManager.swift`
 - `Features/Auth/LoginViewModel.swift`
 - `Features/Auth/LoginScreen.swift`
+- `Features/Auth/SignInView.swift`
+- `Features/Auth/SignUpView.swift`
+- `Features/Auth/VaultMFAVerificationView.swift`
+- `Features/Auth/VaultForgotPasswordView.swift`
+- `Features/Auth/SocialAuthProvider.swift`
+- `Features/Auth/SocialAuthButton.swift`
+- `Features/Auth/SocialAuthSection.swift`
+- `Features/Auth/VaultTextField.swift`
+- `Features/Auth/PasswordStrengthMeter.swift`
+- `Features/Auth/NorviqaLogo.swift`
+- `Features/Auth/VaultPlatinumCard.swift`
+- `Features/Auth/AuthFooter.swift`
 - `Features/Auth/SecureStringStore.swift`
 - `Features/Auth/JWTTokenInspector.swift`
 - `Features/Auth/OAuthWebAuthenticator.swift`
@@ -505,6 +517,41 @@ OAuth sign-in uses:
 - backend OAuth exchange endpoint
 
 The API now supports linking Google, Apple, and X identities to an existing account when the provider returns the same verified email.
+
+### Auth UI Architecture
+
+The auth screens were refactored from a single 1074-line `LoginScreen.swift` into focused, single-responsibility views:
+
+- `LoginScreen` — root container with `MeshGradientBackground`, sheet presentation, and environment switching
+- `SignInView` — email/password form with `GlassCard`, social auth, and password visibility toggle
+- `SignUpView` — registration form with username, email, password strength meter, confirm password, and date-of-birth picker
+- `VaultMFAVerificationView` — 6-digit code entry sheet
+- `VaultForgotPasswordView` — email-based password reset flow
+
+Shared auth components:
+
+- `VaultTextField` — reusable labeled text field with icon, secure mode, focus ring, and glass-styled background
+- `SocialAuthButton` / `SocialAuthSection` — Apple, Google, X OAuth buttons with visible text labels
+- `PasswordStrengthMeter` — 5-bar indicator with color + icon fallback for `accessibilityDifferentiateWithoutColor`
+- `NorviqaLogo` — branded logo with shadow
+- `VaultPlatinumCard` — marketing value proposition card
+- `AuthFooter` — privacy, terms, help, and environment links
+
+Design system alignment:
+
+- All auth screens now use `AppTheme.Colors` instead of the old hardcoded `VaultColors` dark-only palette
+- Background is `MeshGradientBackground` to match Home and Portfolio
+- Form containers use `GlassCard` with `.appGlassEffect` for liquid-glass compatibility
+- Primary actions use `.buttonStyle(.glassProminent)` with `AppTheme.Colors.tint`
+- Typography uses semantic Dynamic Type (`.largeTitle`, `.headline`, `.subheadline`, `.caption`) instead of fixed sizes
+
+Accessibility improvements:
+
+- Social auth buttons show visible text (not just icons) for VoiceOver and HIG compliance
+- Password visibility toggles use `Button("Show password", systemImage: "eye.fill")` with `.labelStyle(.iconOnly)`
+- Password strength shows an icon when `.accessibilityDifferentiateWithoutColor` is enabled
+- `DatePicker` overlay hack replaced with a proper sheet for date-of-birth selection
+- All tap targets meet the 44×44 pt minimum
 
 ## Concurrency Patterns
 
@@ -923,6 +970,71 @@ This keeps the visual language consistent.
 
 It appears across Home, Portfolio, Expenses, Reports, Stock Research, and Settings.
 
+### Liquid Glass APIs
+
+The app targets iOS 26.2, so it can use native Liquid Glass directly. The compatibility layer lives in `Extensions/GlassEffect+Compat.swift` so screens can use app-level helpers while still studying the native SwiftUI API.
+
+Core APIs to study:
+
+- `.glassEffect(_:, in:)` applies Liquid Glass to a view. The default is `.regular` glass in a capsule-shaped `DefaultGlassEffectShape`.
+- `Glass.regular` is the normal material for cards, chips, top bars, and floating controls.
+- `Glass.clear` keeps glass foreground behavior without the regular material. Use it rarely; the app should prefer `.regular` for visible surfaces.
+- `Glass.identity` represents no glass effect. It is useful when composing conditional effects without changing layout.
+- `.tint(_:)` adds contextual color to glass. Use it for selected chips, prominent metric pills, or status surfaces.
+- `.interactive()` makes glass respond to touch and pointer interaction. Use it only on tappable/focusable views.
+- `GlassEffectContainer(spacing:)` groups nearby glass shapes so the renderer can combine, blend, and morph them efficiently.
+- `.glassEffectID(_:in:)` identifies glass shapes that should morph across animated hierarchy changes.
+- `GlassEffectTransition.matchedGeometry` and `.materialize` describe how glass appears, disappears, or morphs during transitions.
+- `.buttonStyle(.glass)` is the default Liquid Glass button style for toolbar icons and secondary actions.
+- `.buttonStyle(.glassProminent)` is the prominent Liquid Glass button style for primary actions.
+- `.buttonStyle(.glass(.regular.tint(...)))` configures a glass button with a custom `Glass` value.
+
+Local wrapper:
+
+```swift
+view
+  .appGlassEffect(
+    .rect(cornerRadius: 16),
+    tint: AppTheme.Colors.tint(for: colorScheme),
+    interactive: true
+  )
+```
+
+Use this wrapper for app-branded surfaces that need the same fallback behavior and shape vocabulary. Use native styles directly for standard `Button` controls:
+
+```swift
+Button("Save") {
+  save()
+}
+.buttonStyle(.glassProminent)
+.tint(AppTheme.Colors.tint(for: colorScheme))
+```
+
+Good app usage patterns:
+
+- cards: `GlassCard` or `.appGlassEffect(.rect(cornerRadius: ...))`, not interactive
+- chips and custom tab pills: `.glassEffect(.regular.interactive(), in: .capsule)`
+- selected chips: `.glassEffect(.regular.tint(AppTheme.Colors.tint(for: colorScheme)).interactive(), in: .capsule)`
+- icon toolbar buttons: `.buttonStyle(.glass)`
+- primary submit buttons: `.buttonStyle(.glassProminent)`
+- grouped chips/buttons: wrap the group in `GlassEffectContainer(spacing:)`
+- morphing tab/chip selection: use `@Namespace` plus `.glassEffectID(_:in:)`
+
+Avoid:
+
+- adding `.interactive()` to static cards or labels
+- stacking custom material backgrounds under native glass unless a design needs a fallback tint
+- replacing system `TabView`, `.searchable`, sheets, menus, or standard navigation chrome when the system already applies native glass behavior
+- using `.clear` as the default for cards; it can make surfaces look like old custom blur rather than Liquid Glass
+
+Related SwiftUI 2025 study topics:
+
+- `ToolbarSpacer` creates visual separation between Liquid Glass toolbar items.
+- `backgroundExtensionEffect()` extends, mirrors, and blurs edge content into safe-area regions.
+- `scrollEdgeEffectStyle(_:for:)` configures scroll edge effects.
+- `tabBarMinimizeBehavior(_:)` controls tab bar minimization behavior.
+- tabs can use a `search` role so search can replace the tab bar in the right context.
+
 ### Empty states
 
 The app uses:
@@ -1084,16 +1196,17 @@ Read in this order:
 8. `Features/Auth/AuthSessionManager.swift`
 9. `Features/Auth/AuthService.swift`
 10. `Features/Auth/LoginViewModel.swift`
-11. `Features/Home/HomeScreen.swift`
-12. `Features/Portfolio/PortfolioViewModel.swift`
-13. `Features/Portfolio/PortfolioScreen.swift`
-14. `Features/Expenses/BudgetPlannerViewModel.swift`
-15. `Features/Expenses/ExpensesSyncManager.swift`
-16. `Features/Reports/ReportsViewModel.swift`
-17. `Features/Stocks/StockDetailsScreenViewModel.swift`
-18. `Components/GlassCard.swift`
-19. `Components/FormComponents.swift`
-20. `Components/ToastBanner.swift`
+11. `Features/Auth/LoginScreen.swift`
+12. `Features/Home/HomeScreen.swift`
+13. `Features/Portfolio/PortfolioViewModel.swift`
+14. `Features/Portfolio/PortfolioScreen.swift`
+15. `Features/Expenses/BudgetPlannerViewModel.swift`
+16. `Features/Expenses/ExpensesSyncManager.swift`
+17. `Features/Reports/ReportsViewModel.swift`
+18. `Features/Stocks/StockDetailsScreenViewModel.swift`
+19. `Components/GlassCard.swift`
+20. `Components/FormComponents.swift`
+21. `Components/ToastBanner.swift`
 
 That order teaches:
 

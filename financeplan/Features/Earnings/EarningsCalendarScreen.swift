@@ -40,101 +40,21 @@ struct EarningsCalendarScreen: View {
   @State private var selectedEvent: EarningsEvent?
   @State private var loadedMonthKeys: Set<String> = []
 
+  private var isShowingLoadingState: Bool {
+    isLoading && earnings.isEmpty && upcomingEarnings.isEmpty
+  }
+
   var body: some View {
     ZStack {
-      if isLoading && earnings.isEmpty && upcomingEarnings.isEmpty {
+      if isShowingLoadingState {
         ProgressView()
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else {
-        List {
-          // 1. Upcoming in the Next 30 Days
-          if isLoadingUpcoming {
-            ProgressView("Loading upcoming...")
-              .frame(maxWidth: .infinity, alignment: .center)
-              .listRowBackground(Color.clear)
-          } else if !upcomingEarnings.isEmpty {
-            Section("Upcoming in the Next 30 Days") {
-              ForEach(upcomingEarnings.prefix(5)) { event in
-                Button {
-                  selectedEvent = event
-                } label: {
-                  EarningsRow(event: event)
-                }
-                .buttonStyle(.plain)
-              }
-            }
-          }
-
-          // 2. Calendar
-          Section {
-            EarningsMarkedCalendar(
-              selectedDate: $selectedDate,
-              markedDates: Set(earnings.map { $0.date })
-            )
-            .frame(height: 380)
-            .background(AppTheme.Colors.cardBackground(for: colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
-          }
-          .listRowInsets(EdgeInsets())
-          .listRowBackground(Color.clear)
-
-          // 3. Selected Date Earnings
-          Section("Earnings for \(selectedDate.formatted(date: .long, time: .omitted))") {
-            let dayEarnings = earningsForSelectedDate
-            if dayEarnings.isEmpty {
-              ContentUnavailableView {
-                Label("No Earnings Today", systemImage: "calendar.badge.exclamationmark")
-              } description: {
-                Text("No earnings releases found for the selected date.")
-              }
-              .listRowBackground(Color.clear)
-            } else {
-              ForEach(dayEarnings) { event in
-                Button {
-                  selectedEvent = event
-                } label: {
-                  EarningsRow(event: event)
-                }
-                .buttonStyle(.plain)
-              }
-            }
-          }
-
-          // 4. "Earnings Transcripts" title + warning
-          Section {
-            VStack(alignment: .leading, spacing: 16) {
-              Text("Earnings Transcripts")
-                .typography(.title, weight: .bold)
-
-              HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "info.circle.fill")
-                  .foregroundStyle(Color.blue)
-                VStack(alignment: .leading, spacing: 4) {
-                  Text("Coming in Future Updates")
-                    .typography(.small, weight: .semibold)
-                  Text("Earnings Transcripts and the ability to select the specific timestamp of the earnings (pre-market vs. after-hours) are currently limited and will be fully supported in future versions.")
-                    .typography(.nano)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                }
-              }
-              .padding()
-              .appGlassEffect(.rect(cornerRadius: 16), tint: Color.blue.opacity(0.05))
-            }
-          }
-          .listRowBackground(Color.clear)
-          .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 24, trailing: 16))
-        }
+        earningsList
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .refreshable {
-          loadedMonthKeys = []
-          earnings = []
-          upcomingEarnings = []
-          await loadEarnings()
-          await loadUpcomingEarnings()
+          await refreshCalendar()
         }
       }
     }
@@ -160,6 +80,107 @@ struct EarningsCalendarScreen: View {
   private var earningsForSelectedDate: [EarningsEvent] {
     let dateString = formatISODateOnly(selectedDate)
     return earnings.filter { $0.date == dateString }
+  }
+
+  private var earningsList: some View {
+    List {
+      upcomingSection
+      calendarSection
+      selectedDateSection
+      transcriptsSection
+    }
+  }
+
+  @ViewBuilder
+  private var upcomingSection: some View {
+    if isLoadingUpcoming {
+      ProgressView("Loading upcoming...")
+        .frame(maxWidth: .infinity, alignment: .center)
+        .listRowBackground(Color.clear)
+    } else if !upcomingEarnings.isEmpty {
+      Section("Upcoming in the Next 30 Days") {
+        ForEach(upcomingEarnings.prefix(5)) { event in
+          Button(action: { selectEvent(event) }) {
+            EarningsRow(event: event)
+          }
+          .buttonStyle(.plain)
+        }
+      }
+    }
+  }
+
+  private var calendarSection: some View {
+    Section {
+      EarningsMarkedCalendar(
+        selectedDate: $selectedDate,
+        markedDates: Set(earnings.map { $0.date })
+      )
+      .frame(height: 380)
+      .background(AppTheme.Colors.cardBackground(for: colorScheme))
+      .clipShape(RoundedRectangle(cornerRadius: 16))
+      .padding(.horizontal, 16)
+      .padding(.bottom, 8)
+    }
+    .listRowInsets(EdgeInsets())
+    .listRowBackground(Color.clear)
+  }
+
+  private var selectedDateSection: some View {
+    Section("Earnings for \(selectedDate.formatted(date: .long, time: .omitted))") {
+      if earningsForSelectedDate.isEmpty {
+        ContentUnavailableView {
+          Label("No Earnings Today", systemImage: "calendar.badge.exclamationmark")
+        } description: {
+          Text("No earnings releases found for the selected date.")
+        }
+        .listRowBackground(Color.clear)
+      } else {
+        ForEach(earningsForSelectedDate) { event in
+          Button(action: { selectEvent(event) }) {
+            EarningsRow(event: event)
+          }
+          .buttonStyle(.plain)
+        }
+      }
+    }
+  }
+
+  private var transcriptsSection: some View {
+    Section {
+      VStack(alignment: .leading, spacing: 16) {
+        Text("Earnings Transcripts")
+          .typography(.title, weight: .bold)
+
+        HStack(alignment: .top, spacing: 12) {
+          Image(systemName: "info.circle.fill")
+            .foregroundStyle(Color.blue)
+          VStack(alignment: .leading, spacing: 4) {
+            Text("Coming in Future Updates")
+              .typography(.small, weight: .semibold)
+            Text("Earnings Transcripts and the ability to select the specific timestamp of the earnings (pre-market vs. after-hours) are currently limited and will be fully supported in future versions.")
+              .typography(.nano)
+              .foregroundStyle(.secondary)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+        }
+        .padding()
+        .appGlassEffect(.rect(cornerRadius: 16), tint: Color.blue.opacity(0.05))
+      }
+    }
+    .listRowBackground(Color.clear)
+    .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 24, trailing: 16))
+  }
+
+  private func refreshCalendar() async {
+    loadedMonthKeys = []
+    earnings = []
+    upcomingEarnings = []
+    await loadEarnings()
+    await loadUpcomingEarnings()
+  }
+
+  private func selectEvent(_ event: EarningsEvent) {
+    selectedEvent = event
   }
 
   private func loadEarnings() async {

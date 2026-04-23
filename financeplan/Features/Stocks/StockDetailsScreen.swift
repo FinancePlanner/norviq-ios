@@ -14,159 +14,114 @@ struct StockDetailScreen: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = StockDetailsViewModel()
-    @State private var showEditValuation = false
-    @State private var showEditPosition = false
-    @State private var showSellPosition = false
-    @State private var showEditAnalysis = false
-    @State private var showEditDCF = false
+    @State private var activeSheet: ActiveSheet?
     @State private var selectedTab: StockDetailTab = .overview
     @State private var selectedScenario: StockProjectionScenarioKind = .base
     @State private var selectedStatementPeriod: StockFinancialStatementPeriod = .fy
 
+    private enum ActiveSheet: String, Identifiable {
+        case editValuation
+        case editPosition
+        case sellPosition
+        case editAnalysis
+        case editDCF
+
+        var id: String { rawValue }
+    }
+
+    private var isShowingLoadingState: Bool {
+        viewModel.isLoading && viewModel.details == nil
+    }
+
+    private var loadErrorMessage: String? {
+        guard viewModel.details == nil else { return nil }
+        return viewModel.errorMessage
+    }
+
     var body: some View {
-        Group {
-            if viewModel.isLoading && viewModel.details == nil {
-                ProgressView("Loading stock...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            } else if let errorMessage = viewModel.errorMessage, viewModel.details == nil {
-                VStack(spacing: 12) {
-                    Text(errorMessage)
-                        .foregroundStyle(.secondary)
-                    Button("Retry") {
-                        Task {
-                            await viewModel.load(stockId: stockId, force: true)
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            } else {
-                content
-            }
-        }
+        rootContent
         .navigationTitle(viewModel.details?.symbol ?? initialSymbol)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                if let shareSnapshot = viewModel.shareSnapshot {
-                    Menu {
-                        ShareLink(
-                            item: shareSnapshot.body,
-                            subject: Text(shareSnapshot.title),
-                            message: Text("Shared from financeplan")
-                        ) {
-                            Label("Snapshot", systemImage: "doc.text")
-                        }
-
-                        if let thesisPayload {
-                            ShareLink(
-                                item: thesisPayload.body,
-                                subject: Text(thesisPayload.title),
-                                message: Text("Shared from financeplan")
-                            ) {
-                                Label("Thesis", systemImage: "quote.bubble")
-                            }
-                        }
-
-                        if let fundamentalsPayload {
-                            ShareLink(
-                                item: fundamentalsPayload.body,
-                                subject: Text(fundamentalsPayload.title),
-                                message: Text("Shared from financeplan")
-                            ) {
-                                Label("Fundamentals", systemImage: "chart.line.uptrend.xyaxis")
-                            }
-                        }
-
-                        if let priceTargetsPayload {
-                            ShareLink(
-                                item: priceTargetsPayload.body,
-                                subject: Text(priceTargetsPayload.title),
-                                message: Text("Shared from financeplan")
-                            ) {
-                                Label("Price targets", systemImage: "scope")
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                    .accessibilityLabel("Share stock snapshot")
-                } else {
-                    Button(action: {}) {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                    .disabled(true)
-                    .accessibilityLabel("Share stock snapshot")
-                }
+                shareMenu
             }
         }
-        .sheet(isPresented: $showEditPosition) {
-            if let stock = viewModel.details {
-                EditStockPositionSheet(
-                    stock: stock,
-                    isSaving: viewModel.isSavingPosition,
-                    isDeleting: viewModel.isDeletingPosition,
-                    onCancel: { showEditPosition = false },
-                    onSave: { updated in
-                        let ok = await viewModel.savePosition(updated)
-                        if ok {
-                            showEditPosition = false
-                        }
-                        return ok
-                    },
-                    onDelete: {
-                        let ok = await viewModel.deletePosition()
-                        if ok {
-                            showEditPosition = false
-                            dismiss()
-                        }
-                        return ok
-                    }
-                )
-            }
-        }
-        .sheet(isPresented: $showEditValuation) {
-            EditStockValuationView(
-                symbol: viewModel.details?.symbol ?? initialSymbol,
-                existing: viewModel.valuation
-            ) { draft in
-                return await viewModel.saveValuation(draft)
-            }
-        }
-        .sheet(isPresented: $showSellPosition) {
-            if let stock = viewModel.details {
-                SellStockSheet(
-                    stock: stock,
-                    isSelling: viewModel.isSellingPosition,
-                    onCancel: { showSellPosition = false },
-                    onSell: { request in
-                        let outcome = await viewModel.sellPosition(request)
-                        if outcome.shouldDismiss {
-                            showSellPosition = false
-                            dismiss()
-                        }
-                        return outcome.errorMessage
-                    }
-                )
-            }
-        }
-        .sheet(isPresented: $showEditAnalysis) {
-            if let stock = viewModel.details {
-                EditStockAnalysisSheet(stock: stock) { analysis in
-                    await viewModel.saveAnalysis(analysis)
-                }
-            }
-        }
-        .sheet(isPresented: $showEditDCF) {
-            EditDCFSheet {
-                viewModel.reloadAnalysisMetrics()
-            }
+        .sheet(item: $activeSheet) { sheet in
+            sheetContent(for: sheet)
         }
         .task {
-            await viewModel.load(stockId: stockId)
+            await loadStockDetails()
         }
         .task(id: selectedTab) {
-            await viewModel.loadSupplementaryDataIfNeeded(for: selectedTab)
+            await loadSupplementaryData(for: selectedTab)
+        }
+    }
+
+    @ViewBuilder
+    private var rootContent: some View {
+        if isShowingLoadingState {
+                ProgressView("Loading stock...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        } else if let loadErrorMessage {
+            ErrorRetryView(message: loadErrorMessage, onRetry: retryLoad)
+        } else {
+            content
+        }
+    }
+
+    private var shareMenu: some View {
+        Group {
+            if let shareSnapshot = viewModel.shareSnapshot {
+                Menu {
+                    ShareLink(
+                        item: shareSnapshot.body,
+                        subject: Text(shareSnapshot.title),
+                        message: Text("Shared from financeplan")
+                    ) {
+                        Label("Snapshot", systemImage: "doc.text")
+                    }
+
+                    if let thesisPayload {
+                        ShareLink(
+                            item: thesisPayload.body,
+                            subject: Text(thesisPayload.title),
+                            message: Text("Shared from financeplan")
+                        ) {
+                            Label("Thesis", systemImage: "quote.bubble")
+                        }
+                    }
+
+                    if let fundamentalsPayload {
+                        ShareLink(
+                            item: fundamentalsPayload.body,
+                            subject: Text(fundamentalsPayload.title),
+                            message: Text("Shared from financeplan")
+                        ) {
+                            Label("Fundamentals", systemImage: "chart.line.uptrend.xyaxis")
+                        }
+                    }
+
+                    if let priceTargetsPayload {
+                        ShareLink(
+                            item: priceTargetsPayload.body,
+                            subject: Text(priceTargetsPayload.title),
+                            message: Text("Shared from financeplan")
+                        ) {
+                            Label("Price targets", systemImage: "scope")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .accessibilityLabel("Share stock snapshot")
+            } else {
+                Button(action: {}) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .disabled(true)
+                .accessibilityLabel("Share stock snapshot")
+            }
         }
     }
 
@@ -200,9 +155,9 @@ struct StockDetailScreen: View {
                         analystConsensusMessage: viewModel.analystConsensusMessage,
                         basicFinancials: viewModel.basicFinancials,
                         errorMessage: viewModel.errorMessage,
-                        onEditValuation: { showEditValuation = true },
-                        onEditPosition: { showEditPosition = true },
-                        onSellPosition: { showSellPosition = true }
+                        onEditValuation: presentEditValuation,
+                        onEditPosition: presentEditPosition,
+                        onSellPosition: presentSellPosition
                     )
                 case .statements:
                     StockFinancialStatementsTab(
@@ -217,14 +172,14 @@ struct StockDetailScreen: View {
                         analysisMetrics: viewModel.analysisMetrics,
                         analysisMetricsMessage: viewModel.analysisMetricsMessage,
                         valuation: viewModel.valuation,
-                        onEditAnalysis: { showEditAnalysis = true },
-                        onEditDCF: { showEditDCF = true }
+                        onEditAnalysis: presentEditAnalysis,
+                        onEditDCF: presentEditDCF
                     )
                 case .forecast:
                     StockForecastTab(
                         profile: viewModel.primaryComparisonProfile,
                         selectedScenario: $selectedScenario,
-                        onEditDCF: { showEditDCF = true }
+                        onEditDCF: presentEditDCF
                     )
                 case .compare:
                     StockCompareTab(viewModel: viewModel)
@@ -241,6 +196,7 @@ struct StockDetailScreen: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 20)
+            .accessibilityIdentifier("stockDetailsScreen")
         }
         .background(MeshGradientBackground().ignoresSafeArea())
         .refreshable {
@@ -251,6 +207,118 @@ struct StockDetailScreen: View {
         .animation(.snappy(duration: 0.24), value: selectedScenario)
         .animation(.snappy(duration: 0.24), value: selectedStatementPeriod)
         .tint(AppTheme.Colors.tint(for: colorScheme))
+    }
+
+    @ViewBuilder
+    private func sheetContent(for sheet: ActiveSheet) -> some View {
+        switch sheet {
+        case .editPosition:
+            if let stock = viewModel.details {
+                EditStockPositionSheet(
+                    stock: stock,
+                    isSaving: viewModel.isSavingPosition,
+                    isDeleting: viewModel.isDeletingPosition,
+                    onCancel: dismissActiveSheet,
+                    onSave: saveEditedPosition,
+                    onDelete: deletePosition
+                )
+            }
+        case .editValuation:
+            EditStockValuationView(
+                symbol: viewModel.details?.symbol ?? initialSymbol,
+                existing: viewModel.valuation,
+                onSave: saveValuation
+            )
+        case .sellPosition:
+            if let stock = viewModel.details {
+                SellStockSheet(
+                    stock: stock,
+                    isSelling: viewModel.isSellingPosition,
+                    onCancel: dismissActiveSheet,
+                    onSell: sellPosition
+                )
+            }
+        case .editAnalysis:
+            if let stock = viewModel.details {
+                EditStockAnalysisSheet(stock: stock, onSave: saveAnalysis)
+            }
+        case .editDCF:
+            EditDCFSheet(onSave: reloadAnalysisMetrics)
+        }
+    }
+
+    private func loadStockDetails() async {
+        await viewModel.load(stockId: stockId)
+    }
+
+    private func loadSupplementaryData(for tab: StockDetailTab) async {
+        await viewModel.loadSupplementaryDataIfNeeded(for: tab)
+    }
+
+    private func retryLoad() {
+        Task { await viewModel.load(stockId: stockId, force: true) }
+    }
+
+    private func dismissActiveSheet() {
+        activeSheet = nil
+    }
+
+    private func presentEditValuation() {
+        activeSheet = .editValuation
+    }
+
+    private func presentEditPosition() {
+        activeSheet = .editPosition
+    }
+
+    private func presentSellPosition() {
+        activeSheet = .sellPosition
+    }
+
+    private func presentEditAnalysis() {
+        activeSheet = .editAnalysis
+    }
+
+    private func presentEditDCF() {
+        activeSheet = .editDCF
+    }
+
+    private func saveEditedPosition(_ updated: StockResponse) async -> Bool {
+        let ok = await viewModel.savePosition(updated)
+        if ok {
+            dismissActiveSheet()
+        }
+        return ok
+    }
+
+    private func deletePosition() async -> Bool {
+        let ok = await viewModel.deletePosition()
+        if ok {
+            dismissActiveSheet()
+            dismiss()
+        }
+        return ok
+    }
+
+    private func saveValuation(_ draft: StockValuationDraft) async -> String? {
+        await viewModel.saveValuation(draft)
+    }
+
+    private func sellPosition(_ request: SellStockRequest) async -> String? {
+        let outcome = await viewModel.sellPosition(request)
+        if outcome.shouldDismiss {
+            dismissActiveSheet()
+            dismiss()
+        }
+        return outcome.errorMessage
+    }
+
+    private func saveAnalysis(_ analysis: String?) async -> String? {
+        await viewModel.saveAnalysis(analysis)
+    }
+
+    private func reloadAnalysisMetrics() {
+        viewModel.reloadAnalysisMetrics()
     }
 
     private var thesisPayload: StockSharePayload? {

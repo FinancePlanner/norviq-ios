@@ -194,12 +194,14 @@ struct HomeScreen: View {
         .tag(HomeTab.portfolio)
 
       ExpensesPlannerScreen(isSettingsPresented: $isSettingsPresented, viewModel: budgetPlannerViewModel)
+        .accessibilityIdentifier("tab.expenses")
         .tabItem {
           tabLabel(.expenses, systemImage: "creditcard")
         }
         .tag(HomeTab.expenses)
 
       ExpensesComparisonScreen()
+        .accessibilityIdentifier("tab.reports")
         .tabItem {
           tabLabel(.reports, systemImage: "chart.bar.xaxis")
         }
@@ -211,22 +213,13 @@ struct HomeScreen: View {
     .toolbarBackground(AppTheme.Colors.tabBarBackground(for: colorScheme), for: .tabBar)
     .animation(.snappy(duration: 0.28), value: selectedTab)
     .sheet(isPresented: $isSettingsPresented) {
-      UserProfileView()
-        .environment(\.locale, Locale(identifier: appLanguage.localeIdentifier))
+      settingsSheet
     }
     .onReceive(NotificationCenter.default.publisher(for: .openStockFromPushNotification)) { notification in
-      guard
-        let symbol = notification.userInfo?["symbol"] as? String,
-        !symbol.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-      else {
-        return
-      }
-      pendingPortfolioOpenSymbol = symbol
-      selectedTab = .portfolio
+      handleOpenStockNotification(notification)
     }
     .onReceive(NotificationCenter.default.publisher(for: .openPortfolioFromPushNotification)) { _ in
-      pendingPortfolioOpenSymbol = nil
-      selectedTab = .portfolio
+      openPortfolioTab()
     }
   }
 
@@ -236,6 +229,28 @@ struct HomeScreen: View {
     } icon: {
       Image(systemName: systemImage)
     }
+  }
+
+  private var settingsSheet: some View {
+    UserProfileView()
+      .environment(\.locale, Locale(identifier: appLanguage.localeIdentifier))
+  }
+
+  private func handleOpenStockNotification(_ notification: Notification) {
+    guard
+      let symbol = notification.userInfo?["symbol"] as? String,
+      !symbol.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    else {
+      return
+    }
+
+    pendingPortfolioOpenSymbol = symbol
+    selectedTab = .portfolio
+  }
+
+  private func openPortfolioTab() {
+    pendingPortfolioOpenSymbol = nil
+    selectedTab = .portfolio
   }
 }
 
@@ -722,72 +737,30 @@ private struct PortfolioRoot: View {
     selectedSegment == .holdings || selectedSegment == .watchlist
   }
 
+  private var portfolioListItems: [ListSwitcherItem] {
+    [.init(id: "__all__", name: "All", isDefault: false)]
+      + portfolioViewModel.portfolioLists.map {
+        .init(id: $0.id, name: $0.name, isDefault: $0.isDefault)
+      }
+  }
+
+  private var watchlistItems: [ListSwitcherItem] {
+    watchlistViewModel.watchlistLists.map {
+      .init(id: $0.id, name: $0.name, isDefault: $0.isDefault)
+    }
+  }
+
   var body: some View {
     NavigationStack {
       VStack(spacing: 16) {
-        GlassEffectContainer(spacing: 8) {
-          Picker("Portfolio section", selection: $selectedSegment) {
-            ForEach(PortfolioSegment.allCases) { segment in
-              Text(segment.title(language: appLanguage)).tag(segment)
-            }
-          }
-          .pickerStyle(.segmented)
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
+        segmentPicker
 
         if shouldShowListSwitcher {
-          if selectedSegment == .holdings {
-            PortfolioListSwitcherBar(
-              items: [.init(id: "__all__", name: "All", isDefault: false)]
-                + portfolioViewModel.portfolioLists.map {
-                    .init(id: $0.id, name: $0.name, isDefault: $0.isDefault)
-                  },
-              selectedId: portfolioViewModel.isShowingAllLists
-                ? "__all__"
-                : portfolioViewModel.selectedPortfolioListId,
-              onSelect: { id in
-                Task {
-                  if id == "__all__" {
-                    await portfolioViewModel.selectAllLists()
-                  } else {
-                    await portfolioViewModel.selectPortfolioList(id)
-                  }
-                }
-              },
-              onManage: { isListManagerPresented = true }
-            )
+          listSwitcher
             .padding(.horizontal, 16)
-
-          } else {
-            PortfolioListSwitcherBar(
-              items: watchlistViewModel.watchlistLists.map {
-                .init(id: $0.id, name: $0.name, isDefault: $0.isDefault)
-              },
-              selectedId: watchlistViewModel.selectedWatchlistListId,
-              onSelect: { id in
-                Task { await watchlistViewModel.selectWatchlistList(id) }
-              },
-              onManage: { isListManagerPresented = true }
-            )
-            .padding(.horizontal, 16)
-          }
         }
 
-        Group {
-          switch selectedSegment {
-          case .holdings:
-            PortfolioScreen(pendingOpenSymbol: $pendingOpenSymbol)
-          case .allocation:
-            PortfolioAllocationScreen()
-          case .watchlist:
-            WatchlistTab(viewModel: watchlistViewModel)
-          case .earnings:
-            EarningsCalendarScreen()
-          case .news:
-            MarketNewsScreen()
-          }
-        }
+        segmentContent
         .animation(.snappy(duration: 0.24), value: selectedSegment)
       }
       .environmentObject(portfolioViewModel)
@@ -796,9 +769,7 @@ private struct PortfolioRoot: View {
       .navigationBarTitleDisplayMode(.large)
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
-          Button {
-            isSettingsPresented = true
-          } label: {
+          Button(action: openSettings) {
             Image(systemName: "gearshape")
               .font(.system(size: 16, weight: .semibold))
           }
@@ -808,49 +779,167 @@ private struct PortfolioRoot: View {
         }
       }
       .onChange(of: pendingOpenSymbol) { _, symbol in
-        guard
-          let symbol = symbol?.trimmingCharacters(in: .whitespacesAndNewlines),
-          !symbol.isEmpty
-        else {
-          return
-        }
-
-        selectedSegment = .holdings
+        handlePendingOpenSymbolChange(symbol)
       }
       .onReceive(NotificationCenter.default.publisher(for: .openPortfolioFromPushNotification)) { _ in
-        selectedSegment = .holdings
+        showHoldingsSegment()
       }
       .sheet(isPresented: $isListManagerPresented) {
-        if selectedSegment == .holdings {
-          PortfolioListManagementSheet(
-            title: "Manage Portfolios",
-            lists: portfolioViewModel.portfolioLists,
-            onCreate: { name in await portfolioViewModel.createPortfolioList(name: name) },
-            onRename: { id, name in await portfolioViewModel.renamePortfolioList(id: id, name: name) },
-            onDelete: { id in await portfolioViewModel.deletePortfolioList(id: id) }
-          )
-        } else {
-          WatchlistListManagementSheet(
-            title: "Manage Watchlists",
-            lists: watchlistViewModel.watchlistLists,
-            onCreate: { name in await watchlistViewModel.createWatchlistList(name: name) },
-            onRename: { id, name in await watchlistViewModel.renameWatchlistList(id: id, name: name) },
-            onDelete: { id in await watchlistViewModel.deleteWatchlistList(id: id) }
-          )
-        }
+        listManagerSheet
       }
       .task {
-        await portfolioViewModel.load(force: true)
-        await watchlistViewModel.load(force: true)
+        await loadLists()
       }
       .onChange(of: selectedSegment) { _, value in
-        if value == .holdings {
-          Task { await portfolioViewModel.load(force: true) }
-        } else if value == .watchlist {
-          Task { await watchlistViewModel.load(force: true) }
-        }
+        handleSegmentChange(value)
       }
     }
+  }
+
+  private var segmentPicker: some View {
+    GlassEffectContainer(spacing: 8) {
+      Picker("Portfolio section", selection: $selectedSegment) {
+        ForEach(PortfolioSegment.allCases) { segment in
+          Text(segment.title(language: appLanguage)).tag(segment)
+        }
+      }
+      .pickerStyle(.segmented)
+    }
+    .padding(.horizontal, 16)
+    .padding(.top, 8)
+  }
+
+  @ViewBuilder
+  private var listSwitcher: some View {
+    if selectedSegment == .holdings {
+      PortfolioListSwitcherBar(
+        items: portfolioListItems,
+        selectedId: portfolioViewModel.isShowingAllLists ? "__all__" : portfolioViewModel.selectedPortfolioListId,
+        onSelect: selectPortfolioList,
+        onManage: presentListManager
+      )
+    } else {
+      PortfolioListSwitcherBar(
+        items: watchlistItems,
+        selectedId: watchlistViewModel.selectedWatchlistListId,
+        onSelect: selectWatchlistList,
+        onManage: presentListManager
+      )
+    }
+  }
+
+  @ViewBuilder
+  private var segmentContent: some View {
+    switch selectedSegment {
+    case .holdings:
+      PortfolioScreen(pendingOpenSymbol: $pendingOpenSymbol)
+    case .allocation:
+      PortfolioAllocationScreen()
+    case .watchlist:
+      WatchlistTab(viewModel: watchlistViewModel)
+    case .earnings:
+      EarningsCalendarScreen()
+    case .news:
+      MarketNewsScreen()
+    }
+  }
+
+  @ViewBuilder
+  private var listManagerSheet: some View {
+    if selectedSegment == .holdings {
+      PortfolioListManagementSheet(
+        title: "Manage Portfolios",
+        lists: portfolioViewModel.portfolioLists,
+        onCreate: createPortfolioList,
+        onRename: renamePortfolioList,
+        onDelete: deletePortfolioList
+      )
+    } else {
+      WatchlistListManagementSheet(
+        title: "Manage Watchlists",
+        lists: watchlistViewModel.watchlistLists,
+        onCreate: createWatchlistList,
+        onRename: renameWatchlistList,
+        onDelete: deleteWatchlistList
+      )
+    }
+  }
+
+  private func openSettings() {
+    isSettingsPresented = true
+  }
+
+  private func presentListManager() {
+    isListManagerPresented = true
+  }
+
+  private func handlePendingOpenSymbolChange(_ symbol: String?) {
+    guard
+      let symbol = symbol?.trimmingCharacters(in: .whitespacesAndNewlines),
+      !symbol.isEmpty
+    else {
+      return
+    }
+
+    selectedSegment = .holdings
+  }
+
+  private func showHoldingsSegment() {
+    selectedSegment = .holdings
+  }
+
+  private func loadLists() async {
+    await portfolioViewModel.load(force: true)
+    await watchlistViewModel.load(force: true)
+  }
+
+  private func handleSegmentChange(_ value: PortfolioSegment) {
+    switch value {
+    case .holdings:
+      Task { await portfolioViewModel.load(force: true) }
+    case .watchlist:
+      Task { await watchlistViewModel.load(force: true) }
+    case .allocation, .earnings, .news:
+      break
+    }
+  }
+
+  private func selectPortfolioList(_ id: String) {
+    Task {
+      if id == "__all__" {
+        await portfolioViewModel.selectAllLists()
+      } else {
+        await portfolioViewModel.selectPortfolioList(id)
+      }
+    }
+  }
+
+  private func selectWatchlistList(_ id: String) {
+    Task { await watchlistViewModel.selectWatchlistList(id) }
+  }
+
+  private func createPortfolioList(name: String) async -> String? {
+    await portfolioViewModel.createPortfolioList(name: name)
+  }
+
+  private func renamePortfolioList(id: String, name: String) async -> String? {
+    await portfolioViewModel.renamePortfolioList(id: id, name: name)
+  }
+
+  private func deletePortfolioList(id: String) async -> String? {
+    await portfolioViewModel.deletePortfolioList(id: id)
+  }
+
+  private func createWatchlistList(name: String) async -> String? {
+    await watchlistViewModel.createWatchlistList(name: name)
+  }
+
+  private func renameWatchlistList(id: String, name: String) async -> String? {
+    await watchlistViewModel.renameWatchlistList(id: id, name: name)
+  }
+
+  private func deleteWatchlistList(id: String) async -> String? {
+    await watchlistViewModel.deleteWatchlistList(id: id)
   }
 }
 

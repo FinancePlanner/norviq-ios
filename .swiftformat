@@ -1,0 +1,108 @@
+# SwiftFormat Configuration - Elegant & SwiftLint Compatible
+--swiftversion 6.1
+
+# === INDENTATION & SPACING ===
+--indent 2
+--tabwidth 2
+--smarttabs enabled
+--trimwhitespace always
+
+# === LINE LENGTH & WRAPPING ===
+--maxwidth 120
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--wrapreturntype preserve
+--wrapconditions before-first
+--wrapeffects if-multiline
+--wraptypealiases before-first
+--closingparen balanced
+--wrapternary default
+
+# === BRACES & CONTROL FLOW ===
+--allman false
+--elseposition same-line
+--guardelse next-line
+--shortoptionals always
+
+# === IMPORTS & ORGANIZATION ===
+--importgrouping alphabetical
+--markextensions always
+
+# === ATTRIBUTES & MODIFIERS ===
+--typeattributes prev-line
+--funcattributes prev-line
+--storedvarattrs same-line
+--computedvarattrs prev-line
+--modifierorder public,internal,fileprivate,private,final,open,override,convenience,required,static,class,lazy,weak
+
+# === OPERATORS & RANGES ===
+--nospaceoperators ...,..<
+--ranges spaced
+
+# === PATTERN MATCHING ===
+--patternlet hoist
+
+# === VISUAL FORMATTING ===
+--assetliterals visual-width
+--insertlines enabled
+--removelines enabled
+
+# === SWITCH CASE FORMATTING ===
+--wrapenumcases always
+
+# === ENABLED RULES (Non-conflicting with SwiftLint) ===
+--enable isEmpty
+--enable strongOutlets
+--enable strongifiedSelf
+--enable todos
+--enable trailingClosures
+--enable typeSugar
+--enable wrapArguments
+--enable wrapMultilineStatementBraces
+--enable yodaConditions
+--enable spaceAroundBraces
+--enable spaceAroundBrackets
+--enable spaceAroundComments
+--enable spaceAroundGenerics
+--enable spaceAroundOperators
+--enable spaceAroundParens
+--enable spaceInsideBraces
+--enable spaceInsideBrackets
+--enable spaceInsideComments
+--enable spaceInsideGenerics
+--enable spaceInsideParens
+--enable hoistPatternLet
+--enable preferKeyPath
+--enable redundantClosure
+--enable sortSwitchCases
+
+# === DISABLED RULES (Let SwiftLint handle these) ===
+--disable sortImports                    # SwiftLint: sorted_imports
+--disable duplicateImports               # SwiftLint: duplicate_imports
+--disable unusedArguments                # SwiftLint: unused_closure_parameter
+--disable redundantSelf                  # SwiftLint: explicit_self (analyzer)
+--disable redundantReturn                # SwiftLint: implicit_return
+--disable redundantBackticks             # SwiftLint handles identifier naming
+--disable redundantBreak                 # SwiftLint: unneeded_break_in_switch
+--disable redundantExtensionACL          # SwiftLint: extension_access_modifier
+--disable extensionAccessControl         # Keep access modifiers on individual members
+--disable redundantFileprivate           # SwiftLint: private_over_fileprivate
+--disable redundantGet                   # SwiftLint: implicit_getter
+--disable redundantInit                  # SwiftLint: explicit_init
+--disable redundantLet                   # SwiftLint: shorthand_optional_binding
+--disable redundantLetError              # SwiftLint: untyped_error_in_catch
+--disable redundantNilInit               # SwiftLint: redundant_optional_initialization
+--disable redundantObjc                  # SwiftLint: redundant_objc_attribute
+--disable redundantParens                # SwiftLint: unneeded_parentheses_in_closure_argument
+--disable redundantPattern               # SwiftLint: pattern_matching_keywords
+--disable redundantRawValues             # SwiftLint: redundant_string_enum_value
+--disable redundantType                  # SwiftLint: redundant_type_annotation
+--disable redundantVoidReturnType        # SwiftLint: redundant_void_return
+--disable blankLinesAtEndOfScope         # SwiftLint: vertical_whitespace
+--disable blankLinesAtStartOfScope       # SwiftLint: vertical_whitespace
+--disable consecutiveBlankLines          # SwiftLint: vertical_whitespace
+--disable trailingCommas                 # SwiftLint: trailing_comma
+--disable numberFormatting               # SwiftLint: number_separator
+--disable braces                         # SwiftLint: opening_brace
+--disable wrap                           # SwiftLint: line_length
