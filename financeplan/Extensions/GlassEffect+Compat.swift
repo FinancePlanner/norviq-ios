@@ -11,19 +11,20 @@ enum GlassShape {
 
 // MARK: - Backwards-compatible Glass Modifier
 
-/// On iOS 26+ applies the native `.glassEffect(.clear, in:)` modifier.
+/// On iOS 26+ applies the native `.glassEffect(.regular, in:)` modifier.
 /// On earlier versions falls back to the existing manual glass look
 /// (fill + stroke + shadow) to maintain visual parity.
 struct GlassEffectModifier: ViewModifier {
   let shape: GlassShape
   let tint: Color?
+  let interactive: Bool
 
   @Environment(\.colorScheme) private var colorScheme
 
   func body(content: Content) -> some View {
     if #available(iOS 26, *) {
       content
-        .modifier(NativeGlassModifier(shape: shape, tint: tint))
+        .modifier(NativeGlassModifier(shape: shape, tint: tint, interactive: interactive))
     } else {
       content
         .modifier(FallbackGlassModifier(shape: shape, tint: tint, colorScheme: colorScheme))
@@ -37,36 +38,24 @@ struct GlassEffectModifier: ViewModifier {
 private struct NativeGlassModifier: ViewModifier {
   let shape: GlassShape
   let tint: Color?
+  let interactive: Bool
+
+  private var glass: Glass {
+    let base = tint.map { Glass.regular.tint($0) } ?? .regular
+    return interactive ? base.interactive() : base
+  }
 
   func body(content: Content) -> some View {
     switch shape {
     case .rect(let cornerRadius):
-      if let tint {
-        content
-          .background(tint.opacity(0.08))
-          .glassEffect(.clear, in: .rect(cornerRadius: cornerRadius))
-      } else {
-        content
-          .glassEffect(.clear, in: .rect(cornerRadius: cornerRadius))
-      }
+      content
+        .glassEffect(glass, in: .rect(cornerRadius: cornerRadius))
     case .capsule:
-      if let tint {
-        content
-          .background(tint.opacity(0.08))
-          .glassEffect(.clear, in: .capsule)
-      } else {
-        content
-          .glassEffect(.clear, in: .capsule)
-      }
+      content
+        .glassEffect(glass, in: .capsule)
     case .circle:
-      if let tint {
-        content
-          .background(tint.opacity(0.08))
-          .glassEffect(.clear, in: .circle)
-      } else {
-        content
-          .glassEffect(.clear, in: .circle)
-      }
+      content
+        .glassEffect(glass, in: .circle)
     }
   }
 }
@@ -143,12 +132,13 @@ private struct FallbackGlassModifier: ViewModifier {
 
 extension View {
   /// Applies a glass effect with backwards compatibility.
-  /// On iOS 26+ uses the native `.glassEffect(.clear, in:)`.
+  /// On iOS 26+ uses the native `.glassEffect(.regular, in:)`.
   /// On older versions uses a manual glass-like background.
   func appGlassEffect(
     _ shape: GlassShape = .rect(cornerRadius: 24),
-    tint: Color? = nil
+    tint: Color? = nil,
+    interactive: Bool = false
   ) -> some View {
-    modifier(GlassEffectModifier(shape: shape, tint: tint))
+    modifier(GlassEffectModifier(shape: shape, tint: tint, interactive: interactive))
   }
 }

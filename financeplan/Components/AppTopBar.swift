@@ -120,7 +120,11 @@ private struct AppTopBarSearchField: View {
     }
     .padding(.horizontal, 12)
     .padding(.vertical, 10)
-    .appGlassEffect(.rect(cornerRadius: 14), tint: AppTheme.Colors.tertiaryFill(for: colorScheme))
+    .appGlassEffect(
+      .rect(cornerRadius: 14),
+      tint: AppTheme.Colors.tertiaryFill(for: colorScheme),
+      interactive: true
+    )
   }
 }
 

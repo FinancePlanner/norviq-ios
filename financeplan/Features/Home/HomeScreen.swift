@@ -725,12 +725,14 @@ private struct PortfolioRoot: View {
   var body: some View {
     NavigationStack {
       VStack(spacing: 16) {
-        Picker("Portfolio section", selection: $selectedSegment) {
-          ForEach(PortfolioSegment.allCases) { segment in
-            Text(segment.title(language: appLanguage)).tag(segment)
+        GlassEffectContainer(spacing: 8) {
+          Picker("Portfolio section", selection: $selectedSegment) {
+            ForEach(PortfolioSegment.allCases) { segment in
+              Text(segment.title(language: appLanguage)).tag(segment)
+            }
           }
+          .pickerStyle(.segmented)
         }
-        .pickerStyle(.segmented)
         .padding(.horizontal, 16)
         .padding(.top, 8)
 
@@ -799,10 +801,9 @@ private struct PortfolioRoot: View {
           } label: {
             Image(systemName: "gearshape")
               .font(.system(size: 16, weight: .semibold))
-              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-              .padding(6)
-              .appGlassEffect(.capsule)
           }
+          .buttonStyle(.glass)
+          .tint(AppTheme.Colors.tint(for: colorScheme))
           .accessibilityLabel("Open settings")
         }
       }
@@ -867,23 +868,25 @@ private struct PortfolioListSwitcherBar: View {
   let onManage: () -> Void
 
   var body: some View {
-    HStack(spacing: 0) {
-      ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: 8) {
-          ForEach(items) { item in
-            listChip(item)
+    GlassEffectContainer(spacing: 12) {
+      HStack(spacing: 0) {
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: 8) {
+            ForEach(items) { item in
+              listChip(item)
+            }
           }
+          .padding(.vertical, 4)
+          .padding(.leading, 2)
+          .padding(.trailing, 8)
         }
-        .padding(.vertical, 4)
-        .padding(.leading, 2)
-        .padding(.trailing, 8)
+
+        Divider()
+          .frame(height: 24)
+          .padding(.horizontal, 4)
+
+        manageButton
       }
-
-      Divider()
-        .frame(height: 24)
-        .padding(.horizontal, 4)
-
-      manageButton
     }
   }
 

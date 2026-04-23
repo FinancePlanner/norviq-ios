@@ -843,6 +843,7 @@ struct MarketSentimentCard: View {
     let label: String
     @State private var animatedValue: CGFloat = 0
     @State private var displayValue: Int = 0
+    @State private var counterTask: Task<Void, Never>?
 
     var sentimentColor: Color {
         if value < 25 { return .red }
@@ -909,14 +910,23 @@ struct MarketSentimentCard: View {
             }
             animateCounter(to: value)
         }
+        .onDisappear {
+            counterTask?.cancel()
+        }
     }
 
     private func animateCounter(to end: Int) {
+        counterTask?.cancel()
         let steps = max(1, end)
-        let interval = 0.8 / Double(steps)
-        for i in 0...steps {
-            DispatchQueue.main.asyncAfter(deadline: .now() + interval * Double(i)) {
+        let interval = Duration.milliseconds(max(1, Int((800.0 / Double(steps)).rounded())))
+
+        counterTask = Task { @MainActor in
+            for i in 0...steps {
+                guard !Task.isCancelled else { return }
                 displayValue = i
+
+                guard i < steps else { return }
+                try? await Task.sleep(for: interval)
             }
         }
     }

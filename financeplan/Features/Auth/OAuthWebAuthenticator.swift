@@ -34,57 +34,103 @@ protocol OAuthWebAuthenticating: AnyObject {
 }
 
 final class OAuthWebAuthenticator: NSObject, OAuthWebAuthenticating {
-  private var session: ASWebAuthenticationSession?
-  private var contextProvider: OAuthPresentationContextProvider?
-
   @MainActor
   func authenticate(url: URL, callbackScheme: String) async throws -> URL {
-    try await withTaskCancellationHandler {
+    let coordinator = OAuthWebAuthenticationCoordinator()
+
+    return try await withTaskCancellationHandler {
       try await withCheckedThrowingContinuation { continuation in
-        let session = ASWebAuthenticationSession(url: url, callbackURLScheme: callbackScheme) { [weak self] callbackURL, error in
-          self?.session = nil
-          self?.contextProvider = nil
-
-          if let error = error as? ASWebAuthenticationSessionError,
-             error.code == .canceledLogin {
-            continuation.resume(throwing: OAuthWebAuthenticationError.cancelled)
-            return
-          }
-
-          if let error {
-            continuation.resume(throwing: error)
-            return
-          }
-
-          guard let callbackURL else {
-            continuation.resume(throwing: OAuthWebAuthenticationError.invalidCallback)
-            return
-          }
-
-          continuation.resume(returning: callbackURL)
-        }
-
-        let contextProvider = OAuthPresentationContextProvider()
-        self.contextProvider = contextProvider
-        session.presentationContextProvider = contextProvider
-        session.prefersEphemeralWebBrowserSession = true
-
-        self.session = session
-
-        guard session.start() else {
-          self.session = nil
-          self.contextProvider = nil
-          continuation.resume(throwing: OAuthWebAuthenticationError.unableToStart)
-          return
-        }
+        coordinator.start(
+          url: url,
+          callbackScheme: callbackScheme,
+          continuation: continuation
+        )
       }
-    } onCancel: { [weak self] in
+    } onCancel: {
       Task { @MainActor in
-        self?.session?.cancel()
-        self?.session = nil
-        self?.contextProvider = nil
+        coordinator.cancel()
       }
     }
+  }
+}
+
+@MainActor
+private final class OAuthWebAuthenticationCoordinator {
+  private var session: ASWebAuthenticationSession?
+  private var contextProvider: OAuthPresentationContextProvider?
+  private var continuation: CheckedContinuation<URL, Error>?
+
+  func start(
+    url: URL,
+    callbackScheme: String,
+    continuation: CheckedContinuation<URL, Error>
+  ) {
+    self.continuation = continuation
+
+    let session = ASWebAuthenticationSession(url: url, callbackURLScheme: callbackScheme) { [weak self] callbackURL, error in
+      Task { @MainActor in
+        self?.finish(callbackURL: callbackURL, error: error)
+      }
+    }
+
+    let contextProvider = OAuthPresentationContextProvider()
+    self.contextProvider = contextProvider
+    session.presentationContextProvider = contextProvider
+    session.prefersEphemeralWebBrowserSession = true
+
+    self.session = session
+
+    guard session.start() else {
+      resume(throwing: OAuthWebAuthenticationError.unableToStart)
+      return
+    }
+  }
+
+  func cancel() {
+    session?.cancel()
+    resume(throwing: OAuthWebAuthenticationError.cancelled)
+  }
+
+  private func finish(callbackURL: URL?, error: Error?) {
+    if let error = error as? ASWebAuthenticationSessionError,
+       error.code == .canceledLogin {
+      resume(throwing: OAuthWebAuthenticationError.cancelled)
+      return
+    }
+
+    if let error {
+      resume(throwing: error)
+      return
+    }
+
+    guard let callbackURL else {
+      resume(throwing: OAuthWebAuthenticationError.invalidCallback)
+      return
+    }
+
+    resume(returning: callbackURL)
+  }
+
+  private func resume(returning callbackURL: URL) {
+    guard let continuation else {
+      return
+    }
+    clearState()
+    continuation.resume(returning: callbackURL)
+  }
+
+  private func resume(throwing error: Error) {
+    guard let continuation else {
+      return
+    }
+    clearState()
+    continuation.resume(throwing: error)
+  }
+
+  private func clearState() {
+    continuation = nil
+    session = nil
+    contextProvider = nil
   }
 }
 
