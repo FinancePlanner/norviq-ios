@@ -187,17 +187,6 @@ struct BrokerHTTPClient {
   }
 
   private func errorMessage(from data: Data) -> String? {
-    let decoder = JSONDecoder.stockPlanShared
-    if let stockError = try? decoder.decode(StockPlanShared.APIErrorResponse.self, from: data),
-       !stockError.error.isEmpty {
-      return stockError.error
-    }
-
-    if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-      if let error = json["error"] as? String, !error.isEmpty { return error }
-      if let reason = json["reason"] as? String, !reason.isEmpty { return reason }
-      if let message = json["message"] as? String, !message.isEmpty { return message }
-    }
-    return nil
+    APIErrorDecoding.message(from: data)
   }
 }

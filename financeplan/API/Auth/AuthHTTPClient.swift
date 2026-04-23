@@ -220,42 +220,7 @@ struct AuthHTTPClient {
   }
 
   private func errorMessage(from data: Data) -> String? {
-    if let stockError = try? Self.decoder.decode(StockPlanShared.APIErrorResponse.self, from: data),
-       !stockError.error.isEmpty {
-      return stockError.error
-    }
-
-    if let stockEnvelope = try? Self.decoder.decode(APIEnvelope<StockPlanShared.APIErrorResponse>.self, from: data) {
-      if let nestedError = stockEnvelope.data?.error, !nestedError.isEmpty {
-        return nestedError
-      }
-      if let message = stockEnvelope.message, !message.isEmpty {
-        return message
-      }
-    }
-
-    if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-      if let error = json["error"] as? String, !error.isEmpty {
-        return error
-      }
-      if let reason = json["reason"] as? String, !reason.isEmpty {
-        return reason
-      }
-      if let message = json["message"] as? String, !message.isEmpty {
-        return message
-      }
-      if let detail = json["detail"] as? String, !detail.isEmpty {
-        return detail
-      }
-    }
-
-    if let body = String(data: data, encoding: .utf8)?
-      .trimmingCharacters(in: .whitespacesAndNewlines),
-      !body.isEmpty {
-      return body
-    }
-
-    return nil
+    APIErrorDecoding.message(from: data, decoder: Self.decoder)
   }
 
   private func decodeAuthResponse(from data: Data) throws -> AuthResponse {

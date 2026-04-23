@@ -110,13 +110,12 @@ public final class UserProfileServiceStub: UserProfileServiceProtocol {
     public init() {}
 
     public func fetchProfile() async throws -> UserProfile {
-        // Simulate a network delay
         try await Task.sleep(nanoseconds: 300_000_000)
         return UserProfile(
-            id: "demo-id",
-            email: "demo@example.com",
-            bio: "This is a demo bio.",
-            username: "Demo User"
+            id: "preview-user",
+            email: "",
+            bio: "",
+            username: ""
         )
     }
 
@@ -128,12 +127,12 @@ public final class UserProfileServiceStub: UserProfileServiceProtocol {
 
     public func updateUsername(_ username: String) async throws -> UserProfile {
         try await Task.sleep(nanoseconds: 200_000_000)
-        return UserProfile(id: "demo-id", email: "demo@example.com", username: username)
+        return UserProfile(id: "preview-user", email: "", username: username)
     }
 
     public func updateEmail(_ email: String) async throws -> UserProfile {
         try await Task.sleep(nanoseconds: 200_000_000)
-        return UserProfile(id: "demo-id", email: email, username: "Demo User")
+        return UserProfile(id: "preview-user", email: email, username: "")
     }
 
     public func updatePassword(current: String, new: String) async throws {

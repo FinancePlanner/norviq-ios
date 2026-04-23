@@ -1450,9 +1450,9 @@ private struct SmartInsightsCard: View {
     
     if result.isEmpty {
       result.append(Insight(
-        icon: "checkmark.circle.fill",
-        text: "Everything looks good! Keep up the great work",
-        color: .green
+        icon: "chart.bar.doc.horizontal",
+        text: "Add expense and portfolio data to unlock insights",
+        color: .secondary
       ))
     }
     

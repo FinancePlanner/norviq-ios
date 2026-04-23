@@ -13,16 +13,10 @@ final class CryptoViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var selectedAsset: CryptoQuoteResponse?
 
-    // New Overview Metrics
-    @Published var sentimentValue: Int = 72 // 0-100
-    @Published var sentimentLabel: String = "Greed"
-    @Published var ethGasGwei: Int = 24
-    @Published var dominance: [DominanceData] = [
-        .init(symbol: "BTC", percentage: 52.4, color: .orange),
-        .init(symbol: "ETH", percentage: 17.2, color: .blue),
-        .init(symbol: "SOL", percentage: 4.8, color: .purple),
-        .init(symbol: "Others", percentage: 25.6, color: .gray)
-    ]
+    @Published var sentimentValue: Int = 0
+    @Published var sentimentLabel: String = "Unavailable"
+    @Published var ethGasGwei: Int = 0
+    @Published var dominance: [DominanceData] = []
     @Published var topGainers: [CryptoQuoteResponse] = []
     @Published var topLosers: [CryptoQuoteResponse] = []
 
@@ -89,10 +83,6 @@ final class CryptoViewModel: ObservableObject {
                 self.topAssets = []
             }
 
-            // Hardcoded refinements for demonstration
-            self.sentimentValue = 72
-            self.sentimentLabel = "Greed"
-            self.ethGasGwei = 24
             hasLoadedOnce = true
 
         } catch {

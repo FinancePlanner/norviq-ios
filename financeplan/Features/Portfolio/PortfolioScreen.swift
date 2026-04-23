@@ -267,11 +267,11 @@ struct PortfolioScreen: View {
                 }
 
                 HStack(spacing: 4) {
-                  Image(systemName: totalValue > 0 ? "arrow.up.right" : "minus")
-                  Text(totalValue > 0 ? "+2.31% ($2,816.32)" : "No portfolio trend yet")
+                  Image(systemName: "minus")
+                  Text("No portfolio trend yet")
                 }
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(totalValue > 0 ? .green : .secondary)
+                .foregroundStyle(.secondary)
               }
               .padding(.horizontal, 4)
 

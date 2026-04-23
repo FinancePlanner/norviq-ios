@@ -50,11 +50,11 @@ struct GoalsHTTPClient {
         goalsHTTPLogger.debug("Goals response [\(endpoint.path)] status=\(httpResponse.statusCode)")
 
         guard (200..<300).contains(httpResponse.statusCode) else {
-            let decoder = JSONDecoder.stockPlanShared
-            if let envelope = try? decoder.decode(APIErrorResponse.self, from: data) {
-                throw DashboardHTTPClient.Error.api(envelope.error)
+            let message = APIErrorDecoding.message(from: data)
+            if httpResponse.statusCode == 401 {
+                throw DashboardHTTPClient.Error.unauthorized(message)
             }
-            if httpResponse.statusCode == 401 { throw DashboardHTTPClient.Error.unauthorized(nil) }
+            if let message, !message.isEmpty { throw DashboardHTTPClient.Error.api(message) }
             throw DashboardHTTPClient.Error.invalidStatus(httpResponse.statusCode)
         }
 

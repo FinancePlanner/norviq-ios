@@ -146,7 +146,22 @@ final class MarketDataHTTPService: MarketDataServicing, @unchecked Sendable {
   }
 
   func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements {
-    StockFinancialStatements.mock(symbol: symbol)
+    async let balanceSheets = fetchBalanceSheetStatement(symbol: symbol, limit: 5, period: "annual")
+    async let cashFlows = fetchCashFlowStatement(symbol: symbol, limit: 5, period: "annual")
+    async let ratios = fetchRatios(symbol: symbol, limit: 5, period: "annual")
+    async let ratiosTTM = fetchRatiosTTM(symbol: symbol)
+    async let growth = fetchFinancialGrowth(symbol: symbol, limit: 5, period: "annual")
+    async let estimates = fetchAnalystEstimates(symbol: symbol, limit: 5, period: "annual")
+
+    return try await StockFinancialStatements.from(
+      symbol: symbol.uppercased(),
+      balanceSheets: balanceSheets,
+      cashFlows: cashFlows,
+      ratios: ratios,
+      ratiosTTM: ratiosTTM,
+      growth: growth,
+      estimates: estimates
+    )
   }
 
   func fetchPriceChart(symbol: String, range: String) async throws -> PriceChartSeries {
@@ -269,8 +284,8 @@ struct MarketDataServiceStub: MarketDataServicing {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 
-  func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements {
-    StockFinancialStatements.mock(symbol: symbol)
+  func fetchFinancialStatements(symbol _: String) async throws -> StockFinancialStatements {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 
   func fetchPriceChart(symbol _: String, range _: String) async throws -> PriceChartSeries {

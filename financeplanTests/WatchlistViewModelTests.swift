@@ -65,6 +65,30 @@ final class WatchlistViewModelTests: XCTestCase {
     XCTAssertEqual(all.first(where: { $0.id == "aapl" })?.note, "updated")
   }
 
+  func testSwiftDataStoreReconcileDoesNotDeleteOtherUsersRows() throws {
+    let container = try makeInMemoryContainer()
+    let context = container.mainContext
+    let store = SwiftDataWatchlistLocalStore(context: context, ownerUserId: "user-1")
+
+    context.insert(
+      SDWatchlistItem(
+        id: "other-aapl",
+        ownerUserId: "user-2",
+        symbol: "AAPL",
+        note: "other user",
+        status: WatchlistStatus.active.rawValue
+      )
+    )
+    try context.save()
+
+    try store.reconcile(with: [], in: nil)
+
+    let all = try context.fetch(FetchDescriptor<SDWatchlistItem>())
+    XCTAssertEqual(all.count, 1)
+    XCTAssertEqual(all[0].ownerUserId, "user-2")
+    XCTAssertEqual(all[0].id, "other-aapl")
+  }
+
   func testSaveWatchlistPropagatesLocalStoreError() async {
     let service = MockStockService()
     service.createWatchlistItemResult = .success(

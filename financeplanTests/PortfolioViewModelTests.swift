@@ -220,6 +220,31 @@ final class PortfolioViewModelTests: XCTestCase {
     XCTAssertEqual(all[0].buyPrice, 175)
   }
 
+  func testSwiftDataStoreReconcileDoesNotDeleteOtherUsersRows() throws {
+    let container = try makeInMemoryContainer()
+    let context = container.mainContext
+    let store = SwiftDataPortfolioLocalStore(context: context, ownerUserId: "user-1")
+
+    context.insert(
+      SDPortfolioStock(
+        id: "other-aapl",
+        ownerUserId: "user-2",
+        symbol: "AAPL",
+        shares: 99,
+        buyPrice: 50,
+        buyDate: "2025-01-01"
+      )
+    )
+    try context.save()
+
+    try store.reconcile(with: [], in: nil)
+
+    let all = try context.fetch(FetchDescriptor<SDPortfolioStock>())
+    XCTAssertEqual(all.count, 1)
+    XCTAssertEqual(all[0].ownerUserId, "user-2")
+    XCTAssertEqual(all[0].id, "other-aapl")
+  }
+
   private func makeInMemoryContainer() throws -> ModelContainer {
     let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
     return try ModelContainer(
@@ -325,6 +350,7 @@ private final class MockStockService: StockServicing {
       allocation: []
     )
   )
+  var fetchTargetsResult: Result<[TargetResponse], Error> = .success([])
   var createResult: Result<StockResponse, Error> = .failure(MockError("Not configured."))
   var updateResult: Result<StockResponse, Error> = .failure(MockError("Not configured."))
   var deleteResult: Result<Void, Error> = .success(())
@@ -356,6 +382,10 @@ private final class MockStockService: StockServicing {
 
   func fetchPortfolioSummary(portfolioListId _: String?) async throws -> PortfolioSummaryResponse {
     try await fetchPortfolioSummary()
+  }
+
+  func fetchTargets(symbol _: String?) async throws -> [TargetResponse] {
+    try fetchTargetsResult.get()
   }
 
   func fetchPortfolioPerformance(portfolioListId _: String?) async throws -> PortfolioPerformanceResponse {

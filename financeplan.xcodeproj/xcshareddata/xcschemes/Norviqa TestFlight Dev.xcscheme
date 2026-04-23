@@ -29,6 +29,28 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
+      <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "60AFA8042F3E406A00FA3135"
+               BuildableName = "financeplanTests.xctest"
+               BlueprintName = "financeplanTests"
+               ReferencedContainer = "container:financeplan.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+      </Testables>
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "60AFA7F72F3E406900FA3135"
+            BuildableName = "financeplan.app"
+            BlueprintName = "financeplan"
+            ReferencedContainer = "container:financeplan.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Beta"

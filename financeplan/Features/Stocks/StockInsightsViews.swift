@@ -1169,7 +1169,7 @@ private struct FinancialStatementsIntroCard: View {
                         Text("Financial statements")
                             .typography(.small, weight: .semibold)
 
-                        Text("Review balance sheet strength and cash generation for \(symbol), with local sample data in place until the MarketData endpoint is wrapped.")
+                        Text("Review balance sheet strength and cash generation for \(symbol) when statement data is available.")
                             .typography(.small)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)

@@ -272,7 +272,7 @@ private struct DashboardRoot: View {
 
   private var insightCards: [InsightCard] {
     guard let insights = dashboardInsights else {
-        return InsightCard.mock(language: appLanguage)
+        return []
     }
 
     return [
@@ -1679,7 +1679,7 @@ private struct PortfolioTrendPoint: Identifiable {
 
   var id: String { label }
 
-  // to fill from endpoint later
+#if DEBUG
   static let mock: [PortfolioTrendPoint] = [
     .init(label: "Mon", value: 112_300),
     .init(label: "Tue", value: 113_840),
@@ -1689,6 +1689,7 @@ private struct PortfolioTrendPoint: Identifiable {
     .init(label: "Sat", value: 118_920),
     .init(label: "Sun", value: 124_830)
   ]
+#endif
 }
 
 private struct SpendingPoint: Identifiable {
@@ -1697,13 +1698,14 @@ private struct SpendingPoint: Identifiable {
 
   var id: String { label }
 
-  // to fill from endpoint later
+#if DEBUG
   static let mock: [SpendingPoint] = [
     .init(label: "Jan", value: 980),
     .init(label: "Feb", value: 860),
     .init(label: "Mar", value: 780),
     .init(label: "Apr", value: 910)
   ]
+#endif
 }
 
 private struct InsightCard: Identifiable {
@@ -1715,7 +1717,7 @@ private struct InsightCard: Identifiable {
 
   var id: String { title }
 
-  // to fill from endpoint later
+#if DEBUG
   static func mock(language: AppLanguage) -> [InsightCard] {
     [
       .init(
@@ -1748,4 +1750,5 @@ private struct InsightCard: Identifiable {
       )
     ]
   }
+#endif
 }

@@ -109,7 +109,7 @@ final class MarketDataModelsTests: XCTestCase {
     XCTAssertFalse(StockAnalystConsensus.isSupportedTicker("ZETA"))
     XCTAssertEqual(
       StockAnalystConsensus.unsupportedPlanMessage(for: "zeta"),
-      "ZETA is outside the consensus coverage available in the current data plan. Analyst consensus is only implemented for the provider's supported ticker list right now."
+      "Analyst consensus is not available for ZETA on the current market data coverage. You can still review the parts of this stock profile that are available."
     )
   }
 
@@ -118,7 +118,7 @@ final class MarketDataModelsTests: XCTestCase {
     XCTAssertFalse(FMPFreeTierCoverage.isSupportedTicker("ZETA"))
     XCTAssertEqual(
       FMPFreeTierCoverage.unsupportedAnalysisMessage(for: "zeta"),
-      "ZETA is outside the analysis coverage available in the current data plan. Current metrics only work for the provider's supported ticker list right now."
+      "Advanced analysis is not available for ZETA on the current market data coverage. Try one of the supported symbols, or check Data Availability in Settings."
     )
   }
 }

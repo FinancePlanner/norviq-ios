@@ -384,25 +384,54 @@ final class MarketDataServiceTests: XCTestCase {
     XCTAssertEqual(authSessionManager.validAccessTokenCalls, 1)
   }
 
-  func testFetchFinancialStatements_ReturnsMockStatementsForRequestedSymbol() async throws {
+  func testFetchFinancialStatements_FetchesStatementEndpointsForRequestedSymbol() async throws {
     let session = SessionMock()
     let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
     let service = MarketDataHTTPService(
       environmentManager: AppEnvironmentManager(),
       session: session,
       authSessionManager: authSessionManager
     )
+    let requestedPathsLock = NSLock()
+    var requestedPaths: Set<String> = []
+
+    session.handler = { request in
+      requestedPathsLock.withLock {
+        requestedPaths.insert(request.url?.path ?? "")
+      }
+      XCTAssertEqual(request.httpMethod, "GET")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+      if request.url?.path.contains("ratios-ttm") == false {
+        XCTAssertEqual(request.url?.query?.contains("limit=5"), true)
+        XCTAssertEqual(request.url?.query?.contains("period=annual"), true)
+      }
+
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (#"[]"#.data(using: .utf8) ?? Data(), response)
+    }
 
     let statements = try await service.fetchFinancialStatements(symbol: "msft")
 
     XCTAssertEqual(statements.symbol, "MSFT")
-    XCTAssertEqual(statements.balanceSheets.count, 6)
-    XCTAssertEqual(statements.cashFlows.count, 6)
-    XCTAssertEqual(statements.ratios.count, 6)
-    XCTAssertEqual(statements.growth.count, 6)
-    XCTAssertEqual(statements.estimates.count, 3)
-    XCTAssertEqual(statements.balanceSheets(for: .fy).first?.symbol, "MSFT")
-    XCTAssertEqual(authSessionManager.validAccessTokenCalls, 0)
+    XCTAssertTrue(statements.balanceSheets.isEmpty)
+    XCTAssertTrue(statements.cashFlows.isEmpty)
+    XCTAssertTrue(statements.ratios.isEmpty)
+    XCTAssertTrue(statements.growth.isEmpty)
+    XCTAssertTrue(statements.estimates.isEmpty)
+    let capturedPaths = requestedPathsLock.withLock { requestedPaths }
+
+    XCTAssertEqual(capturedPaths, [
+      "/v1/market/balance-sheet-statement/MSFT",
+      "/v1/market/cash-flow-statement/MSFT",
+      "/v1/market/ratios/MSFT",
+      "/v1/market/ratios-ttm/MSFT",
+      "/v1/market/financial-growth/MSFT",
+      "/v1/market/analyst-estimates/MSFT"
+    ])
+    XCTAssertEqual(authSessionManager.validAccessTokenCalls, 6)
     XCTAssertEqual(authSessionManager.refreshAccessTokenCalls, 0)
   }
 

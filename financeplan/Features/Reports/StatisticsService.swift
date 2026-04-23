@@ -75,7 +75,7 @@ final class StatisticsHTTPService: StatisticsServicing {
 
 struct StatisticsServiceStub: StatisticsServicing {
   func fetchStatisticsOverview() async throws -> StatisticsDTO {
-    StatisticsDTO.mock
+    StatisticsDTO.empty
   }
   func fetchSectorAllocation() async throws -> [SectorAllocationDTO] {
     []
@@ -86,6 +86,27 @@ struct StatisticsServiceStub: StatisticsServicing {
 }
 
 extension StatisticsDTO {
+    static var empty: StatisticsDTO {
+        StatisticsDTO(
+            generatedAt: ISO8601DateFormatter().string(from: Date()),
+            importedStocks: ImportedStocksStatisticsDTO(
+                totalPositions: 0,
+                totalMarketValue: 0,
+                totalCostBasis: 0,
+                totalUnrealizedPnl: 0,
+                totalRealizedPnl: 0,
+                stockSummaries: [],
+                stockAllocations: [],
+                sectorAllocations: [],
+                calendarPerformance: []
+            ),
+            watchlist: .init(totalSymbols: 0, symbolsWithNotes: 0, sectorAllocations: [], topWatched: []),
+            looklist: .init(totalIdeas: 0, activeIdeas: 0, ideasWithTarget: 0, ideasByConviction: []),
+            market: .init(benchmarkSymbol: "SPY", heatmap: [])
+        )
+    }
+
+#if DEBUG
     static var mock: StatisticsDTO {
         StatisticsDTO(
             generatedAt: "2024-04-05T21:00:00Z",
@@ -115,4 +136,5 @@ extension StatisticsDTO {
             market: .init(benchmarkSymbol: "SPY", heatmap: [])
         )
     }
+#endif
 }

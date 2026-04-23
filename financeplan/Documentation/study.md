@@ -6,6 +6,8 @@ This document is a study guide for the SwiftUI client project. It explains the a
 
 Use it as a map when reading the codebase. The app is useful to study because it is not a tiny sample project: it has authenticated API calls, local SwiftData caching, token refresh, feature view models, charts, settings, onboarding, push notifications, reports, and reusable design components.
 
+For feature ownership and data-flow boundaries, read `source-of-truth.md` alongside this guide. That file states which features are API-backed, which SwiftData rows are cache-only, and where mocks are allowed.
+
 ## Current App Shape
 
 Norviqa is an iOS finance app with two main product areas:
