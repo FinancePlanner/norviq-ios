@@ -62,10 +62,15 @@ struct BrokerHTTPClient {
     try await call(SyncIBKREndpoint())
   }
 
-  func previewCsvImport(provider: String, csvData: Data) async throws -> CsvImportPreviewResponse {
+  func previewCsvImport(
+    provider: String,
+    portfolioListId: String?,
+    csvData: Data
+  ) async throws -> CsvImportPreviewResponse {
     let request = try makeCSVUploadRequest(
       path: "/v1/brokers/import/csv",
       provider: provider,
+      portfolioListId: portfolioListId,
       csvData: csvData
     )
     let data = try await perform(request: request)
@@ -80,10 +85,15 @@ struct BrokerHTTPClient {
     }
   }
 
-  func commitCsvImport(provider: String, csvData: Data) async throws -> CsvImportCommitResponse {
+  func commitCsvImport(
+    provider: String,
+    portfolioListId: String?,
+    csvData: Data
+  ) async throws -> CsvImportCommitResponse {
     let request = try makeCSVUploadRequest(
       path: "/v1/brokers/import/csv/commit",
       provider: provider,
+      portfolioListId: portfolioListId,
       csvData: csvData
     )
     let data = try await perform(request: request)
@@ -140,12 +150,21 @@ struct BrokerHTTPClient {
     return data
   }
 
-  private func makeCSVUploadRequest(path: String, provider: String, csvData: Data) throws -> URLRequest {
+  private func makeCSVUploadRequest(
+    path: String,
+    provider: String,
+    portfolioListId: String?,
+    csvData: Data
+  ) throws -> URLRequest {
     let normalizedPath = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     let base = baseURL.appendingPathComponent(normalizedPath)
 
     var components = URLComponents(url: base, resolvingAgainstBaseURL: false)
-    components?.queryItems = [URLQueryItem(name: "provider", value: provider)]
+    var queryItems = [URLQueryItem(name: "provider", value: provider)]
+    if let portfolioListId, !portfolioListId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      queryItems.append(URLQueryItem(name: "portfolioListId", value: portfolioListId))
+    }
+    components?.queryItems = queryItems
     guard let url = components?.url else {
       throw Error.invalidResponse
     }

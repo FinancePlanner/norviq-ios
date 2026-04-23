@@ -89,6 +89,71 @@ final class FinanceplanUITests: XCTestCase {
   }
 
   @MainActor
+  func testExpensesAndReportsFlow() throws {
+    let app = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)")
+    app.launch()
+
+    // 1. Navigate to Expenses tab
+    let expensesTab = app.tabBars.buttons["Expenses"]
+    XCTAssertTrue(expensesTab.waitForExistence(timeout: 25))
+    expensesTab.tap()
+
+    // 2. Create a plan if missing (using the 'Create' button in the missing budget alert)
+    let createPlanButton = app.buttons["Create"]
+    if createPlanButton.waitForExistence(timeout: 5) {
+      createPlanButton.tap()
+    }
+
+    // 3. Add a planned item
+    let addPlannedItemButton = app.buttons["Add planned item"]
+    XCTAssertTrue(addPlannedItemButton.waitForExistence(timeout: 10))
+    addPlannedItemButton.tap()
+
+    let nameField = app.textFields["Name"]
+    XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+    nameField.tap()
+    nameField.typeText("UI Test Item")
+
+    let amountField = app.textFields["Planned amount"]
+    amountField.tap()
+    amountField.typeText("100")
+
+    app.buttons["Save"].tap()
+
+    // 4. Record an expense
+    let recordSpendButton = app.buttons["Record spend"]
+    XCTAssertTrue(recordSpendButton.waitForExistence(timeout: 10))
+    recordSpendButton.tap()
+
+    let expenseTitleField = app.textFields["Title"]
+    XCTAssertTrue(expenseTitleField.waitForExistence(timeout: 5))
+    expenseTitleField.tap()
+    expenseTitleField.typeText("UI Test Expense")
+
+    let expenseAmountField = app.textFields["Amount"]
+    expenseAmountField.tap()
+    expenseAmountField.typeText("50")
+
+    app.buttons["Save"].tap()
+
+    // 5. Navigate to Reports tab
+    let reportsTab = app.tabBars.buttons["Reports"]
+    XCTAssertTrue(reportsTab.waitForExistence(timeout: 10))
+    reportsTab.tap()
+
+    // 6. Verify reports show data
+    // The Reports screen has a Segmented Picker: Overview, Portfolio, Spending, Trends
+    // We want to check Spending.
+    let spendingSegment = app.buttons["Spending"]
+    XCTAssertTrue(spendingSegment.waitForExistence(timeout: 10))
+    spendingSegment.tap()
+
+    // Verify "Household Spending" or some charts exist
+    XCTAssertTrue(app.staticTexts["Household Spending"].waitForExistence(timeout: 10))
+    XCTAssertTrue(app.staticTexts["UI Test Item"].exists || app.staticTexts["Fundamentals"].exists)
+  }
+
+  @MainActor
   private func completeMandatoryImport(in app: XCUIApplication) {
     let importStocksButton = app.buttons["onboarding.importStocksButton"]
     XCTAssertTrue(importStocksButton.waitForExistence(timeout: 20))

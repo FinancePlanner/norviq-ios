@@ -45,6 +45,15 @@ public struct UserProfileView: View {
     private var appLockManager: AppLockManaging { Container.shared.appLockManager() }
     private var securityCodeManager: SecurityCodeManaging { Container.shared.securityCodeManager() }
 
+    private var isShowingLoadingState: Bool {
+        viewModel.isLoading && viewModel.profile == nil
+    }
+
+    private var loadErrorMessage: String? {
+        guard viewModel.profile == nil else { return nil }
+        return viewModel.errorMessage
+    }
+
     public init(viewModel: UserProfileViewModel? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel ?? UserProfileViewModel())
         _pushNotificationsCoordinator = StateObject(
@@ -54,14 +63,7 @@ public struct UserProfileView: View {
 
     public var body: some View {
         NavigationStack(path: $path) {
-            Group {
-                if viewModel.isLoading && viewModel.profile == nil {
-                    ProgressView(LocalizedStringKey("Loading..."))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                } else {
-                    settingsList(profile: viewModel.profile)
-                }
-            }
+            rootContent
             .id(appLanguage.rawValue)
             .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
             .navigationTitle(LocalizedStringKey("Settings"))
@@ -74,9 +76,7 @@ public struct UserProfileView: View {
                 }
             }
             .task {
-                await viewModel.load()
-                pushNotificationsCoordinator.handleAuthenticatedSessionBecameActive()
-                securityCodeEnabled = securityCodeManager.isEnabled
+                await initialLoad()
             }
             .alert("Face ID", isPresented: faceIDAlertBinding) {
                 Button("OK", role: .cancel) {}
@@ -84,40 +84,26 @@ public struct UserProfileView: View {
                 Text(faceIDErrorMessage ?? "")
             }
             .sheet(isPresented: $isEditPresented) {
-                if let profile = viewModel.profile {
-                    EditProfileView(viewModel: viewModel, profile: profile)
-                }
+                editProfileSheet
             }
             .sheet(isPresented: $isAIInfoPresented) {
                 AIModelIntegrationsInfoSheet()
             }
             .navigationDestination(for: UserProfileDestination.self) { destination in
-                switch destination {
-                case .securityCode:
-                    SecurityCodeView(
-                        manager: securityCodeManager,
-                        isEnabled: $securityCodeEnabled
-                    )
-                case .badges:
-                    BadgesView()
-                case .helpSupport:
-                    HelpSupportView()
-                case .shareFeedback:
-                    ShareFeedbackView()
-                case .about:
-                    AboutNorviqaView()
-                case .language:
-                    LanguageSettingsView()
-                case .dataHandling:
-                    Text("Data handling")
-                case .dataAvailability:
-                    DataAvailabilityView()
-                case .connect:
-                    ConnectView()
-                case .sensitiveActions:
-                    Text("Sensitive actions")
-                }
+                destinationView(for: destination)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var rootContent: some View {
+        if isShowingLoadingState {
+            ProgressView(LocalizedStringKey("Loading..."))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        } else if let loadErrorMessage {
+            ErrorRetryView(message: loadErrorMessage, onRetry: retryLoad)
+        } else {
+            settingsList(profile: viewModel.profile)
         }
     }
 
@@ -343,6 +329,55 @@ public struct UserProfileView: View {
         .scrollContentBackground(.hidden)
         .listStyle(.insetGrouped)
         .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
+        .refreshable {
+            await viewModel.load(force: true)
+        }
+    }
+
+    @ViewBuilder
+    private var editProfileSheet: some View {
+        if let profile = viewModel.profile {
+            EditProfileView(viewModel: viewModel, profile: profile)
+        }
+    }
+
+    @ViewBuilder
+    private func destinationView(for destination: UserProfileDestination) -> some View {
+        switch destination {
+        case .securityCode:
+            SecurityCodeView(
+                manager: securityCodeManager,
+                isEnabled: $securityCodeEnabled
+            )
+        case .badges:
+            BadgesView()
+        case .helpSupport:
+            HelpSupportView()
+        case .shareFeedback:
+            ShareFeedbackView()
+        case .about:
+            AboutNorviqaView()
+        case .language:
+            LanguageSettingsView()
+        case .dataHandling:
+            Text("Data handling")
+        case .dataAvailability:
+            DataAvailabilityView()
+        case .connect:
+            ConnectView()
+        case .sensitiveActions:
+            Text("Sensitive actions")
+        }
+    }
+
+    private func initialLoad() async {
+        await viewModel.load()
+        pushNotificationsCoordinator.handleAuthenticatedSessionBecameActive()
+        securityCodeEnabled = securityCodeManager.isEnabled
+    }
+
+    private func retryLoad() {
+        Task { await viewModel.load(force: true) }
     }
 
     private var appAppearanceBinding: Binding<AppAppearance> {

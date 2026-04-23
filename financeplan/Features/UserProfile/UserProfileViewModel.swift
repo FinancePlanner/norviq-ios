@@ -15,6 +15,7 @@ public final class UserProfileViewModel: ObservableObject {
     @Published public private(set) var errorMessage: String?
 
     private let service: UserProfileServiceProtocol
+    private var hasLoadedOnce = false
 
     public init(service: UserProfileServiceProtocol) {
         self.service = service
@@ -24,13 +25,15 @@ public final class UserProfileViewModel: ObservableObject {
         self.init(service: Container.shared.userProfileService())
     }
 
-    public func load() async {
+    public func load(force: Bool = false) async {
+        if !force, hasLoadedOnce { return }
         guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
         do {
             profile = try await service.fetchProfile()
+            hasLoadedOnce = true
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load profile."
         }

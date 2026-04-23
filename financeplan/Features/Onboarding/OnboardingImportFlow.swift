@@ -669,7 +669,7 @@ struct ManualImportScreen: View {
 struct CSVImportScreen: View {
   @Environment(\.colorScheme) private var colorScheme
   @State private var isImporterPresented = false
-  @StateObject private var viewModel = CSVImportViewModel()
+  @StateObject private var viewModel = CsvImportFlowViewModel()
   var headerNamespace: Namespace.ID?
 
   let onBack: () -> Void
@@ -687,6 +687,30 @@ struct CSVImportScreen: View {
 
       ScrollView {
         VStack(spacing: 20) {
+          VStack(alignment: .leading, spacing: 10) {
+            Text("Broker")
+              .typography(.small, weight: .semibold)
+              .foregroundStyle(.secondary)
+
+            Picker("Provider", selection: $viewModel.selectedProvider) {
+              ForEach(viewModel.availableProviders, id: \.self) { provider in
+                Text(provider.uppercased()).tag(provider)
+              }
+            }
+            .pickerStyle(.menu)
+            .disabled(viewModel.isLoadingProviders)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .appGlassEffect(.rect(cornerRadius: 16))
+
+            if viewModel.isLoadingProviders {
+              ProgressView("Loading broker connections...")
+                .typography(.caption)
+            }
+          }
+          .padding(.horizontal, 20)
+          .padding(.top, 20)
+
           // Upload area
           Button {
             isImporterPresented = true
@@ -721,7 +745,14 @@ struct CSVImportScreen: View {
           }
           .buttonStyle(PressEffectStyle())
           .padding(.horizontal, 20)
-          .padding(.top, 20)
+
+          if let selectedFileName = viewModel.selectedFileName {
+            Text(selectedFileName)
+              .typography(.caption)
+              .foregroundStyle(.secondary)
+              .padding(.horizontal, 20)
+              .frame(maxWidth: .infinity, alignment: .leading)
+          }
 
           if let errorMessage = viewModel.errorMessage {
             HStack(spacing: 8) {
@@ -741,7 +772,7 @@ struct CSVImportScreen: View {
           }
 
           // Preview
-          if !viewModel.previewRows.isEmpty {
+          if let preview = viewModel.previewResponse, !preview.items.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
               HStack {
                 Text("Preview")
@@ -749,13 +780,13 @@ struct CSVImportScreen: View {
 
                 Spacer()
 
-                Text("\(viewModel.previewRows.count) positions found")
+                Text("\(preview.items.count) positions found")
                   .typography(.caption)
                   .foregroundStyle(AppTheme.Colors.success)
               }
               .padding(.horizontal, 4)
 
-              ForEach(viewModel.previewRows) { row in
+              ForEach(preview.items, id: \.line) { row in
                 HStack {
                   Text(row.symbol)
                     .typography(.label, weight: .bold)
@@ -763,9 +794,9 @@ struct CSVImportScreen: View {
                   Spacer()
 
                   VStack(alignment: .trailing, spacing: 2) {
-                    Text("Qty: \(Int(row.quantity))")
+                    Text("Qty: \(row.shares?.formatted(.number.precision(.fractionLength(0...6))) ?? "-")")
                       .typography(.small)
-                    Text(row.price.currency)
+                    Text((row.buyPrice ?? 0).currency)
                       .typography(.nano)
                       .foregroundStyle(.secondary)
                   }
@@ -776,6 +807,31 @@ struct CSVImportScreen: View {
               }
             }
             .padding(.horizontal, 20)
+
+            if !preview.errors.isEmpty {
+              VStack(alignment: .leading, spacing: 10) {
+                Text("Preview Errors")
+                  .typography(.small, weight: .semibold)
+
+                ForEach(preview.errors, id: \.line) { error in
+                  VStack(alignment: .leading, spacing: 4) {
+                    Text("Line \(error.line)")
+                      .typography(.caption)
+                      .foregroundStyle(.secondary)
+                    Text(error.message)
+                      .typography(.small)
+                      .foregroundStyle(AppTheme.Colors.danger)
+                  }
+                  .padding(14)
+                  .frame(maxWidth: .infinity, alignment: .leading)
+                  .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                      .fill(AppTheme.Colors.danger.opacity(0.08))
+                  )
+                }
+              }
+              .padding(.horizontal, 20)
+            }
           } else if viewModel.errorMessage == nil {
             VStack(spacing: 8) {
               Image(systemName: "doc.text.magnifyingglass")
@@ -798,8 +854,8 @@ struct CSVImportScreen: View {
         Divider().opacity(0.3)
 
         HStack(spacing: 12) {
-          if !viewModel.previewRows.isEmpty {
-            Text("\(viewModel.previewRows.count) positions")
+          if let preview = viewModel.previewResponse, !preview.items.isEmpty {
+            Text("\(preview.items.count) positions")
               .typography(.small)
               .foregroundStyle(.secondary)
           }
@@ -807,14 +863,32 @@ struct CSVImportScreen: View {
           Spacer()
 
           Button {
-            onDone(viewModel.previewRows)
+            Task {
+              let didImport = await viewModel.commitImport()
+              guard didImport, let preview = viewModel.previewResponse else { return }
+              let imported = preview.items.map {
+                ImportedPosition(
+                  symbol: $0.symbol,
+                  quantity: $0.shares ?? 0,
+                  price: $0.buyPrice ?? 0
+                )
+              }
+              onDone(imported)
+            }
           } label: {
             HStack(spacing: 6) {
-              Text("Continue")
+              if viewModel.isImporting {
+                ProgressView()
+                  .tint(.white)
+              }
+
+              Text(viewModel.isImporting ? "Importing" : "Continue")
                 .font(.headline)
                 .fontWeight(.bold)
-              Image(systemName: "arrow.right")
-                .font(.subheadline.weight(.bold))
+              if !viewModel.isImporting {
+                Image(systemName: "arrow.right")
+                  .font(.subheadline.weight(.bold))
+              }
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 24)
@@ -828,8 +902,8 @@ struct CSVImportScreen: View {
               radius: 8, x: 0, y: 4
             )
           }
-          .disabled(viewModel.previewRows.isEmpty)
-          .opacity(viewModel.previewRows.isEmpty ? 0.5 : 1)
+          .disabled(!viewModel.canImport)
+          .opacity(viewModel.canImport ? 1 : 0.5)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -842,14 +916,24 @@ struct CSVImportScreen: View {
       isPresented: $isImporterPresented,
       allowedContentTypes: [UTType.commaSeparatedText, .plainText],
       allowsMultipleSelection: false
-    ) { result in
-      do {
-        let urls = try result.get()
-        guard let url = urls.first else { return }
-        viewModel.loadCSV(from: url)
-      } catch {
-        viewModel.errorMessage = "Failed to read CSV: \(error.localizedDescription)"
-        viewModel.previewRows = []
+      ) { result in
+        do {
+          let urls = try result.get()
+          guard let url = urls.first else { return }
+          Task {
+            await viewModel.loadCSV(from: url)
+          }
+        } catch {
+          viewModel.errorMessage = "Failed to read CSV: \(error.localizedDescription)"
+        }
+      }
+    .task {
+      await viewModel.loadProvidersIfNeeded()
+    }
+    .onChange(of: viewModel.selectedProvider) { _, _ in
+      guard viewModel.previewResponse != nil else { return }
+      Task {
+        await viewModel.previewCSV()
       }
     }
   }

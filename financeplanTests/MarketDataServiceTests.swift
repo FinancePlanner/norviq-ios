@@ -457,7 +457,9 @@ final class MarketDataServiceTests: XCTestCase {
           "symbol": "UBER",
           "epsEstimated": 0.71,
           "date": "2026-05-06",
-          "revenueEstimated": 13314280000
+          "revenueEstimated": 13314280000,
+          "surprisePercent": 4.2,
+          "hasTranscript": true
         }
       ]
       """.data(using: .utf8) ?? Data()
@@ -473,6 +475,8 @@ final class MarketDataServiceTests: XCTestCase {
     XCTAssertEqual(response[0].symbol, "UBER")
     XCTAssertEqual(response[0].date, "2026-05-06")
     XCTAssertEqual(response[0].epsEstimated, 0.71)
+    XCTAssertEqual(response[0].surprisePercent, 4.2)
+    XCTAssertEqual(response[0].hasTranscript, true)
   }
 
   func testFetchEarningsCalendar_UsesBearerTokenAndReturnsEvents() async throws {

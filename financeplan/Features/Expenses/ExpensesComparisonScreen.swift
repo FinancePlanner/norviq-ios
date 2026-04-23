@@ -15,6 +15,25 @@ struct ExpensesComparisonScreen: View {
     AppLanguage.from(appLanguageRawValue)
   }
 
+  private var isShowingLoadingState: Bool {
+    reportsViewModel.isLoading &&
+      reportsViewModel.portfolioStatistics == nil &&
+      reportsViewModel.latestMonthSummary == nil
+  }
+
+  private var loadErrorMessage: String? {
+    guard reportsViewModel.monthlySummaries.isEmpty else { return nil }
+    return reportsViewModel.errorMessage
+  }
+
+  private var shouldShowEmptyState: Bool {
+    !reportsViewModel.isLoading && reportsViewModel.monthlySummaries.isEmpty
+  }
+
+  private var visibleCards: [ReportCard] {
+    dashboardPrefs.visibleCards.filter { cardMatchesSelectedTab($0) }
+  }
+
   enum ReportTab: String, CaseIterable {
     case overview = "Overview"
     case portfolio = "Portfolio"
@@ -47,35 +66,13 @@ struct ExpensesComparisonScreen: View {
           .ignoresSafeArea()
 
         VStack(spacing: 0) {
-          Picker("Report Section", selection: $selectedTab.animation(.easeInOut(duration: 0.3))) {
-            ForEach(ReportTab.allCases, id: \.self) { tab in
-              Label(tab.title(language: appLanguage), systemImage: tab.icon).tag(tab)
-            }
-          }
-          .pickerStyle(.segmented)
-          .padding(.horizontal, 16)
-          .padding(.vertical, 12)
-          
+          tabPicker
+
           ScrollView {
-            VStack(spacing: 24) {
-              if reportsViewModel.isLoading && reportsViewModel.portfolioStatistics == nil && reportsViewModel.latestMonthSummary == nil {
-                ProgressView()
-                  .padding(.top, 40)
-              } else {
-                switch selectedTab {
-                case .overview:
-                  overviewSection
-                case .portfolio:
-                  portfolioSection
-                case .spending:
-                  spendingSection
-                case .trends:
-                  trendsSection
-                }
-              }
-            }
+            reportContent
             .padding(.horizontal, 16)
             .padding(.vertical, 20)
+            .accessibilityIdentifier("reports.scrollContent")
           }
         }
       }
@@ -89,55 +86,55 @@ struct ExpensesComparisonScreen: View {
             Image(systemName: "slider.horizontal.3")
           }
           .buttonStyle(.glass)
+          .accessibilityIdentifier("reports.customizeButton")
         }
       }
       .refreshable {
-        await reportsViewModel.load(force: true)
+        await reloadReports(force: true)
       }
-      .onAppear {
-        Task { await reportsViewModel.load(force: true) }
+      .task {
+        await initialLoad()
       }
       .onReceive(NotificationCenter.default.publisher(for: .budgetPlannerDataDidChange)) { _ in
-        Task { await reportsViewModel.load(force: true) }
+        Task { await reloadReports(force: true) }
       }
       .sheet(isPresented: $showingCustomize) {
         CustomizeDashboardSheet(preferences: dashboardPrefs)
       }
     }
   }
-  
+
+  private var tabPicker: some View {
+    Picker("Report Section", selection: $selectedTab.animation(.easeInOut(duration: 0.3))) {
+      ForEach(ReportTab.allCases, id: \.self) { tab in
+        Label(tab.title(language: appLanguage), systemImage: tab.icon).tag(tab)
+      }
+    }
+    .pickerStyle(.segmented)
+    .padding(.horizontal, 16)
+    .padding(.vertical, 12)
+  }
+
   @ViewBuilder
-  private var overviewSection: some View {
-    ForEach(dashboardPrefs.visibleCards.filter { isOverviewCard($0) }) { card in
-      cardView(for: card)
-        .transition(.opacity.combined(with: .move(edge: .top)))
+  private var reportContent: some View {
+    VStack(spacing: 24) {
+      if isShowingLoadingState {
+        ProgressView()
+          .padding(.top, 40)
+      } else if let loadErrorMessage {
+        ErrorRetryView(message: loadErrorMessage, onRetry: retryLoad)
+      } else if shouldShowEmptyState {
+        EmptyStateView(
+          icon: "chart.pie",
+          title: "No reports yet",
+          message: "Reports appear once you have expenses recorded."
+        )
+      } else {
+        ReportCardsSection(cards: visibleCards, content: cardView(for:))
+      }
     }
   }
-  
-  @ViewBuilder
-  private var portfolioSection: some View {
-    ForEach(dashboardPrefs.visibleCards.filter { isPortfolioCard($0) }) { card in
-      cardView(for: card)
-        .transition(.opacity.combined(with: .move(edge: .top)))
-    }
-  }
-  
-  @ViewBuilder
-  private var spendingSection: some View {
-    ForEach(dashboardPrefs.visibleCards.filter { isSpendingCard($0) }) { card in
-      cardView(for: card)
-        .transition(.opacity.combined(with: .move(edge: .top)))
-    }
-  }
-  
-  @ViewBuilder
-  private var trendsSection: some View {
-    ForEach(dashboardPrefs.visibleCards.filter { isTrendsCard($0) }) { card in
-      cardView(for: card)
-        .transition(.opacity.combined(with: .move(edge: .top)))
-    }
-  }
-  
+
   @ViewBuilder
   private func cardView(for card: ReportCard) -> some View {
     switch card {
@@ -175,7 +172,32 @@ struct ExpensesComparisonScreen: View {
       CashFlowAnalysisCard(points: reportsViewModel.cashFlow)
     }
   }
-  
+
+  private func initialLoad() async {
+    await reloadReports(force: true)
+  }
+
+  private func reloadReports(force: Bool = false) async {
+    await reportsViewModel.load(force: force)
+  }
+
+  private func retryLoad() {
+    Task { await reloadReports(force: true) }
+  }
+
+  private func cardMatchesSelectedTab(_ card: ReportCard) -> Bool {
+    switch selectedTab {
+    case .overview:
+      return isOverviewCard(card)
+    case .portfolio:
+      return isPortfolioCard(card)
+    case .spending:
+      return isSpendingCard(card)
+    case .trends:
+      return isTrendsCard(card)
+    }
+  }
+
   private func isOverviewCard(_ card: ReportCard) -> Bool {
     [.netWorth, .quickStats, .insights].contains(card)
   }
@@ -190,6 +212,18 @@ struct ExpensesComparisonScreen: View {
   
   private func isTrendsCard(_ card: ReportCard) -> Bool {
     [.household, .cashFlow].contains(card)
+  }
+}
+
+private struct ReportCardsSection<Content: View>: View {
+  let cards: [ReportCard]
+  let content: (ReportCard) -> Content
+
+  var body: some View {
+    ForEach(cards) { card in
+      content(card)
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
   }
 }
 
@@ -431,6 +465,7 @@ private struct SpendingInsightsSection: View {
       }
     }
     .frame(minHeight: 220)
+    .accessibilityIdentifier("reports.spendingChart")
 
     VStack(spacing: 16) {
       HStack(spacing: 12) {

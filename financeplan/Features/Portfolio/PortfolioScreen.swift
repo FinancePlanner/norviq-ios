@@ -116,15 +116,69 @@ struct PortfolioScreen: View {
     return "\(scopedStocks.count) positions"
   }
 
+  private var isShowingLoadingState: Bool {
+    viewModel.isLoading && scopedStocks.isEmpty
+  }
+
+  private var loadErrorMessage: String? {
+    guard scopedStocks.isEmpty else { return nil }
+    return viewModel.errorMessage
+  }
+
+  private var isEditSheetPresented: Binding<Bool> {
+    Binding(
+      get: { viewModel.editingStock != nil },
+      set: { if !$0 { dismissEditSheet() } }
+    )
+  }
+
   var body: some View {
-    rootContent
-    .animation(.smooth(duration: 0.3), value: viewModel.isLoading)
-    .onAppear {
-        viewModel.setModelContext(modelContext)
-        Task { await viewModel.load() }
-        rebuildChartData()
-        consumePendingOpenSymbolIfNeeded()
+    ZStack {
+      if let loadErrorMessage {
+        PortfolioLoadErrorView(error: loadErrorMessage, onRetry: retryLoad)
+          .transition(.opacity)
+      } else if isShowingLoadingState {
+        PortfolioSkeletonView()
+          .transition(.opacity)
+      } else {
+        ScrollView {
+          VStack(spacing: 16) {
+            PortfolioHeroCard(
+              colorScheme: colorScheme,
+              heroLabel: heroLabel,
+              totalValue: totalValue,
+              heroSubtitle: heroSubtitle,
+              chartData: chartData,
+              selectedTimeRange: selectedTimeRange,
+              totalShares: totalShares,
+              averagePositionValue: averagePositionValue,
+              cashBalance: cashBalance,
+              onSelectTimeRange: selectTimeRange
+            )
+
+            PortfolioAssetFilters(
+              colorScheme: colorScheme,
+              selectedAssetFilter: selectedAssetFilter,
+              onSelectFilter: selectAssetFilter
+            )
+
+            PortfolioPositionsSection(
+              stocks: filteredStocks,
+              targetAlertProvider: viewModel.targetAlert(for:),
+              onAddPosition: presentAddPositionSheet,
+              onEditStock: beginEditing,
+              onDeleteStock: deleteStock,
+              onPresentTargetAlert: presentTargetAlert
+            )
+          }
+          .padding(.horizontal, 16)
+          .padding(.vertical, 12)
+        }
+        .transition(.opacity)
+      }
     }
+    .animation(.smooth(duration: 0.3), value: viewModel.isLoading)
+    .onAppear(perform: prepareScreen)
     .onChange(of: totalValue) { _, _ in
       rebuildChartData()
     }
@@ -134,9 +188,11 @@ struct PortfolioScreen: View {
     .onChange(of: viewModel.selectedPortfolioListId) { _, _ in
       rebuildChartData()
     }
-    .refreshable { await viewModel.load(force: true) }
+    .refreshable {
+      await reloadPortfolio(force: true)
+    }
     .onReceive(NotificationCenter.default.publisher(for: .portfolioDataDidChange)) { _ in
-      Task { await viewModel.load(force: true) }
+      Task { await reloadPortfolio(force: true) }
     }
     .onChange(of: pendingOpenSymbol) { _, _ in
       consumePendingOpenSymbolIfNeeded()
@@ -146,26 +202,8 @@ struct PortfolioScreen: View {
         portfolioActionsMenu
       }
     }
-    .sheet(
-      isPresented: Binding<Bool>(
-        get: { viewModel.editingStock != nil },
-        set: { if !$0 { viewModel.editingStock = nil } }
-      )
-    ) {
-      if let stock = viewModel.editingStock {
-        EditStockPositionSheet(
-          stock: stock,
-          isSaving: viewModel.isSaving,
-          isDeleting: viewModel.isDeletingStock,
-          onCancel: { viewModel.editingStock = nil },
-          onSave: { updated in
-            await viewModel.saveEdit(updated)
-          },
-          onDelete: {
-            await viewModel.delete(id: stock.id)
-          }
-        )
-      }
+    .sheet(isPresented: isEditSheetPresented) {
+      editSheetContent
     }
     .sheet(isPresented: $isAddPositionPresented) {
       AddPositionSheet(
@@ -180,14 +218,12 @@ struct PortfolioScreen: View {
           symbolLocked: false
         ),
         isSaving: viewModel.isSaving,
-        onSave: { draft in
-          await viewModel.saveNewPosition(draft)
-        }
+        onSave: saveNewPosition
       )
     }
     .sheet(isPresented: $isCSVImportPresented) {
-      PortfolioCSVImportSheet {
-        await viewModel.load(force: true)
+      PortfolioCSVImportSheet(portfolioListId: viewModel.selectedPortfolioListId) {
+        await reloadPortfolio(force: true)
       }
     }
     .sheet(item: $targetAlertStock) { stock in
@@ -197,14 +233,10 @@ struct PortfolioScreen: View {
         existingAlert: viewModel.targetAlert(for: stock.symbol),
         isSaving: viewModel.isSavingTargetAlert,
         onSave: { price, direction in
-          await viewModel.saveTargetAlert(
-            symbol: stock.symbol,
-            price: price,
-            direction: direction
-          )
+          await saveTargetAlert(for: stock.symbol, price: price, direction: direction)
         },
         onDelete: {
-          await viewModel.deleteTargetAlert(symbol: stock.symbol)
+          await deleteTargetAlert(for: stock.symbol)
         }
       )
     }
@@ -220,111 +252,6 @@ struct PortfolioScreen: View {
       }
     }
     .appSensoryFeedback(destructive: destructiveFeedbackTrigger)
-  }
-
-  private var rootContent: AnyView {
-    if viewModel.isLoading && scopedStocks.isEmpty {
-      return AnyView(
-        PortfolioSkeletonView()
-          .transition(.opacity)
-      )
-    }
-
-    if let error = viewModel.errorMessage, scopedStocks.isEmpty {
-      return AnyView(
-        ContentUnavailableView {
-          Label("Unable to Load Portfolio", systemImage: "exclamationmark.triangle")
-        } description: {
-          Text(error)
-        } actions: {
-          Button("Retry") {
-            Task { await viewModel.load(force: true) }
-          }
-          .buttonStyle(.borderedProminent)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-      )
-    }
-
-    return AnyView(
-      ScrollView {
-        VStack(spacing: 16) {
-          // Hero Chart Card
-          GlassCard(cornerRadius: 22) {
-            VStack(alignment: .leading, spacing: 16) {
-              VStack(alignment: .leading, spacing: 4) {
-                Text(heroLabel)
-                  .typography(.small, weight: .semibold)
-                  .foregroundStyle(.secondary)
-
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                  Text(totalValue.currency)
-                    .typography(.hero, weight: .bold)
-                    .contentTransition(.numericText())
-                  Text(heroSubtitle)
-                    .typography(.small)
-                    .foregroundStyle(.secondary)
-                }
-
-                HStack(spacing: 4) {
-                  Image(systemName: "minus")
-                  Text("No portfolio trend yet")
-                }
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
-              }
-              .padding(.horizontal, 4)
-
-              InteractiveLineChart(data: chartData, color: .green)
-                .frame(minHeight: 160, maxHeight: .infinity)
-                .padding(.horizontal, -12) // Bleed to edges of card padding
-
-              // Time range picker
-              GlassEffectContainer(spacing: 8) {
-                HStack(spacing: 8) {
-                  ForEach(Array(TimeRange.allCases), id: \.self) { range in
-                    timeRangeButton(range)
-                  }
-                }
-              }
-
-              HStack {
-                PortfolioMetricPill(
-                  title: "Shares",
-                  value: totalShares.formatted(.number.precision(.fractionLength(0...2))),
-                  tint: AppTheme.Colors.secondaryTint(for: colorScheme)
-                )
-                PortfolioMetricPill(
-                  title: "Avg / position",
-                  value: averagePositionValue.currency,
-                  tint: AppTheme.Colors.tint(for: colorScheme)
-                )
-                PortfolioMetricPill(
-                  title: "Cash",
-                  value: cashBalance.currency,
-                  tint: .mint
-                )
-              }
-            }
-          }
-          .foregroundStyle(.primary)
-
-          // Asset Filter
-          GlassEffectContainer(spacing: 8) {
-            HStack(spacing: 8) {
-              ForEach(assetFilters.indices, id: \.self) { index in
-                assetFilterButton(assetFilters[index])
-              }
-            }
-          }
-
-          portfolioPositionsSection
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-      }
-      .transition(.opacity)
-    )
   }
 
   private func rebuildChartData() {
@@ -351,6 +278,7 @@ struct PortfolioScreen: View {
       StockDetailScreen(stockId: stock.id, initialSymbol: stock.symbol)
     } label: {
       PortfolioRow(stock: stock, targetAlert: targetAlert)
+        .accessibilityIdentifier("portfolio.stockRow.\(stock.symbol)")
     }
     .buttonStyle(CardButtonStyle())
     .contextMenu {
@@ -359,12 +287,11 @@ struct PortfolioScreen: View {
       }
 
       Button("Edit", systemImage: "pencil") {
-        viewModel.beginEdit(editableStock)
+        beginEditing(editableStock)
       }
 
       Button("Delete", systemImage: "trash", role: .destructive) {
-        destructiveFeedbackTrigger += 1
-        Task { await viewModel.delete(id: stock.id) }
+        deleteStock(id: stock.id)
       }
     }
   }
@@ -377,37 +304,16 @@ struct PortfolioScreen: View {
     )
   }
 
-  @ViewBuilder
-  private var portfolioPositionsSection: some View {
-    if filteredStocks.isEmpty {
-      ContentUnavailableView {
-        Label("No Positions", systemImage: "chart.line.uptrend.xyaxis")
-      } description: {
-        Text("Add your first holding or change your filter.")
-      } actions: {
-        Button("Add Position") {
-          isAddPositionPresented = true
-        }
-        .buttonStyle(.borderedProminent)
-      }
-      .padding(.vertical, 24)
-    } else {
-      ForEach(filteredStocks) { stock in
-        portfolioStockRow(stock)
-      }
-    }
-  }
-
   private var portfolioActionsMenu: some View {
     Menu {
       Button {
-        isAddPositionPresented = true
+        presentAddPositionSheet()
       } label: {
         Label("Add position", systemImage: "plus")
       }
 
       Button {
-        isCSVImportPresented = true
+        presentCSVImportSheet()
       } label: {
         Label("Import CSV", systemImage: "square.and.arrow.down.on.square")
       }
@@ -422,44 +328,94 @@ struct PortfolioScreen: View {
     AssetFilter.allCases
   }
 
-  private func timeRangeButton(_ range: TimeRange) -> AnyView {
-    let isSelected = selectedTimeRange == range
-    let button = Button(action: {
-      withAnimation { selectedTimeRange = range }
-    }) {
-      Text(range.rawValue)
-        .font(.caption.weight(.semibold))
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity)
-        .foregroundStyle(isSelected ? .primary : .secondary)
-        .glassEffect(
-          isSelected
-            ? .regular.tint(AppTheme.Colors.tint(for: colorScheme)).interactive()
-            : .regular.interactive(),
-          in: .rect(cornerRadius: 8)
-        )
-    }
-    return AnyView(button)
+  private func prepareScreen() {
+    viewModel.setModelContext(modelContext)
+    rebuildChartData()
+    consumePendingOpenSymbolIfNeeded()
+    Task { await reloadPortfolio() }
   }
 
-  private func assetFilterButton(_ filter: AssetFilter) -> AnyView {
-    let isSelected = selectedAssetFilter == filter
-    let button = Button(action: {
-      withAnimation { selectedAssetFilter = filter }
-    }) {
-      Text(filter.rawValue)
-        .font(.subheadline.weight(.medium))
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity)
-        .foregroundStyle(isSelected ? .primary : .secondary)
-        .glassEffect(
-          isSelected
-            ? .regular.tint(AppTheme.Colors.tint(for: colorScheme)).interactive()
-            : .regular.interactive(),
-          in: .rect(cornerRadius: 10)
-        )
+  private func reloadPortfolio(force: Bool = false) async {
+    await viewModel.load(force: force)
+  }
+
+  private func retryLoad() {
+    Task { await reloadPortfolio(force: true) }
+  }
+
+  private func dismissEditSheet() {
+    viewModel.editingStock = nil
+  }
+
+  private func beginEditing(_ stock: StockResponse) {
+    viewModel.beginEdit(stock)
+  }
+
+  private func saveEditedStock(_ updated: StockResponse) async -> Bool {
+    await viewModel.saveEdit(updated)
+  }
+
+  private func deleteEditedStock(id: String) async -> Bool {
+    await viewModel.delete(id: id)
+  }
+
+  private func saveNewPosition(_ draft: AddPositionDraft) async -> String? {
+    await viewModel.saveNewPosition(draft)
+  }
+
+  private func saveTargetAlert(
+    for symbol: String,
+    price: Double,
+    direction: PortfolioTargetAlertDirection
+  ) async -> String? {
+    await viewModel.saveTargetAlert(symbol: symbol, price: price, direction: direction)
+  }
+
+  private func deleteTargetAlert(for symbol: String) async -> String? {
+    await viewModel.deleteTargetAlert(symbol: symbol)
+  }
+
+  private func presentAddPositionSheet() {
+    isAddPositionPresented = true
+  }
+
+  private func presentCSVImportSheet() {
+    isCSVImportPresented = true
+  }
+
+  private func deleteStock(id: String) {
+    destructiveFeedbackTrigger += 1
+    Task {
+      _ = await viewModel.delete(id: id)
     }
-    return AnyView(button)
+  }
+
+  private func selectTimeRange(_ range: TimeRange) {
+    withAnimation {
+      selectedTimeRange = range
+    }
+  }
+
+  private func selectAssetFilter(_ filter: AssetFilter) {
+    withAnimation {
+      selectedAssetFilter = filter
+    }
+  }
+
+  @ViewBuilder
+  private var editSheetContent: some View {
+    if let stock = viewModel.editingStock {
+      EditStockPositionSheet(
+        stock: stock,
+        isSaving: viewModel.isSaving,
+        isDeleting: viewModel.isDeletingStock,
+        onCancel: dismissEditSheet,
+        onSave: saveEditedStock,
+        onDelete: {
+          await deleteEditedStock(id: stock.id)
+        }
+      )
+    }
   }
 
   private func consumePendingOpenSymbolIfNeeded() {
@@ -546,6 +502,245 @@ struct PortfolioScreen: View {
       let value = max(0, baseValue * 0.78 + seasonal + secondaryWave + trend)
 
       return ChartDataPoint(date: date, value: value)
+    }
+  }
+}
+
+private struct PortfolioHeroCard: View {
+  let colorScheme: ColorScheme
+  let heroLabel: String
+  let totalValue: Double
+  let heroSubtitle: String
+  let chartData: [ChartDataPoint]
+  let selectedTimeRange: PortfolioScreen.TimeRange
+  let totalShares: Double
+  let averagePositionValue: Double
+  let cashBalance: Double
+  let onSelectTimeRange: (PortfolioScreen.TimeRange) -> Void
+
+  var body: some View {
+    GlassCard(cornerRadius: 22) {
+      VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 4) {
+          Text(heroLabel)
+            .typography(.small, weight: .semibold)
+            .foregroundStyle(.secondary)
+
+          HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(totalValue.currency)
+              .typography(.hero, weight: .bold)
+              .contentTransition(.numericText())
+            Text(heroSubtitle)
+              .typography(.small)
+              .foregroundStyle(.secondary)
+          }
+
+          HStack(spacing: 4) {
+            Image(systemName: "minus")
+            Text("No portfolio trend yet")
+          }
+          .font(.subheadline.weight(.semibold))
+          .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 4)
+
+        InteractiveLineChart(data: chartData, color: .green)
+          .frame(minHeight: 160, maxHeight: .infinity)
+          .padding(.horizontal, -12)
+
+        GlassEffectContainer(spacing: 8) {
+          HStack(spacing: 8) {
+            ForEach(Array(PortfolioScreen.TimeRange.allCases), id: \.self) { range in
+              PortfolioRangeButton(
+                title: range.rawValue,
+                isSelected: selectedTimeRange == range,
+                tint: AppTheme.Colors.tint(for: colorScheme),
+                action: { onSelectTimeRange(range) }
+              )
+            }
+          }
+        }
+
+        HStack {
+          PortfolioMetricPill(
+            title: "Shares",
+            value: totalShares.formatted(.number.precision(.fractionLength(0...2))),
+            tint: AppTheme.Colors.secondaryTint(for: colorScheme)
+          )
+          PortfolioMetricPill(
+            title: "Avg / position",
+            value: averagePositionValue.currency,
+            tint: AppTheme.Colors.tint(for: colorScheme)
+          )
+          PortfolioMetricPill(
+            title: "Cash",
+            value: cashBalance.currency,
+            tint: .mint
+          )
+        }
+      }
+    }
+    .foregroundStyle(.primary)
+  }
+}
+
+private struct PortfolioAssetFilters: View {
+  let colorScheme: ColorScheme
+  let selectedAssetFilter: PortfolioScreen.AssetFilter
+  let onSelectFilter: (PortfolioScreen.AssetFilter) -> Void
+
+  var body: some View {
+    GlassEffectContainer(spacing: 8) {
+      HStack(spacing: 8) {
+        ForEach(Array(PortfolioScreen.AssetFilter.allCases), id: \.self) { filter in
+          PortfolioFilterButton(
+            title: filter.rawValue,
+            isSelected: selectedAssetFilter == filter,
+            tint: AppTheme.Colors.tint(for: colorScheme),
+            action: { onSelectFilter(filter) }
+          )
+        }
+      }
+    }
+  }
+}
+
+private struct PortfolioPositionsSection: View {
+  let stocks: [SDPortfolioStock]
+  let targetAlertProvider: (String) -> TargetResponse?
+  let onAddPosition: () -> Void
+  let onEditStock: (StockResponse) -> Void
+  let onDeleteStock: (String) -> Void
+  let onPresentTargetAlert: (SDPortfolioStock) -> Void
+
+  var body: some View {
+    if stocks.isEmpty {
+      ContentUnavailableView {
+        Label("No Positions", systemImage: "chart.line.uptrend.xyaxis")
+      } description: {
+        Text("Add your first holding or change your filter.")
+      } actions: {
+        Button("Add Position", action: onAddPosition)
+          .buttonStyle(.borderedProminent)
+          .accessibilityIdentifier("portfolio.addPositionButton")
+      }
+      .padding(.vertical, 24)
+    } else {
+      ForEach(stocks) { stock in
+        PortfolioStockLinkRow(
+          stock: stock,
+          targetAlert: targetAlertProvider(stock.symbol),
+          onEdit: onEditStock,
+          onDelete: onDeleteStock,
+          onPresentTargetAlert: onPresentTargetAlert
+        )
+      }
+    }
+  }
+}
+
+private struct PortfolioStockLinkRow: View {
+  let stock: SDPortfolioStock
+  let targetAlert: TargetResponse?
+  let onEdit: (StockResponse) -> Void
+  let onDelete: (String) -> Void
+  let onPresentTargetAlert: (SDPortfolioStock) -> Void
+
+  private var editableStock: StockResponse {
+    let category = AssetCategory(rawValue: stock.category ?? AssetCategory.stock.rawValue) ?? .stock
+    return StockResponse(
+      id: stock.id,
+      symbol: stock.symbol,
+      shares: stock.shares,
+      buyPrice: stock.buyPrice,
+      buyDate: stock.buyDate,
+      notes: stock.notes,
+      category: category
+    )
+  }
+
+  var body: some View {
+    NavigationLink {
+      StockDetailScreen(stockId: stock.id, initialSymbol: stock.symbol)
+    } label: {
+      PortfolioRow(stock: stock, targetAlert: targetAlert)
+        .accessibilityIdentifier("portfolio.stockRow.\(stock.symbol)")
+    }
+    .buttonStyle(CardButtonStyle())
+    .contextMenu {
+      Button(
+        targetAlert == nil ? "Add price alert" : "Edit price alert",
+        systemImage: targetAlert == nil ? "bell.badge" : "bell.fill"
+      ) {
+        onPresentTargetAlert(stock)
+      }
+
+      Button("Edit", systemImage: "pencil") {
+        onEdit(editableStock)
+      }
+
+      Button("Delete", systemImage: "trash", role: .destructive) {
+        onDelete(stock.id)
+      }
+    }
+  }
+}
+
+private struct PortfolioLoadErrorView: View {
+  let error: String
+  let onRetry: () -> Void
+
+  var body: some View {
+    ContentUnavailableView {
+      Label("Unable to Load Portfolio", systemImage: "exclamationmark.triangle")
+    } description: {
+      Text(error)
+    } actions: {
+      Button("Retry", action: onRetry)
+        .buttonStyle(.borderedProminent)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+}
+
+private struct PortfolioRangeButton: View {
+  let title: String
+  let isSelected: Bool
+  let tint: Color
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Text(title)
+        .font(.caption.weight(.semibold))
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .foregroundStyle(isSelected ? .primary : .secondary)
+        .glassEffect(
+          isSelected ? .regular.tint(tint).interactive() : .regular.interactive(),
+          in: .rect(cornerRadius: 8)
+        )
+    }
+  }
+}
+
+private struct PortfolioFilterButton: View {
+  let title: String
+  let isSelected: Bool
+  let tint: Color
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Text(title)
+        .font(.subheadline.weight(.medium))
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity)
+        .foregroundStyle(isSelected ? .primary : .secondary)
+        .glassEffect(
+          isSelected ? .regular.tint(tint).interactive() : .regular.interactive(),
+          in: .rect(cornerRadius: 10)
+        )
     }
   }
 }

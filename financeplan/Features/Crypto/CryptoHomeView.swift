@@ -13,10 +13,8 @@ struct CryptoHomeView: View {
     @StateObject private var viewModel = CryptoViewModel()
     @State private var selectedSegment: CryptoSegment = .overview
     @Environment(\.colorScheme) private var colorScheme
-    @State private var isProfilePresented = false
     @State private var isAddCryptoPresented = false
     @State private var editingHolding: CryptoPortfolioItemResponse?
-    @Namespace private var segmentNamespace
 
     private enum CryptoSegment: String, CaseIterable, Identifiable {
         case overview, portfolio, market, news
@@ -31,6 +29,10 @@ struct CryptoHomeView: View {
         }
     }
 
+    private var isShowingLoadingState: Bool {
+        viewModel.isLoading && viewModel.topAssets.isEmpty
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -39,33 +41,14 @@ struct CryptoHomeView: View {
 
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Segmented Picker
-                        Picker("Crypto section", selection: $selectedSegment) {
-                            ForEach(CryptoSegment.allCases) { segment in
-                                Text(segment.title).tag(segment)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .padding(.horizontal)
+                        segmentPicker
 
-                        if viewModel.isLoading && viewModel.topAssets.isEmpty {
+                        if isShowingLoadingState {
                             CryptoOverviewSkeleton()
                                 .transition(.opacity)
                         } else {
-                            Group {
-                                switch selectedSegment {
-                                case .overview:
-                                    CryptoOverviewSection(viewModel: viewModel)
-                                case .portfolio:
-                                    CryptoPortfolioSection(viewModel: viewModel, editingHolding: $editingHolding)
-                                case .market:
-                                    CryptoMarketSection(viewModel: viewModel)
-                                case .news:
-                                    CryptoNewsSection(viewModel: viewModel)
-                                }
-                            }
-                            .transition(.opacity)
-                            .animation(.smooth(duration: 0.3), value: selectedSegment)
+                            segmentContent
+                                .transition(.opacity)
                         }
                     }
                     .padding(.vertical)
@@ -73,17 +56,15 @@ struct CryptoHomeView: View {
             }
             .navigationTitle("Crypto")
             .refreshable {
-                await viewModel.load(force: true)
+                await reloadCrypto(force: true)
             }
             .task {
-                await viewModel.load()
+                await initialLoad()
             }
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     if selectedSegment == .portfolio {
-                        Button {
-                            isAddCryptoPresented = true
-                        } label: {
+                        Button(action: presentAddHoldingSheet) {
                             Image(systemName: "plus")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
@@ -93,9 +74,7 @@ struct CryptoHomeView: View {
                         .accessibilityLabel("Add crypto holding")
                     }
 
-                    Button {
-                        isSettingsPresented = true
-                    } label: {
+                    Button(action: openSettings) {
                         Image(systemName: "gearshape")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
@@ -105,16 +84,54 @@ struct CryptoHomeView: View {
                     .accessibilityLabel("Open settings")
                 }
             }
-            .sheet(isPresented: $isProfilePresented) {
-                UserProfileView()
-            }
             .sheet(isPresented: $isAddCryptoPresented) {
                 AddCryptoHoldingSheet(viewModel: viewModel)
             }
             .sheet(item: $editingHolding) { holding in
                 EditCryptoHoldingSheet(viewModel: viewModel, holding: holding)
             }
+            .animation(.smooth(duration: 0.3), value: selectedSegment)
         }
+    }
+
+    private var segmentPicker: some View {
+        Picker("Crypto section", selection: $selectedSegment) {
+            ForEach(CryptoSegment.allCases) { segment in
+                Text(segment.title).tag(segment)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private var segmentContent: some View {
+        switch selectedSegment {
+        case .overview:
+            CryptoOverviewSection(viewModel: viewModel)
+        case .portfolio:
+            CryptoPortfolioSection(viewModel: viewModel, editingHolding: $editingHolding)
+        case .market:
+            CryptoMarketSection(viewModel: viewModel)
+        case .news:
+            CryptoNewsSection(viewModel: viewModel)
+        }
+    }
+
+    private func initialLoad() async {
+        await reloadCrypto()
+    }
+
+    private func reloadCrypto(force: Bool = false) async {
+        await viewModel.load(force: force)
+    }
+
+    private func presentAddHoldingSheet() {
+        isAddCryptoPresented = true
+    }
+
+    private func openSettings() {
+        isSettingsPresented = true
     }
 }
 

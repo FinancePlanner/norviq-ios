@@ -127,13 +127,12 @@ struct StockDetailHeroCard: View {
                         GridRow {
                             DetailItem(
                                 title: "Market cap",
-                                value: companyProfile.marketCapitalizationAmount.map(compactCurrency) ?? "—"
-                            )
-                            DetailItem(
+                                value: companyProfile.marketCapitalizationAmount.map { StockMetricFormatter.compactCurrency($0) } ?? "—"
+                                )
+                                DetailItem(
                                 title: "Shares outstanding",
-                                value: companyProfile.sharesOutstandingAmount.map(compactNumber) ?? "—"
-                            )
-                        }
+                                value: companyProfile.sharesOutstandingAmount.map { StockMetricFormatter.compactNumber($0) } ?? "—"
+                                )                        }
 
                         GridRow {
                             DetailItem(title: "Phone", value: companyProfile.phone ?? "—")
@@ -357,26 +356,26 @@ private struct StockPriceChart: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(latestPoint?.close.currency ?? "Pending")
-                        .typography(.title, weight: .bold)
-                        .monospacedDigit()
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(latestPoint?.close.currency ?? "Pending")
+                            .typography(.title, weight: .bold)
+                            .monospacedDigit()
 
-                    Text("\(series.symbol.uppercased()) · \(series.range)")
-                        .typography(.nano, weight: .semibold)
-                        .foregroundStyle(.secondary)
+                        Text("\(series.symbol.uppercased()) · \(series.range)")
+                            .typography(.nano, weight: .semibold)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Text(change.map { StockMetricFormatter.signedPercentText($0) } ?? "—")
+                        .typography(.caption, weight: .bold)
+                        .foregroundStyle((change ?? 0) >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.secondary.opacity(0.10), in: Capsule())
                 }
-
-                Spacer()
-
-                Text(change.map(signedPercentText) ?? "—")
-                    .typography(.caption, weight: .bold)
-                    .foregroundStyle((change ?? 0) >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.secondary.opacity(0.10), in: Capsule())
-            }
 
             Chart(Array(series.points.enumerated()), id: \.offset) { _, point in
                 LineMark(
@@ -981,33 +980,21 @@ struct StockEarningsTab: View {
             } else if earnings.isEmpty {
                 ResearchPlaceholderCard(title: "No earnings data", bodyText: "No data found for \(symbol).")
             } else {
-                // 1. EPS Surprise Chart
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("EPS Surprise")
-                        .typography(.label, weight: .bold)
-                        .padding(.horizontal, 4)
-
-                    EarningsSurpriseChart(earnings: earnings)
-                        .frame(height: 200)
-                        .padding()
-                        .appGlassEffect(.rect(cornerRadius: 24))
-                }
-
-                // 2. History Timeline
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("History")
+                    Text("Earnings History")
                         .typography(.label, weight: .bold)
                         .padding(.horizontal, 4)
 
                     VStack(spacing: 0) {
+                        EarningsTableHeader()
+
                         ForEach(Array(earnings.enumerated()), id: \.element.id) { index, event in
-                            EarningsTimelineRow(
+                            EarningsTableRow(
                                 event: event,
                                 isLast: index == earnings.count - 1
                             )
                         }
                     }
-                    .padding(.vertical, 8)
                     .appGlassEffect(.rect(cornerRadius: 24))
                 }
             }
@@ -1017,139 +1004,133 @@ struct StockEarningsTab: View {
 
 // MARK: - Components
 
-private struct EarningsSurpriseChart: View {
-    let earnings: [EarningsEvent]
-    @Environment(\.colorScheme) private var colorScheme
-
+private struct EarningsTableHeader: View {
     var body: some View {
-        Chart {
-            ForEach(earnings.reversed()) { event in
-                if let est = event.epsEstimated {
-                    // Estimated Point
-                    PointMark(
-                        x: .value("Date", formatShortDate(event.date)),
-                        y: .value("EPS", est)
-                    )
-                    .foregroundStyle(.secondary)
-                    .symbol {
-                        Circle()
-                            .strokeBorder(.secondary, lineWidth: 2)
-                            .frame(width: 8, height: 8)
-                    }
-                }
-
-                if let act = event.epsActual {
-                    // Actual Bar
-                    BarMark(
-                        x: .value("Date", formatShortDate(event.date)),
-                        y: .value("EPS", act),
-                        width: 12
-                    )
-                    .foregroundStyle(
-                        (act >= (event.epsEstimated ?? 0)) ? Color.green.gradient : Color.red.gradient
-                    )
-                    .cornerRadius(4)
-                }
-            }
+        HStack(alignment: .center, spacing: 12) {
+            Text("Date")
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text("EPS")
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text("Revenue")
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text("Surprise")
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .chartYAxis {
-            AxisMarks(position: .leading)
-        }
-        .chartXAxis {
-            AxisMarks(values: .automatic)
-        }
-    }
-
-    private func formatShortDate(_ dateString: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        if let date = formatter.date(from: dateString) {
-            formatter.dateFormat = "MMM yy"
-            return formatter.string(from: date)
-        }
-        return dateString
+        .typography(.nano, weight: .semibold)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 20)
+        .padding(.top, 18)
+        .padding(.bottom, 10)
     }
 }
 
-private struct EarningsTimelineRow: View {
+private struct EarningsTableRow: View {
     let event: EarningsEvent
     let isLast: Bool
-    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
-            // Indicator
-            VStack(spacing: 0) {
-                Circle()
-                    .fill(statusColor.gradient)
-                    .frame(width: 12, height: 12)
-                    .padding(.top, 4)
-
-                if !isLast {
-                    Rectangle()
-                        .fill(.secondary.opacity(0.2))
-                        .frame(width: 2)
-                        .frame(maxHeight: .infinity)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(event.date)
-                            .typography(.caption, weight: .bold)
-                        Text(surpriseText)
-                            .typography(.nano)
-                            .foregroundStyle(statusColor)
-                    }
-
-                    Spacer()
-
-                    if let act = event.epsActual {
-                        Text(act.formatted(.number.precision(.fractionLength(2))))
-                            .typography(.label, weight: .bold)
+        VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(formatDisplayDate(event.date))
+                        .typography(.caption, weight: .bold)
+                    if event.hasTranscript == true {
+                        Label("Transcript", systemImage: "text.page")
+                            .typography(.nano, weight: .semibold)
+                            .foregroundStyle(.secondary)
+                            .labelStyle(.titleAndIcon)
+                            .accessibilityLabel("Transcript available")
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                HStack(spacing: 20) {
-                    TimelineMetric(title: "EST EPS", value: event.epsEstimated?.formatted() ?? "—")
-                    TimelineMetric(title: "REVENUE", value: event.revenueActual?.formatted(.number.notation(.compactName)) ?? "—")
-                }
+                EarningsMetricCell(
+                    primary: formattedEPS(event.epsActual),
+                    secondary: "Est \(formattedEPS(event.epsEstimated))"
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                if !isLast {
-                    Divider()
-                        .padding(.top, 4)
+                EarningsMetricCell(
+                    primary: formattedRevenue(event.revenueActual),
+                    secondary: "Est \(formattedRevenue(event.revenueEstimated))"
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(formattedSurprisePercent)
+                        .typography(.caption, weight: .bold)
+                        .foregroundStyle(statusColor)
+                    Text(surpriseText)
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
                 }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .accessibilityElement(children: .combine)
             }
-            .padding(.bottom, isLast ? 0 : 16)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+
+            if !isLast {
+                Divider()
+                    .padding(.horizontal, 20)
+            }
         }
-        .padding(.horizontal, 20)
     }
 
     private var statusColor: Color {
-        guard let act = event.epsActual, let est = event.epsEstimated else { return .secondary }
-        return act >= est ? .green : .red
+        guard let surprisePercent = resolvedSurprisePercent else { return .secondary }
+        return surprisePercent >= 0 ? .green : .red
     }
 
     private var surpriseText: String {
-        guard let act = event.epsActual, let est = event.epsEstimated else { return "Reported" }
-        let diff = act - est
-        let percent = est != 0 ? (diff / abs(est)) * 100 : 0
-        return diff >= 0 ? "+\(percent.formatted(.number.precision(.fractionLength(1))))% Beat" : "\(percent.formatted(.number.precision(.fractionLength(1))))% Miss"
+        guard let surprisePercent = resolvedSurprisePercent else { return "Reported" }
+        return surprisePercent >= 0 ? "Beat" : "Miss"
+    }
+
+    private var formattedSurprisePercent: String {
+        guard let surprisePercent = resolvedSurprisePercent else { return "—" }
+        let formatted = abs(surprisePercent).formatted(.number.precision(.fractionLength(1)))
+        return surprisePercent >= 0 ? "+\(formatted)%" : "-\(formatted)%"
+    }
+
+    private var resolvedSurprisePercent: Double? {
+        if let surprisePercent = event.surprisePercent {
+            return surprisePercent
+        }
+        guard let act = event.epsActual, let est = event.epsEstimated, est != 0 else { return nil }
+        return ((act - est) / abs(est)) * 100
+    }
+
+    private func formatDisplayDate(_ rawDate: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let date = formatter.date(from: String(rawDate.prefix(10))) else { return rawDate }
+        formatter.dateFormat = "MMM d, yyyy"
+        return formatter.string(from: date)
+    }
+
+    private func formattedEPS(_ value: Double?) -> String {
+        guard let value else { return "—" }
+        return value.formatted(.number.precision(.fractionLength(2)))
+    }
+
+    private func formattedRevenue(_ value: Double?) -> String {
+        guard let value else { return "—" }
+        return value.formatted(.number.notation(.compactName))
     }
 }
 
-private struct TimelineMetric: View {
-    let title: String
-    let value: String
+private struct EarningsMetricCell: View {
+    let primary: String
+    let secondary: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
+        VStack(alignment: .leading, spacing: 4) {
+            Text(primary)
+                .typography(.caption, weight: .semibold)
+            Text(secondary)
                 .typography(.nano)
                 .foregroundStyle(.secondary)
-            Text(value)
-                .typography(.caption, weight: .semibold)
         }
     }
 }
@@ -1256,6 +1237,7 @@ struct StockDetailTabBar: View {
                                 .glassEffectID(tab.id, in: selectionNamespace)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("stockDetail.tab.\(tab.rawValue)")
                     }
                 }
                 .padding(4)
@@ -1609,7 +1591,7 @@ private struct ProjectionScenarioHeaderCard: View {
                         )
                         ProjectionSummaryBlock(
                             title: "Market cap",
-                            value: compactCurrency(profile.marketCap),
+                            value: StockMetricFormatter.compactCurrency(profile.marketCap),
                             detail: "Current size"
                         )
                     }
@@ -1617,7 +1599,7 @@ private struct ProjectionScenarioHeaderCard: View {
                     GridRow {
                         ProjectionSummaryBlock(
                             title: "Shares outstanding",
-                            value: compactNumber(profile.sharesOutstanding),
+                            value: StockMetricFormatter.compactNumber(profile.sharesOutstanding),
                             detail: "Used to derive EPS"
                         )
                         ProjectionSummaryBlock(
@@ -1665,12 +1647,12 @@ private struct StockMarketSnapshotCard: View {
                         .typography(.hero, weight: .bold)
                         .monospacedDigit()
 
-                    Text(signedCurrencyText(sessionChange))
+                    Text(StockMetricFormatter.signedCurrencyText(sessionChange))
                         .typography(.small, weight: .semibold)
                         .monospacedDigit()
                         .foregroundStyle(changeTint)
 
-                    Text(signedPercentText(snapshot.resolvedPercentChange ?? 0))
+                    Text(StockMetricFormatter.signedPercentText(snapshot.resolvedPercentChange ?? 0))
                         .typography(.small, weight: .semibold)
                         .foregroundStyle(changeTint)
                         .monospacedDigit()
@@ -1847,7 +1829,7 @@ private struct StockConsensusCard: View {
     }
 
     private var bullishShareText: String {
-        percentText(consensus.bullishShare)
+        StockMetricFormatter.percentText(consensus.bullishShare)
     }
 
     var body: some View {
@@ -1956,7 +1938,7 @@ private struct ConsensusDistributionRow: View {
                     .foregroundStyle(.primary)
                     .monospacedDigit()
 
-                Text(percentText(progress))
+                Text(StockMetricFormatter.percentText(progress))
                     .typography(.caption)
                     .foregroundStyle(.secondary)
                     .frame(width: 48, alignment: .trailing)
@@ -2064,7 +2046,7 @@ private struct StockCurrentMetricsCard: View {
                 ForEach(Array(keyMetrics.enumerated()), id: \.element.id) { index, metric in
                     CurrentMetricRow(
                         title: metric.title,
-                        value: formattedMetricValue(metric, value: profile.metrics[metric]),
+                        value: StockMetricFormatter.formattedValue(for: metric, value: profile.metrics[metric]),
                         detail: metric.benchmarkText
                     )
 
@@ -2143,33 +2125,33 @@ private struct StockFundamentalsCard: View {
                     GridRow {
                         DetailItem(
                             title: "TTM Rev Growth",
-                            value: formattedMetricValue(.ttmRevenueGrowth, value: profile.metrics[.ttmRevenueGrowth])
+                            value: StockMetricFormatter.formattedValue(for: .ttmRevenueGrowth, value: profile.metrics[.ttmRevenueGrowth])
                         )
                         DetailItem(
                             title: "Next Yr Rev Growth",
-                            value: formattedMetricValue(.nextYearRevenueGrowth, value: profile.metrics[.nextYearRevenueGrowth])
+                            value: StockMetricFormatter.formattedValue(for: .nextYearRevenueGrowth, value: profile.metrics[.nextYearRevenueGrowth])
                         )
                     }
 
                     GridRow {
                         DetailItem(
                             title: "Gross Margin",
-                            value: formattedMetricValue(.grossMargin, value: profile.metrics[.grossMargin])
+                            value: StockMetricFormatter.formattedValue(for: .grossMargin, value: profile.metrics[.grossMargin])
                         )
                         DetailItem(
                             title: "Net Margin",
-                            value: formattedMetricValue(.netMargin, value: profile.metrics[.netMargin])
+                            value: StockMetricFormatter.formattedValue(for: .netMargin, value: profile.metrics[.netMargin])
                         )
                     }
 
                     GridRow {
                         DetailItem(
                             title: "TTM EPS Growth",
-                            value: formattedMetricValue(.ttmEPSGrowth, value: profile.metrics[.ttmEPSGrowth])
+                            value: StockMetricFormatter.formattedValue(for: .ttmEPSGrowth, value: profile.metrics[.ttmEPSGrowth])
                         )
                         DetailItem(
                             title: "Next Yr EPS Growth",
-                            value: formattedMetricValue(.nextYearEPSGrowth, value: profile.metrics[.nextYearEPSGrowth])
+                            value: StockMetricFormatter.formattedValue(for: .nextYearEPSGrowth, value: profile.metrics[.nextYearEPSGrowth])
                         )
                     }
                 }
@@ -2361,7 +2343,7 @@ private struct ProjectionHighlightsCard: View {
                         title: firstProjectedYear.map { String($0.year) } ?? "Next year",
                         value: projectionRangeText(for: firstProjectedYear),
                         detail: firstProjectedYear.map {
-                            "Rev growth \(percentText($0.revenueGrowth))"
+                            "Rev growth \(StockMetricFormatter.percentText($0.revenueGrowth))"
                         } ?? "Awaiting data"
                     )
 
@@ -2387,9 +2369,9 @@ private struct ProjectionHighlightsCard: View {
 
                     ProjectionHighlightTile(
                         title: "Terminal margins",
-                        value: terminalYear.map { percentText($0.netMargin) } ?? "—",
+                        value: terminalYear.map { StockMetricFormatter.percentText($0.netMargin) } ?? "—",
                         detail: terminalYear.map {
-                            "PE \(multipleText($0.peLowEstimate)) to \(multipleText($0.peHighEstimate))"
+                            "PE \(StockMetricFormatter.multipleText($0.peLowEstimate)) to \(StockMetricFormatter.multipleText($0.peHighEstimate))"
                         } ?? "Awaiting data"
                     )
                 }
@@ -2456,19 +2438,19 @@ private struct ForecastGrowthChartCard: View {
                 HStack(spacing: 10) {
                     ForecastMetricSummaryTile(
                         title: terminalYear.map { "\($0.year) revenue" } ?? "Revenue",
-                        value: terminalYear.map { compactCurrency($0.revenue) } ?? "Pending",
+                        value: terminalYear.map { StockMetricFormatter.compactCurrency($0.revenue) } ?? "Pending",
                         color: AppTheme.Colors.tint(for: colorScheme)
                     )
 
                     ForecastMetricSummaryTile(
                         title: terminalYear.map { "\($0.year) earnings" } ?? "Earnings",
-                        value: terminalYear.map { compactCurrency($0.netIncome) } ?? "Pending",
+                        value: terminalYear.map { StockMetricFormatter.compactCurrency($0.netIncome) } ?? "Pending",
                         color: AppTheme.Colors.secondaryTint(for: colorScheme)
                     )
 
                     ForecastMetricSummaryTile(
                         title: terminalYear.map { "\($0.year) \(cashFlowTitle)" } ?? cashFlowTitle,
-                        value: terminalYear.map { compactCurrency(cashFlowValue(for: $0)) } ?? "Pending",
+                        value: terminalYear.map { StockMetricFormatter.compactCurrency(cashFlowValue(for: $0)) } ?? "Pending",
                         color: AppTheme.Colors.warning
                     )
                 }
@@ -3086,7 +3068,7 @@ private struct SharePriceIntrinsicValueCard: View {
                             .foregroundStyle(.secondary)
 
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(upside.map(signedPercentText) ?? "Pending")
+                            Text(upside.map { StockMetricFormatter.signedPercentText($0) } ?? "Pending")
                                 .typography(.title, weight: .bold)
                                 .foregroundStyle(valuationColor)
 
@@ -3262,14 +3244,14 @@ private struct ProjectionTableCard: View {
             ProjectionTableGroup(
                 title: "Operating assumptions",
                 rows: [
-                    ProjectionTableRow(title: "Revenue", values: scenario.years.map { compactCurrency($0.revenue) }),
-                    ProjectionTableRow(title: "Rev Growth", values: scenario.years.map { percentText($0.revenueGrowth) }),
-                    ProjectionTableRow(title: "Net Income", values: scenario.years.map { compactCurrency($0.netIncome) }),
-                    ProjectionTableRow(title: "Net Inc. Growth", values: scenario.years.map { percentText($0.netIncomeGrowth) }),
-                    ProjectionTableRow(title: "Net Margins", values: scenario.years.map { percentText($0.netMargin) }),
+                    ProjectionTableRow(title: "Revenue", values: scenario.years.map { StockMetricFormatter.compactCurrency($0.revenue) }),
+                    ProjectionTableRow(title: "Rev Growth", values: scenario.years.map { StockMetricFormatter.percentText($0.revenueGrowth) }),
+                    ProjectionTableRow(title: "Net Income", values: scenario.years.map { StockMetricFormatter.compactCurrency($0.netIncome) }),
+                    ProjectionTableRow(title: "Net Inc. Growth", values: scenario.years.map { StockMetricFormatter.percentText($0.netIncomeGrowth) }),
+                    ProjectionTableRow(title: "Net Margins", values: scenario.years.map { StockMetricFormatter.percentText($0.netMargin) }),
                     ProjectionTableRow(title: "EPS", values: scenario.years.map { $0.eps.currency }),
-                    ProjectionTableRow(title: "PE Low Est", values: scenario.years.map { multipleText($0.peLowEstimate) }),
-                    ProjectionTableRow(title: "PE High Est", values: scenario.years.map { multipleText($0.peHighEstimate) })
+                    ProjectionTableRow(title: "PE Low Est", values: scenario.years.map { StockMetricFormatter.multipleText($0.peLowEstimate) }),
+                    ProjectionTableRow(title: "PE High Est", values: scenario.years.map { StockMetricFormatter.multipleText($0.peHighEstimate) })
                 ]
             ),
             ProjectionTableGroup(
@@ -3287,12 +3269,12 @@ private struct ProjectionTableCard: View {
                     ),
                     ProjectionTableRow(
                         title: "CAGR Low",
-                        values: scenario.years.map { percentText($0.cagrLow) },
+                        values: scenario.years.map { StockMetricFormatter.percentText($0.cagrLow) },
                         isEmphasized: true
                     ),
                     ProjectionTableRow(
                         title: "CAGR High",
-                        values: scenario.years.map { percentText($0.cagrHigh) },
+                        values: scenario.years.map { StockMetricFormatter.percentText($0.cagrHigh) },
                         isEmphasized: true
                     )
                 ]
@@ -3529,19 +3511,7 @@ private struct ComparisonMetricRow: View {
 }
 
 private func formattedMetricValue(_ metric: StockComparisonMetric, value: Double?) -> String {
-    guard let value else { return "N/A" }
-
-    switch metric.format {
-    case .multiple:
-        return multipleText(value)
-    case .percent:
-        return percentText(value)
-    case .plain:
-        if metric == .dcfFairValue {
-            return value.currency
-        }
-        return value.formatted(.number.precision(.fractionLength(2)))
-    }
+    StockMetricFormatter.formattedValue(for: metric, value: value)
 }
 
 private func projectionRangeText(for year: StockProjectionYear?) -> String {
@@ -3605,7 +3575,7 @@ struct DCFValuationCard: View {
 
             HStack(spacing: 2) {
                 Image(systemName: isUpside ? "arrow.up.right" : "arrow.down.right")
-                Text(percentText((value - currentPrice) / currentPrice))
+                Text(StockMetricFormatter.percentText((value - currentPrice) / currentPrice))
             }
             .typography(.caption, weight: .semibold)
             .foregroundStyle(color)
@@ -3618,7 +3588,7 @@ struct DCFValuationCard: View {
 
 private func cagrRangeText(for year: StockProjectionYear?) -> String {
     guard let year else { return "—" }
-    return "\(percentText(year.cagrLow)) to \(percentText(year.cagrHigh))"
+    return "\(StockMetricFormatter.percentText(year.cagrLow)) to \(StockMetricFormatter.percentText(year.cagrHigh))"
 }
 
 private func upsideText(
@@ -3629,52 +3599,7 @@ private func upsideText(
     guard currentPrice > 0 else { return "Awaiting data" }
     let lowUpside = (projectedLow / currentPrice) - 1
     let highUpside = (projectedHigh / currentPrice) - 1
-    return "\(percentText(lowUpside)) to \(percentText(highUpside)) vs today"
-}
-
-private func compactCurrency(_ value: Double) -> String {
-    let absolute = abs(value)
-    switch absolute {
-    case 1_000_000_000_000...:
-        return String(format: "$%.2fT", value / 1_000_000_000_000)
-    case 1_000_000_000...:
-        return String(format: "$%.1fB", value / 1_000_000_000)
-    case 1_000_000...:
-        return String(format: "$%.1fM", value / 1_000_000)
-    default:
-        return value.currency
-    }
-}
-
-private func compactNumber(_ value: Double) -> String {
-    let absolute = abs(value)
-    switch absolute {
-    case 1_000_000_000...:
-        return String(format: "%.2fB", value / 1_000_000_000)
-    case 1_000_000...:
-        return String(format: "%.1fM", value / 1_000_000)
-    default:
-        return value.formatted(.number.precision(.fractionLength(0...2)))
-    }
-}
-
-private func percentText(_ value: Double?) -> String {
-    guard let value else { return "—" }
-    return value.formatted(.percent.precision(.fractionLength(1)))
-}
-
-private func multipleText(_ value: Double, decimals: Int = 1) -> String {
-    value.formatted(.number.precision(.fractionLength(decimals))) + "x"
-}
-
-private func signedCurrencyText(_ value: Double) -> String {
-    let prefix = value >= 0 ? "+" : "-"
-    return prefix + abs(value).currency
-}
-
-private func signedPercentText(_ value: Double) -> String {
-    let prefix = value >= 0 ? "+" : "-"
-    return prefix + percentText(abs(value))
+    return "\(StockMetricFormatter.percentText(lowUpside)) to \(StockMetricFormatter.percentText(highUpside)) vs today"
 }
 
 private func consensusTint(for consensus: String, colorScheme: ColorScheme) -> Color {
@@ -3716,22 +3641,22 @@ private func formattedBasicFinancialValue(
 ) -> String {
     switch item.format {
     case .price:
-        return currencyText(item.value, code: currencyCode)
+        return StockMetricFormatter.currencyText(item.value, code: currencyCode)
     case .multiple:
-        return multipleText(item.value)
+        return StockMetricFormatter.multipleText(item.value)
     case .percentFraction:
-        return percentText(item.value)
+        return StockMetricFormatter.percentText(item.value)
     case .percentPoints:
-        return percentText(item.value / 100)
+        return StockMetricFormatter.percentText(item.value / 100)
     case let .plain(decimals):
         return item.value.formatted(.number.precision(.fractionLength(decimals)))
     case .volume:
-        return compactNumber(item.value)
+        return StockMetricFormatter.compactNumber(item.value)
     }
 }
 
 private func formattedFinancialStatementValue(_ value: Double, currencyCode: String?) -> String {
-    compactStatementCurrency(value, code: currencyCode)
+    StockMetricFormatter.compactStatementCurrency(value, code: currencyCode)
 }
 
 private func formattedFinancialMetricValue(
@@ -3742,60 +3667,18 @@ private func formattedFinancialMetricValue(
 
     switch entry.format {
     case .currencyCompact:
-        return compactStatementCurrency(value, code: currencyCode)
+        return StockMetricFormatter.compactStatementCurrency(value, code: currencyCode)
     case let .currency(decimals):
-        return currencyText(value, code: currencyCode, decimals: decimals)
+        return StockMetricFormatter.currencyText(value, code: currencyCode, decimals: decimals)
     case let .multiple(decimals):
-        return multipleText(value, decimals: decimals)
+        return StockMetricFormatter.multipleText(value, decimals: decimals)
     case .percentFraction:
-        return percentText(value)
+        return StockMetricFormatter.percentText(value)
     case let .plain(decimals):
         return value.formatted(.number.precision(.fractionLength(decimals)))
     case .count:
         return value.formatted(.number.precision(.fractionLength(0)))
     }
-}
-
-private func currencyText(_ value: Double, code: String?, decimals: Int = 2) -> String {
-    guard let code, !code.isEmpty else {
-        return value.formatted(
-            .currency(code: "USD")
-                .precision(.fractionLength(decimals))
-        )
-    }
-
-    return value.formatted(
-        .currency(code: code)
-            .precision(.fractionLength(decimals))
-    )
-}
-
-private func compactStatementCurrency(_ value: Double, code: String?) -> String {
-    let absolute = abs(value)
-    let prefix = value < 0 ? "-" : ""
-    let normalizedCode = code?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-    let currencyPrefix = (normalizedCode == nil || normalizedCode == "USD") ? "$" : "\(normalizedCode!) "
-
-    switch absolute {
-    case 1_000_000_000_000...:
-        return prefix + currencyPrefix + scaledNumberText(absolute / 1_000_000_000_000, decimals: 2) + "T"
-    case 1_000_000_000...:
-        return prefix + currencyPrefix + scaledNumberText(absolute / 1_000_000_000, decimals: 1) + "B"
-    case 1_000_000...:
-        return prefix + currencyPrefix + scaledNumberText(absolute / 1_000_000, decimals: 1) + "M"
-    default:
-        if let normalizedCode, !normalizedCode.isEmpty {
-            return value.formatted(
-                .currency(code: normalizedCode)
-                    .precision(.fractionLength(0))
-            )
-        }
-        return value.currency
-    }
-}
-
-private func scaledNumberText(_ value: Double, decimals: Int) -> String {
-    value.formatted(.number.precision(.fractionLength(decimals)))
 }
 
 private func financialStatementTableMinWidth(statementCount: Int) -> CGFloat {

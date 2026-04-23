@@ -31,7 +31,13 @@ final class AppEnvironmentManager {
     private static let defaultIsDebugBuild = false
   #endif
 
+  private static var defaultIsTestFlight: Bool {
+    guard let receiptUrl = Bundle.main.appStoreReceiptURL else { return false }
+    return receiptUrl.lastPathComponent == "sandboxReceipt"
+  }
+
   let isDebugBuild: Bool
+  let isTestFlight: Bool
 
   /// Environment forced by scheme (via env var or build-time pre-action)
   let schemeEnvironment: AppEnvironment?
@@ -41,10 +47,12 @@ final class AppEnvironmentManager {
     infoDictionary: [String: Any]? = Bundle.main.infoDictionary,
     defaults: UserDefaults = .standard,
     schemeEnvironmentValue: String? = SchemeEnvironment.value,
-    isDebugBuild: Bool = AppEnvironmentManager.defaultIsDebugBuild
+    isDebugBuild: Bool = AppEnvironmentManager.defaultIsDebugBuild,
+    isTestFlight: Bool = AppEnvironmentManager.defaultIsTestFlight
   ) {
     self.defaults = defaults
     self.isDebugBuild = isDebugBuild
+    self.isTestFlight = isTestFlight
     let resolvedEnvironment: AppEnvironment
     let forcedEnvironment: AppEnvironment?
 
@@ -70,9 +78,15 @@ final class AppEnvironmentManager {
       forcedEnvironment = nil
       resolvedEnvironment = environment
     // 5. Default based on build type
+    } else if isDebugBuild {
+      forcedEnvironment = nil
+      resolvedEnvironment = AppEnvironments.local
+    } else if isTestFlight {
+      forcedEnvironment = nil
+      resolvedEnvironment = AppEnvironments.dev
     } else {
       forcedEnvironment = nil
-      resolvedEnvironment = isDebugBuild ? AppEnvironments.dev : AppEnvironments.production
+      resolvedEnvironment = AppEnvironments.production
     }
 
     schemeEnvironment = forcedEnvironment
@@ -92,14 +106,10 @@ final class AppEnvironmentManager {
 
   @MainActor
   func allowedEnvironmentsWhen(isLoggedIn: Bool) -> [AppEnvironment] {
-    if isDebugBuild {
-      return AppEnvironments.allCases
-    }
-
     if current == AppEnvironments.production {
-      return isLoggedIn ? AppEnvironments.allEnvironmentsExcludingLocal : []
+      return []
     }
-    return AppEnvironments.allEnvironmentsExcludingLocal
+    return AppEnvironments.allCases
   }
 
   private static func environment(from value: String?) -> AppEnvironment? {
