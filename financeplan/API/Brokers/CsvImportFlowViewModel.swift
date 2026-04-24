@@ -5,6 +5,7 @@ import StockPlanShared
 
 @MainActor
 final class CsvImportFlowViewModel: ObservableObject {
+  @Published private(set) var connections: [BrokerConnectionResponse] = []
   @Published private(set) var providerOptions: [String] = []
   @Published var selectedProvider: String = "ibkr"
   @Published private(set) var selectedFileName: String?
@@ -14,6 +15,10 @@ final class CsvImportFlowViewModel: ObservableObject {
   @Published private(set) var isLoadingProviders = false
   @Published private(set) var isPreviewing = false
   @Published private(set) var isImporting = false
+  @Published private(set) var isConnectingBroker = false
+  @Published private(set) var isSyncingBroker = false
+  @Published private(set) var isDisconnectingBroker = false
+  @Published private(set) var brokerStatusMessage: String?
 
   private let brokerService: any BrokerServicing
   private let portfolioListId: String?
@@ -36,6 +41,15 @@ final class CsvImportFlowViewModel: ObservableObject {
     csvData != nil && previewResponse != nil && !isPreviewing && !isImporting
   }
 
+  var ibkrConnection: BrokerConnectionResponse? {
+    connections.first { $0.provider.lowercased() == "ibkr" }
+  }
+
+  var isIBKRConnected: Bool {
+    guard let status = ibkrConnection?.status.lowercased() else { return false }
+    return status == "connected" || status == "active"
+  }
+
   func loadProvidersIfNeeded() async {
     guard !hasLoadedProviders else { return }
     await loadProviders(force: true)
@@ -53,10 +67,12 @@ final class CsvImportFlowViewModel: ObservableObject {
 
     do {
       let connections = try await brokerService.listConnections()
+      self.connections = connections
       applyProviders(connections.map(\.provider))
       errorMessage = nil
     } catch {
       errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+      connections = []
       applyProviders([])
     }
   }
@@ -141,6 +157,66 @@ final class CsvImportFlowViewModel: ObservableObject {
       return true
     } catch {
       commitResponse = nil
+      errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+      return false
+    }
+  }
+
+  @discardableResult
+  func connectIBKR() async -> Bool {
+    guard !isConnectingBroker else { return false }
+    isConnectingBroker = true
+    errorMessage = nil
+    brokerStatusMessage = nil
+    defer { isConnectingBroker = false }
+
+    do {
+      _ = try await brokerService.connectIBKR(portfolioListId: portfolioListId)
+      brokerStatusMessage = "Connected IBKR."
+      await loadProviders(force: true)
+      return true
+    } catch {
+      brokerStatusMessage = nil
+      errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+      return false
+    }
+  }
+
+  @discardableResult
+  func syncIBKRConnection() async -> Bool {
+    guard !isSyncingBroker else { return false }
+    isSyncingBroker = true
+    errorMessage = nil
+    brokerStatusMessage = nil
+    defer { isSyncingBroker = false }
+
+    do {
+      _ = try await brokerService.syncIBKR()
+      brokerStatusMessage = "Sync complete."
+      await loadProviders(force: true)
+      return true
+    } catch {
+      brokerStatusMessage = nil
+      errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+      return false
+    }
+  }
+
+  @discardableResult
+  func disconnectIBKRConnection() async -> Bool {
+    guard !isDisconnectingBroker else { return false }
+    isDisconnectingBroker = true
+    errorMessage = nil
+    brokerStatusMessage = nil
+    defer { isDisconnectingBroker = false }
+
+    do {
+      let connection = try await brokerService.disconnectIBKR()
+      brokerStatusMessage = "\(connection.provider.uppercased()) disconnected."
+      await loadProviders(force: true)
+      return true
+    } catch {
+      brokerStatusMessage = nil
       errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
       return false
     }

@@ -51,6 +51,18 @@
             ReferencedContainer = "container:financeplan.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "POSTHOG_PROJECT_TOKEN"
+            value = "phc_BAj6KZPSu8JD7oSoj6Mev957eNp6bHsNiNEqzPofDTDp"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "POSTHOG_HOST"
+            value = "https://us.i.posthog.com"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"

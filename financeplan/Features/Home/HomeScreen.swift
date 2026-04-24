@@ -161,10 +161,12 @@ private enum PortfolioSegment: String, CaseIterable, Identifiable {
 @MainActor
 struct HomeScreen: View {
   @Environment(\.colorScheme) private var colorScheme
+  @InjectedObservable(\Container.billingManager) private var billingManager
   @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
   let onLogout: () async -> Void
   @State private var selectedTab: HomeTab = .dashboard
   @State private var isSettingsPresented = false
+  @State private var isPaywallPresented = false
   @State private var pendingPortfolioOpenSymbol: String?
   @StateObject private var budgetPlannerViewModel = BudgetPlannerViewModel()
 
@@ -214,6 +216,14 @@ struct HomeScreen: View {
     .animation(.snappy(duration: 0.28), value: selectedTab)
     .sheet(isPresented: $isSettingsPresented) {
       settingsSheet
+    }
+    .sheet(isPresented: $isPaywallPresented) {
+      PaywallView(billingManager: billingManager)
+    }
+    .onChange(of: selectedTab) { _, newValue in
+      guard newValue == .reports, !billingManager.isPro else { return }
+      selectedTab = .dashboard
+      isPaywallPresented = true
     }
     .onReceive(NotificationCenter.default.publisher(for: .openStockFromPushNotification)) { notification in
       handleOpenStockNotification(notification)

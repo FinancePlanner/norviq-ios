@@ -10,6 +10,7 @@ public struct ContentView: View {
   )
 
   @EnvironmentObject private var sessionManager: SessionManager
+  @InjectedObservable(\Container.billingManager) private var billingManager
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.scenePhase) private var scenePhase
   @State private var launchCompleted = false
@@ -22,8 +23,10 @@ public struct ContentView: View {
   @State private var securityCodeError: String?
   @State private var showSessionRecoveryAlert = false
   @State private var sessionRecoveryMessage = ""
+  @State private var startWithSignup = false
   @StateObject private var pushNotificationsCoordinator: PushNotificationsCoordinator
   @AppStorage("useFaceID") private var useFaceID: Bool = true
+  @AppStorage("hasSeenPrivacyScreen") private var hasSeenPrivacyScreen: Bool = false
   private let splashDelay: Duration
   private let authSessionManager: AuthSessionManaging
   private let sessionStore: AuthSessionStoring
@@ -131,9 +134,24 @@ public struct ContentView: View {
             }
           }
         } else {
-          LoginScreen(onAuthenticated: {
-            applyAuthenticatedState()
-          })
+          if !hasSeenPrivacyScreen {
+            PrivacyWelcomeScreen(
+              onSignIn: {
+                hasSeenPrivacyScreen = true
+              },
+              onSignUp: {
+                startWithSignup = true
+                hasSeenPrivacyScreen = true
+              }
+            )
+          } else {
+            LoginScreen(
+              onAuthenticated: {
+                applyAuthenticatedState()
+              },
+              startWithSignup: startWithSignup
+            )
+          }
         }
       } else {
         SplashScreen()
@@ -166,6 +184,10 @@ public struct ContentView: View {
       case .active:
         Task {
           await pushNotificationsCoordinator.refreshAuthorizationStatus()
+          if isAuthenticated {
+            billingManager.configureForCurrentUser()
+            await billingManager.refreshBillingContext()
+          }
           await enforceAppLockIfNeeded()
         }
       default:
@@ -236,6 +258,8 @@ public struct ContentView: View {
       userID.isEmpty || !sessionStore.hasCompletedInitialStockImport(for: userID)
     sessionManager.updateUsername(sessionStore.currentUsername)
     Task {
+      billingManager.configureForCurrentUser()
+      await billingManager.refreshBillingContext()
       pushNotificationsCoordinator.handleAuthenticatedSessionBecameActive()
       await enforceAppLockIfNeeded()
       deliverPendingPushNotificationRouteIfPossible()
@@ -249,6 +273,7 @@ public struct ContentView: View {
     securityCodeInput = ""
     securityCodeError = nil
     appLockManager.clear()
+    billingManager.clearCache()
     sessionManager.reset()
     pushNotificationsCoordinator.handleSessionDidInvalidate()
   }

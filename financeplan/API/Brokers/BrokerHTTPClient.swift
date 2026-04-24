@@ -62,6 +62,17 @@ struct BrokerHTTPClient {
     try await call(SyncIBKREndpoint())
   }
 
+  func startIBKRConnect(
+    redirectURI: String,
+    portfolioListId: String?
+  ) async throws -> BrokerConnectStartResponse {
+    try await call(StartIBKRConnectEndpoint(redirectURI: redirectURI, portfolioListId: portfolioListId))
+  }
+
+  func disconnectIBKR() async throws -> BrokerConnectionResponse {
+    try await call(DisconnectIBKREndpoint())
+  }
+
   func previewCsvImport(
     provider: String,
     portfolioListId: String?,

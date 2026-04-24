@@ -5,6 +5,7 @@
 //  Created by Fernando Correia on 05.03.26.
 //
 
+import PostHog
 import StockPlanShared
 import SwiftUI
 import Factory
@@ -29,9 +30,11 @@ public struct UserProfileView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dismiss) private var dismiss
     @InjectedObservable(\Container.appEnvironment) private var environmentManager
+    @InjectedObservable(\Container.billingManager) private var billingManager
     @State private var path: [UserProfileDestination] = []
     @State private var isEditPresented = false
     @State private var isAIInfoPresented = false
+    @State private var isPaywallPresented = false
     @State private var isLoggingOut = false
     @State private var securityCodeEnabled = false
     @State private var faceIDErrorMessage: String?
@@ -89,6 +92,9 @@ public struct UserProfileView: View {
             .sheet(isPresented: $isAIInfoPresented) {
                 AIModelIntegrationsInfoSheet()
             }
+            .sheet(isPresented: $isPaywallPresented) {
+                PaywallView(billingManager: billingManager)
+            }
             .navigationDestination(for: UserProfileDestination.self) { destination in
                 destinationView(for: destination)
             }
@@ -134,6 +140,62 @@ public struct UserProfileView: View {
                     .padding(.vertical, 4)
                 }
                 .buttonStyle(.plain)
+            }
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
+            Section(LocalizedStringKey("Subscription")) {
+                if billingManager.isPro {
+                    Button {
+                        billingManager.manageSubscription()
+                    } label: {
+                        Label(LocalizedStringKey("Manage Subscription"), systemImage: "creditcard.fill")
+                    }
+                } else {
+                    Button {
+                        // PostHog: Track upgrade to Pro button tap
+                        PostHogSDK.shared.capture("upgrade_to_pro_tapped", properties: [
+                            "source": "settings",
+                        ])
+                        PostHogSDK.shared.capture("paywall_viewed", properties: [
+                            "source": "settings_upgrade",
+                        ])
+                        isPaywallPresented = true
+                    } label: {
+                        Label(LocalizedStringKey("Upgrade to Pro"), systemImage: "sparkles")
+                    }
+                }
+
+                Button {
+                    Task { await billingManager.restorePurchases() }
+                } label: {
+                    HStack {
+                        Label(LocalizedStringKey("Restore Purchases"), systemImage: "arrow.clockwise")
+                        Spacer()
+                        if billingManager.isRestoring {
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(billingManager.isRestoring)
+
+                if let days = billingManager.trialDaysRemaining {
+                    Label("Trial: \(days) days remaining", systemImage: "calendar.badge.clock")
+                        .foregroundStyle(.secondary)
+                } else {
+                    HStack {
+                        Label(LocalizedStringKey("Status"), systemImage: "checkmark.seal")
+                        Spacer()
+                        Text(billingManager.isPro ? "Pro" : "Free")
+                            .typography(.caption, weight: .semibold)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let message = billingManager.errorMessage, !message.isEmpty {
+                    Text(message)
+                        .typography(.caption)
+                        .foregroundStyle(AppTheme.Colors.danger)
+                }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
@@ -294,6 +356,9 @@ public struct UserProfileView: View {
                     Task {
                         guard !isLoggingOut else { return }
                         isLoggingOut = true
+                        // PostHog: Track logout before resetting the session
+                        PostHogSDK.shared.capture("user_logged_out")
+                        PostHogSDK.shared.reset()
                         await Container.shared.authSessionManager().logout()
                         isLoggingOut = false
                     }
@@ -371,6 +436,8 @@ public struct UserProfileView: View {
     }
 
     private func initialLoad() async {
+        billingManager.configureForCurrentUser()
+        await billingManager.refreshBillingContext()
         await viewModel.load()
         pushNotificationsCoordinator.handleAuthenticatedSessionBecameActive()
         securityCodeEnabled = securityCodeManager.isEnabled

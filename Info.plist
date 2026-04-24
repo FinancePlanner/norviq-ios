@@ -18,6 +18,10 @@
 	<string>Norviqa</string>
 	<key>NorviqaAPIEnvironment</key>
 	<string>$(NORVIQA_API_ENVIRONMENT)</string>
+	<key>RevenueCatAPIKey</key>
+	<string>test_rMSfBBsOXDbWTOdVGdvMGLWvaiv</string>
+	<key>AmplitudeAPIKey</key>
+	<string>57c03f2418ee11b11a26ba7a21827187</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

@@ -32,3 +32,32 @@ struct SyncIBKREndpoint: Endpoint {
 
   func asParameters() throws -> Parameters { [:] }
 }
+
+struct StartIBKRConnectEndpoint: Endpoint {
+  typealias Response = BrokerConnectStartResponse
+
+  let redirectURI: String
+  let portfolioListId: String?
+
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/brokers/ibkr/connect/start" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    var params: Parameters = ["redirectURI": redirectURI]
+    if let portfolioListId, !portfolioListId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      params["portfolioListId"] = portfolioListId
+    }
+    return params
+  }
+}
+
+struct DisconnectIBKREndpoint: Endpoint {
+  typealias Response = BrokerConnectionResponse
+
+  var method: HTTPMethod { .delete }
+  var path: String { "/v1/brokers/ibkr/connection" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}

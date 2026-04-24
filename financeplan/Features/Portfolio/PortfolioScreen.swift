@@ -1,5 +1,7 @@
 import Combine
+import Factory
 import OSLog
+import PostHog
 import StockPlanShared
 import SwiftUI
 import SwiftData
@@ -14,6 +16,7 @@ struct PortfolioScreen: View {
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.modelContext) private var modelContext
   @EnvironmentObject private var viewModel: PortfolioViewModel
+  @InjectedObservable(\Container.billingManager) private var billingManager
   @Binding var pendingOpenSymbol: String?
 
   @Query(sort: \SDPortfolioStock.symbol) private var stocks: [SDPortfolioStock]
@@ -28,6 +31,7 @@ struct PortfolioScreen: View {
   @State private var pushFallbackMessage: String?
   @State private var pushFallbackMessageToken: UUID?
   @State private var targetAlertStock: TargetAlertDraftStock?
+  @State private var isPaywallPresented = false
 
   enum TimeRange: String, CaseIterable, Identifiable {
       case day = "1D"
@@ -240,6 +244,9 @@ struct PortfolioScreen: View {
         }
       )
     }
+    .sheet(isPresented: $isPaywallPresented) {
+      PaywallView(billingManager: billingManager)
+    }
     .navigationDestination(item: $pushNavigationRoute) { route in
       StockDetailScreen(stockId: route.stockID, initialSymbol: route.symbol)
     }
@@ -297,6 +304,14 @@ struct PortfolioScreen: View {
   }
 
   private func presentTargetAlert(for stock: SDPortfolioStock) {
+    guard billingManager.isPro else {
+      // PostHog: Track paywall shown from portfolio price alert
+      PostHogSDK.shared.capture("paywall_viewed", properties: [
+        "source": "portfolio_price_alert",
+      ])
+      isPaywallPresented = true
+      return
+    }
     targetAlertStock = TargetAlertDraftStock(
       id: stock.id,
       symbol: stock.symbol,
@@ -352,15 +367,35 @@ struct PortfolioScreen: View {
   }
 
   private func saveEditedStock(_ updated: StockResponse) async -> Bool {
-    await viewModel.saveEdit(updated)
+    let ok = await viewModel.saveEdit(updated)
+    if ok {
+      // PostHog: Track successful position edit
+      PostHogSDK.shared.capture("position_edited", properties: [
+        "symbol": updated.symbol,
+        "shares": updated.shares,
+      ])
+    }
+    return ok
   }
 
   private func deleteEditedStock(id: String) async -> Bool {
-    await viewModel.delete(id: id)
+    let ok = await viewModel.delete(id: id)
+    if ok {
+      // PostHog: Track position deletion from edit sheet
+      PostHogSDK.shared.capture("position_deleted")
+    }
+    return ok
   }
 
   private func saveNewPosition(_ draft: AddPositionDraft) async -> String? {
-    await viewModel.saveNewPosition(draft)
+    let error = await viewModel.saveNewPosition(draft)
+    if error == nil {
+      // PostHog: Track successful new position addition
+      PostHogSDK.shared.capture("position_added", properties: [
+        "symbol": draft.symbol,
+      ])
+    }
+    return error
   }
 
   private func saveTargetAlert(
@@ -386,7 +421,11 @@ struct PortfolioScreen: View {
   private func deleteStock(id: String) {
     destructiveFeedbackTrigger += 1
     Task {
-      _ = await viewModel.delete(id: id)
+      let ok = await viewModel.delete(id: id)
+      if ok {
+        // PostHog: Track position deletion from list
+        PostHogSDK.shared.capture("position_deleted")
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import PostHog
 import StockPlanShared
 
 @MainActor
@@ -280,6 +281,10 @@ final class LoginViewModel: ObservableObject {
       )
 
       let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+      // PostHog: Track new account creation
+      PostHogSDK.shared.capture("user_signed_up", properties: [
+        "username": username.trimmingCharacters(in: .whitespacesAndNewlines),
+      ])
       username = trimmedEmail
       password = ""
       confirmPassword = ""
@@ -293,6 +298,15 @@ final class LoginViewModel: ObservableObject {
 
   private func persistAuth(_ auth: AuthResponse) {
     sessionStore.store(authResponse: auth)
+    // PostHog: Identify user and track login
+    let userId = auth.userId.uuidString
+    let username = auth.username.trimmingCharacters(in: .whitespacesAndNewlines)
+    PostHogSDK.shared.identify(userId, userProperties: [
+      "username": username,
+    ])
+    PostHogSDK.shared.capture("user_logged_in", properties: [
+      "username": username,
+    ])
     onAuthenticated()
   }
 

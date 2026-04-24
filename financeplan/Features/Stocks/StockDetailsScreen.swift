@@ -5,6 +5,8 @@
 //  Created by Fernando Correia on 10.03.26.
 //
 
+import Factory
+import PostHog
 import SwiftUI
 import StockPlanShared
 
@@ -13,11 +15,13 @@ struct StockDetailScreen: View {
     let initialSymbol: String
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
+    @InjectedObservable(\Container.billingManager) private var billingManager
     @StateObject private var viewModel = StockDetailsViewModel()
     @State private var activeSheet: ActiveSheet?
     @State private var selectedTab: StockDetailTab = .overview
     @State private var selectedScenario: StockProjectionScenarioKind = .base
     @State private var selectedStatementPeriod: StockFinancialStatementPeriod = .fy
+    @State private var isPaywallPresented = false
 
     private enum ActiveSheet: String, Identifiable {
         case editValuation
@@ -49,6 +53,14 @@ struct StockDetailScreen: View {
         }
         .sheet(item: $activeSheet) { sheet in
             sheetContent(for: sheet)
+        }
+        .sheet(isPresented: $isPaywallPresented) {
+            PaywallView(billingManager: billingManager)
+        }
+        .onChange(of: selectedTab) { oldValue, newValue in
+            guard isProOnly(tab: newValue), !billingManager.isPro else { return }
+            selectedTab = oldValue
+            isPaywallPresented = true
         }
         .task {
             await loadStockDetails()
@@ -249,6 +261,11 @@ struct StockDetailScreen: View {
 
     private func loadStockDetails() async {
         await viewModel.load(stockId: stockId)
+        // PostHog: Track stock detail screen view
+        PostHogSDK.shared.capture("stock_detail_viewed", properties: [
+            "symbol": initialSymbol,
+            "stock_id": stockId,
+        ])
     }
 
     private func loadSupplementaryData(for tab: StockDetailTab) async {
@@ -264,6 +281,15 @@ struct StockDetailScreen: View {
     }
 
     private func presentEditValuation() {
+        guard billingManager.isPro else {
+            // PostHog: Track paywall shown from stock valuation
+            PostHogSDK.shared.capture("paywall_viewed", properties: [
+                "source": "stock_valuation",
+                "symbol": initialSymbol,
+            ])
+            isPaywallPresented = true
+            return
+        }
         activeSheet = .editValuation
     }
 
@@ -276,11 +302,28 @@ struct StockDetailScreen: View {
     }
 
     private func presentEditAnalysis() {
+        guard billingManager.isPro else {
+            isPaywallPresented = true
+            return
+        }
         activeSheet = .editAnalysis
     }
 
     private func presentEditDCF() {
+        guard billingManager.isPro else {
+            isPaywallPresented = true
+            return
+        }
         activeSheet = .editDCF
+    }
+
+    private func isProOnly(tab: StockDetailTab) -> Bool {
+        switch tab {
+        case .overview, .chart, .news:
+            false
+        case .statements, .analysis, .forecast, .compare, .earnings:
+            true
+        }
     }
 
     private func saveEditedPosition(_ updated: StockResponse) async -> Bool {
@@ -307,6 +350,11 @@ struct StockDetailScreen: View {
     private func sellPosition(_ request: SellStockRequest) async -> String? {
         let outcome = await viewModel.sellPosition(request)
         if outcome.shouldDismiss {
+            // PostHog: Track successful position sale
+            PostHogSDK.shared.capture("position_sold", properties: [
+                "symbol": viewModel.details?.symbol ?? initialSymbol,
+                "shares_sold": request.sharesToSell,
+            ])
             dismissActiveSheet()
             dismiss()
         }

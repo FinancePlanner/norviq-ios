@@ -7,6 +7,15 @@ import XCTest
 final class PortfolioCSVImportViewModelTests: XCTestCase {
   private final class BrokerServiceMock: BrokerServicing {
     var listConnectionsResult: Result<[BrokerConnectionResponse], Error> = .success([])
+    var connectResult: Result<BrokerConnectionResponse, Error> = .success(
+      BrokerConnectionResponse(id: UUID().uuidString, provider: "ibkr", status: "connected")
+    )
+    var syncResult: Result<BrokerSyncResponse, Error> = .success(
+      BrokerSyncResponse(runId: UUID().uuidString, status: "completed")
+    )
+    var disconnectResult: Result<BrokerConnectionResponse, Error> = .success(
+      BrokerConnectionResponse(id: UUID().uuidString, provider: "ibkr", status: "disconnected")
+    )
     var previewResult: Result<CsvImportPreviewResponse, Error> = .success(
       CsvImportPreviewResponse(provider: "ibkr", items: [], errors: [])
     )
@@ -22,15 +31,23 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
       BrokerConnectionResponse(id: UUID().uuidString, provider: provider, status: "csv")
     }
 
-    func syncIBKR() async throws -> BrokerSyncResponse {
-      BrokerSyncResponse(runId: UUID().uuidString, status: "accepted")
+    func connectIBKR(portfolioListId: String?) async throws -> BrokerConnectionResponse {
+      try connectResult.get()
     }
 
-    func previewCsvImport(provider: String, csvData: Data) async throws -> CsvImportPreviewResponse {
+    func syncIBKR() async throws -> BrokerSyncResponse {
+      try syncResult.get()
+    }
+
+    func disconnectIBKR() async throws -> BrokerConnectionResponse {
+      try disconnectResult.get()
+    }
+
+    func previewCsvImport(provider: String, portfolioListId: String?, csvData: Data) async throws -> CsvImportPreviewResponse {
       try previewResult.get()
     }
 
-    func commitCsvImport(provider: String, csvData: Data) async throws -> CsvImportCommitResponse {
+    func commitCsvImport(provider: String, portfolioListId: String?, csvData: Data) async throws -> CsvImportCommitResponse {
       try commitResult.get()
     }
   }
@@ -62,7 +79,7 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
       )
     )
 
-    let viewModel = PortfolioCSVImportViewModel(brokerService: brokerService)
+    let viewModel = CsvImportFlowViewModel(brokerService: brokerService)
 
     await viewModel.loadProvidersIfNeeded()
     XCTAssertEqual(viewModel.availableProviders, ["degiro", "ibkr"])
@@ -88,7 +105,7 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     let brokerService = BrokerServiceMock()
     brokerService.previewResult = .failure(StubError(message: "Preview failed."))
 
-    let viewModel = PortfolioCSVImportViewModel(brokerService: brokerService)
+    let viewModel = CsvImportFlowViewModel(brokerService: brokerService)
     let fileURL = makeTempCSVFile(contents: "symbol,shares\nAAPL,10\n")
     defer { try? FileManager.default.removeItem(at: fileURL) }
 

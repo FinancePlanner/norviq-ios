@@ -1,5 +1,5 @@
 {
-  "originHash" : "aee1f2de51ad07d767af3597cb7c3090975041b54c3b3cac3a820f95cc8e114d",
+  "originHash" : "5b78ca1ef9c932bf6b44eae22d832e83c5c54b25d58fde0acbeb1406565ab029",
   "pins" : [
     {
       "identity" : "alamofire",
@@ -8,6 +8,69 @@
       "state" : {
         "revision" : "e938f8c66708e7352fc7e3512647fa54255b267a",
         "version" : "5.11.2"
+      }
+    },
+    {
+      "identity" : "amplitude-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/amplitude/Amplitude-iOS.git",
+      "state" : {
+        "revision" : "7ec0f8971b68c1cb859028655fbff1bcde8170dd",
+        "version" : "8.22.2"
+      }
+    },
+    {
+      "identity" : "amplitude-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/amplitude/Amplitude-Swift.git",
+      "state" : {
+        "revision" : "b6dd7d079d20fed9e392b9dfda7a04c9d386d0a6",
+        "version" : "1.18.1"
+      }
+    },
+    {
+      "identity" : "amplitudecore-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/amplitude/AmplitudeCore-Swift.git",
+      "state" : {
+        "revision" : "d9d24b79d4fcb4f1d1dcbc50ae20430afd22ebd0",
+        "version" : "1.4.5"
+      }
+    },
+    {
+      "identity" : "amplitudesessionreplay-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/amplitude/AmplitudeSessionReplay-iOS.git",
+      "state" : {
+        "revision" : "850d44e3e3973a6f04ef09fc24c048249a185c67",
+        "version" : "0.10.0"
+      }
+    },
+    {
+      "identity" : "amplitudeunified-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/amplitude/AmplitudeUnified-Swift",
+      "state" : {
+        "branch" : "main",
+        "revision" : "c91bca61d5ccb43d5be98267d912c5b36ed2ed21"
+      }
+    },
+    {
+      "identity" : "analytics-connector-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/amplitude/analytics-connector-ios.git",
+      "state" : {
+        "revision" : "4adbfe85486e6dcdcdca5fa9362097ffe5ec712b",
+        "version" : "1.3.1"
+      }
+    },
+    {
+      "identity" : "analytics-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/segmentio/analytics-swift",
+      "state" : {
+        "revision" : "acfd5fc1baaf78520d962884672ce1224745c5d1",
+        "version" : "1.9.3"
       }
     },
     {
@@ -47,6 +110,15 @@
       }
     },
     {
+      "identity" : "experiment-ios-client",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/amplitude/experiment-ios-client.git",
+      "state" : {
+        "revision" : "d9c02e9758e27394fd825506eaff1ad397876741",
+        "version" : "1.19.0"
+      }
+    },
+    {
       "identity" : "factory",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/hmlongco/Factory",
@@ -60,8 +132,17 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FinancePlanner/FinanceShared.git",
       "state" : {
-        "revision" : "367b086fdb469a42a1f01ec071f8ef3190ebb36f",
-        "version" : "0.9.4"
+        "revision" : "1e5e5247815222cd656337c3fc79e6be85339291",
+        "version" : "0.9.45"
+      }
+    },
+    {
+      "identity" : "jsonsafeencoding-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/segmentio/jsonsafeencoding-swift.git",
+      "state" : {
+        "revision" : "af6a8b360984085e36c6341b21ecb35c12f47ebd",
+        "version" : "2.0.0"
       }
     },
     {
@@ -101,12 +182,39 @@
       }
     },
     {
+      "identity" : "posthog-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/PostHog/posthog-ios",
+      "state" : {
+        "revision" : "1783865d79a1cabc472cf2d56a1fe3f797417b52",
+        "version" : "3.40.0"
+      }
+    },
+    {
+      "identity" : "purchases-ios-spm",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/RevenueCat/purchases-ios-spm.git",
+      "state" : {
+        "revision" : "a06accc1543fcedc3094d4b5b9a40b84e2213e8e",
+        "version" : "5.69.0"
+      }
+    },
+    {
       "identity" : "sentry-cocoa",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/getsentry/sentry-cocoa.git",
       "state" : {
         "revision" : "a49e7c2148ac9e38bd35ef4f13bc9d6ea3ff0b81",
         "version" : "9.11.0"
+      }
+    },
+    {
+      "identity" : "sovran-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/segmentio/sovran-swift.git",
+      "state" : {
+        "revision" : "24867f3e4ac62027db9827112135e6531b6f4051",
+        "version" : "1.1.2"
       }
     },
     {

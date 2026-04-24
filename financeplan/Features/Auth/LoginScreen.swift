@@ -22,13 +22,19 @@ struct LoginScreen: View {
   }
 
   @MainActor
-  init(onAuthenticated: @escaping () -> Void = {}) {
+  init(onAuthenticated: @escaping () -> Void = {}, startWithSignup: Bool = false) {
     _viewModel = StateObject(
-      wrappedValue: LoginViewModel(
-        authService: Container.shared.authService(),
-        sessionStore: Container.shared.authSessionStore(),
-        onAuthenticated: onAuthenticated
-      )
+      wrappedValue: {
+        let vm = LoginViewModel(
+          authService: Container.shared.authService(),
+          sessionStore: Container.shared.authSessionStore(),
+          onAuthenticated: onAuthenticated
+        )
+        if startWithSignup {
+          vm.showSignup()
+        }
+        return vm
+      }()
     )
   }
 

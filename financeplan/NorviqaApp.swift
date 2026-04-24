@@ -1,8 +1,21 @@
 import EntityStore
 import Factory
+import PostHog
 import Sentry
 import SwiftUI
 import SwiftData
+
+enum PostHogEnv: String {
+  case projectToken = "POSTHOG_PROJECT_TOKEN"
+  case host = "POSTHOG_HOST"
+
+  var value: String {
+    guard let value = ProcessInfo.processInfo.environment[rawValue] else {
+      fatalError("Set \(rawValue) in the Xcode scheme Run environment variables.")
+    }
+    return value
+  }
+}
 
 @main
 @MainActor
@@ -10,6 +23,7 @@ struct NorviqaApp: App {
   @UIApplicationDelegateAdaptor(PushNotificationsAppDelegate.self) var pushNotificationsAppDelegate
   @InjectedObservable(\Container.appEnvironment) var environmentManager
   @StateObject private var sessionManager = SessionManager()
+  @Injected(\.analytics) private var analytics
   @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system
     .rawValue
   @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
@@ -24,6 +38,9 @@ struct NorviqaApp: App {
 
   init() {
     AppLanguage.applyStoredLanguage()
+    let config = PostHogConfig(apiKey: PostHogEnv.projectToken.value, host: PostHogEnv.host.value)
+    config.captureApplicationLifecycleEvents = true
+    PostHogSDK.shared.setup(config)
   }
 
   var body: some Scene {
@@ -38,6 +55,7 @@ struct NorviqaApp: App {
         .tint(AppTheme.Colors.tint(for: appAppearance.colorScheme ?? .light))
         .onAppear {
           AppLanguage.applyStoredLanguage()
+          analytics.track("App Launched")
         }
         .onChange(of: appLanguageRawValue) { _, newValue in
           AppLanguage.applyBundleLanguage(AppLanguage.from(newValue))
