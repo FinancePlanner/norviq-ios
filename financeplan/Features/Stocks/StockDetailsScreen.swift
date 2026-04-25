@@ -172,21 +172,25 @@ struct StockDetailScreen: View {
                         onSellPosition: presentSellPosition
                     )
                 case .statements:
-                    StockFinancialStatementsTab(
-                        statements: viewModel.financialStatements,
-                        errorMessage: viewModel.financialStatementsMessage,
-                        selectedPeriod: $selectedStatementPeriod
-                    )
+                    ProGateView(billingManager: billingManager) {
+                        StockFinancialStatementsTab(
+                            statements: viewModel.financialStatements,
+                            errorMessage: viewModel.financialStatementsMessage,
+                            selectedPeriod: $selectedStatementPeriod
+                        )
+                    }
                 case .analysis:
-                    StockAnalysisTab(
-                        details: viewModel.details,
-                        profile: viewModel.primaryComparisonProfile,
-                        analysisMetrics: viewModel.analysisMetrics,
-                        analysisMetricsMessage: viewModel.analysisMetricsMessage,
-                        valuation: viewModel.valuation,
-                        onEditAnalysis: presentEditAnalysis,
-                        onEditDCF: presentEditDCF
-                    )
+                    ProGateView(billingManager: billingManager) {
+                        StockAnalysisTab(
+                            details: viewModel.details,
+                            profile: viewModel.primaryComparisonProfile,
+                            analysisMetrics: viewModel.analysisMetrics,
+                            analysisMetricsMessage: viewModel.analysisMetricsMessage,
+                            valuation: viewModel.valuation,
+                            onEditAnalysis: presentEditAnalysis,
+                            onEditDCF: presentEditDCF
+                        )
+                    }
                 case .forecast:
                     StockForecastTab(
                         profile: viewModel.primaryComparisonProfile,
@@ -194,16 +198,20 @@ struct StockDetailScreen: View {
                         onEditDCF: presentEditDCF
                     )
                 case .compare:
-                    StockCompareTab(viewModel: viewModel)
+                    ProGateView(billingManager: billingManager) {
+                        StockCompareTab(viewModel: viewModel)
+                    }
                 case .news:
                     StockNewsTab(news: viewModel.news)
                 case .earnings:
-                    StockEarningsTab(
-                        symbol: viewModel.details?.symbol ?? initialSymbol,
-                        earnings: viewModel.stockEarnings,
-                        isLoading: viewModel.isEarningsLoading,
-                        errorMessage: viewModel.stockEarningsMessage
-                    )
+                    ProGateView(billingManager: billingManager) {
+                        StockEarningsTab(
+                            symbol: viewModel.details?.symbol ?? initialSymbol,
+                            earnings: viewModel.stockEarnings,
+                            isLoading: viewModel.isEarningsLoading,
+                            errorMessage: viewModel.stockEarningsMessage
+                        )
+                    }
                 }
             }
             .padding(.horizontal, 16)

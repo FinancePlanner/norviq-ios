@@ -27,6 +27,7 @@ public struct ContentView: View {
   @StateObject private var pushNotificationsCoordinator: PushNotificationsCoordinator
   @AppStorage("useFaceID") private var useFaceID: Bool = true
   @AppStorage("hasSeenPrivacyScreen") private var hasSeenPrivacyScreen: Bool = false
+  @AppStorage("hasSeenPreLoginPaywall") private var hasSeenPreLoginPaywall: Bool = false
   private let splashDelay: Duration
   private let authSessionManager: AuthSessionManaging
   private let sessionStore: AuthSessionStoring
@@ -134,7 +135,13 @@ public struct ContentView: View {
             }
           }
         } else {
-          if !hasSeenPrivacyScreen {
+          if !hasSeenPreLoginPaywall {
+            PreLoginPaywallScreen(
+              onContinue: {
+                hasSeenPreLoginPaywall = true
+              }
+            )
+          } else if !hasSeenPrivacyScreen {
             PrivacyWelcomeScreen(
               onSignIn: {
                 hasSeenPrivacyScreen = true

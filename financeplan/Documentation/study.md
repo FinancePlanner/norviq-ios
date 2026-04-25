@@ -1,5 +1,24 @@
 # Norviqa iOS SwiftUI Client Study Guide
 
+## Implemented Pre-Login Paywall & Privacy Flow (2026-04-24)
+
+Main work:
+- Added a pre-login privacy screen (`PrivacyWelcomeScreen`) highlighting data ownership and security.
+- Added a pre-login paywall screen (`PreLoginPaywallScreen`) allowing anonymous users to start a 7-day free trial on the Pro annual plan.
+- Configured Amplitude unified SDK for iOS analytics, initialized via DI (`AnalyticsService`), currently tracking "App Launched".
+- Set up local StoreKit testing (`Products.storekit`) in Xcode with `pro_weekly`, `pro_monthly`, and `pro_annual` to bypass App Store Connect for local simulator testing.
+- Updated `BillingManager` to support anonymous RevenueCat initialization and purchases, aliasing to the user ID upon login/signup.
+
+Key files:
+- `financeplan/Products.storekit`
+- `financeplan/Features/Analytics/AnalyticsService.swift`
+- `financeplan/API/Analytics/Container+AnalyticsFactories.swift`
+- `financeplan/Features/Auth/PrivacyWelcomeScreen.swift`
+- `financeplan/Features/Auth/PreLoginPaywallScreen.swift`
+- `financeplan/ContentView.swift`
+- `financeplan/NorviqaApp.swift`
+- `financeplan/Features/UserProfile/BillingManager.swift`
+
 ## Implemented Broker IBKR Sync Integration (2026-04-23)
 
 Main work:
@@ -1334,3 +1353,302 @@ The most important SwiftUI lessons in this client are:
 - use `async/await` and `@MainActor` deliberately
 
 The architecture is pragmatic: it uses native SwiftUI, local SwiftData caching, feature-oriented services, and a small design system without trying to make everything abstract.
+
+---
+
+## 📱 Comprehensive Architecture Analysis (Full-Codebase Audit 2026-04-25)
+
+### Repository Layout & Module Map
+
+```
+financeplan/
+├── NorviqaApp.swift              # @main, theme, global services
+├── ContentView.swift             # root router: splash → auth/home/onboarding
+├── AppEnvironment.swift          # AppEnvironments.local/dev/production + base URLs
+├── SchemeEnvironment.swift       # Xcode scheme pre-action inject (auto-generated)
+├── Container+AppFactories.swift  # Factory DI singletons: authService, stockService, …
+├── SessionManager.swift          # display username ObservableObject
+├── Models/Local/                 # SwiftData models (cache): SDPortfolioStock, SDWatchlistItem, SharedModelContainer
+├── Features/
+│   ├── Auth/                     # login, signup, MFA, OAuth, AppLock, Privacy/Paywall (pre-login)
+│   ├── Home/                     # dashboard cards, quick expense, activity feed, asset search
+│   ├── Portfolio/                # holdings list, allocation donut, CRUD sheets, portfolio lists
+│   ├── Stocks/                   # detail screen, insights tabs, valuation editor, watchlist
+│   ├── Crypto/                   # crypto portfolio + market list
+│   ├── Expenses/                 # budget planner, comparison charts, SwiftData sync
+│   ├── UserProfile/              # profile edit, settings, billing/paywall, language
+│   ├── Onboarding/               # CSV import, manual entry, broker link (IBKR)
+│   ├── Reports/                  # statistics, preferences
+│   ├── MarketData/               # DCF calculator, market service
+│   ├── Earnings/                 # earnings calendar screen
+│   ├── Badges/                   # gamification grid
+│   ├── Notifications/            # APNS registration, deep-link handling, target alert coordinator
+│   ├── Support/                  # feedback sheet
+│   ├── Analytics/                # PostHog analytics wrapper
+│   └── Launch/                   # SplashScreen
+├── API/                          # endpoint descriptors + HTTP clients (AnyAPI)
+│   └── <Domain>/
+│       ├── <Domain>Endpoints.swift
+│       ├── <Domain>HTTPClient.swift
+│       └── Container+<Domain>Factories.swift
+├── Components/                   # reusable SwiftUI components: GlassCard, ErrorRetryView, …
+├── Utilities/                    # parsers, formatters, image/chart helpers
+├── Extensions/                   # Shimmer, GlassEffect compatibility
+├── Typography/                   # FontScheme Typography, weight/style enums
+└── Documentation/               # architecture notes, monetization, source-of-truth
+
+Total Swift files: ~206 (app) + 39 (unit tests) + 5 (UI tests)
+```
+
+### Tech Stack Deep Dive
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| UI framework | SwiftUI (iOS 17+) | Declarative views, NavigationStack, TabView |
+| DI container | Factory | `@Injected`, `@InjectedObservable` property wrappers; singleton/composed scopes |
+| Networking | AnyAPI (OpenAPI-inspired) + URLSession | type-safe endpoint structs, request modifiers for auth headers |
+| Local persistence | SwiftData (Apple's CoreData successor) | cache for expenses & budget; also `UserDefaultsAuthSessionStore` for tokens; Keychain for security code |
+| Charts | Swift Charts (iOS Charts framework) | allocation donut, price history, expense comparison |
+| Auth | JWT (HS256) | bearer tokens from Vapor backend |
+| Push | APNS via PushNotifications framework | device registration + silent notifications |
+| Analytics | PostHog + Sentry | product analytics + crash reporting |
+| Observability | OSLog | structured logging with categories |
+| Concurrency | async/await + @MainActor | network & disk IO; UI updates on main actor |
+| State | Combine (selective) + @Published + @StateObject | reactive ViewModel state |
+
+### Architecture Overview
+
+**Pattern**: MV-first hybrid. Views contain minimal logic; ViewModels (`ObservableObject`, `@MainActor`) coordinate services and expose `@Published` state. Services are protocol-oriented (`StockServicing`, `AuthServicing`) with production implementations injected via Factory.
+
+**Directory structure driven by feature folders**. Each feature typically contains:
+- `<Feature>Screen.swift` – SwiftUI view
+- `<Feature>ViewModel.swift` – state + business logic
+- `<Feature>Service.swift` – network/data orchestration
+- `<Feature>Models.swift` or `*DTOs.swift` – local view models or request/response types
+
+Cross-cutting concerns (API clients, DI, utilities, components) are lifted to shared folders to avoid duplication.
+
+### Dependency Injection (Factory)
+
+`Container+AppFactories.swift` registers singletons:
+
+```swift
+extension Container {
+  var appEnvironment: Factory<AppEnvironmentManager> { … }.singleton
+  var stockService: Factory<StockService> {
+    self { @MainActor in
+      StockService(environmentManager: self.appEnvironment(),
+                   authSessionManager: self.authSessionManager())
+    }.singleton
+  }
+  // …
+}
+```
+
+Views read with `@InjectedObservable(\Container.stockService) private var service` or `@Injected(\Container.someService)`.
+
+**Environment switching**: when the user selects a different `AppEnvironment` (local/dev/prod), `Container.shared.reset(scope: .singleton)` tears down all singletons so they re-inject with the new base URL. This is driven from `AppEnvironmentManager.switch(to:)`.
+
+### State & Session Management
+
+**SessionManager** – lightweight ObservableObject holding `username` for app chrome.
+
+**AuthSessionStore** (`UserDefaultsAuthSessionStore`) – persists:
+- `authToken` (JWT)
+- `refreshToken`
+- `authTokenExpiresAt`, `refreshTokenExpiresAt`
+- `currentUserID`, `currentUsername`
+- `loginIsSignup` flag
+- `initialStockImportCompleted` flag per user
+
+**AuthSessionManager** – coordinates:
+- token refresh on 401 intercept (called by services)
+- logout (revoke refresh + clear store)
+- session restoration at launch
+- broadcasts `Notification.Name.AuthSessionDidInvalidate` on forced logout
+
+**AppLockManager** – enforces device auth (FaceID/TouchID) when app backgrounds; fallback 6-digit PIN via `SecurityCodeManager` (Keychain).
+
+**BillingManager** – wraps RevenueCat Purchases SDK; handles anonymous aliasing to user ID on login; exposes `isPro` via `@Published` state; `restore Purchases()` for account restore.
+
+### Networking Layer
+
+**Endpoint definition pattern** (AnyAPI):
+
+```swift
+struct GetQuoteEndpoint: Endpoint {
+  typealias Response = QuoteResponse
+  let symbol: String
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/quote/" + symbol.uppercased() }
+  var decoder: JSONDecoder { .stockPlanShared }
+}
+```
+
+**HTTPClient pattern**:
+
+```swift
+struct StockHTTPClient {
+  let baseURL: URL
+  let session: StockURLSessionProtocol
+  let authTokenProvider: () -> String?
+
+  func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable { … }
+}
+```
+
+Token injection via request `modifier` on `URLRequest`:
+```swift
+if let token = authTokenProvider() {
+  request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+}
+```
+
+**Error envelope** (backend sends):
+```json
+{ "data": null, "message": "error string" }
+```
+`APIErrorDecoding` extracts `message` for user-friendly alerts.
+
+### Shared DTOs (StockPlanShared)
+
+Domain breakdown (16 folders):
+- Activity, Auth, Badges, Billing, Broker, Common, Dashboard, Earnings, Expenses, Market (Crypto, PriceChart, Market data), News, Notifications, Portfolio, Statistics, Stocks, UserProfile
+
+All structs conform to `Codable`, `Sendable`, `Equatable` where practical. Date decoding handled via `SharedDateDecoder` (backend uses matching `JSONCoder+Backend`).
+
+**Contract alignment**: `openapi.yaml` on backend is source-of-truth; AnyAPI endpoints should match path/method/semantics. Manual endpoint definitions can drift; periodic validation recommended.
+
+### SwiftData Local Cache
+
+Used primarily for **Expenses** feature to enable offline drafting + background sync.
+
+Models:
+- `Expense` (local) – ownerUserId, title, amount, pillar, occurredOn, splitMode, linkedItemId
+- `BudgetPlanItem` – ownerUserId, snapshot, title, plannedAmount, pillar
+- `BudgetSnapshot` – ownerUserId, month/year, totalBudget, totalSpent
+
+**Important**: Scope all fetches by `ownerUserId == LocalCacheScope.currentOwnerUserId` to isolate multi-account data on shared device. Legacy rows without owner are ignored or migrated on read.
+
+### Charts & Visuals
+
+- Allocation donut uses `Chart` with `SectorMark`; colors from `AppTheme`
+- Price history: line chart with gradient fill; dual-axis optional
+- Expense comparison: horizontal bar per pillar
+- InteractiveLineChart component reused across features
+- `ChartExporter` renders chart to PNG for share sheet
+
+### Components
+
+Reusable UI library in `Components/`:
+- `GlassCard` – frosted background with border + shadow; `MeshGradientBackground` behind
+- `GlowingButton` – brand-styled primary button with gradient border/shadow
+- `ErrorRetryView` – error state with retry action
+- `EmptyStateView` – generic empty search/list placeholder
+- `AppTopBar` – large title + optional environment switcher button (runtime-gated)
+- `UserMenuDrawer` – profile/settings sheet
+- `ToastBanner` – ephemeral in-app notifications (info/warning/error)
+- `ProgressBar` – determinate/indeterminate loading
+- `FormComponents` – form fields, buttons
+
+### Typography System
+
+Centralized via `Typography` struct + `FontScheme` protocol. Default scheme `AvenirFontScheme` provides weights/styles. Usage:
+```swift
+Text("Hello")
+  .typography(.title2, weight: .semibold)
+```
+Extensible to swap system fonts or custom families without touching views.
+
+### Notifications & Deep Links
+
+- APNS category `TARGET_ALERT` deep links to stock detail (`/stock/:symbol`)
+- `PushNotificationsCoordinator` handles foreground/background notification responses
+- Device token registration on first launch; `PushDevice` model on backend
+- `TargetAlertPoller` (backend) runs every N minutes; `TargetAlertEvaluator` determines if price crossed a user-defined target
+
+### Analytics & Telemetry
+
+- **PostHog** – event tracking; initialized in `NorviqaApp` with `POSTHOG_PROJECT_TOKEN`, `POSTHOG_HOST`
+- **Sentry** – crash reporting; `SentrySDK.start`
+- **Amplitude** – pre-login paywall events (unified SDK), initialized in `AnalyticsService`
+- Events use `AnalyticsService.track(event:properties:)` throughout; also companion RevenueCat events
+
+### Storage & Security
+
+- **Keychain**: `SecurityCodeManager` (6-digit fallback PIN) with `kSecAttrAccessibleWhenUnlocked`
+- **UserDefaults**: `AuthSessionStore` for tokens/flags; `AppAppearance` for color scheme + language
+- **SwiftData**: encrypted at rest by iOS Data Protection; multi-account scoped via `ownerUserId`
+- **Network**: all HTTPS (TLS 1.3+); no certificate pinning
+- **App Lock**: device auth enforced on background/foreground transition (LocalAuthentication)
+
+### Testing Strategy
+
+- **Unit** (39 files): ViewModels, Services, DTO decoding, utilities
+- **UI tests** (5 files): Launch tests, Expenses flow, Stock detail tab navigation, smoke flow
+- **Test helpers**: `-ui_test_*` process arguments in `ContentView.init()` for forced auth/reset/import state
+- **Mock clients**: protocol-based in-memory service implementations
+- **SwiftData test container**: `SharedModelContainer` used by expense tests
+
+### Environment Switching
+
+Three runtime environments configurable from Settings (and AuthFooter in dev):
+
+```swift
+enum AppEnvironments {
+  static let local       = AppEnvironment(apiBaseUrl: http://localhost:8080, …)
+  static let dev         = AppEnvironment(apiBaseUrl: https://www.dev-norviq.online, …)
+  static let production  = AppEnvironment(apiBaseUrl: https://www.prod-norviq.online, …)
+}
+```
+
+**Important**: Visibility of environment-switcher button is controlled by `environment.current != .production` (runtime), *not* `#if DEBUG`. This is the correct approach as confirmed by user preference.
+
+### Recent Feature Work
+
+| Feature | Status | Files of Interest |
+|---------|--------|-------------------|
+| Pre-login Privacy + Paywall | ✅ | `PrivacyWelcomeScreen.swift`, `PreLoginPaywallScreen.swift`, `AnalyticsService.swift` |
+| RevenueCat Billing | ✅ | `BillingManager.swift`, `API/Billing/*`, `Products.storekit` |
+| IBKR Broker Sync | ✅ | `BrokerService.swift`, `API/Broker/*`, backend `IBKRBrokerIntegration.swift` |
+| Watchlist multi-list | ✅ | `Watchlist/`, backend `WatchlistList` |
+| Multi-attachment posts (fandemic) | N/A | distinct feature set for other app |
+
+### Build & CI Notes
+
+- **Scheme**: `Norviqa TestFlight Dev` – test builds; scheme pre-actions currently write unused `SchemeEnvironment.swift`
+- **SwiftLint**: `.swiftlint.yml` present; run `swiftlint --fix`
+- **PostHog/Sentry**: env vars set in scheme or device
+- **UI test arguments**: `-ui_test_skip_splash`, `-ui_test_reset_session`, `-ui_test_auth_token`, `-ui_test_imported_user_id`, etc.
+
+### Code Quality Observations
+
+- Protocol-oriented design → easy mocking in tests
+- Factory DI avoids Service Locator misuse; clear singleton boundaries
+- ViewModels (`@MainActor`) → UI safety
+- Error propagation via `throw` + `LocalizedError` types; `APIErrorDecoding` maps backend envelope
+- Date handling via `SharedDateDecoder` consistent between client and server
+- SwiftUI declarative; some UIKit interop (OAuth `ASWebAuthenticationSession`, keychain prompts)
+- `EnvironmentObject` used sparingly (`SessionManager`, `billingManager`); most injection via Factory
+
+### Suggested Study Path
+
+1. **App lifecycle**: `NorviqaApp` → `ContentView` → session restoration logic
+2. **Auth**: `AuthService` → `AuthHTTPClient` → endpoints → backend `AuthController`
+3. **Portfolio browse**: `PortfolioViewModel` → `StockService` → `StockHTTPClient` → backend `StockController`/`PortfolioController`
+4. **Expenses local cache**: SwiftData models → `ExpensesSyncManager` → sync flow
+5. **Market data**: `MarketDataService` → provider pattern (FMP/Finnhub) → HTTP
+6. **Billing**: `BillingManager` + RevenueCat SDK → backend `/v1/billing/*`
+7. **Notifications**: APNS registration → `TargetAlertPoller` (backend) → deep-link handling
+8. **Broker IBKR sync**: `BrokerService` (CSV + OAuth start) → backend → `IBKRBrokerIntegration`
+
+### Related Documentation
+
+- `auth.md`, `auth_arch.md` – authentication layer diagrams
+- `monetization.md`, `revenuecat-setup.md` – billing & RevenueCat setup
+- `source-of-truth.md` – which features are API-backed vs local cache vs mock
+- `persistence-standards.md` – SwiftData conventions and owner-scoping
+- `stock-org.md` – how stock domain is organized across files
+- `mvp-roadmap.md` – product priorities (deferred features: AI, advanced analytics, etc.)
+
+**Study tip**: Keep `source-of-truth.md` open while navigating code to understand where each feature writes its data. The backend remains authoritative for portfolio, stocks, and expenses; SwiftData is a write-behind cache for offline-first expenses.

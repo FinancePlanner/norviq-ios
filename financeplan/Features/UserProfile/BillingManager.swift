@@ -19,6 +19,7 @@ final class BillingManager {
     static let entitlementID = "pro"
     static let annualProductID = "pro_annual"
     static let monthlyProductID = "pro_monthly"
+    static let weeklyProductID = "pro_weekly"
   }
 
   var context: BillingContextResponse?
@@ -63,8 +64,24 @@ final class BillingManager {
     packages.first { $0.storeProduct.productIdentifier == Constants.monthlyProductID }
   }
 
+  var weeklyPackage: Package? {
+    packages.first { $0.storeProduct.productIdentifier == Constants.weeklyProductID }
+  }
+
   var selectedProductID: String {
     selectedPackage?.storeProduct.productIdentifier ?? Constants.annualProductID
+  }
+
+  func configureAnonymousIfNeeded() {
+    guard !didConfigureRevenueCat else { return }
+    guard let apiKey = Bundle.main.object(forInfoDictionaryKey: "RevenueCatAPIKey") as? String,
+          !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+          !apiKey.contains("$(") else {
+      errorMessage = "RevenueCat API key is not configured."
+      return
+    }
+    Purchases.configure(withAPIKey: apiKey)
+    didConfigureRevenueCat = true
   }
 
   func configureForCurrentUser() {
@@ -106,7 +123,13 @@ final class BillingManager {
   }
 
   func loadOfferings() async {
-    configureForCurrentUser()
+    let userID = sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+    if userID.isEmpty {
+      configureAnonymousIfNeeded()
+    } else {
+      configureForCurrentUser()
+    }
+    
     guard didConfigureRevenueCat else { return }
 
     do {
@@ -124,14 +147,20 @@ final class BillingManager {
     selectedPackage = packages.first { $0.storeProduct.productIdentifier == productID }
   }
 
-  func purchaseSelectedPackage() async {
+  func purchaseSelectedPackage() async -> Bool {
     guard let selectedPackage else {
       errorMessage = "No Pro plan is available. Please try again later."
-      return
+      return false
     }
 
-    configureForCurrentUser()
-    guard didConfigureRevenueCat else { return }
+    let userID = sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+    if userID.isEmpty {
+      configureAnonymousIfNeeded()
+    } else {
+      configureForCurrentUser()
+    }
+
+    guard didConfigureRevenueCat else { return false }
 
     isPurchasing = true
     errorMessage = nil
@@ -139,14 +168,19 @@ final class BillingManager {
 
     do {
       let result = try await Purchases.shared.purchase(package: selectedPackage)
-      guard !result.userCancelled else { return }
+      guard !result.userCancelled else { return false }
       // PostHog: Track successful subscription purchase
       PostHogSDK.shared.capture("subscription_purchased", properties: [
         "product_id": selectedPackage.storeProduct.productIdentifier,
       ])
-      try await restoreBackendEntitlement()
+      
+      if !userID.isEmpty {
+        try await restoreBackendEntitlement()
+      }
+      return true
     } catch {
       errorMessage = error.localizedDescription
+      return false
     }
   }
 

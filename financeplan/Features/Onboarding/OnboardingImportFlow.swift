@@ -1077,13 +1077,13 @@ struct OnboardingNavBar: View {
           .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
           .modifier(
             MatchedGeometryIfAvailable(
-              id: "onboarding.header.icon", namespace: namespace))
+              id: "onboarding.header.icon", namespace: namespace, isSource: false))
 
         Text(title)
           .typography(.label, weight: .semibold)
           .modifier(
             MatchedGeometryIfAvailable(
-              id: "onboarding.header.title", namespace: namespace))
+              id: "onboarding.header.title", namespace: namespace, isSource: false))
       }
 
       Spacer()
@@ -1105,9 +1105,10 @@ struct OnboardingNavBar: View {
 struct MatchedGeometryIfAvailable: ViewModifier {
   let id: String
   let namespace: Namespace.ID?
+  var isSource: Bool = true
   func body(content: Content) -> some View {
     if let ns = namespace {
-      content.matchedGeometryEffect(id: id, in: ns)
+      content.matchedGeometryEffect(id: id, in: ns, isSource: isSource)
     } else {
       content
     }

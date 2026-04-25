@@ -11,6 +11,15 @@ Status snapshot for the current iOS app scope.
 - [x] Shared visual system with light/dark mode support, finance-friendly color semantics, and reusable cards/backgrounds
 - [x] MVVM structure across the main product areas already implemented so far
 
+### Monetization and App Flow
+
+- [x] Pre-login privacy screen (`PrivacyWelcomeScreen`) highlighting data ownership
+- [x] Pre-login paywall screen (`PreLoginPaywallScreen`) allowing anonymous users to start trials
+- [x] RevenueCat SDK integrated via `BillingManager` with full anonymous-to-authenticated aliasing
+- [x] Local StoreKit testing configuration (`Products.storekit`) setup in Xcode with `pro_weekly`, `pro_monthly`, `pro_annual`
+- [x] Amplitude unified SDK integrated via DI (`AnalyticsService`) for tracking events
+- [x] Backend RevenueCat webhook setup and event processing
+
 ### Portfolio
 
 - [x] Portfolio separated into its own feature folder with dedicated MVVM structure
