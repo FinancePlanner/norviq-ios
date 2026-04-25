@@ -21,6 +21,7 @@ private enum UserProfileDestination: Hashable {
     case dataAvailability
     case connect
     case sensitiveActions
+    case subscription
 }
 
 @MainActor
@@ -318,7 +319,27 @@ public struct UserProfileView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
-            // About
+            // Subscription
+            Section(LocalizedStringKey("Subscription")) {
+                NavigationLink(value: UserProfileDestination.subscription) {
+                    HStack {
+                        Label(LocalizedStringKey("Subscription"), systemImage: "star.fill")
+                        Spacer()
+                        if billingManager.isPro {
+                            Text("Pro")
+                                .typography(.caption)
+                                .foregroundStyle(.green)
+                        } else {
+                            Text("Free")
+                                .typography(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
+            // Support
             Section(LocalizedStringKey("Support")) {
                 NavigationLink(value: UserProfileDestination.helpSupport) {
                     Label(LocalizedStringKey("Help & Support"), systemImage: "questionmark.circle")
@@ -432,6 +453,8 @@ public struct UserProfileView: View {
             ConnectView()
         case .sensitiveActions:
             Text("Sensitive actions")
+        case .subscription:
+            SubscriptionSettingsView()
         }
     }
 

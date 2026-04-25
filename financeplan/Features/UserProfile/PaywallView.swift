@@ -95,52 +95,28 @@ struct PaywallView: View {
 
   private var featureList: some View {
     VStack(alignment: .leading, spacing: 0) {
-      Text("Pro Features")
+      Text("Included in Free")
         .typography(.label, weight: .bold)
         .foregroundStyle(.primary)
         .padding(.horizontal, 20)
         .padding(.top, 20)
-        .padding(.bottom, 16)
+        .padding(.bottom, 12)
 
-      ForEach(Array(featureRows.enumerated()), id: \.element.feature) { index, row in
-        HStack(spacing: 14) {
-          ZStack {
-            Circle()
-              .fill(AppTheme.Colors.tintSoft(for: scheme))
-              .frame(width: 36, height: 36)
-            Image(systemName: row.icon)
-              .font(.caption.weight(.medium))
-              .symbolRenderingMode(.hierarchical)
-              .foregroundStyle(AppTheme.Colors.tint(for: scheme))
-          }
+      ForEach(featureRows.filter { $0.tier == .free }, id: \.feature) { row in
+        featureRow(row: row, scheme: scheme)
+      }
 
-          Text(row.feature)
-            .typography(.body)
-            .foregroundStyle(.primary)
-            .frame(maxWidth: .infinity, alignment: .leading)
+      Divider()
+        .padding(.vertical, 16)
 
-          // Free column
-          Image(systemName: "xmark")
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(AppTheme.Colors.tertiaryFill(for: scheme).opacity(3))
-            .frame(width: 28)
-
-          // Pro column
-          Image(systemName: "checkmark.circle.fill")
-            .font(.body)
-            .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(AppTheme.Colors.tint(for: scheme))
-            .frame(width: 28)
-        }
+      Text("Unlocked with Pro")
+        .typography(.label, weight: .bold)
+        .foregroundStyle(AppTheme.Colors.tint(for: scheme))
         .padding(.horizontal, 20)
-        .padding(.vertical, 14)
+        .padding(.bottom, 12)
 
-        if index < featureRows.count - 1 {
-          Rectangle()
-            .fill(AppTheme.Colors.separator(for: scheme))
-            .frame(height: 0.5)
-            .padding(.leading, 70)
-        }
+      ForEach(featureRows.filter { $0.tier == .pro }, id: \.feature) { row in
+        featureRow(row: row, scheme: scheme)
       }
 
       Spacer(minLength: 20)
@@ -148,20 +124,103 @@ struct PaywallView: View {
     .background(AppTheme.Colors.cardBackground(for: scheme), in: RoundedRectangle(cornerRadius: 20))
   }
 
+  @ViewBuilder
+  private func featureRow(row: FeatureRow, scheme: ColorScheme) -> some View {
+    HStack(spacing: 14) {
+      ZStack {
+        Circle()
+          .fill(AppTheme.Colors.tintSoft(for: scheme))
+          .frame(width: 36, height: 36)
+        Image(systemName: row.icon)
+          .font(.caption.weight(.medium))
+          .symbolRenderingMode(.hierarchical)
+          .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+      }
+
+      Text(row.feature)
+        .typography(.body)
+        .foregroundStyle(.primary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+
+      // Free column
+      Group {
+        if row.tier == .free {
+          Image(systemName: "checkmark.circle.fill")
+            .font(.body)
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(.green)
+        } else {
+          Image(systemName: "xmark")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(AppTheme.Colors.tertiaryFill(for: scheme).opacity(0.4))
+        }
+      }
+      .frame(width: 28)
+
+      // Pro column
+      Group {
+        if row.tier == .pro {
+          Image(systemName: "checkmark.circle.fill")
+            .font(.body)
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+        } else {
+          Image(systemName: "xmark")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(AppTheme.Colors.tertiaryFill(for: scheme).opacity(0.4))
+        }
+      }
+      .frame(width: 28)
+    }
+    .padding(.horizontal, 20)
+    .padding(.vertical, 14)
+  }
+
   private struct FeatureRow {
     let icon: String
     let feature: String
+    let tier: Tier // free | pro
+
+    enum Tier: String {
+      case free, pro
+    }
   }
 
   private var featureRows: [FeatureRow] {
     [
-      FeatureRow(icon: "arrow.triangle.2.circlepath", feature: "Broker auto-sync"),
-      FeatureRow(icon: "person.2.fill", feature: "Cloud sync across devices"),
-      FeatureRow(icon: "chart.bar.fill", feature: "Real fundamentals and projections"),
-      FeatureRow(icon: "chart.line.uptrend.xyaxis", feature: "Risk analytics and comparisons"),
-      FeatureRow(icon: "bell.badge.fill", feature: "Advanced alerts and exports"),
+      // MARK: Free (what you already have)
+      FeatureRow(icon: "list.bullet", feature: "Unlimited holdings & watchlist", tier: .free),
+      FeatureRow(icon: "chart.line.uptrend.xyaxis", feature: "Current price, news, charts", tier: .free),
+      FeatureRow(icon: "note.text", feature: "Research notes & thesis tracking", tier: .free),
+      FeatureRow(icon: "square.and.arrow.up", feature: "CSV import & text export", tier: .free),
+      FeatureRow(icon: "clock.badge", feature: "End-of-day quotes", tier: .free),
+      FeatureRow(icon: "dollarsign.circle", feature: "Basic P&L summary", tier: .free),
+      FeatureRow(icon: "checkmark.circle.fill", feature: "Record expenses (local-only)", tier: .free),
+      FeatureRow(icon: "calendar", feature: "3-month expense history", tier: .free),
+      FeatureRow(icon: "chart.pie", feature: "Current month category breakdown", tier: .free),
+      FeatureRow(icon: "target", feature: "Monthly salary & pillars setup", tier: .free),
+
+      // MARK: Pro (upgrade unlocks)
+      FeatureRow(icon: "person.2.fill", feature: "Cloud sync across devices", tier: .pro),
+      FeatureRow(icon: "chart.bar.fill", feature: "Real fundamentals & financial statements", tier: .pro),
+      FeatureRow(icon: "chart.line.uptrend.xyaxis", feature: "Risk analytics (beta, drawdown, correlation)", tier: .pro),
+      FeatureRow(icon: "bell.badge.fill", feature: "Price, dividend & earnings alerts (up to 15)", tier: .pro),
+      FeatureRow(icon: "doc.text.fill", feature: "Earnings transcripts & summaries", tier: .pro),
+      FeatureRow(icon: "arrow.up.arrow.down", feature: "Bear/base/bull projections", tier: .pro),
+      FeatureRow(icon: "square.stack.3d.up", feature: "3-stock metric comparison", tier: .pro),
+      FeatureRow(icon: "tag.fill", feature: "Valuation tracking & fair value", tier: .pro),
+      FeatureRow(icon: "chart.line.uptrend.xyaxis", feature: "Year-over-year expense trends", tier: .pro),
+      FeatureRow(icon: "lightbulb.min.fill", feature: "Smart spending suggestions", tier: .pro),
+      FeatureRow(icon: "person.2.fill", feature: "Household partner splits", tier: .pro),
+      FeatureRow(icon: "arrow.triangle.2.circlepath", feature: "Recurring expense templates", tier: .pro),
+      FeatureRow(icon: "chart.line.uptrend.xyaxis", feature: "Full reports & month comparisons", tier: .pro),
+      FeatureRow(icon: "arrow.triangle.2.circlepath", feature: "Unlimited historical expense data", tier: .pro),
+      FeatureRow(icon: "bitcoinsign.circle.fill", feature: "Crypto tracking & analytics (coming soon)", tier: .pro),
+
+      // MARK: Premium (future)
     ]
   }
+
 
   // MARK: - Plan Cards
 
