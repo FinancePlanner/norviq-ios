@@ -21,7 +21,6 @@ struct StockDetailScreen: View {
     @State private var selectedTab: StockDetailTab = .overview
     @State private var selectedScenario: StockProjectionScenarioKind = .base
     @State private var selectedStatementPeriod: StockFinancialStatementPeriod = .fy
-    @State private var isPaywallPresented = false
 
     private enum ActiveSheet: String, Identifiable {
         case editValuation
@@ -53,14 +52,6 @@ struct StockDetailScreen: View {
         }
         .sheet(item: $activeSheet) { sheet in
             sheetContent(for: sheet)
-        }
-        .sheet(isPresented: $isPaywallPresented) {
-            PaywallView(billingManager: billingManager)
-        }
-        .onChange(of: selectedTab) { oldValue, newValue in
-            guard isProOnly(tab: newValue), !billingManager.isPro else { return }
-            selectedTab = oldValue
-            isPaywallPresented = true
         }
         .task {
             await loadStockDetails()
@@ -192,11 +183,13 @@ struct StockDetailScreen: View {
                         )
                     }
                 case .forecast:
-                    StockForecastTab(
-                        profile: viewModel.primaryComparisonProfile,
-                        selectedScenario: $selectedScenario,
-                        onEditDCF: presentEditDCF
-                    )
+                    ProGateView(billingManager: billingManager) {
+                        StockForecastTab(
+                            profile: viewModel.primaryComparisonProfile,
+                            selectedScenario: $selectedScenario,
+                            onEditDCF: presentEditDCF
+                        )
+                    }
                 case .compare:
                     ProGateView(billingManager: billingManager) {
                         StockCompareTab(viewModel: viewModel)
@@ -295,7 +288,7 @@ struct StockDetailScreen: View {
                 "source": "stock_valuation",
                 "symbol": initialSymbol,
             ])
-            isPaywallPresented = true
+            //isPaywallPresented = true
             return
         }
         activeSheet = .editValuation
@@ -311,7 +304,7 @@ struct StockDetailScreen: View {
 
     private func presentEditAnalysis() {
         guard billingManager.isPro else {
-            isPaywallPresented = true
+            //isPaywallPresented = true
             return
         }
         activeSheet = .editAnalysis
@@ -319,19 +312,10 @@ struct StockDetailScreen: View {
 
     private func presentEditDCF() {
         guard billingManager.isPro else {
-            isPaywallPresented = true
+            //isPaywallPresented = true
             return
         }
         activeSheet = .editDCF
-    }
-
-    private func isProOnly(tab: StockDetailTab) -> Bool {
-        switch tab {
-        case .overview, .chart, .news:
-            false
-        case .statements, .analysis, .forecast, .compare, .earnings:
-            true
-        }
     }
 
     private func saveEditedPosition(_ updated: StockResponse) async -> Bool {

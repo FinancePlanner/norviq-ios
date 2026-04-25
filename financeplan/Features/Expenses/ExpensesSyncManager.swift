@@ -20,10 +20,14 @@ final class ExpensesSyncManager {
     }
     
     func pullLatestData(from service: any ExpensesServicing) async throws {
-        guard !isSyncing else { return }
-        guard !ownerUserId.isEmpty else { return }
-        isSyncing = true
-        defer { isSyncing = false }
+      guard !isSyncing else { return }
+      guard !ownerUserId.isEmpty else { return }
+      guard Container.shared.billingManager().isPro else {
+        logger.info("Sync skipped: user not Pro")
+        return
+      }
+      isSyncing = true
+      defer { isSyncing = false }
         
         logger.debug("Starting pullLatestData from API")
         try cleanupLegacyRows()
@@ -212,10 +216,14 @@ final class ExpensesSyncManager {
     }
     
     func pushPendingActions(to service: any ExpensesServicing) async {
-        guard !isSyncing else { return }
-        guard !ownerUserId.isEmpty else { return }
-        isSyncing = true
-        defer { isSyncing = false }
+      guard !isSyncing else { return }
+      guard !ownerUserId.isEmpty else { return }
+      guard Container.shared.billingManager().isPro else {
+        logger.info("Push skipped: user not Pro")
+        return
+      }
+      isSyncing = true
+      defer { isSyncing = false }
         
         do {
             let pendingActions = try context.fetch(FetchDescriptor<OfflineSyncAction>(sortBy: [SortDescriptor(\.timestamp, order: .forward)]))

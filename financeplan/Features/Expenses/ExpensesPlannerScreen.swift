@@ -1,12 +1,14 @@
 import Charts
 import SwiftUI
 import StockPlanShared
+import Factory
 
 struct ExpensesPlannerScreen: View {
   @Binding var isSettingsPresented: Bool
   @ObservedObject var viewModel: BudgetPlannerViewModel
 
   @Environment(\.colorScheme) private var colorScheme
+  @InjectedObservable(\Container.billingManager) private var billingManager
   @State private var isSalaryEditorPresented = false
   @State private var isTargetEditorPresented = false
   @State private var isActivitySheetPresented = false
@@ -21,6 +23,7 @@ struct ExpensesPlannerScreen: View {
   @State private var activityToDelete: BudgetActivity?
   @State private var recordSpendInitialPillar: BudgetPillar = .fundamentals
   @State private var destructiveFeedbackTrigger = 0
+  @State private var isPaywallPresented = false
 
   private var isShowingLoadingState: Bool {
     viewModel.isLoading && viewModel.monthlySnapshots.isEmpty
@@ -84,6 +87,9 @@ struct ExpensesPlannerScreen: View {
         recurringTemplateSheet(for: template)
       }
       .sheet(isPresented: $isRecurringManagerPresented, content: recurringManagerSheet)
+      .sheet(isPresented: $isPaywallPresented) {
+        PaywallView(billingManager: billingManager)
+      }
       .confirmationDialog(
         "Delete planned item?",
         isPresented: itemDeleteBinding,
@@ -146,7 +152,15 @@ struct ExpensesPlannerScreen: View {
         Button("Adjust pillar targets", systemImage: "slider.horizontal.3", action: presentTargetEditor)
         Button("Add pillar", systemImage: "square.stack.3d.up", action: presentTargetEditor)
         Button("Record spend", systemImage: "plus.circle", action: presentRecordSpend)
-        Button("Household partner", systemImage: "person.2", action: presentPartnerEditor)
+        Button {
+          if billingManager.isPro {
+            presentPartnerEditor()
+          } else {
+            isPaywallPresented = true
+          }
+        } label: {
+          Label("Household partner", systemImage: "person.2")
+        }
         Divider()
         Button("Delete this month plan", systemImage: "trash", role: .destructive, action: viewModel.deleteCurrentSnapshot)
       } label: {
@@ -207,19 +221,27 @@ struct ExpensesPlannerScreen: View {
           onEdit: { item in presentExistingPlanItemDraft(item) },
           onDelete: { item in itemToDelete = item },
           onLogRecurring: { template in recurringTemplateToLog = template },
-          onManageRecurring: { isRecurringManagerPresented = true }
+          onManageRecurring: {
+            if billingManager.isPro {
+              isRecurringManagerPresented = true
+            } else {
+              isPaywallPresented = true
+            }
+          }
         )
         .padding(.horizontal, 16)
 
-        ExpensesYearOverviewCard(
-          selectedYear: selectedYearBinding,
-          availableYears: viewModel.availableYears,
-          totalSpent: viewModel.selectedYearActualTotal,
-          averageSpent: viewModel.selectedYearAverageActual,
-          lastMonthLabel: viewModel.selectedYearLastMonthLabel,
-          chartPoints: viewModel.selectedYearChartPoints
-        )
-        .padding(.horizontal, 16)
+        ProGateView(billingManager: billingManager) {
+          ExpensesYearOverviewCard(
+            selectedYear: selectedYearBinding,
+            availableYears: viewModel.availableYears,
+            totalSpent: viewModel.selectedYearActualTotal,
+            averageSpent: viewModel.selectedYearAverageActual,
+            lastMonthLabel: viewModel.selectedYearLastMonthLabel,
+            chartPoints: viewModel.selectedYearChartPoints
+          )
+          .padding(.horizontal, 16)
+        }
 
         PillarAllocationTableCard(
           monthTitle: viewModel.selectedMonthDisplayTitle,
@@ -227,15 +249,17 @@ struct ExpensesPlannerScreen: View {
         )
         .padding(.horizontal, 16)
 
-        SmartSuggestionsCard(
-          suggestion: viewModel.topReportSuggestion,
-          isLoading: viewModel.isSuggestionsLoading,
-          isUnavailable: viewModel.suggestionsUnavailable,
-          onDismiss: { suggestion in
-            viewModel.dismissSuggestion(suggestion)
-          }
-        )
-        .padding(.horizontal, 16)
+        ProGateView(billingManager: billingManager) {
+          SmartSuggestionsCard(
+            suggestion: viewModel.topReportSuggestion,
+            isLoading: viewModel.isSuggestionsLoading,
+            isUnavailable: viewModel.suggestionsUnavailable,
+            onDismiss: { suggestion in
+              viewModel.dismissSuggestion(suggestion)
+            }
+          )
+          .padding(.horizontal, 16)
+        }
 
         ExpensesByCategoryCard(
           monthTitle: viewModel.selectedMonthDisplayTitle,
@@ -435,7 +459,13 @@ struct ExpensesPlannerScreen: View {
   private var selectedMonthBinding: Binding<Date> {
     Binding(
       get: { viewModel.selectedMonthStart },
-      set: { viewModel.selectMonth($0) }
+      set: { newValue in
+        if billingManager.isPro {
+          viewModel.selectMonth(newValue)
+        } else {
+          isPaywallPresented = true
+        }
+      }
     )
   }
 

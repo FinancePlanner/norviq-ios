@@ -2,11 +2,13 @@ import Charts
 import SwiftUI
 import StockPlanShared
 import UIKit
+import Factory
 
 struct ExpensesComparisonScreen: View {
   @StateObject private var reportsViewModel = ReportsViewModel()
   @StateObject private var dashboardPrefs = ReportsDashboardPreferences()
   @Environment(\.colorScheme) private var colorScheme
+  @InjectedObservable(\Container.billingManager) private var billingManager
   @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
   @State private var selectedTab: ReportTab = .overview
   @State private var showingCustomize = false
@@ -60,46 +62,48 @@ struct ExpensesComparisonScreen: View {
   }
 
   var body: some View {
-    NavigationStack {
-      ZStack {
-        MeshGradientBackground()
-          .ignoresSafeArea()
+    ProGateView(billingManager: billingManager) {
+      NavigationStack {
+        ZStack {
+          MeshGradientBackground()
+            .ignoresSafeArea()
 
-        VStack(spacing: 0) {
-          tabPicker
+          VStack(spacing: 0) {
+            tabPicker
 
-          ScrollView {
-            reportContent
-            .padding(.horizontal, 16)
-            .padding(.vertical, 20)
-            .accessibilityIdentifier("reports.scrollContent")
+            ScrollView {
+              reportContent
+                .padding(.horizontal, 16)
+                .padding(.vertical, 20)
+                .accessibilityIdentifier("reports.scrollContent")
+            }
           }
         }
-      }
-      .navigationTitle(LocalizedStringKey("Reports"))
-      .navigationBarTitleDisplayMode(.large)
-      .toolbar {
-        ToolbarItem(placement: .topBarTrailing) {
-          Button {
-            showingCustomize = true
-          } label: {
-            Image(systemName: "slider.horizontal.3")
+        .navigationTitle(LocalizedStringKey("Reports"))
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+          ToolbarItem(placement: .topBarTrailing) {
+            Button {
+              showingCustomize = true
+            } label: {
+              Image(systemName: "slider.horizontal.3")
+            }
+            .buttonStyle(.glass)
+            .accessibilityIdentifier("reports.customizeButton")
           }
-          .buttonStyle(.glass)
-          .accessibilityIdentifier("reports.customizeButton")
         }
-      }
-      .refreshable {
-        await reloadReports(force: true)
-      }
-      .task {
-        await initialLoad()
-      }
-      .onReceive(NotificationCenter.default.publisher(for: .budgetPlannerDataDidChange)) { _ in
-        Task { await reloadReports(force: true) }
-      }
-      .sheet(isPresented: $showingCustomize) {
-        CustomizeDashboardSheet(preferences: dashboardPrefs)
+        .refreshable {
+          await reloadReports(force: true)
+        }
+        .task {
+          await initialLoad()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .budgetPlannerDataDidChange)) { _ in
+          Task { await reloadReports(force: true) }
+        }
+        .sheet(isPresented: $showingCustomize) {
+          CustomizeDashboardSheet(preferences: dashboardPrefs)
+        }
       }
     }
   }
