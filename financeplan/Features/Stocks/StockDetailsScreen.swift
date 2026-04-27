@@ -138,7 +138,7 @@ struct StockDetailScreen: View {
                     marketSnapshot: viewModel.marketSnapshot
                 )
 
-                StockDetailTabBar(selectedTab: $selectedTab)
+                StockDetailTabBar(selectedTab: $selectedTab, isPro: billingManager.isPro)
 
                 switch selectedTab {
                 case .chart:

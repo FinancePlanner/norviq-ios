@@ -34,13 +34,25 @@ final class ExpensesSyncManager {
         
         async let fetchSnapshots = service.getSnapshots(year: nil, month: nil)
         async let fetchItems = service.getAllPlanItems()
-        async let fetchExpenses = service.getExpenses(from: nil, to: nil)
+        async let fetchExpensesResult = service.getExpenses(from: nil, to: nil)
         async let fetchCategories = service.getCategories()
         async let fetchRecurringTemplates = service.getRecurringTemplates()
         
-        let (fetchedSnapshots, fetchedItems, fetchedExpenses, fetchedCategories, fetchedRecurringTemplates) = try await (
-            fetchSnapshots, fetchItems, fetchExpenses, fetchCategories, fetchRecurringTemplates
+        let (
+            fetchedSnapshots,
+            fetchedItems,
+            expensesResult,
+            fetchedCategories,
+            fetchedRecurringTemplates
+        ) = try await (
+            fetchSnapshots,
+            fetchItems,
+            fetchExpensesResult,
+            fetchCategories,
+            fetchRecurringTemplates
         )
+
+        let (fetchedExpenses, _) = expensesResult
         
         // Update Categories
         let existingCategories = try context.fetch(FetchDescriptor<LocalExpenseCategory>())

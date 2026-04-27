@@ -8,7 +8,7 @@ private let billingHTTPLogger = Logger(
   category: "BillingHTTPClient"
 )
 
-protocol BillingURLSessionProtocol {
+protocol BillingURLSessionProtocol: HTTPClientSession {
   func data(for request: URLRequest) async throws -> (Data, URLResponse)
 }
 

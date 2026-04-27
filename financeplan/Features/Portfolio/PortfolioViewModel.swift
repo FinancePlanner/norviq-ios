@@ -60,6 +60,8 @@ final class PortfolioViewModel: ObservableObject {
   private let service: StockServicing
   private var localStore: (any PortfolioLocalPersisting)?
   private var hasLoadedOnce = false
+  @Published private(set) var nextCursor: String? = nil
+  @Published private(set) var isLoadingMore = false
 
   init(
     service: StockServicing,
@@ -85,6 +87,7 @@ final class PortfolioViewModel: ObservableObject {
     defer { isLoading = false }
 
     do {
+      nextCursor = nil  // reset pagination state on load
       let lists = try await service.fetchPortfolioLists()
       portfolioLists = lists
       if !isShowingAllLists &&
@@ -92,11 +95,13 @@ final class PortfolioViewModel: ObservableObject {
         selectedPortfolioListId = lists.first?.id
       }
 
-      async let stocksTask = service.fetchPortfolio(portfolioListId: selectedPortfolioListId)
+      async let stocksTask = service.fetchPortfolio(portfolioListId: selectedPortfolioListId, limit: 50)
       async let summaryTask = service.fetchPortfolioSummary(portfolioListId: selectedPortfolioListId)
       async let targetsTask = service.fetchTargets(symbol: nil)
-      let (remoteStocks, summary, targets) = try await (stocksTask, summaryTask, targetsTask)
+      let (stocksResult, summary, targets) = try await (stocksTask, summaryTask, targetsTask)
+      let (remoteStocks, fetchedNextCursor) = stocksResult
       await syncWithSwiftData(remoteStocks, listId: selectedPortfolioListId)
+      nextCursor = fetchedNextCursor
       cashBalance = extractCashBalance(from: summary)
       targetAlertsBySymbol = Self.makeTargetAlertsBySymbol(targets)
       hasLoadedOnce = true
@@ -114,6 +119,23 @@ final class PortfolioViewModel: ObservableObject {
       portfolioViewModelLogger.error(
         "SwiftData portfolio sync failed: \(error.localizedDescription, privacy: .public)"
       )
+    }
+  }
+
+  func loadMoreIfAvailable() async {
+    guard !isLoadingMore, let cursor = nextCursor else { return }
+    isLoadingMore = true
+    defer { isLoadingMore = false }
+    do {
+      let (items, newCursor) = try await service.fetchPortfolio(portfolioListId: selectedPortfolioListId, cursor: cursor, limit: 50)
+      if let localStore {
+        for item in items {
+          try localStore.upsert(item, in: selectedPortfolioListId)
+        }
+      }
+      nextCursor = newCursor
+    } catch {
+      portfolioViewModelLogger.error("Load more failed: \(error.localizedDescription, privacy: .public)")
     }
   }
 

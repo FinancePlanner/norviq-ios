@@ -59,6 +59,20 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
       return { _ in .indigo }
     }
   }
+
+  var isDisabled: Bool {
+    switch self {
+    case .csv, .manual: return false
+    case .api: return true
+    }
+  }
+
+  var badge: String? {
+    switch self {
+    case .csv, .manual: return nil
+    case .api: return "Soon"
+    }
+  }
 }
 
 struct InitialStockImportScreen: View {
@@ -253,6 +267,7 @@ struct InitialStockImportScreen: View {
 
   private func methodSelectionButton(for method: StockImportMethod, index: Int) -> some View {
     Button {
+      guard !method.isDisabled else { return }
       withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
         selectedMethod = method
         message = nil
@@ -274,6 +289,7 @@ struct InitialStockImportScreen: View {
     .offset(y: animatedIndices.contains(index) ? 0 : 24)
     .scaleEffect(tappedMethod == method ? 1.02 : 1.0)
     .animation(.spring(response: 0.25, dampingFraction: 0.8), value: tappedMethod)
+    .disabled(method.isDisabled)
   }
 
   private var buttonTitle: String {
@@ -322,22 +338,33 @@ private struct ImportMethodCard: View {
       // Icon
       ZStack {
         RoundedRectangle(cornerRadius: 12, style: .continuous)
-          .fill(method.iconColor(colorScheme).opacity(isSelected ? 0.18 : 0.10))
+          .fill(method.iconColor(colorScheme).opacity(method.isDisabled ? 0.06 : (isSelected ? 0.18 : 0.10)))
           .frame(width: 44, height: 44)
 
         Image(systemName: method.icon)
           .font(.headline)
-          .foregroundStyle(method.iconColor(colorScheme))
+          .foregroundStyle(method.isDisabled ? AnyShapeStyle(.tertiary) : AnyShapeStyle(method.iconColor(colorScheme)))
       }
 
       VStack(alignment: .leading, spacing: 3) {
-        Text(method.title)
-          .typography(.label, weight: .semibold)
-          .foregroundStyle(.primary)
+        HStack(spacing: 8) {
+          Text(method.title)
+            .typography(.label, weight: .semibold)
+            .foregroundStyle(method.isDisabled ? .tertiary : .primary)
+
+          if let badge = method.badge {
+            Text(badge)
+              .typography(.nano, weight: .bold)
+              .foregroundStyle(.secondary)
+              .padding(.horizontal, 7)
+              .padding(.vertical, 3)
+              .background(AppTheme.Colors.tertiaryFill(for: colorScheme), in: Capsule())
+          }
+        }
 
         Text(method.subtitle)
           .typography(.nano)
-          .foregroundStyle(.secondary)
+          .foregroundStyle(.tertiary)
           .lineLimit(2)
           .frame(maxWidth: .infinity, alignment: .leading)
       }

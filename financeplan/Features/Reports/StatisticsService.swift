@@ -73,17 +73,7 @@ final class StatisticsHTTPService: StatisticsServicing {
   }
 }
 
-struct StatisticsServiceStub: StatisticsServicing {
-  func fetchStatisticsOverview() async throws -> StatisticsDTO {
-    StatisticsDTO.empty
-  }
-  func fetchSectorAllocation() async throws -> [SectorAllocationDTO] {
-    []
-  }
-  func fetchStockAllocation() async throws -> [StockAllocationDTO] {
-    []
-  }
-}
+
 
 extension StatisticsDTO {
     static var empty: StatisticsDTO {

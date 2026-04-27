@@ -5,7 +5,7 @@ import OSLog
 
 private let stockHTTPLogger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "StockHTTPClient")
 
-protocol StockURLSessionProtocol {
+protocol StockURLSessionProtocol: HTTPClientSession {
   func data(for request: URLRequest) async throws -> (Data, URLResponse)
 }
 

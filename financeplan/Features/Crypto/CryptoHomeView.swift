@@ -8,6 +8,8 @@ private let cryptoHomeLogger = Logger(
     category: "CryptoHome"
 )
 
+private let tickIntervalMs: Double = 800.0
+
 struct CryptoHomeView: View {
     @Binding var isSettingsPresented: Bool
     @StateObject private var viewModel = CryptoViewModel()
@@ -935,7 +937,7 @@ struct MarketSentimentCard: View {
     private func animateCounter(to end: Int) {
         counterTask?.cancel()
         let steps = max(1, end)
-        let interval = Duration.milliseconds(max(1, Int((800.0 / Double(steps)).rounded())))
+        let interval = Duration.milliseconds(max(1, Int((tickIntervalMs / Double(steps)).rounded())))
 
         counterTask = Task { @MainActor in
             for i in 0...steps {

@@ -149,10 +149,12 @@ struct PaywallView: View {
             .font(.body)
             .symbolRenderingMode(.hierarchical)
             .foregroundStyle(.green)
+            .accessibilityLabel("Included in Free tier")
         } else {
           Image(systemName: "xmark")
             .font(.caption.weight(.semibold))
             .foregroundStyle(AppTheme.Colors.tertiaryFill(for: scheme).opacity(0.4))
+            .accessibilityLabel("Not included in Free tier")
         }
       }
       .frame(width: 28)
@@ -164,10 +166,12 @@ struct PaywallView: View {
             .font(.body)
             .symbolRenderingMode(.hierarchical)
             .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+            .accessibilityLabel("Included in Pro tier")
         } else {
           Image(systemName: "xmark")
             .font(.caption.weight(.semibold))
             .foregroundStyle(AppTheme.Colors.tertiaryFill(for: scheme).opacity(0.4))
+            .accessibilityLabel("Not included in Pro tier")
         }
       }
       .frame(width: 28)

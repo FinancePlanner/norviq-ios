@@ -825,6 +825,7 @@ private struct FeaturedNewsHero: View {
                     Image(systemName: "newspaper.fill")
                         .font(.caption)
                         .foregroundStyle(.secondary.opacity(0.5))
+                        .accessibilityLabel("News icon")
                 }
 
                 Text(news.title)
@@ -853,6 +854,7 @@ private struct FeaturedNewsHero: View {
                             .typography(.nano, weight: .semibold)
                         Image(systemName: "arrow.up.right")
                             .typography(.nano, weight: .bold)
+                            .accessibilityLabel("Open external link")
                     }
                     .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
                 }
@@ -1210,6 +1212,7 @@ private struct FinancialStatementPeriodPicker: View {
 
 struct StockDetailTabBar: View {
     @Binding var selectedTab: StockDetailTab
+    var isPro: Bool = false
     @Environment(\.colorScheme) private var colorScheme
     @Namespace private var selectionNamespace
 
@@ -1223,18 +1226,25 @@ struct StockDetailTabBar: View {
                                 selectedTab = tab
                             }
                         } label: {
-                            Text(tab.title)
-                                .typography(.caption, weight: .semibold)
-                                .foregroundStyle(selectedTab == tab ? .primary : .secondary)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 10)
-                                .glassEffect(
-                                    selectedTab == tab
-                                        ? .regular.tint(AppTheme.Colors.tint(for: colorScheme)).interactive()
-                                        : .regular.interactive(),
-                                    in: .capsule
-                                )
-                                .glassEffectID(tab.id, in: selectionNamespace)
+                            HStack(spacing: 4) {
+                                Text(tab.title)
+                                    .typography(.caption, weight: .semibold)
+                                    .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                                if tab.isProOnly && !isPro {
+                                    Image(systemName: "lock.fill")
+                                        .font(.system(size: 9, weight: .semibold))
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .glassEffect(
+                                selectedTab == tab
+                                    ? .regular.tint(AppTheme.Colors.tint(for: colorScheme)).interactive()
+                                    : .regular.interactive(),
+                                in: .capsule
+                            )
+                            .glassEffectID(tab.id, in: selectionNamespace)
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("stockDetail.tab.\(tab.rawValue)")

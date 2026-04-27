@@ -198,43 +198,4 @@ struct BrokerService: BrokerServicing {
   }
 }
 
-struct BrokerServiceStub: BrokerServicing {
-  func listConnections() async throws -> [BrokerConnectionResponse] { [] }
 
-  func getConnection(provider: String) async throws -> BrokerConnectionResponse {
-    BrokerConnectionResponse(id: UUID().uuidString, provider: provider, status: "disconnected")
-  }
-
-  @MainActor
-  func connectIBKR(portfolioListId: String?) async throws -> BrokerConnectionResponse {
-    BrokerConnectionResponse(
-      id: UUID().uuidString,
-      provider: "ibkr",
-      status: "connected"
-    )
-  }
-
-  func syncIBKR() async throws -> BrokerSyncResponse {
-    BrokerSyncResponse(runId: UUID().uuidString, status: "completed")
-  }
-
-  func disconnectIBKR() async throws -> BrokerConnectionResponse {
-    BrokerConnectionResponse(id: UUID().uuidString, provider: "ibkr", status: "disconnected")
-  }
-
-  func previewCsvImport(
-    provider: String,
-    portfolioListId: String?,
-    csvData: Data
-  ) async throws -> CsvImportPreviewResponse {
-    CsvImportPreviewResponse(provider: provider, items: [], errors: [])
-  }
-
-  func commitCsvImport(
-    provider: String,
-    portfolioListId: String?,
-    csvData: Data
-  ) async throws -> CsvImportCommitResponse {
-    CsvImportCommitResponse(provider: provider, inserted: [], updated: [], errors: [])
-  }
-}

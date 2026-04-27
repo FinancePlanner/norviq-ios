@@ -172,7 +172,8 @@ struct PortfolioScreen: View {
               onAddPosition: presentAddPositionSheet,
               onEditStock: beginEditing,
               onDeleteStock: deleteStock,
-              onPresentTargetAlert: presentTargetAlert
+              onPresentTargetAlert: presentTargetAlert,
+              onLoadMore: { Task { await viewModel.loadMoreIfAvailable() } }
             )
           }
           .padding(.horizontal, 16)
@@ -651,6 +652,7 @@ private struct PortfolioPositionsSection: View {
   let onEditStock: (StockResponse) -> Void
   let onDeleteStock: (String) -> Void
   let onPresentTargetAlert: (SDPortfolioStock) -> Void
+  let onLoadMore: (() -> Void)?
 
   var body: some View {
     if stocks.isEmpty {
@@ -673,6 +675,11 @@ private struct PortfolioPositionsSection: View {
           onDelete: onDeleteStock,
           onPresentTargetAlert: onPresentTargetAlert
         )
+        .onAppear {
+          if let last = stocks.last, last.id == stock.id {
+            onLoadMore?()
+          }
+        }
       }
     }
   }

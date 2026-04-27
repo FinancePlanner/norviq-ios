@@ -43,31 +43,4 @@ struct DefaultGoalsService: GoalsServicing {
     }
 }
 
-struct GoalsServiceStub: GoalsServicing {
-    func getGoals() async throws -> [GoalResponse] {
-        [
-            GoalResponse(id: UUID().uuidString, title: "Max out 401k", status: .pending),
-            GoalResponse(id: UUID().uuidString, title: "Save for European vacation", status: .completed)
-        ]
-    }
 
-    func createGoal(payload: GoalRequest) async throws -> GoalResponse {
-        GoalResponse(id: UUID().uuidString, title: payload.title, status: .pending)
-    }
-
-    func updateGoal(id: String, payload: GoalRequest) async throws -> GoalResponse {
-        GoalResponse(id: id, title: payload.title, status: .pending)
-    }
-
-    func updateGoalStatus(id: String, payload: GoalStatusUpdateRequest) async throws -> GoalResponse {
-        GoalResponse(
-            id: id,
-            title: "Updated",
-            status: payload.status,
-            statusUpdatedBy: payload.source,
-            completedAt: payload.status == .completed ? ISO8601DateFormatter().string(from: Date()) : nil
-        )
-    }
-
-    func deleteGoal(id: String) async throws {}
-}

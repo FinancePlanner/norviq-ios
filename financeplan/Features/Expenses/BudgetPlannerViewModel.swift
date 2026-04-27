@@ -84,7 +84,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
           }
           async let snapshotsTask = expensesService.getSnapshots(year: nil, month: nil)
           async let itemsTask = expensesService.getAllPlanItems()
-          async let expensesTask = expensesService.getExpenses(from: nil, to: nil)
+          async let expensesResultTask = expensesService.getExpenses(from: nil, to: nil)
           async let categoriesTask = expensesService.getCategories()
           async let recurringTemplatesTask = expensesService.getRecurringTemplates()
           async let monthlyReportsTask = expensesService.getMonthlyExpenseReports(from: nil, to: nil)
@@ -93,7 +93,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
           let (
             fetchedSnapshots,
             fetchedItems,
-            fetchedExpenses,
+            expensesResult,
             fetchedCategories,
             fetchedRecurringTemplates,
             fetchedMonthlyReports,
@@ -101,12 +101,14 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
           ) = try await (
             snapshotsTask,
             itemsTask,
-            expensesTask,
+            expensesResultTask,
             categoriesTask,
             recurringTemplatesTask,
             monthlyReportsTask,
             yearlyReportsTask
           )
+
+          let (fetchedExpenses, _) = expensesResult
 
           self.categories = fetchedCategories
           self.recurringTemplates = fetchedRecurringTemplates

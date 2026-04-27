@@ -2,7 +2,7 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
-protocol BrokerURLSessionProtocol {
+protocol BrokerURLSessionProtocol: HTTPClientSession {
   func data(for request: URLRequest) async throws -> (Data, URLResponse)
 }
 
