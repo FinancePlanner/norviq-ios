@@ -182,6 +182,7 @@ public struct UserProfileView: View {
                 if let days = billingManager.trialDaysRemaining {
                     Label("Trial: \(days) days remaining", systemImage: "calendar.badge.clock")
                         .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("settings.subscription.trial")
                 } else {
                     HStack {
                         Label(LocalizedStringKey("Status"), systemImage: "checkmark.seal")
@@ -189,6 +190,7 @@ public struct UserProfileView: View {
                         Text(billingManager.isPro ? "Pro" : "Free")
                             .typography(.caption, weight: .semibold)
                             .foregroundStyle(.secondary)
+                            .accessibilityIdentifier(billingManager.isPro ? "settings.subscription.pro" : "settings.subscription.free")
                     }
                 }
 

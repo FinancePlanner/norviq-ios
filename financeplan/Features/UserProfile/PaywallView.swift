@@ -52,13 +52,14 @@ struct PaywallView: View {
             .foregroundStyle(.secondary)
         }
       }
-      .task {
+    .task {
         await billingManager.loadOfferings()
       }
       .onChange(of: billingManager.isPro) { _, isPro in
         if isPro { dismiss() }
       }
-    }
+      .accessibilityIdentifier("PaywallView")
+  }
   }
 
   // MARK: - Hero

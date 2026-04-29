@@ -35,6 +35,7 @@ final class BillingManager {
   private let sessionStore: AuthSessionStoring
   private var configuredUserID: String?
   private var didConfigureRevenueCat = false
+  private let uiTestBillingTier: String?
 
   init(
     environmentManager: AppEnvironmentManager,
@@ -44,7 +45,9 @@ final class BillingManager {
     self.environmentManager = environmentManager
     self.authSessionManager = authSessionManager
     self.sessionStore = sessionStore
+    self.uiTestBillingTier = Self.normalizedUITestBillingTier()
     loadCachedEntitlement()
+    applyUITestBillingContextIfNeeded()
   }
 
   var isPro: Bool {
@@ -88,6 +91,7 @@ final class BillingManager {
   }
 
   func configureAnonymousIfNeeded() {
+    guard uiTestBillingTier == nil else { return }
     guard !didConfigureRevenueCat else { return }
     guard let apiKey = Bundle.main.object(forInfoDictionaryKey: "RevenueCatAPIKey") as? String,
           !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -100,12 +104,14 @@ final class BillingManager {
   }
 
   func configureForCurrentUser() {
+    guard uiTestBillingTier == nil else { return }
     let userID = sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !userID.isEmpty else { return }
     configureRevenueCat(userID: userID)
   }
 
   func configureRevenueCat(userID: String) {
+    guard uiTestBillingTier == nil else { return }
     guard configuredUserID != userID else { return }
     configuredUserID = userID
 
@@ -131,6 +137,10 @@ final class BillingManager {
   }
 
   func refreshBillingContext() async {
+    guard uiTestBillingTier == nil else {
+      applyUITestBillingContextIfNeeded()
+      return
+    }
     await performLoading {
       let context = try await billingClient(forceRefresh: false).fetchContext()
       apply(context)
@@ -200,6 +210,10 @@ final class BillingManager {
   }
 
   func restorePurchases() async {
+    guard uiTestBillingTier == nil else {
+      applyUITestBillingContextIfNeeded()
+      return
+    }
     configureForCurrentUser()
     guard didConfigureRevenueCat else { return }
 
@@ -276,5 +290,113 @@ final class BillingManager {
 
   private func loadCachedEntitlement() {
     guard UserDefaults.standard.object(forKey: Keys.isPro) != nil else { return }
+  }
+
+  private static func normalizedUITestBillingTier() -> String? {
+    if ProcessInfo.processInfo.arguments.contains("-ui_test_pro_user") {
+      return "pro"
+    }
+    guard let raw = ProcessInfo.processInfo.billingArgumentValue(for: "-ui_test_billing_tier") else {
+      return nil
+    }
+    let normalized = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    guard ["free", "trial", "pro"].contains(normalized) else { return nil }
+    return normalized
+  }
+
+  private func applyUITestBillingContextIfNeeded() {
+    guard let uiTestBillingTier else { return }
+    apply(Self.makeUITestBillingContext(tier: uiTestBillingTier))
+  }
+
+  private static func makeUITestBillingContext(tier: String) -> BillingContextResponse {
+    let isPaid = tier == "trial" || tier == "pro"
+    let entitlementLevel = tier == "trial" ? "temporary" : tier
+    return BillingContextResponse(
+      plan: entitlementLevel,
+      entitlementLevel: entitlementLevel,
+      isPremium: isPaid,
+      subscription: nil,
+      features: makeUITestFeatures(available: isPaid),
+      usage: makeUITestUsage(hasFreeLimits: !isPaid),
+      trialDaysRemaining: tier == "trial" ? 7 : nil,
+      isTrialActive: tier == "trial",
+      generatedAt: Date()
+    )
+  }
+
+  private static func makeUITestFeatures(available paidFeaturesAvailable: Bool) -> [BillingFeatureDTO] {
+    let proOnlyKeys = Set([
+      "broker_sync",
+      "valuation_cases",
+      "target_alerts",
+      "household_partner",
+      "recurring_templates",
+      "year_overview",
+      "smart_suggestions",
+      "reports",
+      "statistics",
+      "market_fundamentals",
+      "advanced_research",
+      "peer_comparison",
+      "earnings_text",
+    ])
+    let keys = [
+      "broker_sync",
+      "portfolio_lists",
+      "holdings",
+      "watchlist_items",
+      "valuation_cases",
+      "csv_imports",
+      "target_alerts",
+      "report_generations",
+      "expense_planner",
+      "household_partner",
+      "recurring_templates",
+      "year_overview",
+      "smart_suggestions",
+      "reports",
+      "statistics",
+      "market_fundamentals",
+      "advanced_research",
+      "peer_comparison",
+      "earnings_text",
+    ]
+    return keys.map { key in
+      let available = !proOnlyKeys.contains(key) || paidFeaturesAvailable
+      return BillingFeatureDTO(
+        key: key,
+        title: key.replacingOccurrences(of: "_", with: " ").capitalized,
+        available: available,
+        requiredPlan: available ? nil : "pro",
+        reason: available ? nil : "Upgrade to Pro to use this feature.",
+        limit: nil,
+        used: nil,
+        remaining: nil
+      )
+    }
+  }
+
+  private static func makeUITestUsage(hasFreeLimits: Bool) -> [BillingUsageDTO] {
+    [
+      BillingUsageDTO(key: "portfolio_lists", used: 0, limit: hasFreeLimits ? 1 : nil, remaining: hasFreeLimits ? 1 : nil, periodStart: nil),
+      BillingUsageDTO(key: "holdings", used: 0, limit: hasFreeLimits ? 5 : nil, remaining: hasFreeLimits ? 5 : nil, periodStart: nil),
+      BillingUsageDTO(key: "watchlist_items", used: 0, limit: hasFreeLimits ? 10 : nil, remaining: hasFreeLimits ? 10 : nil, periodStart: nil),
+      BillingUsageDTO(key: "csv_imports", used: 0, limit: hasFreeLimits ? 1 : nil, remaining: hasFreeLimits ? 1 : nil, periodStart: Date()),
+      BillingUsageDTO(key: "report_generations", used: 0, limit: hasFreeLimits ? 10 : nil, remaining: hasFreeLimits ? 10 : nil, periodStart: Date()),
+    ]
+  }
+}
+
+private extension ProcessInfo {
+  func billingArgumentValue(for name: String) -> String? {
+    guard let index = arguments.firstIndex(of: name) else {
+      return nil
+    }
+    let valueIndex = arguments.index(after: index)
+    guard arguments.indices.contains(valueIndex) else {
+      return nil
+    }
+    return arguments[valueIndex]
   }
 }

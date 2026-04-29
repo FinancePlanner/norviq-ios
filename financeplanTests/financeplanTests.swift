@@ -56,14 +56,7 @@ final class BillingManagerTests: XCTestCase {
       sessionStore: sessionStore
     )
 
-    sut.context = BillingContextResponse(
-      id: "ctx1",
-      userId: "user1",
-      isPremium: true,
-      entitlementLevel: "basic",
-      trialDaysRemaining: nil,
-      features: []
-    )
+    sut.context = makeBillingContext(entitlementLevel: "basic", isPremium: true)
 
     XCTAssertTrue(sut.isPro)
   }
@@ -75,16 +68,27 @@ final class BillingManagerTests: XCTestCase {
       sessionStore: sessionStore
     )
 
-    sut.context = BillingContextResponse(
-      id: "ctx1",
-      userId: "user1",
-      isPremium: false,
-      entitlementLevel: "pro",
-      trialDaysRemaining: nil,
-      features: []
+    sut.context = makeBillingContext(entitlementLevel: "pro", isPremium: false)
+
+    XCTAssertTrue(sut.isPro)
+  }
+
+  func testIsProReturnsTrueForTemporaryTrialEntitlement() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+
+    sut.context = makeBillingContext(
+      entitlementLevel: "temporary",
+      isPremium: true,
+      trialDaysRemaining: 7,
+      isTrialActive: true
     )
 
     XCTAssertTrue(sut.isPro)
+    XCTAssertEqual(sut.trialDaysRemaining, 7)
   }
 
   func testIsProReturnsFalseWhenNotPremiumAndNotProLevel() {
@@ -94,19 +98,39 @@ final class BillingManagerTests: XCTestCase {
       sessionStore: sessionStore
     )
 
-    sut.context = BillingContextResponse(
-      id: "ctx1",
-      userId: "user1",
-      isPremium: false,
-      entitlementLevel: "free",
-      trialDaysRemaining: nil,
-      features: []
-    )
+    sut.context = makeBillingContext(entitlementLevel: "free", isPremium: false)
 
     // Clear user defaults cache to ensure it evaluates from context
     UserDefaults.standard.removeObject(forKey: "billing.is_pro")
 
     XCTAssertFalse(sut.isPro)
+  }
+
+  func testFeatureAvailabilityUsesServerFeatureDescriptor() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+
+    sut.context = makeBillingContext(
+      entitlementLevel: "free",
+      isPremium: false,
+      features: [
+        BillingFeatureDTO(
+          key: "advanced_research",
+          title: "Advanced research",
+          available: false,
+          requiredPlan: "pro",
+          reason: "Upgrade required",
+          limit: nil,
+          used: nil,
+          remaining: nil
+        ),
+      ]
+    )
+
+    XCTAssertFalse(sut.isFeatureAvailable("advanced_research"))
   }
 
   func testIsProFallsBackToUserDefaultsWhenContextIsNil() {
@@ -124,6 +148,26 @@ final class BillingManagerTests: XCTestCase {
     UserDefaults.standard.set(false, forKey: "billing.is_pro")
 
     XCTAssertFalse(sut.isPro)
+  }
+
+  private func makeBillingContext(
+    entitlementLevel: String,
+    isPremium: Bool,
+    features: [BillingFeatureDTO] = [],
+    trialDaysRemaining: Int? = nil,
+    isTrialActive: Bool = false
+  ) -> BillingContextResponse {
+    BillingContextResponse(
+      plan: entitlementLevel,
+      entitlementLevel: entitlementLevel,
+      isPremium: isPremium,
+      subscription: nil,
+      features: features,
+      usage: [],
+      trialDaysRemaining: trialDaysRemaining,
+      isTrialActive: isTrialActive,
+      generatedAt: Date()
+    )
   }
 }
 

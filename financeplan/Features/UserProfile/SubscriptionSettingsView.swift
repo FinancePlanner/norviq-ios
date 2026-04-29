@@ -16,18 +16,22 @@ struct SubscriptionSettingsView: View {
                     Label("Pro Active", systemImage: "checkmark.seal.fill")
                         .font(.title2).fontWeight(.bold)
                         .foregroundStyle(.green)
+                        .accessibilityIdentifier("subscription.status.pro")
                     if let days = billingManager.trialDaysRemaining, days > 0 {
                         Text("Trial: \(days) day\(days == 1 ? "" : "s") remaining")
                             .typography(.body)
                             .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("subscription.status.trial")
                     }
                     Text(currentPlanName)
                         .typography(.caption)
                         .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("subscription.planName")
                 } else {
                     Label("Free Plan", systemImage: "star")
                         .font(.title2).fontWeight(.bold)
                         .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("subscription.status.free")
                     Text("Upgrade to Pro to unlock all features.")
                         .typography(.body)
                         .foregroundStyle(.secondary)
@@ -37,6 +41,7 @@ struct SubscriptionSettingsView: View {
             .padding(.vertical, 24)
             .frame(maxWidth: .infinity)
             .background(AppTheme.Colors.elevatedCardBackground(for: scheme), in: RoundedRectangle(cornerRadius: 20))
+            .accessibilityIdentifier("subscription.statusCard")
 
             // Actions
             VStack(spacing: 12) {

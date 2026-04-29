@@ -173,8 +173,7 @@ final class FinanceplanUITests: XCTestCase {
 
   @MainActor
   func testProUserCanAccessProTabs() throws {
-    let app = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)")
-    app.launchArguments.append("-ui_test_pro_user")
+    let app = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)", billingTier: "pro")
     app.launch()
 
     let portfolioTab = app.tabBars.buttons["Portfolio"]
@@ -187,6 +186,42 @@ final class FinanceplanUITests: XCTestCase {
 
     // Should load the allocation screen
     XCTAssertTrue(app.staticTexts["By cost basis"].waitForExistence(timeout: 8))
+  }
+
+  @MainActor
+  func testTrialUserCanAccessProTabs() throws {
+    let app = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)", billingTier: "trial")
+    app.launch()
+
+    let portfolioTab = app.tabBars.buttons["Portfolio"]
+    XCTAssertTrue(portfolioTab.waitForExistence(timeout: 25))
+    portfolioTab.tap()
+
+    let allocationSegment = app.buttons["Allocation"]
+    XCTAssertTrue(allocationSegment.waitForExistence(timeout: 8))
+    allocationSegment.tap()
+
+    XCTAssertTrue(app.staticTexts["By cost basis"].waitForExistence(timeout: 8))
+  }
+
+  @MainActor
+  func testSettingsReflectFreeTrialAndProBillingStates() throws {
+    let freeApp = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)", billingTier: "free")
+    freeApp.launch()
+    openSettings(in: freeApp)
+    XCTAssertTrue(freeApp.descendants(matching: .any)["settings.subscription.free"].waitForExistence(timeout: 8))
+    freeApp.terminate()
+
+    let trialApp = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)", billingTier: "trial")
+    trialApp.launch()
+    openSettings(in: trialApp)
+    XCTAssertTrue(trialApp.descendants(matching: .any)["settings.subscription.trial"].waitForExistence(timeout: 8))
+    trialApp.terminate()
+
+    let proApp = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)", billingTier: "pro")
+    proApp.launch()
+    openSettings(in: proApp)
+    XCTAssertTrue(proApp.descendants(matching: .any)["settings.subscription.pro"].waitForExistence(timeout: 8))
   }
 
   @MainActor
@@ -212,8 +247,7 @@ final class FinanceplanUITests: XCTestCase {
 
   @MainActor
   func testProUserCanAccessPriceAlerts() throws {
-    let app = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)")
-    app.launchArguments.append("-ui_test_pro_user")
+    let app = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)", billingTier: "pro")
     app.launch()
 
     let portfolioTab = app.tabBars.buttons["Portfolio"]
@@ -230,6 +264,18 @@ final class FinanceplanUITests: XCTestCase {
       alertButton.tap()
       XCTAssertTrue(app.navigationBars["Set Alert"].waitForExistence(timeout: 5))
     }
+  }
+
+  @MainActor
+  private func openSettings(in app: XCUIApplication) {
+    let homeTab = app.tabBars.buttons["Home"]
+    if homeTab.waitForExistence(timeout: 25) {
+      homeTab.tap()
+    }
+
+    let settingsButton = app.buttons["Open settings"]
+    XCTAssertTrue(settingsButton.waitForExistence(timeout: 10))
+    settingsButton.tap()
   }
 
   @MainActor
@@ -260,7 +306,7 @@ final class FinanceplanUITests: XCTestCase {
   }
 
   @MainActor
-  private func makeAuthenticatedFirstLoginApp(userID: String, resetSession: Bool = true) -> XCUIApplication {
+  private func makeAuthenticatedFirstLoginApp(userID: String, resetSession: Bool = true, billingTier: String? = nil) -> XCUIApplication {
     let app = XCUIApplication()
     var launchArguments = [
       "-ui_test_skip_splash",
@@ -272,12 +318,15 @@ final class FinanceplanUITests: XCTestCase {
     if resetSession {
       launchArguments.append("-ui_test_reset_session")
     }
+    if let billingTier {
+      launchArguments += ["-ui_test_billing_tier", billingTier]
+    }
     app.launchArguments += launchArguments
     return app
   }
 
   @MainActor
-  private func makeAuthenticatedImportedUserApp(userID: String, resetSession: Bool = true) -> XCUIApplication {
+  private func makeAuthenticatedImportedUserApp(userID: String, resetSession: Bool = true, billingTier: String? = nil) -> XCUIApplication {
     let app = XCUIApplication()
     var launchArguments = [
       "-ui_test_skip_splash",
@@ -290,6 +339,9 @@ final class FinanceplanUITests: XCTestCase {
     ]
     if resetSession {
       launchArguments.append("-ui_test_reset_session")
+    }
+    if let billingTier {
+      launchArguments += ["-ui_test_billing_tier", billingTier]
     }
     app.launchArguments += launchArguments
     return app
