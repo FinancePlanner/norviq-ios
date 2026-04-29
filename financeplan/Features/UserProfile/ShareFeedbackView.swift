@@ -36,31 +36,6 @@ struct ShareFeedbackView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
-            // App Store Review
-            Section {
-                Button {
-                    requestReview()
-                } label: {
-                    Label {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Rate on App Store")
-                                .typography(.body, weight: .semibold)
-                                .foregroundStyle(.primary)
-                            Text("Takes just a second and helps us a lot")
-                                .typography(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    } icon: {
-                        Image(systemName: "star.fill")
-                            .foregroundStyle(.yellow)
-                    }
-                }
-                .buttonStyle(.plain)
-            } footer: {
-                Text("App Store ratings help other investors discover Norviqa.")
-            }
-            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-
             // Direct Feedback
             Section("Reach Out") {
                 Button {
