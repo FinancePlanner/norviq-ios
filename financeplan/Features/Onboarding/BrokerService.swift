@@ -33,13 +33,13 @@ protocol BrokerServicing {
 struct BrokerService: BrokerServicing {
   private let environmentManager: AppEnvironmentManager
   private let authSessionManager: AuthSessionManaging
-  private let session: BrokerURLSessionProtocol
+  private let session: any HTTPClientSession
   private let webAuthenticator: OAuthWebAuthenticating
 
   init(
     environmentManager: AppEnvironmentManager,
     authSessionManager: AuthSessionManaging,
-    session: BrokerURLSessionProtocol = URLSession.shared,
+    session: any HTTPClientSession = URLSession.shared,
     webAuthenticator: OAuthWebAuthenticating = OAuthWebAuthenticator()
   ) {
     self.environmentManager = environmentManager

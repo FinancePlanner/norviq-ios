@@ -1,21 +1,21 @@
 import AnyAPI
 import Foundation
 import StockPlanShared
+import OSLog
 
-protocol BrokerURLSessionProtocol: HTTPClientSession {
-  func data(for request: URLRequest) async throws -> (Data, URLResponse)
-}
+// MARK: - Client
 
-extension URLSession: BrokerURLSessionProtocol {}
-
-struct BrokerHTTPClient {
-  enum Error: LocalizedError, Equatable {
+final class BrokerHTTPClient: BaseHTTPClient<BrokerHTTPClient.Error> {
+  
+  // MARK: - Error Type
+  
+  enum Error: LocalizedError, Equatable, Sendable, HTTPClientError {
     case invalidResponse
     case invalidStatus(Int)
     case unauthorized(String?)
     case api(String)
 
-    var errorDescription: String? {
+    nonisolated var errorDescription: String? {
       switch self {
       case .invalidResponse:
         return "Invalid server response."
@@ -34,21 +34,41 @@ struct BrokerHTTPClient {
       }
       return false
     }
+
+    nonisolated var statusCode: Int? {
+      if case let .invalidStatus(code) = self { return code }
+      return nil
+    }
+
+    nonisolated static func == (lhs: Error, rhs: Error) -> Bool {
+      switch (lhs, rhs) {
+      case (.invalidResponse, .invalidResponse): return true
+      case let (.invalidStatus(l), .invalidStatus(r)): return l == r
+      case let (.unauthorized(l), .unauthorized(r)): return l == r
+      case let (.api(l), .api(r)): return l == r
+      default: return false
+      }
+    }
   }
 
-  let baseURL: URL
-  let session: BrokerURLSessionProtocol
-  let authTokenProvider: () -> String?
-
-  init(
-    baseURL: URL,
-    session: BrokerURLSessionProtocol = URLSession.shared,
-    authTokenProvider: @escaping () -> String? = { nil }
-  ) {
-    self.baseURL = baseURL
-    self.session = session
-    self.authTokenProvider = authTokenProvider
+  init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping () -> String? = { nil }) {
+    super.init(
+      baseURL: baseURL,
+      session: session,
+      authTokenProvider: authTokenProvider,
+      logger: Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "BrokerHTTPClient"),
+      decoder: .stockPlanShared
+    )
   }
+
+  // MARK: - Error Factory Overrides
+
+  override func makeInvalidResponseError() -> Error { .invalidResponse }
+  override func makeInvalidStatusError(_ code: Int) -> Error { .invalidStatus(code) }
+  override func makeUnauthorizedError(_ message: String?) -> Error { .unauthorized(message) }
+  override func makeAPIError(_ message: String) -> Error { .api(message) }
+
+  // MARK: - Public API
 
   func getBrokers() async throws -> [BrokerConnectionResponse] {
     try await call(GetBrokersEndpoint())
@@ -84,11 +104,11 @@ struct BrokerHTTPClient {
       portfolioListId: portfolioListId,
       csvData: csvData
     )
-    let data = try await perform(request: request)
+    let data = try await sendRequest(request)
     do {
-      return try JSONDecoder.stockPlanShared.decode(CsvImportPreviewResponse.self, from: data)
+      return try decoder.decode(CsvImportPreviewResponse.self, from: data)
     } catch {
-      if let envelope = try? JSONDecoder.stockPlanShared.decode(APIEnvelope<CsvImportPreviewResponse>.self, from: data),
+      if let envelope = try? decoder.decode(APIEnvelope<CsvImportPreviewResponse>.self, from: data),
          let payload = envelope.data {
         return payload
       }
@@ -107,58 +127,16 @@ struct BrokerHTTPClient {
       portfolioListId: portfolioListId,
       csvData: csvData
     )
-    let data = try await perform(request: request)
+    let data = try await sendRequest(request)
     do {
-      return try JSONDecoder.stockPlanShared.decode(CsvImportCommitResponse.self, from: data)
+      return try decoder.decode(CsvImportCommitResponse.self, from: data)
     } catch {
-      if let envelope = try? JSONDecoder.stockPlanShared.decode(APIEnvelope<CsvImportCommitResponse>.self, from: data),
+      if let envelope = try? decoder.decode(APIEnvelope<CsvImportCommitResponse>.self, from: data),
          let payload = envelope.data {
         return payload
       }
       throw error
     }
-  }
-
-  private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable & Sendable {
-    let data = try await perform(endpoint)
-    do {
-      return try endpoint.decode(data)
-    } catch {
-      if let envelope = try? endpoint.decoder.decode(APIEnvelope<E.Response>.self, from: data) {
-        if let payload = envelope.data {
-          return payload
-        }
-        if let message = envelope.message, !message.isEmpty {
-          throw Error.api(message)
-        }
-      }
-      throw error
-    }
-  }
-
-  private func perform<E: Endpoint>(_ endpoint: E) async throws -> Data {
-    let request = try makeURLRequest(for: endpoint)
-    return try await perform(request: request)
-  }
-
-  private func perform(request: URLRequest) async throws -> Data {
-    let (data, response) = try await session.data(for: request)
-
-    guard let httpResponse = response as? HTTPURLResponse else {
-      throw Error.invalidResponse
-    }
-
-    guard (200 ..< 300).contains(httpResponse.statusCode) else {
-      let message = errorMessage(from: data)
-      if httpResponse.statusCode == 401 {
-        throw Error.unauthorized(message)
-      }
-      if let message, !message.isEmpty {
-        throw Error.api(message)
-      }
-      throw Error.invalidStatus(httpResponse.statusCode)
-    }
-    return data
   }
 
   private func makeCSVUploadRequest(
@@ -191,32 +169,5 @@ struct BrokerHTTPClient {
     request.httpBody = csvData
     return request
   }
-
-  private func makeURLRequest<E: Endpoint>(for endpoint: E) throws -> URLRequest {
-    let normalizedPath = endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-    var request = URLRequest(url: baseURL.appendingPathComponent(normalizedPath))
-    request.httpMethod = endpoint.method.rawValue
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-    if let token = authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-      request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-    }
-
-    let parameters = try endpoint.asParameters()
-    if endpoint.method == .get, !parameters.isEmpty {
-      var components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)
-      components?.queryItems = parameters.map { URLQueryItem(name: $0.key, value: String(describing: $0.value)) }
-      if let final = components?.url {
-        request.url = final
-      }
-    } else if !parameters.isEmpty {
-      request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
-    }
-
-    return request
-  }
-
-  private func errorMessage(from data: Data) -> String? {
-    APIErrorDecoding.message(from: data)
-  }
 }
+

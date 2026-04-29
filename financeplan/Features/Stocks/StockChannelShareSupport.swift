@@ -1,6 +1,9 @@
 import Foundation
 import SwiftUI
 import StockPlanShared
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct StockSharePayload: Equatable {
   let title: String
@@ -10,13 +13,11 @@ struct StockSharePayload: Equatable {
 enum StockShareTextStyle {
   case native
   case x
-  case stockTwits
   case discord
 }
 
 enum StockShareDestination: String, CaseIterable, Identifiable {
   case x
-  case stockTwits
   case discord
 
   var id: String { rawValue }
@@ -25,8 +26,6 @@ enum StockShareDestination: String, CaseIterable, Identifiable {
     switch self {
     case .x:
       return "X"
-    case .stockTwits:
-      return "StockTwits"
     case .discord:
       return "Discord"
     }
@@ -36,8 +35,6 @@ enum StockShareDestination: String, CaseIterable, Identifiable {
     switch self {
     case .x:
       return "bubble.left.and.bubble.right"
-    case .stockTwits:
-      return "chart.line.uptrend.xyaxis"
     case .discord:
       return "message"
     }
@@ -54,18 +51,21 @@ enum StockSharePayloadFormatter {
   ) -> StockSharePayload {
     var lines: [String] = []
     let symbolUppercased = symbol.uppercased()
-    lines.append(localized(language, en: "Thesis update for $\(symbolUppercased)", pt: "Tese de investimento para $\(symbolUppercased)"))
+    lines.append(headline(localized(language, en: "Thesis update for $\(symbolUppercased)", pt: "Tese de investimento para $\(symbolUppercased)"), style: style))
     if let details {
       let costBasis = (details.shares * details.buyPrice).currency
       lines.append(
-        localized(
+        listLine(
+          localized(
           language,
           en: "Position: \(details.shares.formatted(.number.precision(.fractionLength(0...2)))) shares @ \(details.buyPrice.currency) (Cost basis \(costBasis))",
           pt: "Posição: \(details.shares.formatted(.number.precision(.fractionLength(0...2)))) ações @ \(details.buyPrice.currency) (Base de custo \(costBasis))"
+          ),
+          style: style
         )
       )
     }
-    lines.append(localized(language, en: "Thesis: \(normalizeText(thesis))", pt: "Tese: \(normalizeText(thesis))"))
+    lines.append(listLine(localized(language, en: "Thesis: \(normalizeText(thesis))", pt: "Tese: \(normalizeText(thesis))"), style: style))
     lines.append(disclaimer(language))
 
     return StockSharePayload(
@@ -90,26 +90,26 @@ enum StockSharePayloadFormatter {
     switch language {
     case .english:
       lines = [
-        "Fundamentals snapshot for $\(symbol)",
-        "Price: \(profile.currentPrice.currency)",
-        "Market cap: \(formatCompactCurrency(profile.marketCap))",
-        "TTM PE: \(ttmPE)",
-        "Gross margin: \(grossMargin)",
-        "Net margin: \(netMargin)",
-        "TTM revenue growth: \(ttmRevenueGrowth)",
-        "Next-year revenue growth: \(nextYearRevenueGrowth)",
+        headline("Fundamentals snapshot for $\(symbol)", style: style),
+        listLine("Price: \(profile.currentPrice.currency)", style: style),
+        listLine("Market cap: \(formatCompactCurrency(profile.marketCap))", style: style),
+        listLine("TTM PE: \(ttmPE)", style: style),
+        listLine("Gross margin: \(grossMargin)", style: style),
+        listLine("Net margin: \(netMargin)", style: style),
+        listLine("TTM revenue growth: \(ttmRevenueGrowth)", style: style),
+        listLine("Next-year revenue growth: \(nextYearRevenueGrowth)", style: style),
         disclaimer(language)
       ]
     case .portuguesePortugal:
       lines = [
-        "Fundamentais de $\(symbol)",
-        "Preço: \(profile.currentPrice.currency)",
-        "Market cap: \(formatCompactCurrency(profile.marketCap))",
-        "TTM PE: \(ttmPE)",
-        "Margem bruta: \(grossMargin)",
-        "Margem líquida: \(netMargin)",
-        "Crescimento receita TTM: \(ttmRevenueGrowth)",
-        "Crescimento receita próximo ano: \(nextYearRevenueGrowth)",
+        headline("Fundamentais de $\(symbol)", style: style),
+        listLine("Preço: \(profile.currentPrice.currency)", style: style),
+        listLine("Market cap: \(formatCompactCurrency(profile.marketCap))", style: style),
+        listLine("TTM PE: \(ttmPE)", style: style),
+        listLine("Margem bruta: \(grossMargin)", style: style),
+        listLine("Margem líquida: \(netMargin)", style: style),
+        listLine("Crescimento receita TTM: \(ttmRevenueGrowth)", style: style),
+        listLine("Crescimento receita próximo ano: \(nextYearRevenueGrowth)", style: style),
         disclaimer(language)
       ]
     }
@@ -141,22 +141,22 @@ enum StockSharePayloadFormatter {
     switch language {
     case .english:
       lines = [
-        "Price targets for $\(symbolUppercased)",
-        "Current price: \(current > 0 ? current.currency : "n/a")",
-        "Bear: \(valuation.bearCase.low.currency) - \(valuation.bearCase.high.currency)",
-        "Base: \(valuation.baseCase.low.currency) - \(valuation.baseCase.high.currency)",
-        "Bull: \(valuation.bullCase.low.currency) - \(valuation.bullCase.high.currency)",
-        "Base midpoint implied return: \(impliedUpside)",
+        headline("Price targets for $\(symbolUppercased)", style: style),
+        listLine("Current price: \(current > 0 ? current.currency : "n/a")", style: style),
+        listLine("Bear: \(valuation.bearCase.low.currency) - \(valuation.bearCase.high.currency)", style: style),
+        listLine("Base: \(valuation.baseCase.low.currency) - \(valuation.baseCase.high.currency)", style: style),
+        listLine("Bull: \(valuation.bullCase.low.currency) - \(valuation.bullCase.high.currency)", style: style),
+        listLine("Base midpoint implied return: \(impliedUpside)", style: style),
         disclaimer(language)
       ]
     case .portuguesePortugal:
       lines = [
-        "Preços-alvo para $\(symbolUppercased)",
-        "Preço atual: \(current > 0 ? current.currency : "n/a")",
-        "Bear: \(valuation.bearCase.low.currency) - \(valuation.bearCase.high.currency)",
-        "Base: \(valuation.baseCase.low.currency) - \(valuation.baseCase.high.currency)",
-        "Bull: \(valuation.bullCase.low.currency) - \(valuation.bullCase.high.currency)",
-        "Retorno implícito no ponto médio base: \(impliedUpside)",
+        headline("Preços-alvo para $\(symbolUppercased)", style: style),
+        listLine("Preço atual: \(current > 0 ? current.currency : "n/a")", style: style),
+        listLine("Bear: \(valuation.bearCase.low.currency) - \(valuation.bearCase.high.currency)", style: style),
+        listLine("Base: \(valuation.baseCase.low.currency) - \(valuation.baseCase.high.currency)", style: style),
+        listLine("Bull: \(valuation.bullCase.low.currency) - \(valuation.bullCase.high.currency)", style: style),
+        listLine("Retorno implícito no ponto médio base: \(impliedUpside)", style: style),
         disclaimer(language)
       ]
     }
@@ -196,9 +196,17 @@ enum StockSharePayloadFormatter {
 
   private static func constrained(_ body: String, style: StockShareTextStyle) -> String {
     guard style == .x, body.count > 280 else { return body }
-    let reserve = "…\nNot investment advice."
+    let reserve = "...\nNot investment advice."
     let limit = max(0, 280 - reserve.count)
     return String(body.prefix(limit)).trimmingCharacters(in: .whitespacesAndNewlines) + reserve
+  }
+
+  private static func headline(_ text: String, style: StockShareTextStyle) -> String {
+    style == .discord ? "**\(text)**" : text
+  }
+
+  private static func listLine(_ text: String, style: StockShareTextStyle) -> String {
+    style == .discord ? "• \(text)" : text
   }
 
   private static func formatPercent(_ value: Double?) -> String {
@@ -305,13 +313,8 @@ struct StockChannelShareActions: View {
         "https://x.com/intent/tweet?text=\(percentEncoded(payload.body))",
         fallbackItems: [payload.body]
       )
-    case .stockTwits:
-      openPrefilledURL(
-        "https://stocktwits.com/message/new?body=\(percentEncoded(payload.body))",
-        fallbackItems: [payload.body]
-      )
     case .discord:
-      copyForDiscordAndOpen()
+      copyForDiscordAndOpen(payload.body)
     }
   }
 
@@ -334,7 +337,10 @@ struct StockChannelShareActions: View {
     }
   }
 
-  private func copyForDiscordAndOpen() {
+  private func copyForDiscordAndOpen(_ body: String) {
+#if canImport(UIKit)
+    UIPasteboard.general.string = body
+#endif
     showBanner("Opening Discord. Please paste your text there.", style: .success)
 
     guard let discordAppURL = URL(string: "discord://") else { return }

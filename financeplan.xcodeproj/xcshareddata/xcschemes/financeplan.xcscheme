@@ -51,6 +51,12 @@
             ReferencedContainer = "container:financeplan.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <CommandLineArguments>
+         <CommandLineArgument
+            argument = "NORVIQA_ENVIRONMENT"
+            isEnabled = "YES">
+         </CommandLineArgument>
+      </CommandLineArguments>
       <EnvironmentVariables>
          <EnvironmentVariable
             key = "POSTHOG_PROJECT_TOKEN"
@@ -60,6 +66,11 @@
          <EnvironmentVariable
             key = "POSTHOG_HOST"
             value = "https://us.i.posthog.com"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "NORVIQA_ENVIRONMENT"
+            value = "local"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>

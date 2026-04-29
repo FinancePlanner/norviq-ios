@@ -142,6 +142,15 @@ private enum PortfolioSegment: String, CaseIterable, Identifiable {
 
   var id: String { rawValue }
 
+  var isProOnly: Bool {
+    switch self {
+    case .allocation, .earnings, .news:
+      return true
+    case .holdings, .watchlist:
+      return false
+    }
+  }
+
   func title(language: AppLanguage) -> String {
     switch self {
     case .holdings:
@@ -738,6 +747,8 @@ private struct PortfolioRoot: View {
   @StateObject private var watchlistViewModel = WatchlistViewModel()
   @State private var selectedSegment: PortfolioSegment = .holdings
   @State private var isListManagerPresented = false
+  @State private var isPaywallPresented = false
+  @InjectedObservable(\Container.billingManager) private var billingManager
 
   private var appLanguage: AppLanguage {
     AppLanguage.from(appLanguageRawValue)
@@ -800,6 +811,9 @@ private struct PortfolioRoot: View {
       .task {
         await loadLists()
       }
+      .sheet(isPresented: $isPaywallPresented) {
+        PaywallView(billingManager: billingManager)
+      }
       .onChange(of: selectedSegment) { _, value in
         handleSegmentChange(value)
       }
@@ -810,7 +824,8 @@ private struct PortfolioRoot: View {
     GlassEffectContainer(spacing: 8) {
       Picker("Portfolio section", selection: $selectedSegment) {
         ForEach(PortfolioSegment.allCases) { segment in
-          Text(segment.title(language: appLanguage)).tag(segment)
+          let title = segment.title(language: appLanguage)
+          Text(!billingManager.isPro && segment.isProOnly ? "\(title) 🔒" : title).tag(segment)
         }
       }
       .pickerStyle(.segmented)
@@ -904,6 +919,13 @@ private struct PortfolioRoot: View {
   }
 
   private func handleSegmentChange(_ value: PortfolioSegment) {
+    if value.isProOnly && !billingManager.isPro {
+      // Revert selection and show paywall
+      selectedSegment = .holdings
+      isPaywallPresented = true
+      return
+    }
+
     switch value {
     case .holdings:
       Task { await portfolioViewModel.load(force: true) }

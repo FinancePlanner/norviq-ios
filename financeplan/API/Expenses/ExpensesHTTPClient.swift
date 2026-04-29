@@ -93,8 +93,11 @@ struct ExpensesHTTPClient {
         try await call(UpdateHouseholdPartnerEndpoint(payload: payload))
     }
 
-    func getExpenses(from: String? = nil, to: String? = nil) async throws -> [ExpenseResponse] {
-        try await call(GetExpensesEndpoint(from: from, to: to))
+    func getExpenses(from: String? = nil, to: String? = nil, cursor: String? = nil, limit: Int? = nil) async throws -> (items: [ExpenseResponse], nextCursor: String?) {
+        let endpoint = GetExpensesEndpoint(from: from, to: to, cursor: cursor, limit: limit)
+        let (items, httpResponse) = try await callWithHeaders(endpoint)
+        let nextCursor = httpResponse.value(forHTTPHeaderField: "X-Next-Cursor")
+        return (items, nextCursor)
     }
 
     func createExpense(request: ExpenseRequest) async throws -> ExpenseResponse {
@@ -164,6 +167,41 @@ struct ExpensesHTTPClient {
     }
 
     // MARK: - Core Logic
+
+    /// Variant of `call` that also returns the raw `HTTPURLResponse` for header inspection
+    /// (e.g. `X-Next-Cursor` for paginated endpoints).
+    private func callWithHeaders<E: Endpoint>(_ endpoint: E) async throws -> (E.Response, HTTPURLResponse) where E.Response: Codable {
+        let request = try makeURLRequest(for: endpoint)
+        logRequest(request, endpoint: endpoint)
+        logSnapshotRequestIfNeeded(request, endpointPath: endpoint.path)
+        logExpenseRequestIfNeeded(request, endpointPath: endpoint.path)
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw Error.invalidResponse
+        }
+
+        expensesHTTPLogger.debug(
+            "Expenses response [\(endpoint.path, privacy: .public)] status=\(httpResponse.statusCode, privacy: .public)"
+        )
+
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            let message = errorMessage(from: data)
+            if httpResponse.statusCode == 401 { throw Error.unauthorized(message) }
+            if let message, !message.isEmpty { throw Error.api(message) }
+            throw Error.invalidStatus(httpResponse.statusCode)
+        }
+
+        do {
+            return (try endpoint.decode(data), httpResponse)
+        } catch {
+            if let envelope = try? endpoint.decoder.decode(HTTPEnvelope<E.Response>.self, from: data) {
+                if let payload = envelope.data { return (payload, httpResponse) }
+                if let message = envelope.message, !message.isEmpty { throw Error.api(message) }
+            }
+            throw error
+        }
+    }
 
     private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
         let data = try await perform(endpoint)

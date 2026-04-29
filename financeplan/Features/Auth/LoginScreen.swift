@@ -8,8 +8,6 @@ struct LoginScreen: View {
   @Environment(\.colorScheme) private var colorScheme
   @StateObject private var viewModel: LoginViewModel
 
-  @State private var isEnvironmentPresented = false
-
   private var isMFAPresented: Binding<Bool> {
     Binding(
       get: { viewModel.pendingMFAChallenge != nil },
@@ -40,8 +38,6 @@ struct LoginScreen: View {
 
   var body: some View {
     ZStack {
-      MeshGradientBackground()
-
       authContent
 
       if let error = viewModel.error {
@@ -64,6 +60,9 @@ struct LoginScreen: View {
         .transition(.move(edge: .top).combined(with: .opacity))
       }
     }
+    .background {
+      MeshGradientBackground()
+    }
     .animation(.easeInOut(duration: 0.3), value: viewModel.isSignup)
     .sheet(isPresented: $viewModel.isForgotPasswordPresented) {
       forgotPasswordSheet
@@ -74,29 +73,15 @@ struct LoginScreen: View {
     .task(id: viewModel.infoMessage) {
       await autoDismissInfoMessage()
     }
-    .confirmationDialog(
-      "Switch from \(environment.current.title) to",
-      isPresented: $isEnvironmentPresented,
-      titleVisibility: .visible
-    ) {
-      ForEach(environment.allowedEnvironmentsWhen(isLoggedIn: false), id: \.title) { env in
-        Button(action: {
-          environment.change(to: env)
-        }) {
-          Text(env.title)
-        }
-        .disabled(env == environment.current)
-      }
-    }
   }
 
   @ViewBuilder
   private var authContent: some View {
     if viewModel.isSignup {
-      SignUpView(viewModel: viewModel, isEnvironmentPresented: $isEnvironmentPresented)
+      SignUpView(viewModel: viewModel)
         .transition(.opacity.combined(with: .move(edge: .trailing)))
     } else {
-      SignInView(viewModel: viewModel, isEnvironmentPresented: $isEnvironmentPresented)
+      SignInView(viewModel: viewModel)
         .transition(.opacity.combined(with: .move(edge: .leading)))
     }
   }

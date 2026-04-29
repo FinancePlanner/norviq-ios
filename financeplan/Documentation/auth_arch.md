@@ -121,7 +121,7 @@ Signup and forgot-password follow the same pipeline with their endpoint/DTO type
 - endpoint-oriented design
 - typed async request methods
 - centralized status-code and decoding handling
-- testable transport abstraction (`AuthURLSessionProtocol`)
+- testable transport abstraction (`HTTPClientSession`)
 
 ### Differences
 - Current design is auth-specific (`AuthHTTPClient`) rather than a reusable shared generic client.

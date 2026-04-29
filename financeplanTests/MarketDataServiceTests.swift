@@ -92,6 +92,57 @@ final class MarketDataServiceTests: XCTestCase {
     XCTAssertEqual(authSessionManager.refreshAccessTokenCalls, 0)
   }
 
+  func testFetchCompanyProfile_UsesCacheOnSubsequentCalls() async throws {
+    let session = SessionMock()
+    let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+    
+    // Create an isolated user defaults instance for this test
+    let defaults = UserDefaults(suiteName: "TestCompanyProfileCache")!
+    defaults.removePersistentDomain(forName: "TestCompanyProfileCache")
+    let profileCache = CompanyProfileCache(userDefaults: defaults)
+
+    let service = MarketDataHTTPService(
+      environmentManager: AppEnvironmentManager(),
+      session: session,
+      authSessionManager: authSessionManager,
+      profileCache: profileCache
+    )
+
+    let expected = CompanyProfileResponse(
+      country: "US",
+      currency: "USD",
+      estimateCurrency: "USD",
+      exchange: "NEW YORK STOCK EXCHANGE, INC.",
+      finnhubIndustry: "Technology",
+      ipo: "2021-06-10",
+      logo: "logo.png",
+      marketCapitalization: 4355.17,
+      name: "Zeta Global Holdings Corp",
+      phone: "18003464646",
+      shareOutstanding: 244.12,
+      ticker: "ZETA",
+      weburl: "https://investors.zetaglobal.com/"
+    )
+
+    var requestCount = 0
+    session.handler = { request in
+      requestCount += 1
+      let response = try XCTUnwrap(HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil))
+      return (try JSONEncoder().encode(expected), response)
+    }
+
+    // First call should hit the network
+    let response1 = try await service.fetchCompanyProfile(symbol: "zeta")
+    XCTAssertEqual(response1, expected)
+    XCTAssertEqual(requestCount, 1)
+
+    // Second call should return cached response instantly
+    let response2 = try await service.fetchCompanyProfile(symbol: "zeta")
+    XCTAssertEqual(response2, expected)
+    XCTAssertEqual(requestCount, 1, "The API should not have been hit a second time due to caching")
+  }
+
   func testFetchQuote_WhenUnauthorized_RefreshesAndRetriesWithNewToken() async throws {
     let session = SessionMock()
     let authSessionManager = AuthSessionManagerMock()

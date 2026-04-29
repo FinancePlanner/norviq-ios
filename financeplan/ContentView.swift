@@ -11,6 +11,7 @@ public struct ContentView: View {
 
   @EnvironmentObject private var sessionManager: SessionManager
   @InjectedObservable(\Container.billingManager) private var billingManager
+  @InjectedObservable(\Container.appEnvironment) private var environmentManager
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.scenePhase) private var scenePhase
   @State private var launchCompleted = false
@@ -135,29 +136,31 @@ public struct ContentView: View {
             }
           }
         } else {
-          if !hasSeenPreLoginPaywall {
-            PreLoginPaywallScreen(
-              onContinue: {
-                hasSeenPreLoginPaywall = true
-              }
-            )
-          } else if !hasSeenPrivacyScreen {
-            PrivacyWelcomeScreen(
-              onSignIn: {
-                hasSeenPrivacyScreen = true
-              },
-              onSignUp: {
-                startWithSignup = true
-                hasSeenPrivacyScreen = true
-              }
-            )
-          } else {
-            LoginScreen(
-              onAuthenticated: {
-                applyAuthenticatedState()
-              },
-              startWithSignup: startWithSignup
-            )
+          Group {
+            if !hasSeenPreLoginPaywall {
+              PreLoginPaywallScreen(
+                onContinue: {
+                  hasSeenPreLoginPaywall = true
+                }
+              )
+            } else if !hasSeenPrivacyScreen {
+              PrivacyWelcomeScreen(
+                onSignIn: {
+                  hasSeenPrivacyScreen = true
+                },
+                onSignUp: {
+                  startWithSignup = true
+                  hasSeenPrivacyScreen = true
+                }
+              )
+            } else {
+              LoginScreen(
+                onAuthenticated: {
+                  applyAuthenticatedState()
+                },
+                startWithSignup: startWithSignup
+              )
+            }
           }
         }
       } else {

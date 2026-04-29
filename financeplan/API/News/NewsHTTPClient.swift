@@ -3,43 +3,42 @@ import Foundation
 import OSLog
 import StockPlanShared
 
-// MARK: - Error Type
+// MARK: - Client
 
-@preconcurrency enum NewsError: LocalizedError, Equatable, @unchecked Sendable, HTTPClientError {
-enum Error: @preconcurrency LocalizedError, Equatable, @unchecked Sendable, HTTPClientError {
-case invalidResponse
-case invalidStatus(Int)
-case unauthorized(String?)
-case api(String)
+final class NewsHTTPClient: BaseHTTPClient<NewsHTTPClient.Error> {
 
-var errorDescription: String? {
-switch self {
-case .invalidResponse: return "Invalid server response."
-case let .invalidStatus(code): return "Request failed (\(code))."
-case let .unauthorized(message): return message ?? "Your session expired. Please sign in again."
-case let .api(message): return message
-}
-}
+    // MARK: - Error Type
 
+    enum Error: LocalizedError, Equatable, Sendable, HTTPClientError {
+        case invalidResponse
+        case invalidStatus(Int)
+        case unauthorized(String?)
+        case api(String)
 
-
-        var isUnauthorized: Bool {
-            if case .unauthorized = self { return true }
-            return false
+        nonisolated var errorDescription: String? {
+            switch self {
+            case .invalidResponse: return "Invalid server response."
+            case let .invalidStatus(code): return "Request failed (\(code))."
+            case let .unauthorized(message): return message ?? "Your session expired. Please sign in again."
+            case let .api(message): return message
+            }
         }
-            var statusCode: Int? {
+
+        nonisolated var statusCode: Int? {
             if case let .invalidStatus(code) = self { return code }
             return nil
         }
-}
-}
 
-// MARK: - Client
-
-final class NewsHTTPClient: BaseHTTPClient<NewsError> {
-
-    typealias Error = NewsError
-
+        nonisolated static func == (lhs: Error, rhs: Error) -> Bool {
+            switch (lhs, rhs) {
+            case (.invalidResponse, .invalidResponse): return true
+            case let (.invalidStatus(l), .invalidStatus(r)): return l == r
+            case let (.unauthorized(l), .unauthorized(r)): return l == r
+            case let (.api(l), .api(r)): return l == r
+            default: return false
+            }
+        }
+    }
 
     init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping () -> String? = { nil }) {
         super.init(

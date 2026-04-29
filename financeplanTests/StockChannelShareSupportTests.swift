@@ -91,6 +91,49 @@ final class StockChannelShareSupportTests: XCTestCase {
     XCTAssertTrue(payload.body.contains("Base midpoint implied return:"))
   }
 
+  func testShareDestinationsOnlyIncludeXAndDiscord() {
+    XCTAssertEqual(StockShareDestination.allCases, [.x, .discord])
+  }
+
+  func testDiscordPriceTargetsUseMarkdownFormatting() {
+    let payload = StockSharePayloadFormatter.priceTargets(
+      symbol: "tsla",
+      valuation: StockValuationRequest(
+        symbol: "TSLA",
+        bearCase: PriceRange(low: 120, high: 150),
+        baseCase: PriceRange(low: 180, high: 220),
+        bullCase: PriceRange(low: 260, high: 320),
+        rationale: "Operating leverage improves.",
+        targetDate: "2026-12-31"
+      ),
+      currentPrice: 200,
+      style: .discord
+    )
+
+    XCTAssertTrue(payload.body.contains("**Price targets for $TSLA**"))
+    XCTAssertTrue(payload.body.contains("• Bear:"))
+  }
+
+  func testXPriceTargetsAvoidDiscordMarkdownAndStayLimited() {
+    let payload = StockSharePayloadFormatter.priceTargets(
+      symbol: "tsla",
+      valuation: StockValuationRequest(
+        symbol: "TSLA",
+        bearCase: PriceRange(low: 120, high: 150),
+        baseCase: PriceRange(low: 180, high: 220),
+        bullCase: PriceRange(low: 260, high: 320),
+        rationale: "Operating leverage improves.",
+        targetDate: "2026-12-31"
+      ),
+      currentPrice: 200,
+      style: .x
+    )
+
+    XCTAssertLessThanOrEqual(payload.body.count, 280)
+    XCTAssertFalse(payload.body.contains("**"))
+    XCTAssertFalse(payload.body.contains("•"))
+  }
+
   func testXFormatterIsCharacterLimited() {
     let payload = StockSharePayloadFormatter.thesis(
       symbol: "aapl",
@@ -142,5 +185,61 @@ final class StockChannelShareSupportTests: XCTestCase {
 
     XCTAssertLessThanOrEqual(payload.body.count, 280)
     XCTAssertTrue(payload.body.contains("+6 more positions"))
+  }
+
+  func testAllocationImpactForNewPositionStartsAtZero() {
+    let impact = PortfolioAllocationImpactCalculator.preview(
+      holdings: [
+        .init(id: "aapl", symbol: "AAPL", shares: 1, buyPrice: 100)
+      ],
+      cashBalance: 0,
+      change: .newPosition(symbol: "MSFT", shares: 1, buyPrice: 100)
+    )
+
+    XCTAssertEqual(impact?.symbol, "MSFT")
+    XCTAssertEqual(impact?.beforePercentage, 0, accuracy: 0.001)
+    XCTAssertEqual(impact?.afterPercentage, 50, accuracy: 0.001)
+  }
+
+  func testAllocationImpactForIncreasedPositionRises() {
+    let impact = PortfolioAllocationImpactCalculator.preview(
+      holdings: [
+        .init(id: "aapl", symbol: "AAPL", shares: 1, buyPrice: 100),
+        .init(id: "msft", symbol: "MSFT", shares: 1, buyPrice: 100)
+      ],
+      cashBalance: 0,
+      change: .replacePosition(id: "aapl", symbol: "AAPL", shares: 2, buyPrice: 100)
+    )
+
+    XCTAssertEqual(impact?.beforePercentage, 50, accuracy: 0.001)
+    XCTAssertEqual(impact?.afterPercentage, 66.666, accuracy: 0.001)
+  }
+
+  func testAllocationImpactForPartialSellFallsAndAddsCash() {
+    let impact = PortfolioAllocationImpactCalculator.preview(
+      holdings: [
+        .init(id: "aapl", symbol: "AAPL", shares: 2, buyPrice: 100),
+        .init(id: "msft", symbol: "MSFT", shares: 1, buyPrice: 100)
+      ],
+      cashBalance: 0,
+      change: .sellPosition(id: "aapl", symbol: "AAPL", remainingShares: 1, buyPrice: 100, cashProceeds: 100)
+    )
+
+    XCTAssertEqual(impact?.beforePercentage, 66.666, accuracy: 0.001)
+    XCTAssertEqual(impact?.afterPercentage, 33.333, accuracy: 0.001)
+  }
+
+  func testAllocationImpactForFullSellBecomesZero() {
+    let impact = PortfolioAllocationImpactCalculator.preview(
+      holdings: [
+        .init(id: "aapl", symbol: "AAPL", shares: 1, buyPrice: 100),
+        .init(id: "msft", symbol: "MSFT", shares: 1, buyPrice: 100)
+      ],
+      cashBalance: 0,
+      change: .sellPosition(id: "aapl", symbol: "AAPL", remainingShares: 0, buyPrice: 100, cashProceeds: 100)
+    )
+
+    XCTAssertEqual(impact?.beforePercentage, 50, accuracy: 0.001)
+    XCTAssertEqual(impact?.afterPercentage, 0, accuracy: 0.001)
   }
 }

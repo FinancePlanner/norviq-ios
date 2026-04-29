@@ -1,3 +1,4 @@
+import Factory
 import Foundation
 import StockPlanShared
 
@@ -9,8 +10,8 @@ protocol NewsServicing: Sendable {
 }
 
 extension NewsServicing {
-    func getNews() async throws -> (items: [NewsItemResponse], nextCursor: String?) {
-        try await getNews(symbol: nil, cursor: nil, limit: nil)
+    func getNews(symbol: String? = nil, cursor: String? = nil, limit: Int? = nil) async throws -> (items: [NewsItemResponse], nextCursor: String?) {
+        try await getNews(symbol: symbol, cursor: cursor, limit: limit)
     }
 }
 
@@ -20,7 +21,7 @@ struct NewsHTTPService: NewsServicing {
     init(environmentManager: AppEnvironmentManager, authSessionManager: any AuthSessionManaging) {
         self.client = NewsHTTPClient(
             baseURL: environmentManager.current.apiBaseUrl,
-            session: .shared,
+            session: URLSession.shared,
             authTokenProvider: { Container.shared.authSessionStore().authToken }
         )
     }
