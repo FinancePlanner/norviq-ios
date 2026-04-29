@@ -197,8 +197,8 @@ final class StockChannelShareSupportTests: XCTestCase {
     )
 
     XCTAssertEqual(impact?.symbol, "MSFT")
-    XCTAssertEqual(impact?.beforePercentage, 0, accuracy: 0.001)
-    XCTAssertEqual(impact?.afterPercentage, 50, accuracy: 0.001)
+    XCTAssertEqual(impact?.beforePercentage ?? -1, 0, accuracy: 0.001)
+    XCTAssertEqual(impact?.afterPercentage ?? -1, 50, accuracy: 0.001)
   }
 
   func testAllocationImpactForIncreasedPositionRises() {
@@ -211,8 +211,8 @@ final class StockChannelShareSupportTests: XCTestCase {
       change: .replacePosition(id: "aapl", symbol: "AAPL", shares: 2, buyPrice: 100)
     )
 
-    XCTAssertEqual(impact?.beforePercentage, 50, accuracy: 0.001)
-    XCTAssertEqual(impact?.afterPercentage, 66.666, accuracy: 0.001)
+    XCTAssertEqual(impact?.beforePercentage ?? -1, 50, accuracy: 0.001)
+    XCTAssertEqual(impact?.afterPercentage ?? -1, 66.666, accuracy: 0.001)
   }
 
   func testAllocationImpactForPartialSellFallsAndAddsCash() {
@@ -225,8 +225,8 @@ final class StockChannelShareSupportTests: XCTestCase {
       change: .sellPosition(id: "aapl", symbol: "AAPL", remainingShares: 1, buyPrice: 100, cashProceeds: 100)
     )
 
-    XCTAssertEqual(impact?.beforePercentage, 66.666, accuracy: 0.001)
-    XCTAssertEqual(impact?.afterPercentage, 33.333, accuracy: 0.001)
+    XCTAssertEqual(impact?.beforePercentage ?? -1, 66.666, accuracy: 0.001)
+    XCTAssertEqual(impact?.afterPercentage ?? -1, 33.333, accuracy: 0.001)
   }
 
   func testAllocationImpactForFullSellBecomesZero() {
@@ -239,7 +239,7 @@ final class StockChannelShareSupportTests: XCTestCase {
       change: .sellPosition(id: "aapl", symbol: "AAPL", remainingShares: 0, buyPrice: 100, cashProceeds: 100)
     )
 
-    XCTAssertEqual(impact?.beforePercentage, 50, accuracy: 0.001)
-    XCTAssertEqual(impact?.afterPercentage, 0, accuracy: 0.001)
+    XCTAssertEqual(impact?.beforePercentage ?? -1, 50, accuracy: 0.001)
+    XCTAssertEqual(impact?.afterPercentage ?? -1, 0, accuracy: 0.001)
   }
 }

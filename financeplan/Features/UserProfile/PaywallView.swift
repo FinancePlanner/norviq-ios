@@ -366,12 +366,8 @@ struct PaywallView: View {
             Task { await billingManager.restorePurchases() }
           }
           Text("•").foregroundStyle(.tertiary)
-          Button("Terms") {
-            openURL(URL(string: "https://norviqa.com/terms")!)
-          }
-          Text("•").foregroundStyle(.tertiary)
           Button("Privacy Policy") {
-            openURL(URL(string: "https://norviqa.com/privacy")!)
+            openURL(URL(string: "https://your-privacy-policy-url.com")!)
           }
         }
         .typography(.nano)

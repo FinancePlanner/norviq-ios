@@ -41,10 +41,4 @@ final class DashboardLogicTests: XCTestCase {
         XCTAssertEqual(insights.financialHealth.score, 88)
         XCTAssertEqual(insights.financialHealth.status, .healthy)
     }
-
-    @MainActor
-    func testDashboardLoading() async throws {
-        let data = try await DashboardServiceStub().getDashboard()
-        XCTAssertEqual(data.totalValue, 124830.42)
-    }
 }

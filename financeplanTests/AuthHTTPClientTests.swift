@@ -5,6 +5,7 @@ import XCTest
 
 @MainActor
 final class AuthHTTPClientTests: XCTestCase {
+  @MainActor
   private final class SessionMock: HTTPClientSession {
     var handler: ((URLRequest) throws -> (Data, URLResponse))?
 

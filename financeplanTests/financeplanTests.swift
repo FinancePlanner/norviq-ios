@@ -178,19 +178,29 @@ private final class MockAuthSessionManager: AuthSessionManaging {
   func restoreSessionIfNeeded() async -> Bool { return false }
   func invalidateSession() async {}
   func onSessionConfigured() {}
+  func validAccessToken() async throws -> String? { return nil }
+  func refreshAccessToken() async throws -> String? { return nil }
 }
 
 private final class MockAuthSessionStore: AuthSessionStoring {
+  var authToken: String = ""
+  var refreshToken: String = ""
+  var authTokenExpiresAt: Date? = nil
+  var refreshTokenExpiresAt: Date? = nil
+  var loginIsSignup: Bool = false
+  var currentUserID = "mock-user-id"
+  var currentUsername = "mock-user"
   var isSetupComplete = false
   var hasPassedSecurity = false
   var hasAppLockEnabled = false
-  var currentUserID = "mock-user-id"
-  var currentUsername = "mock-user"
   var currentSecurityCodeHash: String? = nil
 
+  func store(authResponse: StockPlanShared.AuthResponse) {}
   func saveTokens(access: String, refresh: String) throws {}
   func loadTokens() throws -> (access: String, refresh: String)? { return nil }
   func clearTokens() throws {}
   func saveUserProfile(id: String, username: String) {}
   func clearSession() {}
+  func hasCompletedInitialStockImport(for userID: String) -> Bool { return false }
+  func markInitialStockImportCompleted(for userID: String) {}
 }

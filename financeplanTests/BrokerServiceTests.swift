@@ -5,7 +5,8 @@ import XCTest
 
 @MainActor
 final class BrokerServiceTests: XCTestCase {
-  private final class SessionMock: BrokerURLSessionProtocol {
+  @MainActor
+  private final class SessionMock: HTTPClientSession {
     var handler: ((URLRequest) throws -> (Data, URLResponse))?
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
@@ -125,6 +126,7 @@ final class BrokerServiceTests: XCTestCase {
 
     let response = try await client.previewCsvImport(
       provider: "ibkr",
+      portfolioListId: nil,
       csvData: Data("symbol,shares\nAAPL,10".utf8)
     )
 
@@ -167,6 +169,7 @@ final class BrokerServiceTests: XCTestCase {
 
     let response = try await client.commitCsvImport(
       provider: "ibkr",
+      portfolioListId: nil,
       csvData: Data("symbol,shares\nAAPL,10".utf8)
     )
 

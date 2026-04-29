@@ -21,14 +21,6 @@ struct AuthFooter: View {
           .font(.caption)
           .foregroundStyle(.secondary)
 
-        Button("Terms of Service") {}
-          .font(.caption)
-          .foregroundStyle(.secondary)
-
-        Button("Help Center") {}
-          .font(.caption)
-          .foregroundStyle(.secondary)
-
         if showEnvironmentButton {
           Button("Environment") {
             isEnvironmentPresented = true

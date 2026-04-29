@@ -85,7 +85,9 @@ final class FinanceplanUITests: XCTestCase {
     XCTAssertTrue(importAction.waitForExistence(timeout: 8))
     importAction.tap()
 
-    XCTAssertTrue(app.otherElements["portfolioCSVImportSheet"].waitForExistence(timeout: 8))
+    let importButton = app.buttons["portfolioCSVImport.commit"]
+    XCTAssertTrue(importButton.waitForExistence(timeout: 8))
+    XCTAssertFalse(importButton.isEnabled, "Import button should be disabled before selecting a file.")
   }
 
   @MainActor

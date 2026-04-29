@@ -1933,12 +1933,11 @@ private struct RecordSpendSheet: View {
 
             FormDivider()
 
-            Toggle(isOn: $isForeignCurrency) {
-              Label("Foreign currency", systemImage: "globe")
-                .typography(.small)
-            }
-            .tint(AppTheme.Colors.tint(for: colorScheme))
-            .padding(.vertical, 4)
+            FormToggle(
+              icon: "globe",
+              label: "Foreign currency",
+              isOn: $isForeignCurrency
+            )
 
             if let saveErrorMessage {
               FormDivider()
