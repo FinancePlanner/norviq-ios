@@ -6,6 +6,7 @@ struct EditStockPositionSheet: View {
   let stock: StockResponse
   let isSaving: Bool
   let isDeleting: Bool
+  let allocationImpactProvider: ((StockResponse) -> PortfolioAllocationImpact?)?
   let onCancel: () -> Void
   let onSave: @MainActor (StockResponse) async -> Bool
   let onDelete: @MainActor () async -> Bool
@@ -22,6 +23,7 @@ struct EditStockPositionSheet: View {
     stock: StockResponse,
     isSaving: Bool,
     isDeleting: Bool = false,
+    allocationImpactProvider: ((StockResponse) -> PortfolioAllocationImpact?)? = nil,
     onCancel: @escaping () -> Void,
     onSave: @escaping @MainActor (StockResponse) async -> Bool,
     onDelete: @escaping @MainActor () async -> Bool
@@ -29,6 +31,7 @@ struct EditStockPositionSheet: View {
     self.stock = stock
     self.isSaving = isSaving
     self.isDeleting = isDeleting
+    self.allocationImpactProvider = allocationImpactProvider
     self.onCancel = onCancel
     self.onSave = onSave
     self.onDelete = onDelete
@@ -83,6 +86,10 @@ struct EditStockPositionSheet: View {
             )
           }
 
+          if let impact = currentDraft.flatMap({ allocationImpactProvider?($0) }), impact.didChange {
+            AllocationImpactPreviewCard(impact: impact)
+          }
+
           FormCard(title: "Notes") {
             HStack(spacing: 12) {
               Image(systemName: "note.text")
@@ -121,19 +128,9 @@ struct EditStockPositionSheet: View {
         isLoading: isSaving,
         isDisabled: isSaving || isDeleting
       ) {
-        guard let shares = Double(sharesText), let buyPrice = Double(buyPriceText) else { return }
+        guard let currentDraft else { return }
         Task {
-          let didSave = await onSave(
-            StockResponse(
-              id: stock.id,
-              symbol: stock.symbol,
-              shares: shares,
-              buyPrice: buyPrice,
-              buyDate: stock.buyDate,
-              notes: notes.isEmpty ? nil : notes,
-              category: category
-            )
-          )
+          let didSave = await onSave(currentDraft)
           if didSave {
             successFeedbackTrigger += 1
           }
@@ -157,5 +154,18 @@ struct EditStockPositionSheet: View {
     } message: {
       Text("This removes the holding from your portfolio. You can add it again later.")
     }
+  }
+
+  private var currentDraft: StockResponse? {
+    guard let shares = Double(sharesText), let buyPrice = Double(buyPriceText) else { return nil }
+    return StockResponse(
+      id: stock.id,
+      symbol: stock.symbol,
+      shares: shares,
+      buyPrice: buyPrice,
+      buyDate: stock.buyDate,
+      notes: notes.isEmpty ? nil : notes,
+      category: category
+    )
   }
 }

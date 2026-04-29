@@ -22,6 +22,12 @@ final class ExpensesSyncManager {
     func pullLatestData(from service: any ExpensesServicing) async throws {
       guard !isSyncing else { return }
       guard !ownerUserId.isEmpty else { return }
+      // Cloud sync is Pro-only. Free users work with local SwiftData only and never push/pull.
+      // TODO (Future free-user sync): If you decide to allow free users to sync core expense data,
+      // remove this guard. You will also need to ungate the corresponding API endpoints (already done
+      // in BudgetController and ExpensesController for core CRUD). The `.householdPartner` and
+      // `.recurringTemplates` fetches in this method should remain Pro-gated \u2014 either skip those
+      // fetch calls for free users, or let the API 402 response be swallowed gracefully.
       guard Container.shared.billingManager().isPro else {
         logger.info("Sync skipped: user not Pro")
         return

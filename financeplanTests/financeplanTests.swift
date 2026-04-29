@@ -7,6 +7,7 @@
 
 import XCTest
 @testable import financeplan
+import StockPlanShared
 
 final class FinanceplanTests: XCTestCase {
 
@@ -33,4 +34,119 @@ final class FinanceplanTests: XCTestCase {
         }
     }
 
+}
+
+@MainActor
+final class BillingManagerTests: XCTestCase {
+  private var environmentManager: AppEnvironmentManager!
+  private var authSessionManager: MockAuthSessionManager!
+  private var sessionStore: MockAuthSessionStore!
+
+  override func setUp() {
+    super.setUp()
+    environmentManager = AppEnvironmentManager()
+    authSessionManager = MockAuthSessionManager()
+    sessionStore = MockAuthSessionStore()
+  }
+
+  func testIsProReturnsTrueWhenPremium() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+
+    sut.context = BillingContextResponse(
+      id: "ctx1",
+      userId: "user1",
+      isPremium: true,
+      entitlementLevel: "basic",
+      trialDaysRemaining: nil,
+      features: []
+    )
+
+    XCTAssertTrue(sut.isPro)
+  }
+
+  func testIsProReturnsTrueWhenEntitlementLevelIsPro() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+
+    sut.context = BillingContextResponse(
+      id: "ctx1",
+      userId: "user1",
+      isPremium: false,
+      entitlementLevel: "pro",
+      trialDaysRemaining: nil,
+      features: []
+    )
+
+    XCTAssertTrue(sut.isPro)
+  }
+
+  func testIsProReturnsFalseWhenNotPremiumAndNotProLevel() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+
+    sut.context = BillingContextResponse(
+      id: "ctx1",
+      userId: "user1",
+      isPremium: false,
+      entitlementLevel: "free",
+      trialDaysRemaining: nil,
+      features: []
+    )
+
+    // Clear user defaults cache to ensure it evaluates from context
+    UserDefaults.standard.removeObject(forKey: "billing.is_pro")
+
+    XCTAssertFalse(sut.isPro)
+  }
+
+  func testIsProFallsBackToUserDefaultsWhenContextIsNil() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+
+    sut.context = nil
+    UserDefaults.standard.set(true, forKey: "billing.is_pro")
+
+    XCTAssertTrue(sut.isPro)
+
+    UserDefaults.standard.set(false, forKey: "billing.is_pro")
+
+    XCTAssertFalse(sut.isPro)
+  }
+}
+
+// Minimal mocks for testing
+private final class MockAuthSessionManager: AuthSessionManaging {
+  func logout() async {}
+  func reset() {}
+  func restoreSessionIfNeeded() async -> Bool { return false }
+  func invalidateSession() async {}
+  func onSessionConfigured() {}
+}
+
+private final class MockAuthSessionStore: AuthSessionStoring {
+  var isSetupComplete = false
+  var hasPassedSecurity = false
+  var hasAppLockEnabled = false
+  var currentUserID = "mock-user-id"
+  var currentUsername = "mock-user"
+  var currentSecurityCodeHash: String? = nil
+
+  func saveTokens(access: String, refresh: String) throws {}
+  func loadTokens() throws -> (access: String, refresh: String)? { return nil }
+  func clearTokens() throws {}
+  func saveUserProfile(id: String, username: String) {}
+  func clearSession() {}
 }

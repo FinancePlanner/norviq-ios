@@ -5,6 +5,7 @@ import SwiftUI
 struct SellStockSheet: View {
   let stock: StockResponse
   let isSelling: Bool
+  let allocationImpactProvider: ((SellStockRequest) -> PortfolioAllocationImpact?)?
   let onCancel: () -> Void
   let onSell: @MainActor (SellStockRequest) async -> String?
 
@@ -19,11 +20,13 @@ struct SellStockSheet: View {
   init(
     stock: StockResponse,
     isSelling: Bool,
+    allocationImpactProvider: ((SellStockRequest) -> PortfolioAllocationImpact?)? = nil,
     onCancel: @escaping () -> Void,
     onSell: @escaping @MainActor (SellStockRequest) async -> String?
   ) {
     self.stock = stock
     self.isSelling = isSelling
+    self.allocationImpactProvider = allocationImpactProvider
     self.onCancel = onCancel
     self.onSell = onSell
     _sharesText = State(initialValue: "")
@@ -102,6 +105,10 @@ struct SellStockSheet: View {
             }
           }
 
+          if let request = currentRequest, let impact = allocationImpactProvider?(request), impact.didChange {
+            AllocationImpactPreviewCard(impact: impact)
+          }
+
           if let errorMessage {
             FormErrorBanner(message: errorMessage)
           }
@@ -129,31 +136,25 @@ struct SellStockSheet: View {
   }
 
   private func submit() async {
-    guard let sharesToSell = parsedShares, let sellPrice = parsedSellPrice else {
+    guard let request = currentRequest else {
       errorMessage = "Enter valid shares and sell price."
       return
     }
 
-    guard sharesToSell > 0 else {
+    guard request.sharesToSell > 0 else {
       errorMessage = "Shares to sell must be greater than 0."
       return
     }
 
-    guard sharesToSell <= stock.shares else {
+    guard request.sharesToSell <= stock.shares else {
       errorMessage = "Cannot sell more shares than currently owned."
       return
     }
 
-    guard sellPrice > 0 else {
+    guard request.sellPrice > 0 else {
       errorMessage = "Sell price must be greater than 0."
       return
     }
-
-    let request = SellStockRequest(
-      sharesToSell: sharesToSell,
-      sellPrice: sellPrice,
-      sellDate: sellDateText.trimmingCharacters(in: .whitespacesAndNewlines)
-    )
 
     if let error = await onSell(request) {
       errorMessage = error
@@ -173,5 +174,14 @@ struct SellStockSheet: View {
     formatter.timeZone = TimeZone(secondsFromGMT: 0)
     formatter.dateFormat = "yyyy-MM-dd"
     return formatter.string(from: Date())
+  }
+
+  private var currentRequest: SellStockRequest? {
+    guard let sharesToSell = parsedShares, let sellPrice = parsedSellPrice else { return nil }
+    return SellStockRequest(
+      sharesToSell: sharesToSell,
+      sellPrice: sellPrice,
+      sellDate: sellDateText.trimmingCharacters(in: .whitespacesAndNewlines)
+    )
   }
 }

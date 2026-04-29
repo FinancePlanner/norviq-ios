@@ -26,10 +26,12 @@ struct PreLoginPaywallScreen: View {
               .multilineTextAlignment(.center)
               .padding(.horizontal)
           }
+          
+          AuthFooter()
         }
         .padding(.horizontal, 24)
         .padding(.top, 40)
-        .padding(.bottom, 40)
+        .padding(.bottom, 16)
       }
     }
     .task {

@@ -2752,8 +2752,6 @@ private func shareStyle(for destination: StockShareDestination) -> StockShareTex
     switch destination {
     case .x:
         .x
-    case .stockTwits:
-        .stockTwits
     case .discord:
         .discord
     }

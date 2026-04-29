@@ -18,6 +18,7 @@ struct StockDetailScreen: View {
     @InjectedObservable(\Container.billingManager) private var billingManager
     @StateObject private var viewModel = StockDetailsViewModel()
     @State private var activeSheet: ActiveSheet?
+    @State private var isPaywallPresented = false
     @State private var selectedTab: StockDetailTab = .overview
     @State private var selectedScenario: StockProjectionScenarioKind = .base
     @State private var selectedStatementPeriod: StockFinancialStatementPeriod = .fy
@@ -52,6 +53,9 @@ struct StockDetailScreen: View {
         }
         .sheet(item: $activeSheet) { sheet in
             sheetContent(for: sheet)
+        }
+        .sheet(isPresented: $isPaywallPresented) {
+            PaywallView(billingManager: billingManager)
         }
         .task {
             await loadStockDetails()
@@ -231,6 +235,7 @@ struct StockDetailScreen: View {
                     stock: stock,
                     isSaving: viewModel.isSavingPosition,
                     isDeleting: viewModel.isDeletingPosition,
+                    allocationImpactProvider: viewModel.allocationImpact(for:),
                     onCancel: dismissActiveSheet,
                     onSave: saveEditedPosition,
                     onDelete: deletePosition
@@ -247,6 +252,7 @@ struct StockDetailScreen: View {
                 SellStockSheet(
                     stock: stock,
                     isSelling: viewModel.isSellingPosition,
+                    allocationImpactProvider: viewModel.allocationImpact(for:),
                     onCancel: dismissActiveSheet,
                     onSell: sellPosition
                 )
@@ -288,7 +294,7 @@ struct StockDetailScreen: View {
                 "source": "stock_valuation",
                 "symbol": initialSymbol,
             ])
-            //isPaywallPresented = true
+            isPaywallPresented = true
             return
         }
         activeSheet = .editValuation
@@ -304,7 +310,7 @@ struct StockDetailScreen: View {
 
     private func presentEditAnalysis() {
         guard billingManager.isPro else {
-            //isPaywallPresented = true
+            isPaywallPresented = true
             return
         }
         activeSheet = .editAnalysis
@@ -312,7 +318,7 @@ struct StockDetailScreen: View {
 
     private func presentEditDCF() {
         guard billingManager.isPro else {
-            //isPaywallPresented = true
+            isPaywallPresented = true
             return
         }
         activeSheet = .editDCF

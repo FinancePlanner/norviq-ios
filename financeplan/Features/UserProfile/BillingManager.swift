@@ -48,12 +48,27 @@ final class BillingManager {
   }
 
   var isPro: Bool {
-    context.map { $0.isPremium || $0.entitlementLevel == "pro" || $0.entitlementLevel.hasPrefix("pro_") }
+    if ProcessInfo.processInfo.arguments.contains("-ui_test_pro_user") {
+      return true
+    }
+    return context.map { $0.isPremium || $0.entitlementLevel == "pro" || $0.entitlementLevel.hasPrefix("pro_") }
       ?? UserDefaults.standard.bool(forKey: Keys.isPro)
   }
 
   var trialDaysRemaining: Int? {
     context?.trialDaysRemaining
+  }
+
+  /// Returns whether a named feature is available for the current user.
+  ///
+  /// Checks the `features` list from the server-provided `BillingContextResponse` first,
+  /// which allows individual features to be toggled server-side without an app update.
+  /// Falls back to `isPro` when no server-side descriptor is found for the given key.
+  ///
+  /// - Parameter key: The raw feature key (e.g. `"household_partner"`, `"year_overview"`).
+  /// - Returns: `true` if the feature is available, `false` otherwise.
+  func isFeatureAvailable(_ key: String) -> Bool {
+    context?.features.first(where: { $0.key == key })?.available ?? isPro
   }
 
   var annualPackage: Package? {

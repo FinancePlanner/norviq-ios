@@ -8,7 +8,7 @@ extension Container {
             let store = self.authSessionStore()
             return NewsHTTPClient(
                 baseURL: env.current.apiBaseUrl,
-                session: .shared,
+                session: URLSession.shared,
                 authTokenProvider: { store.authToken }
             )
         }

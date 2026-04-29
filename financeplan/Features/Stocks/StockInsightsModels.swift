@@ -36,8 +36,8 @@ enum StockDetailTab: String, CaseIterable, Identifiable {
 
     var isProOnly: Bool {
         switch self {
-        case .chart, .overview, .forecast, .news: return false
-        case .statements, .analysis, .compare, .earnings: return true
+        case .chart, .overview, .news: return false
+        case .forecast, .statements, .analysis, .compare, .earnings: return true
         }
     }
 }

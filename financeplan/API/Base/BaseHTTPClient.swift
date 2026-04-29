@@ -86,7 +86,7 @@ public class BaseHTTPClient<ErrorType: LocalizedError & Equatable & Sendable & H
                 let shouldRetry = shouldRetry(error: error, attempt: attempt, endpoint: endpoint)
                 if shouldRetry, attempt < maxRetries - 1 {
                     let delay = computeRetryDelay(attempt: attempt)
-                    logger.debug("Retrying \(endpoint.path) after \(Int(delay))ms (attempt \(attempt + 1)/\(maxRetries))")
+                    self.logger.debug("Retrying \(endpoint.path) after \(Int(delay))ms (attempt \(attempt + 1)/\(self.maxRetries))")
                     try? await Task.sleep(for: .milliseconds(Int(delay)))
                     attempt += 1
                     continue
@@ -129,7 +129,7 @@ public class BaseHTTPClient<ErrorType: LocalizedError & Equatable & Sendable & H
                 let shouldRetry = shouldRetry(error: error, attempt: attempt, endpoint: endpoint)
                 if shouldRetry, attempt < maxRetries - 1 {
                     let delay = computeRetryDelay(attempt: attempt)
-                    logger.debug("Retrying \(endpoint.path) with headers after \(Int(delay))ms")
+                    self.logger.debug("Retrying \(endpoint.path) with headers after \(Int(delay))ms")
                     try? await Task.sleep(for: .milliseconds(Int(delay)))
                     attempt += 1
                     continue

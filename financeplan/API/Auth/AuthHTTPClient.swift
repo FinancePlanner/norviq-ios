@@ -3,13 +3,6 @@ import Foundation
 import OSLog
 import StockPlanShared
 
-// MARK: - Session Protocol
-
-protocol AuthURLSessionProtocol: HTTPClientSession {
-    func data(for request: URLRequest) async throws -> (Data, URLResponse)
-}
-extension URLSession: AuthURLSessionProtocol {}
-
 // MARK: - Client
 
 final class AuthHTTPClient: BaseHTTPClient<AuthHTTPClient.Error> {
@@ -30,13 +23,13 @@ final class AuthHTTPClient: BaseHTTPClient<AuthHTTPClient.Error> {
     
     // MARK: - Error Type
     
-    enum Error: @preconcurrency LocalizedError, Equatable, @unchecked Sendable, HTTPClientError {
+    enum Error: LocalizedError, Equatable, Sendable, HTTPClientError {
         case invalidResponse
         case invalidStatus(Int)
         case unauthorized(String?)
         case api(String)
         
-        var errorDescription: String? {
+        nonisolated var errorDescription: String? {
             switch self {
             case .invalidResponse:
                 return "Invalid server response."
@@ -53,11 +46,22 @@ final class AuthHTTPClient: BaseHTTPClient<AuthHTTPClient.Error> {
             if case .unauthorized = self { return true }
             return false
         }
-            var statusCode: Int? {
+        
+        nonisolated var statusCode: Int? {
             if case let .invalidStatus(code) = self { return code }
             return nil
         }
-}
+
+        nonisolated static func == (lhs: Error, rhs: Error) -> Bool {
+            switch (lhs, rhs) {
+            case (.invalidResponse, .invalidResponse): return true
+            case let (.invalidStatus(l), .invalidStatus(r)): return l == r
+            case let (.unauthorized(l), .unauthorized(r)): return l == r
+            case let (.api(l), .api(r)): return l == r
+            default: return false
+            }
+        }
+    }
     
     // MARK: - Init
     
