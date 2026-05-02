@@ -168,7 +168,7 @@ struct PreLoginPaywallScreen: View {
           .stroke(selected ? AppTheme.Colors.tint(for: scheme) : .clear, lineWidth: 2)
       }
     }
-    .buttonStyle(.plain)
+.buttonStyle(.bordered)
   }
 
   private var actionButtons: some View {
@@ -190,7 +190,7 @@ struct PreLoginPaywallScreen: View {
             .frame(maxWidth: .infinity)
         }
       }
-      .buttonStyle(.glassProminent)
+      .buttonStyle(.borderedProminent)
       .disabled(billingManager.isPurchasing)
 
       Button(action: onContinue) {

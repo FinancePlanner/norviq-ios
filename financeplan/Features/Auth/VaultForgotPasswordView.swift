@@ -98,7 +98,7 @@ struct VaultForgotPasswordView: View {
                   }
                 }
               }
-              .buttonStyle(.glassProminent)
+              .buttonStyle(.borderedProminent)
               .tint(email.isEmpty ? AppTheme.Colors.disabled : AppTheme.Colors.tint(for: colorScheme))
               .disabled(email.isEmpty || isSubmitting)
 

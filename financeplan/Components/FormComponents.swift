@@ -293,7 +293,7 @@ struct FormActionBar: View {
           .padding(.horizontal, 24)
           .padding(.vertical, 12)
         }
-        .buttonStyle(.glassProminent)
+        .buttonStyle(.borderedProminent)
         .tint(isDisabled ? AppTheme.Colors.disabled : AppTheme.Colors.tint(for: colorScheme))
         .disabled(isDisabled || isLoading)
         .animation(.easeInOut(duration: 0.2), value: isDisabled)

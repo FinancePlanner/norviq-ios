@@ -438,7 +438,7 @@ private struct DashboardRoot: View {
               Image(systemName: "gearshape")
                 .font(.system(size: 16, weight: .semibold))
             }
-            .buttonStyle(.glass)
+            .buttonStyle(.bordered)
             .tint(AppTheme.Colors.tint(for: colorScheme))
             .accessibilityLabel(LocalizedStringKey("Open settings"))
           } else {
@@ -719,7 +719,7 @@ private struct QuickAddEntryButton: View {
           .frame(maxWidth: .infinity)
           .padding()
       }
-      .buttonStyle(.glassProminent)
+      .buttonStyle(.borderedProminent)
       .tint(AppTheme.Colors.tint(for: colorScheme))
     } else {
       Button(action: action) {
@@ -794,7 +794,7 @@ private struct PortfolioRoot: View {
             Image(systemName: "gearshape")
               .font(.system(size: 16, weight: .semibold))
           }
-          .buttonStyle(.glass)
+          .buttonStyle(.bordered)
           .tint(AppTheme.Colors.tint(for: colorScheme))
           .accessibilityLabel("Open settings")
         }
@@ -1075,7 +1075,7 @@ private struct PortfolioListSwitcherBar: View {
         Image(systemName: "slider.horizontal.3")
           .font(.subheadline.weight(.semibold))
       }
-      .buttonStyle(.glass)
+      .buttonStyle(.bordered)
       .controlSize(.small)
       .accessibilityLabel("Manage lists")
     } else {
@@ -1741,7 +1741,7 @@ private struct DashboardActionButton: View {
           actionContent
             .padding(.vertical, 12)
         }
-        .buttonStyle(.glass)
+        .buttonStyle(.bordered)
         .tint(tint)
         .opacity(isDisabled ? 0.6 : 1.0)
         .disabled(isDisabled)

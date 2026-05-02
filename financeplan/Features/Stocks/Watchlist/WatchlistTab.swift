@@ -72,7 +72,7 @@ struct WatchlistTab: View {
         } label: {
           Image(systemName: "plus")
         }
-        .buttonStyle(.glass)
+        .buttonStyle(.bordered)
         .accessibilityLabel("Add watchlist item")
       }
     }
@@ -154,7 +154,7 @@ struct WatchlistTab: View {
         Text("Save names you want to revisit so research and entry timing stay organized.")
       } actions: {
         Button("Add Watchlist Item", action: presentAddWatchlistSheet)
-          .buttonStyle(.glassProminent)
+          .buttonStyle(.borderedProminent)
       }
       .frame(maxWidth: .infinity)
       .padding(.vertical, 16)
@@ -201,7 +201,7 @@ private struct WatchlistRow: View {
         Spacer()
 
         Button("Add to portfolio", action: onAddToPortfolio)
-          .buttonStyle(.glassProminent)
+          .buttonStyle(.borderedProminent)
           .controlSize(.small)
       }
     }

@@ -85,7 +85,7 @@ struct HomeQuickExpenseSheet: View {
             Button("Cancel") {
               dismiss()
             }
-            .buttonStyle(.glass)
+            .buttonStyle(.bordered)
             .disabled(isSaving)
           } else {
             Button("Cancel") {
@@ -106,7 +106,7 @@ struct HomeQuickExpenseSheet: View {
                 Text("Save")
               }
             }
-            .buttonStyle(.glassProminent)
+            .buttonStyle(.borderedProminent)
             .disabled(!canSave)
           } else {
             Button {

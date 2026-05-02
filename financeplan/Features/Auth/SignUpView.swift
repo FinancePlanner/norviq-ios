@@ -130,7 +130,7 @@ struct SignUpView: View {
                     .stroke(AppTheme.Colors.separator(for: colorScheme), lineWidth: 1)
                 )
               }
-              .buttonStyle(.plain)
+.buttonStyle(.bordered)
             }
           }
           .padding(24)
@@ -152,7 +152,7 @@ struct SignUpView: View {
                 .font(.subheadline.weight(.bold))
             }
           }
-          .buttonStyle(.glassProminent)
+          .buttonStyle(.borderedProminent)
           .tint(AppTheme.Colors.tint(for: colorScheme))
           .disabled(viewModel.isSubmitting || !viewModel.canSubmitSignup)
 
@@ -172,7 +172,7 @@ struct SignUpView: View {
             .background(AppTheme.Colors.cardBackground(for: colorScheme))
             .clipShape(.rect(cornerRadius: 12))
           }
-          .buttonStyle(.plain)
+.buttonStyle(.bordered)
         }
         .padding(.horizontal, 24)
         .padding(.top, 32)

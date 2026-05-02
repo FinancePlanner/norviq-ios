@@ -83,7 +83,7 @@ struct SignInView: View {
                   .font(.subheadline.weight(.bold))
               }
             }
-            .buttonStyle(.glassProminent)
+            .buttonStyle(.borderedProminent)
             .tint(AppTheme.Colors.tint(for: colorScheme))
             .disabled(viewModel.isSubmitting)
             .padding(.top, 8)

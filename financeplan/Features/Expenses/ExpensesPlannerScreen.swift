@@ -141,7 +141,7 @@ struct ExpensesPlannerScreen: View {
         Image(systemName: "plus.circle")
           .font(.system(size: 16, weight: .semibold))
       }
-      .buttonStyle(.glass)
+.buttonStyle(.borderedProminent)
       .tint(AppTheme.Colors.tint(for: colorScheme))
       .accessibilityLabel("Record spend")
       .accessibilityIdentifier("expenses.recordSpendButton")
@@ -167,7 +167,7 @@ struct ExpensesPlannerScreen: View {
         Image(systemName: "ellipsis.circle")
           .font(.system(size: 16, weight: .semibold))
       }
-      .buttonStyle(.glass)
+.buttonStyle(.borderedProminent)
       .tint(AppTheme.Colors.tint(for: colorScheme))
       .accessibilityLabel("Expense actions")
 
@@ -175,7 +175,7 @@ struct ExpensesPlannerScreen: View {
         Image(systemName: "gearshape")
           .font(.system(size: 16, weight: .semibold))
       }
-      .buttonStyle(.glass)
+.buttonStyle(.borderedProminent)
       .tint(AppTheme.Colors.tint(for: colorScheme))
       .accessibilityLabel("Open settings")
     }
@@ -656,7 +656,7 @@ private struct ExpensesMonthDetailListCard: View {
                 in: RoundedRectangle(cornerRadius: 16, style: .continuous)
               )
             }
-            .buttonStyle(.plain)
+.buttonStyle(.bordered)
 
             if summary.id != summaries.last?.id {
               Divider()
@@ -965,7 +965,7 @@ private struct MonthlyPlanItemsCard: View {
                               .font(.subheadline.weight(.semibold))
                               .contentTransition(.numericText())
                           }
-                          .buttonStyle(.plain)
+.buttonStyle(.bordered)
                           
                           Menu {
                             Button("Edit", systemImage: "pencil") { onEdit(item) }
