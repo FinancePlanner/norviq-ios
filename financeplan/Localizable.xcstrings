@@ -21,7 +21,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "-- / sem dados"
+            "value": "--/sem dados"
           }
         }
       }
@@ -295,7 +295,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "%l ld"
+            "value": "%lld"
           }
         }
       }
@@ -313,7 +313,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "%l ld linha(s) analisada(s) • %l ld problema(s)"
+            "value": "%lld linha(s) analisada(s) • %lld problema(s)"
           }
         }
       }
@@ -331,7 +331,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "%l posição anterior %@ pronto"
+            "value": "%lld posição anterior %@ pronto"
           }
         }
       }
@@ -343,7 +343,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "%l posições anteriores"
+            "value": "%lld posições anteriores"
           }
         }
       }
@@ -355,7 +355,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "%l ld Posições"
+            "value": "%lld Posições"
           }
         }
       }
@@ -367,7 +367,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "%l posições ld · soma percentual de quanto cada participação contribui para o valor total."
+            "value": "%lld posições · soma percentual de quanto cada participação contribui para o valor total."
           }
         }
       }
@@ -377,7 +377,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "%l ld posições encontradas"
+            "value": "%lld posições encontradas"
           }
         }
       }
@@ -395,7 +395,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "%l ld/ %l ld para %@"
+            "value": "%lld/%lld para %@"
           }
         }
       }
@@ -407,7 +407,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "%l e %%"
+            "value": "%lld%%"
           }
         }
       }
@@ -425,7 +425,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "%l e %% | %@"
+            "value": "%lld%% | %@"
           }
         }
       }
@@ -437,7 +437,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "%l ld %% do orçamento"
+            "value": "%lld%% do orçamento"
           }
         }
       }
@@ -449,7 +449,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "%l ld %% do Orçamento"
+            "value": "%lld%% do Orçamento"
           }
         }
       }
@@ -461,7 +461,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "%l ld %% de renda"
+            "value": "%lld%% de renda"
           }
         }
       }
@@ -473,7 +473,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "%l ld %% restante"
+            "value": "%lld%% restante"
           }
         }
       }
@@ -485,7 +485,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "%l ld %% vs o mês passado"
+            "value": "%lld%% vs o mês passado"
           }
         }
       }
@@ -2678,7 +2678,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Despesa %l ld"
+            "value": "Despesa %lld"
           }
         }
       }
@@ -3290,7 +3290,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inserido: %l ld • Atualizado: %l ld • Erros: %l ld"
+            "value": "Inserido: %lld • Atualizado: %lld • Erros: %lld"
           }
         }
       }
@@ -3480,7 +3480,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Linha %l ld"
+            "value": "Linha %lld"
           }
         }
       }
@@ -4568,7 +4568,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "de %l ld"
+            "value": "de %lld"
           }
         }
       }
@@ -5020,7 +5020,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Posição %l ld"
+            "value": "Posição %lld"
           }
         }
       }
@@ -5216,7 +5216,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Progresso: %l ld %%"
+            "value": "Progresso: %lld%%"
           }
         }
       }
@@ -6358,7 +6358,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Partilhado • %l ld %% o seu"
+            "value": "Partilhado • %lld%% o seu"
           }
         }
       }
@@ -7215,7 +7215,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Teste: %l dia %@ restante"
+            "value": "Teste: %lld dia %@ restante"
           }
         }
       }
@@ -7225,7 +7225,7 @@
         "pt-PT": {
           "stringUnit": {
             "state": "translated",
-            "value": "Avaliação: %l ld dias restantes"
+            "value": "Avaliação: %lld dias restantes"
           }
         }
       }

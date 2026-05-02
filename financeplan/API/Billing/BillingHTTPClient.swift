@@ -64,6 +64,10 @@ struct BillingHTTPClient {
     try await call(RestoreBillingEndpoint())
   }
 
+  func redeemCoupon(code: String) async throws -> BillingCouponRedemptionResponse {
+    try await call(RedeemBillingCouponEndpoint(code: code))
+  }
+
   private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
     let data = try await perform(endpoint)
     do {

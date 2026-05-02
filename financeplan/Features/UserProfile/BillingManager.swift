@@ -9,6 +9,8 @@ import UIKit
 @MainActor
 @Observable
 final class BillingManager {
+  typealias BillingClientFactory = @MainActor (URL, String?) -> BillingHTTPClient
+
   private enum Keys {
     static let entitlementLevel = "billing.entitlement_level"
     static let isPro = "billing.is_pro"
@@ -28,11 +30,14 @@ final class BillingManager {
   var isLoading = false
   var isPurchasing = false
   var isRestoring = false
+  var isRedeemingCoupon = false
   var errorMessage: String?
+  var couponRedemptionMessage: String?
 
   private let environmentManager: AppEnvironmentManager
   private let authSessionManager: AuthSessionManaging
   private let sessionStore: AuthSessionStoring
+  private let billingClientFactory: BillingClientFactory
   private var configuredUserID: String?
   private var didConfigureRevenueCat = false
   private let uiTestBillingTier: String?
@@ -40,11 +45,18 @@ final class BillingManager {
   init(
     environmentManager: AppEnvironmentManager,
     authSessionManager: AuthSessionManaging,
-    sessionStore: AuthSessionStoring
+    sessionStore: AuthSessionStoring,
+    billingClientFactory: @escaping BillingClientFactory = { baseURL, token in
+      BillingHTTPClient(
+        baseURL: baseURL,
+        authTokenProvider: { token }
+      )
+    }
   ) {
     self.environmentManager = environmentManager
     self.authSessionManager = authSessionManager
     self.sessionStore = sessionStore
+    self.billingClientFactory = billingClientFactory
     self.uiTestBillingTier = Self.normalizedUITestBillingTier()
     loadCachedEntitlement()
     applyUITestBillingContextIfNeeded()
@@ -229,6 +241,44 @@ final class BillingManager {
     }
   }
 
+  func redeemCoupon(code: String) async {
+    let trimmedCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmedCode.isEmpty else {
+      errorMessage = "Enter a coupon code."
+      couponRedemptionMessage = nil
+      return
+    }
+
+    isRedeemingCoupon = true
+    errorMessage = nil
+    couponRedemptionMessage = nil
+    defer { isRedeemingCoupon = false }
+
+    do {
+      let response = try await billingClient(forceRefresh: false).redeemCoupon(code: trimmedCode)
+      if let context = response.billingContext {
+        apply(context)
+      }
+      couponRedemptionMessage = isPro
+        ? "Coupon redeemed. Pro is active."
+        : "Coupon redeemed."
+    } catch let error as BillingHTTPClient.Error where error.isUnauthorized {
+      do {
+        let response = try await billingClient(forceRefresh: true).redeemCoupon(code: trimmedCode)
+        if let context = response.billingContext {
+          apply(context)
+        }
+        couponRedemptionMessage = isPro
+          ? "Coupon redeemed. Pro is active."
+          : "Coupon redeemed."
+      } catch {
+        errorMessage = error.localizedDescription
+      }
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
+
   func manageSubscription() {
     guard let url = URL(string: "https://apps.apple.com/account/subscriptions") else { return }
     UIApplication.shared.open(url)
@@ -272,10 +322,7 @@ final class BillingManager {
     let token = forceRefresh
       ? try await authSessionManager.refreshAccessToken()
       : try await authSessionManager.validAccessToken()
-    return BillingHTTPClient(
-      baseURL: environmentManager.current.apiBaseUrl,
-      authTokenProvider: { token }
-    )
+    return billingClientFactory(environmentManager.current.apiBaseUrl, token)
   }
 
   private func apply(_ context: BillingContextResponse) {

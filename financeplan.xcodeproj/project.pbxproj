@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6040CE3A2FA64C4B0087919E /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = 6040CE392FA64C4B0087919E /* TelemetryDeck */; };
 		60543D5B2F48C8B400B67ADA /* AnyAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 60543D5A2F48C8B400B67ADA /* AnyAPI */; };
 		60543D5D2F48C8B400B67ADA /* Factory in Frameworks */ = {isa = PBXBuildFile; productRef = 60543D5C2F48C8B400B67ADA /* Factory */; };
 		60543D5F2F48C8B400B67ADA /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 60543D5E2F48C8B400B67ADA /* Kingfisher */; };
@@ -78,6 +79,7 @@
 				60543E122F48D90000B67ADA /* BetterCodable in Frameworks */,
 				60543E132F48D90000B67ADA /* Drops in Frameworks */,
 				60543D5D2F48C8B400B67ADA /* Factory in Frameworks */,
+				6040CE3A2FA64C4B0087919E /* TelemetryDeck in Frameworks */,
 				60543D5F2F48C8B400B67ADA /* Kingfisher in Frameworks */,
 				60543E152F48D90000B67ADA /* Lottie in Frameworks */,
 				60543E162F48D90000B67ADA /* MarkdownUI in Frameworks */,
@@ -181,6 +183,7 @@
 				70B001A23C5E11AA00F01001 /* StockPlanShared */,
 				605462E32F9B5F3C001A3351 /* AmplitudeUnified */,
 				A0B003A23C5E11AA00F03001 /* PostHog */,
+				6040CE392FA64C4B0087919E /* TelemetryDeck */,
 			);
 			productName = financeplan;
 			productReference = 60AFA7F82F3E406900FA3135 /* financeplan.app */;
@@ -282,6 +285,7 @@
 				602AAA712F8810D2004485ED /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
 				605462DB2F9B5B3C001A3351 /* XCRemoteSwiftPackageReference "AmplitudeUnified-Swift" */,
 				A0B003A33C5E11AA00F03001 /* XCRemoteSwiftPackageReference "posthog-ios" */,
+				6040CE382FA64C4B0087919E /* XCRemoteSwiftPackageReference "SwiftSDK" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 60AFA7F92F3E406900FA3135 /* Products */;
@@ -817,6 +821,14 @@
 				minimumVersion = 0.63.2;
 			};
 		};
+		6040CE382FA64C4B0087919E /* XCRemoteSwiftPackageReference "SwiftSDK" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/TelemetryDeck/SwiftSDK";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.12.0;
+			};
+		};
 		60543D592F48C8B400B67ADA /* XCRemoteSwiftPackageReference "AnyAPI" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/jpmcglone/AnyAPI";
@@ -940,6 +952,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		6040CE392FA64C4B0087919E /* TelemetryDeck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6040CE382FA64C4B0087919E /* XCRemoteSwiftPackageReference "SwiftSDK" */;
+			productName = TelemetryDeck;
+		};
 		60543D5A2F48C8B400B67ADA /* AnyAPI */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 60543D592F48C8B400B67ADA /* XCRemoteSwiftPackageReference "AnyAPI" */;

@@ -1413,6 +1413,95 @@ final class StockDetailsViewModelTests: XCTestCase {
     XCTAssertFalse(viewModel.isLoading)
   }
 
+  func testApplyDCFToValuation_WhenNoExistingValuation_CreatesExactRanges() async {
+    let service = StockServiceMock()
+    let viewModel = StockDetailsViewModel(service: service)
+    let expected = StockValuationRequest(
+      symbol: "AAPL",
+      bearCase: PriceRange(low: 91.25, high: 91.25),
+      baseCase: PriceRange(low: 123.5, high: 123.5),
+      bullCase: PriceRange(low: 166.75, high: 166.75),
+      rationale: nil,
+      targetDate: nil
+    )
+
+    viewModel.details = makeDetails(symbol: "AAPL")
+    service.createValuationResult = .success(expected)
+
+    let message = await viewModel.applyDCFToValuation(
+      bearPrice: 91.25,
+      basePrice: 123.5,
+      bullPrice: 166.75
+    )
+
+    XCTAssertNil(message)
+    XCTAssertEqual(service.createValuationCalls, 1)
+    XCTAssertEqual(service.updateValuationCalls, 0)
+    XCTAssertEqual(service.lastCreateValuationSymbol, "AAPL")
+    XCTAssertEqual(service.lastCreateValuationBearLow, 91.25)
+    XCTAssertEqual(service.lastCreateValuationBearHigh, 91.25)
+    XCTAssertEqual(service.lastCreateValuationBaseLow, 123.5)
+    XCTAssertEqual(service.lastCreateValuationBaseHigh, 123.5)
+    XCTAssertEqual(service.lastCreateValuationBullLow, 166.75)
+    XCTAssertEqual(service.lastCreateValuationBullHigh, 166.75)
+    XCTAssertNil(service.lastCreateValuationRationale)
+    XCTAssertNil(service.lastCreateValuationTargetDate)
+    XCTAssertEqual(viewModel.valuation, expected)
+  }
+
+  func testApplyDCFToValuation_WhenExistingValuation_UpdatesAndPreservesNotes() async {
+    let service = StockServiceMock()
+    let viewModel = StockDetailsViewModel(service: service)
+    let existing = makeValuation(symbol: "MSFT")
+    let expected = StockValuationRequest(
+      symbol: "MSFT",
+      bearCase: PriceRange(low: 210, high: 210),
+      baseCase: PriceRange(low: 250, high: 250),
+      bullCase: PriceRange(low: 305, high: 305),
+      rationale: existing.rationale,
+      targetDate: existing.targetDate
+    )
+
+    viewModel.details = makeDetails(symbol: "MSFT")
+    viewModel.valuation = existing
+    service.updateValuationResult = .success(expected)
+
+    let message = await viewModel.applyDCFToValuation(
+      bearPrice: 210,
+      basePrice: 250,
+      bullPrice: 305
+    )
+
+    XCTAssertNil(message)
+    XCTAssertEqual(service.createValuationCalls, 0)
+    XCTAssertEqual(service.updateValuationCalls, 1)
+    XCTAssertEqual(service.lastUpdateValuationSymbol, "MSFT")
+    XCTAssertEqual(service.lastUpdateValuationBearLow, 210)
+    XCTAssertEqual(service.lastUpdateValuationBearHigh, 210)
+    XCTAssertEqual(service.lastUpdateValuationBaseLow, 250)
+    XCTAssertEqual(service.lastUpdateValuationBaseHigh, 250)
+    XCTAssertEqual(service.lastUpdateValuationBullLow, 305)
+    XCTAssertEqual(service.lastUpdateValuationBullHigh, 305)
+    XCTAssertEqual(service.lastUpdateValuationRationale, "Stable margins with steady growth.")
+    XCTAssertEqual(service.lastUpdateValuationTargetDate, "2026-12-31")
+    XCTAssertEqual(viewModel.valuation, expected)
+  }
+
+  func testApplyDCFToValuation_WhenNoSymbolAvailable_ReturnsErrorWithoutCallingService() async {
+    let service = StockServiceMock()
+    let viewModel = StockDetailsViewModel(service: service)
+
+    let message = await viewModel.applyDCFToValuation(
+      bearPrice: 91.25,
+      basePrice: 123.5,
+      bullPrice: 166.75
+    )
+
+    XCTAssertEqual(message, "Unable to resolve the stock symbol for this valuation.")
+    XCTAssertEqual(service.createValuationCalls, 0)
+    XCTAssertEqual(service.updateValuationCalls, 0)
+  }
+
   func testSellPositionPartialSaleUpdatesDetailsAndKeepsScreenOpen() async {
     let service = StockServiceMock()
     let viewModel = StockDetailsViewModel(service: service)

@@ -249,6 +249,29 @@ final class StockDetailsViewModel: ObservableObject {
         }
     }
 
+    func applyDCFToValuation(
+        bearPrice: Double,
+        basePrice: Double,
+        bullPrice: Double
+    ) async -> String? {
+        guard bearPrice.isFinite, basePrice.isFinite, bullPrice.isFinite else {
+            return "DCF valuation values are unavailable."
+        }
+
+        let draft = StockValuationDraft(
+            bearLow: bearPrice,
+            bearHigh: bearPrice,
+            baseLow: basePrice,
+            baseHigh: basePrice,
+            bullLow: bullPrice,
+            bullHigh: bullPrice,
+            rationale: valuation?.rationale,
+            targetDate: valuation?.targetDate
+        )
+
+        return await saveValuation(draft)
+    }
+
     func load(stockId: String, force: Bool = false) async {
         if !force, loadedStockID == stockId, details != nil { return }
         guard !isLoading else { return }
