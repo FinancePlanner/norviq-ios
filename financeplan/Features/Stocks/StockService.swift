@@ -504,7 +504,7 @@ final class StockService: StockServicing {
     )
   }
 
-  private func performAuthenticated<T>(
+  private func performAuthenticated<T: Sendable>(
     _ operation: (StockHTTPClient) async throws -> T
   ) async throws -> T {
     do {
