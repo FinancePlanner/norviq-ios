@@ -295,7 +295,7 @@ final class StockServiceTests: XCTestCase {
 
     let response = try await service.fetchPortfolio()
 
-    XCTAssertEqual(response, expected)
+    XCTAssertEqual(response.items, expected)
   }
 
   func testFetchPortfolioSummary_UsesSummaryEndpointAndDecodesPayload() async throws {

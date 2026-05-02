@@ -177,6 +177,20 @@ struct PortfolioAllocationScreen: View {
                                 }
                             }
                         }
+
+                        let sharePayload = PortfolioAllocationShareFormatter.payload(
+                            slices: allocationSlices,
+                            totalValue: totalValue
+                        )
+                        GlassCard {
+                            StockChannelShareActions(payload: sharePayload) { destination in
+                                PortfolioAllocationShareFormatter.payload(
+                                    slices: allocationSlices,
+                                    totalValue: totalValue,
+                                    destination: destination
+                                )
+                            }
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
@@ -243,34 +257,35 @@ struct PortfolioAllocationScreen: View {
         ) -> StockSharePayload {
             let limit = destination == .x ? 4 : 8
             let topSlices = slices.prefix(limit)
+            let style: StockShareTextStyle = destination == .discord ? .discord : .native
             var lines: [String] = []
             let title: String
 
             switch language {
             case .english:
                 title = "Portfolio allocation"
-                lines.append(title)
+                lines.append(headline(title, style: style))
                 if let totalValue {
-                    lines.append("Total value: \(totalValue.currency)")
+                    lines.append(listLine("Total value: \(totalValue.currency)", style: style))
                 }
                 lines.append(contentsOf: topSlices.map {
-                    "\($0.symbol): \($0.percentage.formatted(.number.precision(.fractionLength(1))))% (\($0.value.currency))"
+                    listLine("\($0.symbol): \($0.percentage.formatted(.number.precision(.fractionLength(1))))% (\($0.value.currency))", style: style)
                 })
                 if slices.count > limit {
-                    lines.append("+\(slices.count - limit) more positions")
+                    lines.append(listLine("+\(slices.count - limit) more positions", style: style))
                 }
                 lines.append("Not investment advice.")
             case .portuguesePortugal:
                 title = "Alocação do portefólio"
-                lines.append(title)
+                lines.append(headline(title, style: style))
                 if let totalValue {
-                    lines.append("Valor total: \(totalValue.currency)")
+                    lines.append(listLine("Valor total: \(totalValue.currency)", style: style))
                 }
                 lines.append(contentsOf: topSlices.map {
-                    "\($0.symbol): \($0.percentage.formatted(.number.precision(.fractionLength(1))))% (\($0.value.currency))"
+                    listLine("\($0.symbol): \($0.percentage.formatted(.number.precision(.fractionLength(1))))% (\($0.value.currency))", style: style)
                 })
                 if slices.count > limit {
-                    lines.append("+\(slices.count - limit) posições")
+                    lines.append(listLine("+\(slices.count - limit) posições", style: style))
                 }
                 lines.append("Não é aconselhamento financeiro.")
             }
@@ -280,11 +295,18 @@ struct PortfolioAllocationScreen: View {
                 return StockSharePayload(title: title, body: String(body.prefix(277)) + "...")
             }
             return StockSharePayload(title: title, body: body)
-            }
+        }
 
-            }
+        private static func headline(_ text: String, style: StockShareTextStyle) -> String {
+            style == .discord ? "**\(text)**" : text
+        }
 
-            // MARK: - Skeleton View
+        private static func listLine(_ text: String, style: StockShareTextStyle) -> String {
+            style == .discord ? "• \(text)" : text
+        }
+    }
+
+    // MARK: - Skeleton View
     private struct PortfolioAllocationSkeletonView: View {
         var body: some View {
             ScrollView {

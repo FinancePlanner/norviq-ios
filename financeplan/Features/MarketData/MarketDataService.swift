@@ -33,21 +33,31 @@ final class MarketDataHTTPService: MarketDataServicing {
   private let environmentManager: AppEnvironmentManager
   private let session: MarketDataURLSessionProtocol
   private let authSessionManager: AuthSessionManaging
+  private let profileCache: CompanyProfileCaching
 
   init(
     environmentManager: AppEnvironmentManager,
     session: MarketDataURLSessionProtocol = URLSession.shared,
-    authSessionManager: AuthSessionManaging
+    authSessionManager: AuthSessionManaging,
+    profileCache: CompanyProfileCaching = CompanyProfileCache.shared
   ) {
     self.environmentManager = environmentManager
     self.session = session
     self.authSessionManager = authSessionManager
+    self.profileCache = profileCache
   }
 
   func fetchCompanyProfile(symbol: String) async throws -> CompanyProfileResponse {
-    try await performAuthenticated { client in
+    if let cached = profileCache.getProfile(for: symbol) {
+      return cached
+    }
+
+    let profile = try await performAuthenticated { client in
       try await client.fetchCompanyProfile(symbol: symbol)
     }
+
+    profileCache.saveProfile(profile, for: symbol)
+    return profile
   }
 
   func fetchQuote(symbol: String) async throws -> QuoteResponse {
@@ -293,6 +303,7 @@ struct MarketDataServiceStub: MarketDataServicing {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 
+
   func fetchPriceChartComparison(symbols _: [String], range _: String) async throws -> PriceChartComparisonResponse {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
@@ -300,4 +311,59 @@ struct MarketDataServiceStub: MarketDataServicing {
 
 enum MarketDataServiceDefaults {
   static let stub: any MarketDataServicing = MarketDataServiceStub()
+}
+
+// MARK: - Company Profile Caching
+
+protocol CompanyProfileCaching: Sendable {
+  func getProfile(for symbol: String) -> CompanyProfileResponse?
+  func saveProfile(_ profile: CompanyProfileResponse, for symbol: String)
+}
+
+final class CompanyProfileCache: CompanyProfileCaching {
+  static let shared = CompanyProfileCache()
+  
+  private let userDefaults: UserDefaults
+  private let keyPrefix = "CompanyProfileCache_"
+
+  init(userDefaults: UserDefaults = .standard) {
+    self.userDefaults = userDefaults
+  }
+
+  func getProfile(for symbol: String) -> CompanyProfileResponse? {
+    let key = cacheKey(for: symbol)
+    guard let data = userDefaults.data(forKey: key) else { return nil }
+    do {
+      return try JSONDecoder().decode(CompanyProfileResponse.self, from: data)
+    } catch {
+      // If decoding fails (e.g. model changed), clear the stale cache
+      userDefaults.removeObject(forKey: key)
+      return nil
+    }
+  }
+
+  func saveProfile(_ profile: CompanyProfileResponse, for symbol: String) {
+    let key = cacheKey(for: symbol)
+    do {
+      let data = try JSONEncoder().encode(profile)
+      userDefaults.set(data, forKey: key)
+    } catch {
+      print("Failed to encode CompanyProfileResponse for caching: \(error)")
+    }
+  }
+
+  func clearCache(for symbol: String) {
+    userDefaults.removeObject(forKey: cacheKey(for: symbol))
+  }
+
+  func clearAllCache() {
+    let keys = userDefaults.dictionaryRepresentation().keys.filter { $0.hasPrefix(keyPrefix) }
+    for key in keys {
+      userDefaults.removeObject(forKey: key)
+    }
+  }
+
+  private func cacheKey(for symbol: String) -> String {
+    "\(keyPrefix)\(symbol.uppercased())"
+  }
 }

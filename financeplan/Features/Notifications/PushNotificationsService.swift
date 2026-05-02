@@ -91,22 +91,4 @@ struct PushNotificationsService: PushNotificationsServicing {
   }
 }
 
-struct PushNotificationsServiceStub: PushNotificationsServicing {
-  func registerDevice(
-    deviceToken: String,
-    apnsEnvironment: PushAPNSEnvironment,
-    authorizationStatus: PushAuthorizationStatus
-  ) async throws -> PushDeviceRegistrationResponse {
-    PushDeviceRegistrationResponse(
-      id: UUID().uuidString,
-      deviceToken: deviceToken,
-      platform: .ios,
-      apnsEnvironment: apnsEnvironment,
-      authorizationStatus: authorizationStatus,
-      isActive: true,
-      lastSeenAt: ISO8601DateFormatter().string(from: Date())
-    )
-  }
 
-  func deactivateDevice(deviceToken _: String) async throws {}
-}

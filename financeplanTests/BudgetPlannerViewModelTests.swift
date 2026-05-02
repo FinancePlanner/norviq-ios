@@ -1104,8 +1104,8 @@ private final class BudgetPlannerServiceMock: ExpensesServicing {
 
   func deletePlanItem(itemId _: String) async throws {}
 
-  func getExpenses(from _: String?, to _: String?) async throws -> [ExpenseResponse] {
-    try expensesResult.get()
+  func getExpenses(from _: String?, to _: String?, cursor _: String? = nil, limit _: Int? = nil) async throws -> (items: [ExpenseResponse], nextCursor: String?) {
+    (try expensesResult.get(), nil)
   }
 
   func createExpense(request: ExpenseRequest) async throws -> ExpenseResponse {

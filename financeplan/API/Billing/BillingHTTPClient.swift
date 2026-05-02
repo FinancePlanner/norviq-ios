@@ -8,7 +8,7 @@ private let billingHTTPLogger = Logger(
   category: "BillingHTTPClient"
 )
 
-protocol BillingURLSessionProtocol {
+protocol BillingURLSessionProtocol: HTTPClientSession {
   func data(for request: URLRequest) async throws -> (Data, URLResponse)
 }
 
@@ -62,6 +62,10 @@ struct BillingHTTPClient {
 
   func restorePurchases() async throws -> BillingContextResponse {
     try await call(RestoreBillingEndpoint())
+  }
+
+  func redeemCoupon(code: String) async throws -> BillingCouponRedemptionResponse {
+    try await call(RedeemBillingCouponEndpoint(code: code))
   }
 
   private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {

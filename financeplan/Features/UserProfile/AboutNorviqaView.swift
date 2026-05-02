@@ -77,16 +77,9 @@ struct AboutNorviqaView: View {
 
             // Legal
             Section("Legal") {
-                if let privacyURL = URL(string: "https://norviqa.com/privacy") {
+                if let privacyURL = URL(string: "https://your-privacy-policy-url.com") {
                     Link(destination: privacyURL) {
                         Label("Privacy Policy", systemImage: "hand.raised.fill")
-                    }
-                    .foregroundStyle(.primary)
-                }
-
-                if let termsURL = URL(string: "https://norviqa.com/terms") {
-                    Link(destination: termsURL) {
-                        Label("Terms of Service", systemImage: "doc.text.fill")
                     }
                     .foregroundStyle(.primary)
                 }

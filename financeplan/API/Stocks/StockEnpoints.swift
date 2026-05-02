@@ -58,6 +58,8 @@ struct BulkCreateStocksEndpoint: Endpoint {
 struct GetStocksEndpoint: Endpoint {
   typealias Response = [StockResponse]
   let portfolioListId: String?
+  let cursor: String?
+  let limit: Int?
 
   var method: HTTPMethod { .get }
   var path: String { "/v1/stocks" }
@@ -68,6 +70,8 @@ struct GetStocksEndpoint: Endpoint {
     if let portfolioListId, !portfolioListId.isEmpty {
       params["portfolioListId"] = portfolioListId
     }
+    if let cursor { params["cursor"] = cursor }
+    if let limit { params["limit"] = String(limit) }
     return params
   }
 }

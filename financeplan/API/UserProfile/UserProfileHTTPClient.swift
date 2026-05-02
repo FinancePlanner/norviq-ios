@@ -15,7 +15,7 @@ private let userProfileHTTPLogger = Logger(
   category: "UserProfileHTTPClient"
 )
 
-protocol UserProfileURLSessionProtocol {
+protocol UserProfileURLSessionProtocol: HTTPClientSession {
   func data(for request: URLRequest) async throws -> (Data, URLResponse)
 }
 

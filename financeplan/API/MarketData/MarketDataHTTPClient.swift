@@ -3,7 +3,7 @@ import Foundation
 import OSLog
 import StockPlanShared
 
-protocol MarketDataURLSessionProtocol {
+protocol MarketDataURLSessionProtocol: HTTPClientSession {
   func data(for request: URLRequest) async throws -> (Data, URLResponse)
 }
 

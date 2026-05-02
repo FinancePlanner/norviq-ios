@@ -48,6 +48,7 @@ final class StockDetailsViewModel: ObservableObject {
     @Published var history: [StockHistory] = []
     @Published var news: [StockNews] = []
     @Published var valuation: StockValuationRequest?
+    @Published private(set) var portfolioSummary: PortfolioSummaryResponse?
     @Published private(set) var companyProfile: CompanyProfileResponse?
     @Published private(set) var marketSnapshot: StockMarketSnapshot?
     @Published private(set) var analystConsensus: StockAnalystConsensus?
@@ -110,6 +111,37 @@ final class StockDetailsViewModel: ObservableObject {
     var availablePeerProfiles: [StockComparisonProfile] {
         guard let primaryComparisonProfile else { return comparisonUniverse }
         return comparisonUniverse.filter { $0.symbol != primaryComparisonProfile.symbol }
+    }
+
+    func allocationImpact(for request: SellStockRequest) -> PortfolioAllocationImpact? {
+        guard let details, let portfolioSummary else { return nil }
+        let symbol = details.symbol.uppercased()
+
+        return PortfolioAllocationImpactCalculator.preview(
+            holdings: allocationHoldings(details: details, summary: portfolioSummary),
+            cashBalance: portfolioSummary.cashBalance,
+            change: .sellPosition(
+                id: details.id,
+                symbol: symbol,
+                remainingShares: max(0, details.shares - request.sharesToSell),
+                buyPrice: details.buyPrice,
+                cashProceeds: request.sharesToSell * request.sellPrice
+            )
+        )
+    }
+
+    func allocationImpact(for stock: StockResponse) -> PortfolioAllocationImpact? {
+        guard let details, let portfolioSummary else { return nil }
+        return PortfolioAllocationImpactCalculator.preview(
+            holdings: allocationHoldings(details: details, summary: portfolioSummary),
+            cashBalance: portfolioSummary.cashBalance,
+            change: .replacePosition(
+                id: stock.id,
+                symbol: stock.symbol,
+                shares: stock.shares,
+                buyPrice: stock.buyPrice
+            )
+        )
     }
 
     init() {
@@ -217,6 +249,29 @@ final class StockDetailsViewModel: ObservableObject {
         }
     }
 
+    func applyDCFToValuation(
+        bearPrice: Double,
+        basePrice: Double,
+        bullPrice: Double
+    ) async -> String? {
+        guard bearPrice.isFinite, basePrice.isFinite, bullPrice.isFinite else {
+            return "DCF valuation values are unavailable."
+        }
+
+        let draft = StockValuationDraft(
+            bearLow: bearPrice,
+            bearHigh: bearPrice,
+            baseLow: basePrice,
+            baseHigh: basePrice,
+            bullLow: bullPrice,
+            bullHigh: bullPrice,
+            rationale: valuation?.rationale,
+            targetDate: valuation?.targetDate
+        )
+
+        return await saveValuation(draft)
+    }
+
     func load(stockId: String, force: Bool = false) async {
         if !force, loadedStockID == stockId, details != nil { return }
         guard !isLoading else { return }
@@ -245,6 +300,7 @@ final class StockDetailsViewModel: ObservableObject {
             async let quoteTask = loadQuote(symbol: symbol)
             async let analystConsensusTask = loadAnalystConsensus(symbol: symbol)
             async let basicFinancialsTask = loadBasicFinancials(symbol: symbol)
+            async let portfolioSummaryTask = loadPortfolioSummary()
 
             self.details = details
             self.history = await historyTask
@@ -263,6 +319,7 @@ final class StockDetailsViewModel: ObservableObject {
             self.analystConsensus = analystConsensusResult.consensus
             self.analystConsensusMessage = analystConsensusResult.message
             self.basicFinancials = await basicFinancialsTask
+            self.portfolioSummary = await portfolioSummaryTask
             self.stockEarnings = []
             self.stockEarningsMessage = nil
             self.isEarningsLoading = false
@@ -280,6 +337,7 @@ final class StockDetailsViewModel: ObservableObject {
             history = []
             news = []
             valuation = nil
+            portfolioSummary = nil
             companyProfile = nil
             marketSnapshot = nil
             analystConsensus = nil
@@ -472,6 +530,7 @@ final class StockDetailsViewModel: ObservableObject {
         history = []
         news = []
         valuation = nil
+        portfolioSummary = nil
         companyProfile = nil
         marketSnapshot = nil
         analystConsensus = nil
@@ -519,6 +578,33 @@ final class StockDetailsViewModel: ObservableObject {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             return nil
         }
+    }
+
+    private func loadPortfolioSummary() async -> PortfolioSummaryResponse? {
+        do {
+            return try await service.fetchPortfolioSummary(portfolioListId: nil)
+        } catch {
+            Self.logger.error("Portfolio summary load failed for allocation impact: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
+    }
+
+    private func allocationHoldings(
+        details: StockDetails,
+        summary: PortfolioSummaryResponse
+    ) -> [PortfolioAllocationImpactCalculator.Holding] {
+        let symbol = details.symbol.uppercased()
+        return summary.allocation
+            .filter { $0.symbol.uppercased() != "CASH" }
+            .map { item in
+                let itemSymbol = item.symbol.uppercased()
+                return PortfolioAllocationImpactCalculator.Holding(
+                    id: itemSymbol == symbol ? details.id : itemSymbol,
+                    symbol: item.symbol,
+                    shares: itemSymbol == symbol ? details.shares : 1,
+                    buyPrice: itemSymbol == symbol ? details.buyPrice : item.value
+                )
+            }
     }
 
     private func loadInsights(symbol: String) async -> StockInsightsResponse? {

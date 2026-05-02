@@ -4,6 +4,7 @@ import PostHog
 import Sentry
 import SwiftUI
 import SwiftData
+import TelemetryDeck
 
 enum PostHogEnv: String {
   case projectToken = "POSTHOG_PROJECT_TOKEN"
@@ -37,6 +38,7 @@ struct NorviqaApp: App {
   }
 
   init() {
+    TelemetryDeck.initialize(config: .init(appID: "C2B05381-D641-4BE4-B418-5AE02A8DB85F"))
     AppLanguage.applyStoredLanguage()
     let config = PostHogConfig(apiKey: PostHogEnv.projectToken.value, host: PostHogEnv.host.value)
     config.captureApplicationLifecycleEvents = true

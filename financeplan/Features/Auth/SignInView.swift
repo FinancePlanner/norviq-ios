@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SignInView: View {
   @ObservedObject var viewModel: LoginViewModel
-  @Binding var isEnvironmentPresented: Bool
   @State private var isPasswordVisible = false
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -13,7 +12,7 @@ struct SignInView: View {
         // Header
         VStack(spacing: 16) {
           NorviqaLogo(size: 78)
-            .padding(.top, 60)
+            .padding(.top, 24)
 
           VStack(spacing: 8) {
             Text("Welcome back")
@@ -112,8 +111,7 @@ struct SignInView: View {
 
         Spacer(minLength: 40)
 
-        // Footer
-        AuthFooter(isEnvironmentPresented: $isEnvironmentPresented)
+        AuthFooter()
       }
     }
     .scrollDismissesKeyboard(.interactively)

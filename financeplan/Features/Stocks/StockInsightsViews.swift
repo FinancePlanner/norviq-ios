@@ -420,6 +420,7 @@ struct StockAnalysisTab: View {
     let valuation: StockValuationRequest?
     let onEditAnalysis: () -> Void
     let onEditDCF: () -> Void
+    let onApplyDCFToValuation: (_ bearPrice: Double, _ basePrice: Double, _ bullPrice: Double) -> Void
 
     private var resolvedProfile: StockComparisonProfile? {
         if let profile {
@@ -450,7 +451,12 @@ struct StockAnalysisTab: View {
                         intrinsicValue: intrinsicValue,
                         bearValue: resolvedProfile.dcfBearPrice,
                         bullValue: resolvedProfile.dcfBullPrice,
-                        onEdit: onEditDCF
+                        onEdit: onEditDCF,
+                        onApplyToValuation: dcfApplyAction(
+                            bearPrice: resolvedProfile.dcfBearPrice,
+                            basePrice: intrinsicValue,
+                            bullPrice: resolvedProfile.dcfBullPrice
+                        )
                     )
                 }
 
@@ -473,12 +479,24 @@ struct StockAnalysisTab: View {
             )
         }
     }
+
+    private func dcfApplyAction(
+        bearPrice: Double?,
+        basePrice: Double?,
+        bullPrice: Double?
+    ) -> (() -> Void)? {
+        guard let bearPrice, let basePrice, let bullPrice else { return nil }
+        return {
+            onApplyDCFToValuation(bearPrice, basePrice, bullPrice)
+        }
+    }
 }
 
 struct StockForecastTab: View {
     let profile: StockComparisonProfile?
     @Binding var selectedScenario: StockProjectionScenarioKind
     let onEditDCF: () -> Void
+    let onApplyDCFToValuation: (_ bearPrice: Double, _ basePrice: Double, _ bullPrice: Double) -> Void
 
     private var scenario: StockProjectionScenario? {
         profile?.projectionScenarios[selectedScenario]
@@ -509,7 +527,10 @@ struct StockForecastTab: View {
                         bearPrice: dcfBear,
                         bullPrice: dcfBull,
                         currentPrice: profile.currentPrice,
-                        onEdit: onEditDCF
+                        onEdit: onEditDCF,
+                        onApplyToValuation: {
+                            onApplyDCFToValuation(dcfBear, dcfBase, dcfBull)
+                        }
                     )
                 }
 
@@ -825,6 +846,7 @@ private struct FeaturedNewsHero: View {
                     Image(systemName: "newspaper.fill")
                         .font(.caption)
                         .foregroundStyle(.secondary.opacity(0.5))
+                        .accessibilityLabel("News icon")
                 }
 
                 Text(news.title)
@@ -853,6 +875,7 @@ private struct FeaturedNewsHero: View {
                             .typography(.nano, weight: .semibold)
                         Image(systemName: "arrow.up.right")
                             .typography(.nano, weight: .bold)
+                            .accessibilityLabel("Open external link")
                     }
                     .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
                 }
@@ -1210,6 +1233,7 @@ private struct FinancialStatementPeriodPicker: View {
 
 struct StockDetailTabBar: View {
     @Binding var selectedTab: StockDetailTab
+    var isPro: Bool = false
     @Environment(\.colorScheme) private var colorScheme
     @Namespace private var selectionNamespace
 
@@ -1223,18 +1247,25 @@ struct StockDetailTabBar: View {
                                 selectedTab = tab
                             }
                         } label: {
-                            Text(tab.title)
-                                .typography(.caption, weight: .semibold)
-                                .foregroundStyle(selectedTab == tab ? .primary : .secondary)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 10)
-                                .glassEffect(
-                                    selectedTab == tab
-                                        ? .regular.tint(AppTheme.Colors.tint(for: colorScheme)).interactive()
-                                        : .regular.interactive(),
-                                    in: .capsule
-                                )
-                                .glassEffectID(tab.id, in: selectionNamespace)
+                            HStack(spacing: 4) {
+                                Text(tab.title)
+                                    .typography(.caption, weight: .semibold)
+                                    .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                                if tab.isProOnly && !isPro {
+                                    Image(systemName: "lock.fill")
+                                        .font(.system(size: 9, weight: .semibold))
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .glassEffect(
+                                selectedTab == tab
+                                    ? .regular.tint(AppTheme.Colors.tint(for: colorScheme)).interactive()
+                                    : .regular.interactive(),
+                                in: .capsule
+                            )
+                            .glassEffectID(tab.id, in: selectionNamespace)
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("stockDetail.tab.\(tab.rawValue)")
@@ -2742,8 +2773,6 @@ private func shareStyle(for destination: StockShareDestination) -> StockShareTex
     switch destination {
     case .x:
         .x
-    case .stockTwits:
-        .stockTwits
     case .discord:
         .discord
     }
@@ -3029,6 +3058,7 @@ private struct SharePriceIntrinsicValueCard: View {
     let bearValue: Double?
     let bullValue: Double?
     var onEdit: (() -> Void)? = nil
+    var onApplyToValuation: (() -> Void)? = nil
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -3080,13 +3110,26 @@ private struct SharePriceIntrinsicValueCard: View {
                     
                     Spacer()
                     
-                    if let onEdit {
-                        Button(action: onEdit) {
-                            Text("Edit")
-                                .typography(.caption, weight: .semibold)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.secondary.opacity(0.12), in: Capsule())
+                    HStack(spacing: 8) {
+                        if let onApplyToValuation {
+                            Button(action: onApplyToValuation) {
+                                Text("Apply")
+                                    .typography(.caption, weight: .semibold)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.secondary.opacity(0.12), in: Capsule())
+                            }
+                            .accessibilityLabel("Apply DCF values to valuation")
+                        }
+
+                        if let onEdit {
+                            Button(action: onEdit) {
+                                Text("Edit")
+                                    .typography(.caption, weight: .semibold)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.secondary.opacity(0.12), in: Capsule())
+                            }
                         }
                     }
                 }
@@ -3525,6 +3568,7 @@ struct DCFValuationCard: View {
     let bullPrice: Double
     let currentPrice: Double
     var onEdit: (() -> Void)? = nil
+    var onApplyToValuation: (() -> Void)? = nil
 
     var body: some View {
         GlassCard {
@@ -3541,13 +3585,26 @@ struct DCFValuationCard: View {
                     
                     Spacer()
                     
-                    if let onEdit {
-                        Button(action: onEdit) {
-                            Text("Edit")
-                                .typography(.caption, weight: .semibold)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.secondary.opacity(0.12), in: Capsule())
+                    HStack(spacing: 8) {
+                        if let onApplyToValuation {
+                            Button(action: onApplyToValuation) {
+                                Text("Apply")
+                                    .typography(.caption, weight: .semibold)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.secondary.opacity(0.12), in: Capsule())
+                            }
+                            .accessibilityLabel("Apply DCF values to valuation")
+                        }
+
+                        if let onEdit {
+                            Button(action: onEdit) {
+                                Text("Edit")
+                                    .typography(.caption, weight: .semibold)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.secondary.opacity(0.12), in: Capsule())
+                            }
                         }
                     }
                 }

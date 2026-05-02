@@ -9,6 +9,7 @@ import Combine
 import Factory
 import Foundation
 
+@MainActor
 public final class UserProfileViewModel: ObservableObject {
     @Published public private(set) var profile: UserProfile?
     @Published public private(set) var isLoading: Bool = false

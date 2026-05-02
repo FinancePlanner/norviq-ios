@@ -1,7 +1,7 @@
 import Foundation
 import StockPlanShared
 
-protocol PushNotificationsURLSessionProtocol {
+protocol PushNotificationsURLSessionProtocol: HTTPClientSession {
   func data(for request: URLRequest) async throws -> (Data, URLResponse)
 }
 
