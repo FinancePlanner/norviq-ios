@@ -18,7 +18,7 @@ public protocol HTTPClientError: Error, Sendable {
 ///
 /// Subclasses specify their own `Error` type conforming to `LocalizedError & Equatable & Sendable`
 /// and override factory methods to produce errors. The base class handles the rest.
-public class BaseHTTPClient<ErrorType: LocalizedError & Equatable & Sendable & HTTPClientError>: Sendable {
+public class BaseHTTPClient<ErrorType: LocalizedError & Equatable & Sendable & HTTPClientError>: @unchecked Sendable {
     
     // MARK: - Stored Properties
     

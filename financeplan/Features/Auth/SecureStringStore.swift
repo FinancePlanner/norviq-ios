@@ -21,20 +21,20 @@ enum SecureStoreError: LocalizedError, Equatable {
   }
 }
 
-protocol SecureStringStoring {
-  func string(for key: String) throws -> String?
-  func setString(_ value: String, for key: String) throws
-  func removeValue(for key: String) throws
+protocol SecureStringStoring: Sendable {
+  nonisolated func string(for key: String) throws -> String?
+  nonisolated func setString(_ value: String, for key: String) throws
+  nonisolated func removeValue(for key: String) throws
 }
 
-final class KeychainStringStore: SecureStringStoring {
+final class KeychainStringStore: SecureStringStoring, Sendable {
   private let service: String
 
   init(service: String) {
     self.service = service
   }
 
-  func string(for key: String) throws -> String? {
+  nonisolated func string(for key: String) throws -> String? {
     let query: [CFString: Any] = [
       kSecClass: kSecClassGenericPassword,
       kSecAttrService: service,
@@ -60,7 +60,7 @@ final class KeychainStringStore: SecureStringStoring {
     return value
   }
 
-  func setString(_ value: String, for key: String) throws {
+  nonisolated func setString(_ value: String, for key: String) throws {
     let data = Data(value.utf8)
     let query: [CFString: Any] = [
       kSecClass: kSecClassGenericPassword,
@@ -91,7 +91,7 @@ final class KeychainStringStore: SecureStringStoring {
     }
   }
 
-  func removeValue(for key: String) throws {
+  nonisolated func removeValue(for key: String) throws {
     let query: [CFString: Any] = [
       kSecClass: kSecClassGenericPassword,
       kSecAttrService: service,

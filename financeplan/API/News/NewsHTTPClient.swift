@@ -5,7 +5,7 @@ import StockPlanShared
 
 // MARK: - Client
 
-final class NewsHTTPClient: BaseHTTPClient<NewsHTTPClient.Error> {
+final class NewsHTTPClient: BaseHTTPClient<NewsHTTPClient.Error>, @unchecked Sendable {
 
     // MARK: - Error Type
 

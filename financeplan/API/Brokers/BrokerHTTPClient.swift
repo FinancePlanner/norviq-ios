@@ -5,7 +5,7 @@ import OSLog
 
 // MARK: - Client
 
-final class BrokerHTTPClient: BaseHTTPClient<BrokerHTTPClient.Error> {
+final class BrokerHTTPClient: BaseHTTPClient<BrokerHTTPClient.Error>, @unchecked Sendable {
   
   // MARK: - Error Type
   

@@ -5,7 +5,7 @@ import StockPlanShared
 
 // MARK: - Client
 
-final class AuthHTTPClient: BaseHTTPClient<AuthHTTPClient.Error> {
+final class AuthHTTPClient: BaseHTTPClient<AuthHTTPClient.Error>, @unchecked Sendable {
     
     // MARK: - Static Constants
     

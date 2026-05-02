@@ -3,7 +3,7 @@ import OSLog
 import UIKit
 import UserNotifications
 
-final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, @preconcurrency UNUserNotificationCenterDelegate {
   private let logger = Logger(
     subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
     category: "PushNotificationsUX"
