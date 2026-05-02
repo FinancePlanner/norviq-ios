@@ -39,6 +39,16 @@ struct NorviqaApp: App {
 
   init() {
     TelemetryDeck.initialize(config: .init(appID: "C2B05381-D641-4BE4-B418-5AE02A8DB85F"))
+    
+    // Initialize Sentry
+    if let dsn = Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String {
+      SentrySDK.start { options in
+        options.dsn = dsn
+        options.enableAppHangTracking = true
+        options.enableCaptureFailedRequests = true
+      }
+    }
+
     AppLanguage.applyStoredLanguage()
     let config = PostHogConfig(apiKey: PostHogEnv.projectToken.value, host: PostHogEnv.host.value)
     config.captureApplicationLifecycleEvents = true
