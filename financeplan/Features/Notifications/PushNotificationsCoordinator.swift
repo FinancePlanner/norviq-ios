@@ -5,8 +5,8 @@ import StockPlanShared
 import UIKit
 import UserNotifications
 
-struct PushNotificationRoute: Equatable {
-  enum Kind: String, Equatable {
+struct PushNotificationRoute: Equatable, Sendable {
+  enum Kind: String, Equatable, Sendable {
     case targetHit = "target_hit"
     case openPortfolio = "open_portfolio"
   }
@@ -19,7 +19,7 @@ struct PushNotificationRoute: Equatable {
 }
 
 enum PushNotificationPayloadParser {
-  static func parse(userInfo: [AnyHashable: Any]) -> PushNotificationRoute? {
+  nonisolated static func parse(userInfo: [AnyHashable: Any]) -> PushNotificationRoute? {
     let root = normalizeDictionary(userInfo)
     let payload = (root["payload"] as? [String: Any]) ?? root
 
@@ -44,14 +44,14 @@ enum PushNotificationPayloadParser {
     )
   }
 
-  private static func normalizeDictionary(_ dictionary: [AnyHashable: Any]) -> [String: Any] {
+  nonisolated private static func normalizeDictionary(_ dictionary: [AnyHashable: Any]) -> [String: Any] {
     Dictionary(uniqueKeysWithValues: dictionary.compactMap { key, value in
       guard let key = key as? String else { return nil }
       return (key, value)
     })
   }
 
-  private static func stringValue(for keys: [String], in dictionary: [String: Any]) -> String? {
+  nonisolated private static func stringValue(for keys: [String], in dictionary: [String: Any]) -> String? {
     for key in keys {
       if let string = dictionary[key] as? String {
         return string
@@ -60,7 +60,7 @@ enum PushNotificationPayloadParser {
     return nil
   }
 
-  private static func normalize(_ value: String?) -> String? {
+  nonisolated private static func normalize(_ value: String?) -> String? {
     guard let value else { return nil }
     let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
     return trimmed.isEmpty ? nil : trimmed
@@ -228,6 +228,13 @@ final class PushNotificationsCoordinator: ObservableObject {
       return
     }
 
+    handleIncomingRoute(parsedRoute, userAction: userAction)
+  }
+
+  func handleIncomingRoute(
+    _ parsedRoute: PushNotificationRoute,
+    userAction: PushNotificationUserAction = .openStock
+  ) {
     let route: PushNotificationRoute
     switch userAction {
     case .openStock:

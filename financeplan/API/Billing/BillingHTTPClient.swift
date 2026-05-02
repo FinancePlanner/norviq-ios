@@ -3,25 +3,16 @@ import Foundation
 import OSLog
 import StockPlanShared
 
-private let billingHTTPLogger = Logger(
-  subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
-  category: "BillingHTTPClient"
-)
+// MARK: - Client
 
-protocol BillingURLSessionProtocol: HTTPClientSession {
-  func data(for request: URLRequest) async throws -> (Data, URLResponse)
-}
-
-extension URLSession: BillingURLSessionProtocol {}
-
-struct BillingHTTPClient {
-  enum Error: LocalizedError, Equatable {
+struct BillingHTTPClient: Sendable {
+  enum Error: HTTPClientError {
     case invalidResponse
     case invalidStatus(Int)
     case unauthorized(String?)
     case api(String)
 
-    var errorDescription: String? {
+    nonisolated var errorDescription: String? {
       switch self {
       case .invalidResponse:
         return "Invalid server response."
@@ -40,105 +31,53 @@ struct BillingHTTPClient {
       }
       return false
     }
+
+    nonisolated var statusCode: Int? {
+        if case let .invalidStatus(code) = self { return code }
+        return nil
+    }
+
+    nonisolated static func == (lhs: Error, rhs: Error) -> Bool {
+        switch (lhs, rhs) {
+        case (.invalidResponse, .invalidResponse): return true
+        case let (.invalidStatus(l), .invalidStatus(r)): return l == r
+        case let (.unauthorized(l), .unauthorized(r)): return l == r
+        case let (.api(l), .api(r)): return l == r
+        default: return false
+        }
+    }
+
+    static func makeInvalidResponse() -> Error { .invalidResponse }
+    static func makeInvalidStatus(_ code: Int) -> Error { .invalidStatus(code) }
+    static func makeUnauthorized(_ message: String?) -> Error { .unauthorized(message) }
+    static func makeAPI(_ message: String) -> Error { .api(message) }
   }
 
-  let baseURL: URL
-  let session: BillingURLSessionProtocol
-  let authTokenProvider: () -> String?
+  private let client: BaseHTTPClient
 
   init(
     baseURL: URL,
-    session: BillingURLSessionProtocol = URLSession.shared,
-    authTokenProvider: @escaping () -> String? = { nil }
+    session: any HTTPClientSession = URLSession.shared,
+    authTokenProvider: @escaping @Sendable () -> String? = { nil }
   ) {
-    self.baseURL = baseURL
-    self.session = session
-    self.authTokenProvider = authTokenProvider
+    self.client = BaseHTTPClient(
+        baseURL: baseURL,
+        session: session,
+        authTokenProvider: authTokenProvider,
+        logger: Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "BillingHTTPClient"),
+        decoder: .stockPlanShared
+    )
   }
 
   func fetchContext() async throws -> BillingContextResponse {
-    try await call(GetBillingContextEndpoint())
+    try await client.call(GetBillingContextEndpoint(), errorType: Error.self)
   }
 
   func restorePurchases() async throws -> BillingContextResponse {
-    try await call(RestoreBillingEndpoint())
+    try await client.call(RestoreBillingEndpoint(), errorType: Error.self)
   }
 
   func redeemCoupon(code: String) async throws -> BillingCouponRedemptionResponse {
-    try await call(RedeemBillingCouponEndpoint(code: code))
+    try await client.call(RedeemBillingCouponEndpoint(code: code), errorType: Error.self)
   }
-
-  private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
-    let data = try await perform(endpoint)
-    do {
-      return try endpoint.decode(data)
-    } catch {
-      if let envelope = try? endpoint.decoder.decode(BillingHTTPEnvelope<E.Response>.self, from: data) {
-        if let payload = envelope.data {
-          return payload
-        }
-        if let message = envelope.message, !message.isEmpty {
-          throw Error.api(message)
-        }
-      }
-      throw error
-    }
-  }
-
-  private func perform<E: Endpoint>(_ endpoint: E) async throws -> Data {
-    let request = try makeURLRequest(for: endpoint)
-    let (data, response) = try await session.data(for: request)
-
-    guard let httpResponse = response as? HTTPURLResponse else {
-      throw Error.invalidResponse
-    }
-
-    billingHTTPLogger.debug(
-      "Billing response [\(endpoint.path, privacy: .public)] status=\(httpResponse.statusCode, privacy: .public)"
-    )
-
-    guard (200 ..< 300).contains(httpResponse.statusCode) else {
-      let message = APIErrorDecoding.message(from: data)
-      if httpResponse.statusCode == 401 {
-        throw Error.unauthorized(message)
-      }
-      if let message, !message.isEmpty {
-        throw Error.api(message)
-      }
-      throw Error.invalidStatus(httpResponse.statusCode)
-    }
-
-    return data
-  }
-
-  private func makeURLRequest<E: Endpoint>(for endpoint: E) throws -> URLRequest {
-    let normalizedPath = endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-    let url = baseURL.appendingPathComponent(normalizedPath)
-    let parameters = try endpoint.asParameters()
-
-    var request = URLRequest(url: url)
-    request.httpMethod = endpoint.method.rawValue
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-    if let token = authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-      request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-    }
-
-    if endpoint.method == .get, !parameters.isEmpty {
-      var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-      components?.queryItems = parameters.map { URLQueryItem(name: $0.key, value: String(describing: $0.value)) }
-      if let final = components?.url {
-        request.url = final
-      }
-    } else if !parameters.isEmpty {
-      request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
-    }
-
-    return request
-  }
-}
-
-private struct BillingHTTPEnvelope<T: Codable>: Codable {
-  let data: T?
-  let message: String?
 }

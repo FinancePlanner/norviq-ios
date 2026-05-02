@@ -5,11 +5,11 @@ import StockPlanShared
 
 // MARK: - Client
 
-final class NewsHTTPClient: BaseHTTPClient<NewsHTTPClient.Error>, @unchecked Sendable {
+final class NewsHTTPClient: Sendable {
 
     // MARK: - Error Type
 
-    enum Error: LocalizedError, Equatable, Sendable, HTTPClientError {
+    enum Error: HTTPClientError {
         case invalidResponse
         case invalidStatus(Int)
         case unauthorized(String?)
@@ -38,10 +38,17 @@ final class NewsHTTPClient: BaseHTTPClient<NewsHTTPClient.Error>, @unchecked Sen
             default: return false
             }
         }
+
+        static func makeInvalidResponse() -> Error { .invalidResponse }
+        static func makeInvalidStatus(_ code: Int) -> Error { .invalidStatus(code) }
+        static func makeUnauthorized(_ message: String?) -> Error { .unauthorized(message) }
+        static func makeAPI(_ message: String) -> Error { .api(message) }
     }
 
-    init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping () -> String? = { nil }) {
-        super.init(
+    private let client: BaseHTTPClient
+
+    init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping @Sendable () -> String? = { nil }) {
+        self.client = BaseHTTPClient(
             baseURL: baseURL,
             session: session,
             authTokenProvider: authTokenProvider,
@@ -50,51 +57,24 @@ final class NewsHTTPClient: BaseHTTPClient<NewsHTTPClient.Error>, @unchecked Sen
         )
     }
 
-    // MARK: - Error Factory Overrides
-
-    override func makeInvalidResponseError() -> Error { .invalidResponse }
-    override func makeInvalidStatusError(_ code: Int) -> Error { .invalidStatus(code) }
-    override func makeUnauthorizedError(_ message: String?) -> Error { .unauthorized(message) }
-    override func makeAPIError(_ message: String) -> Error { .api(message) }
-
-    // MARK: - Public API (unchanged)
+    // MARK: - Public API (delegated)
 
     func getNews(symbol: String? = nil, cursor: String? = nil, limit: Int? = nil) async throws -> (items: [NewsItemResponse], nextCursor: String?) {
         let endpoint = GetNewsEndpoint(symbol: symbol, cursor: cursor, limit: limit)
-        let (response, httpResponse) = try await callWithHeaders(endpoint)
+        let (response, httpResponse) = try await client.callWithHeaders(endpoint, errorType: Error.self)
         let nextCursor = httpResponse.value(forHTTPHeaderField: "X-Next-Cursor")
         return (response, nextCursor)
     }
 
     func createNews(payload: NewsItemRequest) async throws -> NewsItemResponse {
-        try await call(CreateNewsEndpoint(payload: payload))
+        try await client.call(CreateNewsEndpoint(payload: payload), errorType: Error.self)
     }
 
     func updateNews(newsId: String, payload: NewsItemRequest) async throws -> NewsItemResponse {
-        try await call(UpdateNewsEndpoint(newsId: newsId, payload: payload))
+        try await client.call(UpdateNewsEndpoint(newsId: newsId, payload: payload), errorType: Error.self)
     }
 
-    func deleteNews(newsId: String) async throws -> EmptyAPIResponse {
-        try await call(DeleteNewsEndpoint(newsId: newsId))
-    }
-
-    // MARK: - Custom Envelope
-
-    override func decodeCustomEnvelope<E: Endpoint>(data: Data, for endpoint: E) throws -> E.Response? where E.Response: Codable & Sendable {
-        if let envelope = try? decoder.decode(HTTPEnvelope<E.Response>.self, from: data) {
-            if let payload = envelope.data {
-                return payload
-            }
-            if let message = envelope.message, !message.isEmpty {
-                throw Error.api(message)
-            }
-        }
-        return nil
-    }
-
-    // Preserve local envelope for servers that wrap payload in { data: ..., message: ... }.
-    private struct HTTPEnvelope<T: Codable>: Codable {
-        let data: T?
-        let message: String?
+    func deleteNews(newsId: String) async throws {
+        try await client.callWithoutResponse(DeleteNewsEndpoint(newsId: newsId), errorType: Error.self)
     }
 }

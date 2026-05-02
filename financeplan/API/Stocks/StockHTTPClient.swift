@@ -3,26 +3,16 @@ import Foundation
 import StockPlanShared
 import OSLog
 
-private let stockHTTPLogger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "StockHTTPClient")
+// MARK: - Client
 
-protocol StockURLSessionProtocol: HTTPClientSession {
-  func data(for request: URLRequest) async throws -> (Data, URLResponse)
-}
-
-extension URLSession: StockURLSessionProtocol {}
-
-protocol StockRequestBodyEndpoint {
-  func bodyData() throws -> Data?
-}
-
-struct StockHTTPClient {
-  enum Error: LocalizedError, Equatable {
+struct StockHTTPClient: Sendable {
+  enum Error: HTTPClientError {
     case invalidResponse
     case invalidStatus(Int)
     case unauthorized(String?)
     case api(String)
 
-    var errorDescription: String? {
+    nonisolated var errorDescription: String? {
       switch self {
       case .invalidResponse:
         return "Invalid server response."
@@ -41,187 +31,79 @@ struct StockHTTPClient {
       }
       return false
     }
-  }
 
-  let baseURL: URL
-  let session: StockURLSessionProtocol
-  let authTokenProvider: () -> String?
+    nonisolated var statusCode: Int? {
+        if case let .invalidStatus(code) = self { return code }
+        return nil
+    }
 
-  init(baseURL: URL, session: StockURLSessionProtocol = URLSession.shared, authTokenProvider: @escaping () -> String? = { nil }) {
-    self.baseURL = baseURL
-    self.session = session
-    self.authTokenProvider = authTokenProvider
-  }
-
-  func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
-    let data = try await perform(endpoint)
-    do {
-      return try endpoint.decode(data)
-    } catch {
-      if let envelope = try? endpoint.decoder.decode(HTTPEnvelope<E.Response>.self, from: data) {
-        if let payload = envelope.data {
-          return payload
+    nonisolated static func == (lhs: Error, rhs: Error) -> Bool {
+        switch (lhs, rhs) {
+        case (.invalidResponse, .invalidResponse): return true
+        case let (.invalidStatus(l), .invalidStatus(r)): return l == r
+        case let (.unauthorized(l), .unauthorized(r)): return l == r
+        case let (.api(l), .api(r)): return l == r
+        default: return false
         }
-        if let message = envelope.message, !message.isEmpty {
-          throw Error.api(message)
-        }
-      }
-      throw error
     }
+
+    static func makeInvalidResponse() -> Error { .invalidResponse }
+    static func makeInvalidStatus(_ code: Int) -> Error { .invalidStatus(code) }
+    static func makeUnauthorized(_ message: String?) -> Error { .unauthorized(message) }
+    static func makeAPI(_ message: String) -> Error { .api(message) }
   }
 
-  func callWithoutResponse<E: Endpoint>(_ endpoint: E) async throws {
-    _ = try await perform(endpoint)
-  }
+  private let client: BaseHTTPClient
+  private let logger: Logger
 
-  /// Calls the endpoint and returns both the decoded response and the raw `HTTPURLResponse`,
-  /// allowing callers to inspect headers (e.g. `X-Next-Cursor` for pagination).
-  func callWithHeaders<E: Endpoint>(_ endpoint: E) async throws -> (response: E.Response, headers: HTTPURLResponse) where E.Response: Codable {
-    let request = try makeURLRequest(for: endpoint)
-    logRequest(request, endpoint: endpoint)
-    let (data, urlResponse) = try await session.data(for: request)
-
-    guard let httpResponse = urlResponse as? HTTPURLResponse else {
-      throw Error.invalidResponse
-    }
-
-    stockHTTPLogger.debug("Stock response [\(endpoint.path, privacy: .public)] status=\(httpResponse.statusCode, privacy: .public)")
-    logValuationResponseIfNeeded(data, endpointPath: endpoint.path, statusCode: httpResponse.statusCode)
-
-    guard (200..<300).contains(httpResponse.statusCode) else {
-      let message = errorMessage(from: data)
-      if httpResponse.statusCode == 401 {
-        throw Error.unauthorized(message)
-      }
-      if let message, !message.isEmpty {
-        throw Error.api(message)
-      }
-      throw Error.invalidStatus(httpResponse.statusCode)
-    }
-
-    do {
-      return (try endpoint.decode(data), httpResponse)
-    } catch {
-      if let envelope = try? endpoint.decoder.decode(HTTPEnvelope<E.Response>.self, from: data) {
-        if let payload = envelope.data {
-          return (payload, httpResponse)
-        }
-        if let message = envelope.message, !message.isEmpty {
-          throw Error.api(message)
-        }
-      }
-      throw error
-    }
-  }
-
-  private func perform<E: Endpoint>(_ endpoint: E) async throws -> Data {
-    let request = try makeURLRequest(for: endpoint)
-    logRequest(request, endpoint: endpoint)
-    let (data, response) = try await session.data(for: request)
-
-    guard let httpResponse = response as? HTTPURLResponse else {
-      throw Error.invalidResponse
-    }
-
-    stockHTTPLogger.debug("Stock response [\(endpoint.path, privacy: .public)] status=\(httpResponse.statusCode, privacy: .public)")
-    logValuationResponseIfNeeded(data, endpointPath: endpoint.path, statusCode: httpResponse.statusCode)
-
-    guard (200 ..< 300).contains(httpResponse.statusCode) else {
-      let message = errorMessage(from: data)
-
-      if httpResponse.statusCode == 401 {
-        throw Error.unauthorized(message)
-      }
-
-      if let message, !message.isEmpty {
-        throw Error.api(message)
-      }
-      throw Error.invalidStatus(httpResponse.statusCode)
-    }
-
-    return data
-  }
-
-  private func logRequest<E: Endpoint>(_ request: URLRequest, endpoint: E) {
-    let method = request.httpMethod ?? endpoint.method.rawValue
-    let urlString =
-      request.url?.absoluteString ?? baseURL.appendingPathComponent(endpoint.path).absoluteString
-    stockHTTPLogger.debug(
-      "Stock request [\(method, privacy: .public)] \(urlString, privacy: .public)"
+  init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping @Sendable () -> String? = { nil }) {
+    let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "StockHTTPClient")
+    self.logger = logger
+    self.client = BaseHTTPClient(
+        baseURL: baseURL,
+        session: session,
+        authTokenProvider: authTokenProvider,
+        requestLogger: { [logger] path, method, parameters in
+            StockHTTPClient.logValuationRequestIfNeeded(logger: logger, path: path, method: method, parameters: parameters)
+        },
+        logger: logger,
+        decoder: .stockPlanShared
     )
   }
 
-  private func errorMessage(from data: Data) -> String? {
-    APIErrorDecoding.message(from: data)
+  func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable & Sendable {
+    try await client.call(endpoint, errorType: Error.self)
   }
 
-  private func makeURLRequest<E: Endpoint>(for endpoint: E) throws -> URLRequest {
-    let normalizedPath = endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-    var url = baseURL.appendingPathComponent(normalizedPath)
+  func callWithoutResponse<E: Endpoint>(_ endpoint: E) async throws where E.Response: Codable {
+    try await client.callWithoutResponse(endpoint, errorType: Error.self)
+  }
 
-    var request = URLRequest(url: url)
-    request.httpMethod = endpoint.method.rawValue
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+  func callWithHeaders<E: Endpoint>(_ endpoint: E) async throws -> (response: E.Response, headers: HTTPURLResponse) where E.Response: Codable & Sendable {
+    try await client.callWithHeaders(endpoint, errorType: Error.self)
+  }
 
-    if let token = authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-      request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+  // MARK: - Legacy / Special Methods
+  
+  func execute<E: Endpoint>(_ endpoint: E) async throws -> Data where E.Response: Codable {
+    try await client.execute(endpoint, errorType: Error.self)
+  }
+
+  private static func logValuationRequestIfNeeded(logger: Logger, path: String, method: HTTPMethod, parameters: Parameters) {
+    guard path.contains("/stocks/symbol/"), path.contains("/valuation") else {
+      return
     }
 
-    for header in endpoint.headers {
-      request.setValue(header.value, forHTTPHeaderField: header.name)
-    }
-
-    if endpoint.method == .get {
-      let parameters = try endpoint.asParameters()
-
-      if !parameters.isEmpty {
-        var comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        comps?.queryItems = parameters.map { URLQueryItem(name: $0.key, value: String(describing: $0.value)) }
-        if let final = comps?.url { request.url = final }
-      }
-    } else if let bodyEndpoint = endpoint as? any StockRequestBodyEndpoint {
-      request.httpBody = try bodyEndpoint.bodyData()
+    let payloadDescription: String
+    if let data = try? JSONSerialization.data(withJSONObject: parameters, options: [.sortedKeys]),
+       let json = String(data: data, encoding: .utf8) {
+        payloadDescription = json
     } else {
-      let parameters = try endpoint.asParameters()
-
-      if !parameters.isEmpty {
-        request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
-      }
+        payloadDescription = "\(parameters)"
     }
 
-    logValuationRequestIfNeeded(request, endpointPath: endpoint.path)
-
-    return request
-  }
-
-  private func logValuationRequestIfNeeded(_ request: URLRequest, endpointPath: String) {
-    guard endpointPath.contains("/stocks/symbol/"), endpointPath.contains("/valuation") else {
-      return
-    }
-
-    let body = request.httpBody.flatMap {
-      String(data: $0, encoding: .utf8)
-    } ?? "<empty>"
-
-    stockHTTPLogger.debug(
-      "Stock request [\(endpointPath, privacy: .public)] method=\(request.httpMethod ?? "", privacy: .public) body=\(body, privacy: .public)"
+    logger.debug(
+      "Stock request [\(path, privacy: .public)] method=\(method.rawValue, privacy: .public) body=\(payloadDescription, privacy: .public)"
     )
   }
-
-  private func logValuationResponseIfNeeded(_ data: Data, endpointPath: String, statusCode: Int) {
-    guard endpointPath.contains("/stocks/symbol/"), endpointPath.contains("/valuation") else {
-      return
-    }
-
-    let body = String(data: data, encoding: .utf8) ?? "<non-utf8>"
-
-    stockHTTPLogger.debug(
-      "Stock response [\(endpointPath, privacy: .public)] status=\(statusCode, privacy: .public) body=\(body, privacy: .public)"
-    )
-  }
-}
-
-private struct HTTPEnvelope<T: Codable>: Codable {
-  let data: T?
-  let message: String?
 }

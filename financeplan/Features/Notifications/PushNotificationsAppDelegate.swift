@@ -30,8 +30,10 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, @prec
       logger.info(
         "push.analytics delivered source=launch kind=\(route?.kind.rawValue ?? "unknown", privacy: .public) symbol=\(route?.symbol ?? "-", privacy: .public)"
       )
-      Task { @MainActor in
-        Container.shared.pushNotificationsCoordinator().handleIncomingRemoteNotification(userInfo: remoteNotification)
+      if let route {
+        Task { @MainActor in
+          Container.shared.pushNotificationsCoordinator().handleIncomingRoute(route)
+        }
       }
     }
 
@@ -56,7 +58,7 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, @prec
     }
   }
 
-  func userNotificationCenter(
+  nonisolated func userNotificationCenter(
     _: UNUserNotificationCenter,
     willPresent notification: UNNotification,
     withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
@@ -65,15 +67,15 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, @prec
     logger.info(
       "push.analytics delivered source=foreground kind=\(route?.kind.rawValue ?? "unknown", privacy: .public) symbol=\(route?.symbol ?? "-", privacy: .public)"
     )
-    Task { @MainActor in
-      Container.shared.pushNotificationsCoordinator().handleIncomingRemoteNotification(
-        userInfo: notification.request.content.userInfo
-      )
+    if let route {
+      Task { @MainActor in
+        Container.shared.pushNotificationsCoordinator().handleIncomingRoute(route)
+      }
     }
     completionHandler([.banner, .list, .sound])
   }
 
-  func userNotificationCenter(
+  nonisolated func userNotificationCenter(
     _: UNUserNotificationCenter,
     didReceive response: UNNotificationResponse,
     withCompletionHandler completionHandler: @escaping () -> Void
@@ -96,10 +98,10 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, @prec
       }
     }()
 
-    if let userAction {
+    if let userAction, let route {
       Task { @MainActor in
-        Container.shared.pushNotificationsCoordinator().handleIncomingRemoteNotification(
-          userInfo: response.notification.request.content.userInfo,
+        Container.shared.pushNotificationsCoordinator().handleIncomingRoute(
+          route,
           userAction: userAction
         )
       }

@@ -1,34 +1,18 @@
-//
-//  UserProfileHTTPClient.swift
-//  financeplan
-//
-//  Created by Fernando Correia on 07.03.26.
-//
-
 import AnyAPI
 import Foundation
 import OSLog
 import StockPlanShared
 
-private let userProfileHTTPLogger = Logger(
-  subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
-  category: "UserProfileHTTPClient"
-)
+// MARK: - Client
 
-protocol UserProfileURLSessionProtocol: HTTPClientSession {
-  func data(for request: URLRequest) async throws -> (Data, URLResponse)
-}
-
-extension URLSession: UserProfileURLSessionProtocol {}
-
-struct UserProfileHTTPClient {
-  enum Error: LocalizedError, Equatable {
+struct UserProfileHTTPClient: Sendable {
+  enum Error: HTTPClientError {
     case invalidResponse
     case invalidStatus(Int)
     case unauthorized(String?)
     case api(String)
 
-    var errorDescription: String? {
+    nonisolated var errorDescription: String? {
       switch self {
       case .invalidResponse:
         return "Invalid server response."
@@ -47,140 +31,67 @@ struct UserProfileHTTPClient {
       }
       return false
     }
+
+    nonisolated var statusCode: Int? {
+        if case let .invalidStatus(code) = self { return code }
+        return nil
+    }
+
+    nonisolated static func == (lhs: Error, rhs: Error) -> Bool {
+        switch (lhs, rhs) {
+        case (.invalidResponse, .invalidResponse): return true
+        case let (.invalidStatus(l), .invalidStatus(r)): return l == r
+        case let (.unauthorized(l), .unauthorized(r)): return l == r
+        case let (.api(l), .api(r)): return l == r
+        default: return false
+        }
+    }
+
+    static func makeInvalidResponse() -> Error { .invalidResponse }
+    static func makeInvalidStatus(_ code: Int) -> Error { .invalidStatus(code) }
+    static func makeUnauthorized(_ message: String?) -> Error { .unauthorized(message) }
+    static func makeAPI(_ message: String) -> Error { .api(message) }
   }
 
-  let baseURL: URL
-  let session: UserProfileURLSessionProtocol
-  let authTokenProvider: () -> String?
+  private let client: BaseHTTPClient
 
   init(
     baseURL: URL,
-    session: UserProfileURLSessionProtocol = URLSession.shared,
-    authTokenProvider: @escaping () -> String? = { nil }
+    session: any HTTPClientSession = URLSession.shared,
+    authTokenProvider: @escaping @Sendable () -> String? = { nil }
   ) {
-    self.baseURL = baseURL
-    self.session = session
-    self.authTokenProvider = authTokenProvider
+    self.client = BaseHTTPClient(
+        baseURL: baseURL,
+        session: session,
+        authTokenProvider: authTokenProvider,
+        logger: Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "UserProfileHTTPClient"),
+        decoder: .stockPlanShared
+    )
   }
 
   func fetchProfile(_ request: GetUserProfileRequest) async throws -> GetUserProfileResponse {
     _ = request
-    let endpoint = GetUserProfileEndpoint()
-    return try await call(endpoint)
+    return try await client.call(GetUserProfileEndpoint(), errorType: Error.self)
   }
 
   func updateProfile(_ request: UpdateUserProfileRequest) async throws -> UpdateUserProfileResponse {
-    let endpoint = UpdateUserProfileEndpoint(request: request)
-    return try await call(endpoint)
+    return try await client.call(UpdateUserProfileEndpoint(request: request), errorType: Error.self)
   }
 
   func updateUsername(_ request: UpdateUsernameRequest) async throws -> UpdateUserProfileResponse {
-    let endpoint = UpdateUsernameEndpoint(request: request)
-    return try await call(endpoint)
+    return try await client.call(UpdateUsernameEndpoint(request: request), errorType: Error.self)
   }
 
   func updateEmail(_ request: UpdateEmailRequest) async throws -> UpdateUserProfileResponse {
-    let endpoint = UpdateEmailEndpoint(request: request)
-    return try await call(endpoint)
+    return try await client.call(UpdateEmailEndpoint(request: request), errorType: Error.self)
   }
 
   func updatePassword(_ request: UpdatePasswordRequest) async throws -> APIMessageResponse {
-    let endpoint = UpdatePasswordEndpoint(request: request)
-    return try await call(endpoint)
+    return try await client.call(UpdatePasswordEndpoint(request: request), errorType: Error.self)
   }
 
   func deleteProfile(_ request: DeleteUserProfileRequest) async throws -> DeleteUserProfileResponse {
     _ = request
-    let endpoint = DeleteUserProfileEndpoint()
-    return try await call(endpoint)
+    return try await client.call(DeleteUserProfileEndpoint(), errorType: Error.self)
   }
-
-  func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
-    let data = try await perform(endpoint)
-    do {
-      return try endpoint.decode(data)
-    } catch {
-      if let envelope = try? endpoint.decoder.decode(HTTPEnvelope<E.Response>.self, from: data) {
-        if let payload = envelope.data {
-          return payload
-        }
-        if let message = envelope.message, !message.isEmpty {
-          throw Error.api(message)
-        }
-      }
-      throw error
-    }
-  }
-
-  func callWithoutResponse<E: Endpoint>(_ endpoint: E) async throws {
-    _ = try await perform(endpoint)
-  }
-
-  private func perform<E: Endpoint>(_ endpoint: E) async throws -> Data {
-    let request = try makeURLRequest(for: endpoint)
-    let (data, response) = try await session.data(for: request)
-
-    guard let httpResponse = response as? HTTPURLResponse else {
-      throw Error.invalidResponse
-    }
-
-    userProfileHTTPLogger.debug(
-      "UserProfile response [\(endpoint.path, privacy: .public)] status=\(httpResponse.statusCode, privacy: .public)"
-    )
-
-    guard (200 ..< 300).contains(httpResponse.statusCode) else {
-      let message = errorMessage(from: data)
-
-      if httpResponse.statusCode == 401 {
-        throw Error.unauthorized(message)
-      }
-
-      if let message, !message.isEmpty {
-        throw Error.api(message)
-      }
-      throw Error.invalidStatus(httpResponse.statusCode)
-    }
-
-    return data
-  }
-
-  private func errorMessage(from data: Data) -> String? {
-    APIErrorDecoding.message(from: data)
-  }
-
-  private func makeURLRequest<E: Endpoint>(for endpoint: E) throws -> URLRequest {
-    let normalizedPath = endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-    let url = baseURL.appendingPathComponent(normalizedPath)
-
-    let parameters = try endpoint.asParameters()
-
-    var request = URLRequest(url: url)
-    request.httpMethod = endpoint.method.rawValue
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-    if let token = authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-      request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-    }
-
-    for header in endpoint.headers {
-      request.setValue(header.value, forHTTPHeaderField: header.name)
-    }
-
-    if endpoint.method == .get, !parameters.isEmpty {
-      var comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
-      comps?.queryItems = parameters.map { URLQueryItem(name: $0.key, value: String(describing: $0.value)) }
-      if let final = comps?.url {
-        request.url = final
-      }
-    } else if !parameters.isEmpty {
-      request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
-    }
-
-    return request
-  }
-}
-
-private struct HTTPEnvelope<T: Codable>: Codable {
-  let data: T?
-  let message: String?
 }

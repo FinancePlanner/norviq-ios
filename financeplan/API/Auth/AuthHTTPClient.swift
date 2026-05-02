@@ -5,12 +5,12 @@ import StockPlanShared
 
 // MARK: - Client
 
-final class AuthHTTPClient: BaseHTTPClient<AuthHTTPClient.Error>, @unchecked Sendable {
+final class AuthHTTPClient: Sendable {
     
     // MARK: - Static Constants
     
-    private static let mfaCapabilityHeader = "X-StockPlan-Client-Capabilities"
-    private static let mfaCapabilityToken = "mfa-auth-v1"
+    nonisolated(unsafe) private static let mfaCapabilityHeader = "X-StockPlan-Client-Capabilities"
+    nonisolated(unsafe) private static let mfaCapabilityToken = "mfa-auth-v1"
     private static let dbStyleDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
@@ -23,7 +23,7 @@ final class AuthHTTPClient: BaseHTTPClient<AuthHTTPClient.Error>, @unchecked Sen
     
     // MARK: - Error Type
     
-    enum Error: LocalizedError, Equatable, Sendable, HTTPClientError {
+    enum Error: HTTPClientError {
         case invalidResponse
         case invalidStatus(Int)
         case unauthorized(String?)
@@ -61,55 +61,49 @@ final class AuthHTTPClient: BaseHTTPClient<AuthHTTPClient.Error>, @unchecked Sen
             default: return false
             }
         }
+
+        static func makeInvalidResponse() -> Error { .invalidResponse }
+        static func makeInvalidStatus(_ code: Int) -> Error { .invalidStatus(code) }
+        static func makeUnauthorized(_ message: String?) -> Error { .unauthorized(message) }
+        static func makeAPI(_ message: String) -> Error { .api(message) }
     }
     
+    private let client: BaseHTTPClient
+    private let logger: Logger
+
     // MARK: - Init
     
-    init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping () -> String? = { nil }) {
-        super.init(
+    init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping @Sendable () -> String? = { nil }) {
+        let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "AuthHTTPClient")
+        self.logger = logger
+        self.client = BaseHTTPClient(
             baseURL: baseURL,
             session: session,
             authTokenProvider: authTokenProvider,
-            logger: Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "AuthHTTPClient"),
+            extraHeadersProvider: { endpoint in
+                var headers: [(String, String)] = []
+                if endpoint.path == "/v1/auth/login"
+                    || (endpoint.path.contains("/oauth/") && endpoint.path.hasSuffix("/exchange"))
+                    || endpoint.path == "/v1/auth/mfa/verify"
+                    || endpoint.path == "/v1/auth/mfa/resend"
+                {
+                    headers.append((Self.mfaCapabilityHeader, Self.mfaCapabilityToken))
+                }
+                return headers
+            },
+            requestLogger: { [logger] path, method, parameters in
+                AuthHTTPClient.logRequest(logger: logger, endpointPath: path, method: method, parameters: parameters)
+            },
+            logger: logger,
             decoder: .stockPlanShared
         )
     }
     
-    // MARK: - Error Factory Overrides
-    
-    override func makeInvalidResponseError() -> Error { .invalidResponse }
-    override func makeInvalidStatusError(_ code: Int) -> Error { .invalidStatus(code) }
-    override func makeUnauthorizedError(_ message: String?) -> Error { .unauthorized(message) }
-    override func makeAPIError(_ message: String) -> Error { .api(message) }
-    
-    // MARK: - Custom Headers
-    
-    override func extraHeaders<E: Endpoint>(for endpoint: E) -> [(name: String, value: String)] {
-        var headers: [(String, String)] = []
-        if endpoint.path == "/v1/auth/login"
-            || (endpoint.path.contains("/oauth/") && endpoint.path.hasSuffix("/exchange"))
-            || endpoint.path == "/v1/auth/mfa/verify"
-            || endpoint.path == "/v1/auth/mfa/resend"
-        {
-            headers.append((Self.mfaCapabilityHeader, Self.mfaCapabilityToken))
-        }
-        return headers
-    }
-    
-    // MARK: - Custom Request Building (preserve existing request construction + logging)
-    
-    override func makeURLRequest<E: Endpoint>(for endpoint: E) throws -> URLRequest where E.Response: Codable {
-        let request = try super.makeURLRequest(for: endpoint)
-        // Preserve original request logging for login/register
-        logRequest(endpointPath: endpoint.path, method: endpoint.method, parameters: try endpoint.asParameters())
-        return request
-    }
-    
-    // MARK: - Public API (unchanged)
+    // MARK: - Public API (delegated)
     
     func login(_ request: AuthLoginRequest) async throws -> AuthLoginOutcomePayload {
         let endpoint = LoginEndpoint(email: request.email, password: request.password)
-        let data = try await execute(endpoint)
+        let data = try await client.execute(endpoint, errorType: Error.self)
         return try decodeLoginOutcome(from: data)
     }
     
@@ -137,23 +131,23 @@ final class AuthHTTPClient: BaseHTTPClient<AuthHTTPClient.Error>, @unchecked Sen
             confirmPassword: confirmPassword,
             dateOfBirth: dateOfBirth
         )
-        try await callWithoutResponse(endpoint)
+        try await client.callWithoutResponse(endpoint, errorType: Error.self)
     }
     
     func forgotPassword(_ request: AuthForgotPasswordRequest) async throws -> AuthForgotPasswordResponse {
         let endpoint = ForgotPasswordEndpoint(email: request.email)
-        return try await call(endpoint)
+        return try await client.call(endpoint, errorType: Error.self)
     }
     
     func refresh(_ request: AuthRefreshRequest) async throws -> AuthResponse {
         let endpoint = RefreshEndpoint(refreshToken: request.refreshToken)
-        let data = try await execute(endpoint)
+        let data = try await client.execute(endpoint, errorType: Error.self)
         return try decodeAuthResponse(from: data)
     }
     
     func oauthStart(provider: OAuthProviderKind, redirectURI: String) async throws -> OAuthStartResponsePayload {
         let endpoint = OAuthStartEndpoint(provider: provider, redirectURI: redirectURI)
-        return try await call(endpoint)
+        return try await client.call(endpoint, errorType: Error.self)
     }
     
     func oauthExchange(
@@ -161,33 +155,33 @@ final class AuthHTTPClient: BaseHTTPClient<AuthHTTPClient.Error>, @unchecked Sen
         request: OAuthExchangeRequestPayload
     ) async throws -> AuthLoginOutcomePayload {
         let endpoint = OAuthExchangeEndpoint(provider: provider, payload: request)
-        let data = try await execute(endpoint)
+        let data = try await client.execute(endpoint, errorType: Error.self)
         return try decodeLoginOutcome(from: data)
     }
     
     func verifyMFA(_ request: AuthMFAVerifyRequestPayload) async throws -> AuthResponse {
         let endpoint = MFAVerifyEndpoint(payload: request)
-        let data = try await execute(endpoint)
+        let data = try await client.execute(endpoint, errorType: Error.self)
         return try decodeAuthResponse(from: data)
     }
     
     func resendMFA(_ request: AuthMFAResendRequestPayload) async throws -> AuthMFAChallengeResponsePayload {
         let endpoint = MFAResendEndpoint(payload: request)
-        return try await call(endpoint)
+        return try await client.call(endpoint, errorType: Error.self)
     }
     
     func logout(_ request: AuthRefreshRequest) async throws {
         let primary = LogoutEndpoint(refreshToken: request.refreshToken, endpointPath: "/v2/logout")
         do {
-            try await callWithoutResponse(primary)
-        } catch Error.invalidStatus(404) {
+            try await client.callWithoutResponse(primary, errorType: Error.self)
+        } catch let error as Error where error == .invalidStatus(404) {
             // Backward-compatible fallback while servers migrate endpoint versions.
             let fallback = LogoutEndpoint(refreshToken: request.refreshToken, endpointPath: "/auth/logout")
-            try await callWithoutResponse(fallback)
+            try await client.callWithoutResponse(fallback, errorType: Error.self)
         }
     }
     
-    // MARK: - Private Helpers (unchanged)
+    // MARK: - Private Helpers
     
     private func decodeAuthResponse(from data: Data) throws -> AuthResponse {
         do {
@@ -368,7 +362,7 @@ final class AuthHTTPClient: BaseHTTPClient<AuthHTTPClient.Error>, @unchecked Sen
         return Date(timeIntervalSinceReferenceDate: rawValue)
     }
     
-    private func logRequest(endpointPath: String, method: HTTPMethod, parameters: Parameters) {
+    nonisolated private static func logRequest(logger: Logger, endpointPath: String, method: HTTPMethod, parameters: Parameters) {
         guard endpointPath == "/v1/auth/login" || endpointPath == "/auth/register" else {
             return
         }

@@ -5,11 +5,11 @@ import StockPlanShared
 
 // MARK: - Client
 
-final class ActivityHTTPClient: BaseHTTPClient<ActivityHTTPClient.Error>, @unchecked Sendable {
+final class ActivityHTTPClient: Sendable {
     
     // MARK: - Error Type
     
-    enum Error: LocalizedError, Equatable, Sendable, HTTPClientError {
+    enum Error: HTTPClientError {
         case invalidResponse
         case invalidStatus(Int)
         case unauthorized(String?)
@@ -47,10 +47,17 @@ final class ActivityHTTPClient: BaseHTTPClient<ActivityHTTPClient.Error>, @unche
             default: return false
             }
         }
+
+        static func makeInvalidResponse() -> Error { .invalidResponse }
+        static func makeInvalidStatus(_ code: Int) -> Error { .invalidStatus(code) }
+        static func makeUnauthorized(_ message: String?) -> Error { .unauthorized(message) }
+        static func makeAPI(_ message: String) -> Error { .api(message) }
     }
     
-    init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping () -> String? = { nil }) {
-        super.init(
+    private let client: BaseHTTPClient
+
+    init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping @Sendable () -> String? = { nil }) {
+        self.client = BaseHTTPClient(
             baseURL: baseURL,
             session: session,
             authTokenProvider: authTokenProvider,
@@ -59,16 +66,9 @@ final class ActivityHTTPClient: BaseHTTPClient<ActivityHTTPClient.Error>, @unche
         )
     }
     
-    // MARK: - Error Factory Overrides
-    
-    override func makeInvalidResponseError() -> Error { .invalidResponse }
-    override func makeInvalidStatusError(_ code: Int) -> Error { .invalidStatus(code) }
-    override func makeUnauthorizedError(_ message: String?) -> Error { .unauthorized(message) }
-    override func makeAPIError(_ message: String) -> Error { .api(message) }
-    
     // MARK: - Public API
     
     func fetchActivities(limit: Int? = nil) async throws -> [UserActivityResponse] {
-        try await call(GetActivitiesEndpoint(limit: limit))
+        try await client.call(GetActivitiesEndpoint(limit: limit), errorType: Error.self)
     }
 }
