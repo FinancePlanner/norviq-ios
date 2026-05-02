@@ -6,34 +6,31 @@ enum JWTTokenInspector {
     let expiresAt: Date?
   }
 
-  private struct Claims: Decodable {
-    let userId: UUID?
-    let exp: Double?
-  }
-
-  static func payload(from token: String) -> Payload? {
+  nonisolated static func payload(from token: String) -> Payload? {
     let segments = token.split(separator: ".", omittingEmptySubsequences: false)
     guard segments.count >= 2,
           let data = Data(base64URLEncoded: String(segments[1])),
-          let claims = try? JSONDecoder().decode(Claims.self, from: data) else {
+          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
       return nil
     }
 
-    let expiresAt = claims.exp.map(Date.init(timeIntervalSince1970:))
-    return Payload(userID: claims.userId, expiresAt: expiresAt)
+    let userId = (json["userId"] as? String).flatMap(UUID.init(uuidString:))
+    let exp = json["exp"] as? Double
+    let expiresAt = exp.map(Date.init(timeIntervalSince1970:))
+    return Payload(userID: userId, expiresAt: expiresAt)
   }
 
-  static func expirationDate(in token: String) -> Date? {
+  nonisolated static func expirationDate(in token: String) -> Date? {
     payload(from: token)?.expiresAt
   }
 
-  static func userID(in token: String) -> UUID? {
+  nonisolated static func userID(in token: String) -> UUID? {
     payload(from: token)?.userID
   }
 }
 
 private extension Data {
-  init?(base64URLEncoded value: String) {
+  nonisolated init?(base64URLEncoded value: String) {
     var base64 = value
       .replacingOccurrences(of: "-", with: "+")
       .replacingOccurrences(of: "_", with: "/")

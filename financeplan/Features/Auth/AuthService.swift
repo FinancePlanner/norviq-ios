@@ -19,19 +19,19 @@ protocol AuthServicing {
   func oauthSignIn(provider: OAuthProviderKind) async throws -> AuthLoginOutcomePayload
 }
 
-protocol AuthSessionStoring: AnyObject {
-  var authToken: String { get set }
-  var refreshToken: String { get set }
-  var authTokenExpiresAt: Date? { get set }
-  var refreshTokenExpiresAt: Date? { get set }
-  var loginIsSignup: Bool { get set }
-  var currentUserID: String { get set }
-  var currentUsername: String { get set }
+protocol AuthSessionStoring: AnyObject, Sendable {
+  nonisolated var authToken: String { get set }
+  nonisolated var refreshToken: String { get set }
+  nonisolated var authTokenExpiresAt: Date? { get set }
+  nonisolated var refreshTokenExpiresAt: Date? { get set }
+  nonisolated var loginIsSignup: Bool { get set }
+  nonisolated var currentUserID: String { get set }
+  nonisolated var currentUsername: String { get set }
 
-  func store(authResponse: AuthResponse)
-  func clearSession()
-  func hasCompletedInitialStockImport(for userID: String) -> Bool
-  func markInitialStockImportCompleted(for userID: String)
+  nonisolated func store(authResponse: AuthResponse)
+  nonisolated func clearSession()
+  nonisolated func hasCompletedInitialStockImport(for userID: String) -> Bool
+  nonisolated func markInitialStockImportCompleted(for userID: String)
 }
 
 final class AuthService: AuthServicing {
@@ -154,28 +154,28 @@ final class AuthService: AuthServicing {
   }
 }
 
-final class UserDefaultsAuthSessionStore: AuthSessionStoring {
+final class UserDefaultsAuthSessionStore: AuthSessionStoring, @unchecked Sendable {
   private enum Keys {
-    static let authToken = "auth_token"
-    static let refreshToken = "refresh_token"
-    static let authTokenExpiresAt = "auth_token_expires_at"
-    static let refreshTokenExpiresAt = "refresh_token_expires_at"
-    static let loginIsSignup = "login_isSignup"
-    static let currentUserID = "current_user_id"
-    static let currentUsername = "current_username"
-    static let initialStockImportUserIDs = "initial_stock_import_user_ids"
+    nonisolated(unsafe) static let authToken = "auth_token"
+    nonisolated(unsafe) static let refreshToken = "refresh_token"
+    nonisolated(unsafe) static let authTokenExpiresAt = "auth_token_expires_at"
+    nonisolated(unsafe) static let refreshTokenExpiresAt = "refresh_token_expires_at"
+    nonisolated(unsafe) static let loginIsSignup = "login_isSignup"
+    nonisolated(unsafe) static let currentUserID = "current_user_id"
+    nonisolated(unsafe) static let currentUsername = "current_username"
+    nonisolated(unsafe) static let initialStockImportUserIDs = "initial_stock_import_user_ids"
   }
 
-  private let defaults: UserDefaults
-  private let secureStore: SecureStringStoring
-  private let nowProvider: () -> Date
-  private let stateLock = NSRecursiveLock()
-  private var didReportSecureStoreFailure = false
+  nonisolated(unsafe) private let defaults: UserDefaults
+  nonisolated(unsafe) private let secureStore: SecureStringStoring
+  nonisolated private let nowProvider: @Sendable () -> Date
+  nonisolated private let stateLock = NSRecursiveLock()
+  nonisolated(unsafe) private var didReportSecureStoreFailure = false
 
   init(
     defaults: UserDefaults = .standard,
     secureStore: SecureStringStoring? = nil,
-    nowProvider: @escaping () -> Date = Date.init
+    nowProvider: @escaping @Sendable () -> Date = Date.init
   ) {
     self.defaults = defaults
     self.secureStore = secureStore
@@ -184,27 +184,27 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring {
     migrateLegacyTokenStorageIfNeeded()
   }
 
-  var authToken: String {
+  nonisolated var authToken: String {
     get { withStateLock { secureToken(for: Keys.authToken) ?? "" } }
     set { withStateLock { setSecureValue(newValue, for: Keys.authToken) } }
   }
 
-  var refreshToken: String {
+  nonisolated var refreshToken: String {
     get { withStateLock { secureToken(for: Keys.refreshToken) ?? "" } }
     set { withStateLock { setSecureValue(newValue, for: Keys.refreshToken) } }
   }
 
-  var authTokenExpiresAt: Date? {
+  nonisolated var authTokenExpiresAt: Date? {
     get { withStateLock { defaults.object(forKey: Keys.authTokenExpiresAt) as? Date } }
     set { withStateLock { setDate(newValue, for: Keys.authTokenExpiresAt) } }
   }
 
-  var refreshTokenExpiresAt: Date? {
+  nonisolated var refreshTokenExpiresAt: Date? {
     get { withStateLock { defaults.object(forKey: Keys.refreshTokenExpiresAt) as? Date } }
     set { withStateLock { setDate(newValue, for: Keys.refreshTokenExpiresAt) } }
   }
 
-  var loginIsSignup: Bool {
+  nonisolated var loginIsSignup: Bool {
     get { withStateLock {
       if defaults.object(forKey: Keys.loginIsSignup) == nil {
         return true
@@ -214,17 +214,17 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring {
     set { withStateLock { defaults.set(newValue, forKey: Keys.loginIsSignup) } }
   }
 
-  var currentUserID: String {
+  nonisolated var currentUserID: String {
     get { withStateLock { defaults.string(forKey: Keys.currentUserID) ?? "" } }
     set { withStateLock { defaults.set(newValue, forKey: Keys.currentUserID) } }
   }
 
-  var currentUsername: String {
+  nonisolated var currentUsername: String {
     get { withStateLock { defaults.string(forKey: Keys.currentUsername) ?? "" } }
     set { withStateLock { defaults.set(newValue, forKey: Keys.currentUsername) } }
   }
 
-  func store(authResponse: AuthResponse) {
+  nonisolated func store(authResponse: AuthResponse) {
     withStateLock {
       authToken = authResponse.token
       refreshToken = authResponse.refreshToken
@@ -240,7 +240,7 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring {
     }
   }
 
-  func clearSession() {
+  nonisolated func clearSession() {
     withStateLock {
       didReportSecureStoreFailure = false
       authToken = ""
@@ -252,14 +252,14 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring {
     }
   }
 
-  func hasCompletedInitialStockImport(for userID: String) -> Bool {
+  nonisolated func hasCompletedInitialStockImport(for userID: String) -> Bool {
     guard !userID.isEmpty else {
       return false
     }
     return withStateLock { initialStockImportUserIDs.contains(userID) }
   }
 
-  func markInitialStockImportCompleted(for userID: String) {
+  nonisolated func markInitialStockImportCompleted(for userID: String) {
     guard !userID.isEmpty else {
       return
     }
@@ -270,18 +270,18 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring {
     }
   }
 
-  private var initialStockImportUserIDs: Set<String> {
+  nonisolated private var initialStockImportUserIDs: Set<String> {
     Set(defaults.stringArray(forKey: Keys.initialStockImportUserIDs) ?? [])
   }
 
   @inline(__always)
-  private func withStateLock<T>(_ operation: () throws -> T) rethrows -> T {
+  nonisolated private func withStateLock<T>(_ operation: () throws -> T) rethrows -> T {
     stateLock.lock()
     defer { stateLock.unlock() }
     return try operation()
   }
 
-  private func setSecureValue(_ value: String, for key: String) {
+  nonisolated private func setSecureValue(_ value: String, for key: String) {
     let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
     if trimmed.isEmpty {
       do {
@@ -300,7 +300,7 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring {
     }
   }
 
-  private func secureToken(for key: String) -> String? {
+  nonisolated private func secureToken(for key: String) -> String? {
     do {
       if let secureValue = try secureStore.string(for: key),
        !secureValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -313,7 +313,7 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring {
     return nil
   }
 
-  private func setDate(_ value: Date?, for key: String) {
+  nonisolated private func setDate(_ value: Date?, for key: String) {
     if let value {
       defaults.set(value, forKey: key)
     } else {
@@ -321,7 +321,7 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring {
     }
   }
 
-  private func migrateLegacyTokenStorageIfNeeded() {
+  nonisolated private func migrateLegacyTokenStorageIfNeeded() {
     if let legacyToken = defaults.string(forKey: Keys.authToken),
        !legacyToken.isEmpty {
       do {
@@ -347,7 +347,7 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring {
     }
   }
 
-  private func handleSecureStoreFailure(_ error: Error) {
+  nonisolated private func handleSecureStoreFailure(_ error: Error) {
     let shouldNotify: Bool = withStateLock {
       authTokenExpiresAt = nil
       refreshTokenExpiresAt = nil

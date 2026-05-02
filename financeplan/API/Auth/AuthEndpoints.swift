@@ -56,12 +56,12 @@ struct SignupEndpoint: Endpoint {
     return params
   }
 
-  private static let formatter: ISO8601DateFormatter = {
+  private static var formatter: ISO8601DateFormatter {
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime]
     formatter.timeZone = .init(secondsFromGMT: 0)
     return formatter
-  }()
+  }
 }
 
 struct ForgotPasswordEndpoint: Endpoint {

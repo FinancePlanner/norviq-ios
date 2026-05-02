@@ -7,8 +7,8 @@ import SwiftUI
 #if !canImport(LiquidGlassFramework) // Dummy check for the future framework
 
 // MARK: - Dummy Types
-public struct Glass {
-    public static let regular = Glass()
+public struct Glass: Sendable {
+    public nonisolated(unsafe) static let regular = Glass()
     public func tint(_ color: Color) -> Glass { self }
     public func interactive() -> Glass { self }
 }

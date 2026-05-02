@@ -5,7 +5,7 @@ import StockPlanShared
 
 // MARK: - Client
 
-final class ActivityHTTPClient: BaseHTTPClient<ActivityHTTPClient.Error> {
+final class ActivityHTTPClient: BaseHTTPClient<ActivityHTTPClient.Error>, @unchecked Sendable {
     
     // MARK: - Error Type
     
