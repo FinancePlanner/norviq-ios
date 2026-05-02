@@ -5,11 +5,11 @@ import OSLog
 
 // MARK: - Client
 
-final class BrokerHTTPClient: BaseHTTPClient<BrokerHTTPClient.Error>, @unchecked Sendable {
+final class BrokerHTTPClient: Sendable {
   
   // MARK: - Error Type
   
-  enum Error: LocalizedError, Equatable, Sendable, HTTPClientError {
+  enum Error: HTTPClientError {
     case invalidResponse
     case invalidStatus(Int)
     case unauthorized(String?)
@@ -49,48 +49,48 @@ final class BrokerHTTPClient: BaseHTTPClient<BrokerHTTPClient.Error>, @unchecked
       default: return false
       }
     }
+
+    static func makeInvalidResponse() -> Error { .invalidResponse }
+    static func makeInvalidStatus(_ code: Int) -> Error { .invalidStatus(code) }
+    static func makeUnauthorized(_ message: String?) -> Error { .unauthorized(message) }
+    static func makeAPI(_ message: String) -> Error { .api(message) }
   }
 
-  init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping () -> String? = { nil }) {
-    super.init(
-      baseURL: baseURL,
-      session: session,
-      authTokenProvider: authTokenProvider,
-      logger: Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "BrokerHTTPClient"),
-      decoder: .stockPlanShared
+  private let client: BaseHTTPClient
+
+  init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping @Sendable () -> String? = { nil }) {
+    self.client = BaseHTTPClient(
+        baseURL: baseURL,
+        session: session,
+        authTokenProvider: authTokenProvider,
+        logger: Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "BrokerHTTPClient"),
+        decoder: .stockPlanShared
     )
   }
 
-  // MARK: - Error Factory Overrides
-
-  override func makeInvalidResponseError() -> Error { .invalidResponse }
-  override func makeInvalidStatusError(_ code: Int) -> Error { .invalidStatus(code) }
-  override func makeUnauthorizedError(_ message: String?) -> Error { .unauthorized(message) }
-  override func makeAPIError(_ message: String) -> Error { .api(message) }
-
-  // MARK: - Public API
+  // MARK: - Public API (delegated)
 
   func getBrokers() async throws -> [BrokerConnectionResponse] {
-    try await call(GetBrokersEndpoint())
+    try await client.call(GetBrokersEndpoint(), errorType: Error.self)
   }
 
   func getBroker(provider: String) async throws -> BrokerConnectionResponse {
-    try await call(GetBrokerEndpoint(provider: provider))
+    try await client.call(GetBrokerEndpoint(provider: provider), errorType: Error.self)
   }
 
   func syncIBKR() async throws -> BrokerSyncResponse {
-    try await call(SyncIBKREndpoint())
+    try await client.call(SyncIBKREndpoint(), errorType: Error.self)
   }
 
   func startIBKRConnect(
     redirectURI: String,
     portfolioListId: String?
   ) async throws -> BrokerConnectStartResponse {
-    try await call(StartIBKRConnectEndpoint(redirectURI: redirectURI, portfolioListId: portfolioListId))
+    try await client.call(StartIBKRConnectEndpoint(redirectURI: redirectURI, portfolioListId: portfolioListId), errorType: Error.self)
   }
 
   func disconnectIBKR() async throws -> BrokerConnectionResponse {
-    try await call(DisconnectIBKREndpoint())
+    try await client.call(DisconnectIBKREndpoint(), errorType: Error.self)
   }
 
   func previewCsvImport(
@@ -104,11 +104,11 @@ final class BrokerHTTPClient: BaseHTTPClient<BrokerHTTPClient.Error>, @unchecked
       portfolioListId: portfolioListId,
       csvData: csvData
     )
-    let data = try await sendRequest(request)
+    let data = try await client.sendRequest(request, errorType: Error.self)
     do {
-      return try decoder.decode(CsvImportPreviewResponse.self, from: data)
+      return try client.decoder.decode(CsvImportPreviewResponse.self, from: data)
     } catch {
-      if let envelope = try? decoder.decode(APIEnvelope<CsvImportPreviewResponse>.self, from: data),
+      if let envelope = try? client.decoder.decode(APIEnvelope<CsvImportPreviewResponse>.self, from: data),
          let payload = envelope.data {
         return payload
       }
@@ -127,11 +127,11 @@ final class BrokerHTTPClient: BaseHTTPClient<BrokerHTTPClient.Error>, @unchecked
       portfolioListId: portfolioListId,
       csvData: csvData
     )
-    let data = try await sendRequest(request)
+    let data = try await client.sendRequest(request, errorType: Error.self)
     do {
-      return try decoder.decode(CsvImportCommitResponse.self, from: data)
+      return try client.decoder.decode(CsvImportCommitResponse.self, from: data)
     } catch {
-      if let envelope = try? decoder.decode(APIEnvelope<CsvImportCommitResponse>.self, from: data),
+      if let envelope = try? client.decoder.decode(APIEnvelope<CsvImportCommitResponse>.self, from: data),
          let payload = envelope.data {
         return payload
       }
@@ -146,7 +146,7 @@ final class BrokerHTTPClient: BaseHTTPClient<BrokerHTTPClient.Error>, @unchecked
     csvData: Data
   ) throws -> URLRequest {
     let normalizedPath = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-    let base = baseURL.appendingPathComponent(normalizedPath)
+    let base = client.baseURL.appendingPathComponent(normalizedPath)
 
     var components = URLComponents(url: base, resolvingAgainstBaseURL: false)
     var queryItems = [URLQueryItem(name: "provider", value: provider)]
@@ -162,7 +162,7 @@ final class BrokerHTTPClient: BaseHTTPClient<BrokerHTTPClient.Error>, @unchecked
     request.httpMethod = HTTPMethod.post.rawValue
     request.setValue("text/csv", forHTTPHeaderField: "Content-Type")
 
-    if let token = authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+    if let token = client.authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
       request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     }
 
@@ -170,4 +170,3 @@ final class BrokerHTTPClient: BaseHTTPClient<BrokerHTTPClient.Error>, @unchecked
     return request
   }
 }
-

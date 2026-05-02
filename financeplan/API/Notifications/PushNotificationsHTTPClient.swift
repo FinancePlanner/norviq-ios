@@ -1,20 +1,18 @@
+import AnyAPI
 import Foundation
 import StockPlanShared
+import OSLog
 
-protocol PushNotificationsURLSessionProtocol: HTTPClientSession {
-  func data(for request: URLRequest) async throws -> (Data, URLResponse)
-}
+// MARK: - Client
 
-extension URLSession: PushNotificationsURLSessionProtocol {}
-
-struct PushNotificationsHTTPClient {
-  enum Error: LocalizedError, Equatable {
+struct PushNotificationsHTTPClient: Sendable {
+  enum Error: HTTPClientError {
     case invalidResponse
     case invalidStatus(Int)
     case unauthorized(String?)
     case api(String)
 
-    var errorDescription: String? {
+    nonisolated var errorDescription: String? {
       switch self {
       case .invalidResponse:
         return "Invalid server response."
@@ -33,39 +31,53 @@ struct PushNotificationsHTTPClient {
       }
       return false
     }
+
+    nonisolated var statusCode: Int? {
+        if case let .invalidStatus(code) = self { return code }
+        return nil
+    }
+
+    nonisolated static func == (lhs: Error, rhs: Error) -> Bool {
+        switch (lhs, rhs) {
+        case (.invalidResponse, .invalidResponse): return true
+        case let (.invalidStatus(l), .invalidStatus(r)): return l == r
+        case let (.unauthorized(l), .unauthorized(r)): return l == r
+        case let (.api(l), .api(r)): return l == r
+        default: return false
+        }
+    }
+
+    static func makeInvalidResponse() -> Error { .invalidResponse }
+    static func makeInvalidStatus(_ code: Int) -> Error { .invalidStatus(code) }
+    static func makeUnauthorized(_ message: String?) -> Error { .unauthorized(message) }
+    static func makeAPI(_ message: String) -> Error { .api(message) }
   }
 
-  let baseURL: URL
-  let session: PushNotificationsURLSessionProtocol
-  let authTokenProvider: () -> String?
+  private let client: BaseHTTPClient
 
   init(
     baseURL: URL,
-    session: PushNotificationsURLSessionProtocol = URLSession.shared,
-    authTokenProvider: @escaping () -> String? = { nil }
+    session: any HTTPClientSession = URLSession.shared,
+    authTokenProvider: @escaping @Sendable () -> String? = { nil }
   ) {
-    self.baseURL = baseURL
-    self.session = session
-    self.authTokenProvider = authTokenProvider
+    self.client = BaseHTTPClient(
+        baseURL: baseURL,
+        session: session,
+        authTokenProvider: authTokenProvider,
+        logger: Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "PushNotificationsHTTPClient"),
+        decoder: .stockPlanShared
+    )
   }
 
   func registerDevice(_ payload: PushDeviceRegistrationRequest) async throws -> PushDeviceRegistrationResponse {
-    let request = try makeRequest(
-      path: "/v1/notifications/apns/device",
-      method: "PUT",
-      body: payload
-    )
-    let data = try await perform(request: request)
+    let request = try client.makeURLRequest(for: CustomEndpoint(path: "/v1/notifications/apns/device", method: .put, payload: payload))
+    let data = try await client.sendRequest(request, errorType: Error.self)
 
     do {
       return try JSONDecoder.stockPlanShared.decode(PushDeviceRegistrationResponse.self, from: data)
     } catch {
-      if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-         let nestedPayload = json["data"],
-         JSONSerialization.isValidJSONObject(nestedPayload),
-         let nestedData = try? JSONSerialization.data(withJSONObject: nestedPayload),
-         let payload = try? JSONDecoder.stockPlanShared.decode(PushDeviceRegistrationResponse.self, from: nestedData)
-      {
+      if let envelope = try? JSONDecoder.stockPlanShared.decode(APIEnvelope<PushDeviceRegistrationResponse>.self, from: data),
+         let payload = envelope.data {
         return payload
       }
       throw error
@@ -73,56 +85,19 @@ struct PushNotificationsHTTPClient {
   }
 
   func deactivateDevice(_ payload: PushDeviceDeactivateRequest) async throws {
-    let request = try makeRequest(
-      path: "/v1/notifications/apns/device/deactivate",
-      method: "POST",
-      body: payload
-    )
-    _ = try await perform(request: request)
+    let request = try client.makeURLRequest(for: CustomEndpoint(path: "/v1/notifications/apns/device/deactivate", method: .post, payload: payload))
+    _ = try await client.sendRequest(request, errorType: Error.self)
   }
+}
 
-  private func makeRequest<T: Encodable>(
-    path: String,
-    method: String,
-    body: T
-  ) throws -> URLRequest {
-    let normalizedPath = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-    let url = baseURL.appendingPathComponent(normalizedPath)
-
-    var request = URLRequest(url: url)
-    request.httpMethod = method
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-    if let token = authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-      request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+private struct CustomEndpoint<T: Encodable>: Endpoint {
+    typealias Response = EmptyAPIResponse
+    let path: String
+    let method: HTTPMethod
+    let payload: T
+    
+    func asParameters() throws -> Parameters {
+        let data = try JSONEncoder.stockPlanShared.encode(payload)
+        return (try JSONSerialization.jsonObject(with: data) as? Parameters) ?? [:]
     }
-
-    request.httpBody = try JSONEncoder.stockPlanShared.encode(body)
-    return request
-  }
-
-  private func perform(request: URLRequest) async throws -> Data {
-    let (data, response) = try await session.data(for: request)
-
-    guard let httpResponse = response as? HTTPURLResponse else {
-      throw Error.invalidResponse
-    }
-
-    guard (200 ..< 300).contains(httpResponse.statusCode) else {
-      let message = errorMessage(from: data)
-      if httpResponse.statusCode == 401 {
-        throw Error.unauthorized(message)
-      }
-      if let message, !message.isEmpty {
-        throw Error.api(message)
-      }
-      throw Error.invalidStatus(httpResponse.statusCode)
-    }
-
-    return data
-  }
-
-  private func errorMessage(from data: Data) -> String? {
-    APIErrorDecoding.message(from: data)
-  }
 }
