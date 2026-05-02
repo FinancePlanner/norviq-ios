@@ -34,7 +34,7 @@ jobs:
           xcodebuild test \
             -project financeplan.xcodeproj \
             -scheme financeplan \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
             -only-testing:financeplanTests/StockComparisonFormattingTests \
             -only-testing:financeplanTests/StockComparisonSortingTests \
             -quiet
@@ -44,7 +44,7 @@ jobs:
           xcodebuild test \
             -project financeplan.xcodeproj \
             -scheme financeplan \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
             -only-testing:financeplanUITests/StockDetailTabTests \
             -quiet
 
