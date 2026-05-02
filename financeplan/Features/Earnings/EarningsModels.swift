@@ -1,6 +1,6 @@
 import Foundation
 
-public struct EarningsEvent: Identifiable, Codable, Equatable, Sendable {
+public struct EarningsEvent: Identifiable, Equatable, Sendable {
     public var id: String { "\(symbol)-\(date)" }
     public let symbol: String
     public let date: String // YYYY-MM-DD
@@ -34,3 +34,5 @@ public struct EarningsEvent: Identifiable, Codable, Equatable, Sendable {
         self.hasTranscript = hasTranscript
     }
 }
+
+nonisolated extension EarningsEvent: Codable {}

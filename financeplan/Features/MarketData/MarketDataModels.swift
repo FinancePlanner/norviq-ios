@@ -35,7 +35,7 @@ enum FMPFreeTierCoverage {
   }
 }
 
-struct YearlyProjection: Codable, Equatable, Sendable {
+struct YearlyProjection: Equatable, Sendable {
   let year: Int
   let revenue: Double
   let revenueGrowth: Double
@@ -115,7 +115,7 @@ struct StockAnalysisMetrics: Codable, Equatable, Sendable {
   }
 }
 
-struct StockAnalystConsensus: Codable, Equatable, Sendable {
+struct StockAnalystConsensus: Equatable, Sendable {
   let symbol: String
   let strongBuy: Int
   let buy: Int
@@ -1371,3 +1371,11 @@ private func rounded(_ value: Double, decimals: Int) -> Double {
   let factor = pow(10, Double(decimals))
   return (value * factor).rounded() / factor
 }
+
+// MARK: - Nonisolated Codable conformances
+// Required because SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor would otherwise
+// make synthesized Codable methods @MainActor-isolated, breaking Sendable call sites.
+
+nonisolated extension YearlyProjection: Codable {}
+nonisolated extension StockAnalysisMetrics: Codable {}
+nonisolated extension StockAnalystConsensus: Codable {}
