@@ -1,6 +1,7 @@
 import Foundation
 import StockPlanShared
 
+@MainActor
 protocol CryptoServicing: Sendable {
     func fetchCryptoList() async throws -> [CryptoAssetResponse]
     func fetchCryptoQuote(symbols: String) async throws -> [CryptoQuoteResponse]
@@ -115,4 +116,3 @@ final class CryptoHTTPService: CryptoServicing {
         return token
     }
 }
-
