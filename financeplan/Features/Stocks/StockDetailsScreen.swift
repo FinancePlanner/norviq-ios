@@ -22,6 +22,8 @@ struct StockDetailScreen: View {
     @State private var selectedTab: StockDetailTab = .overview
     @State private var selectedScenario: StockProjectionScenarioKind = .base
     @State private var selectedStatementPeriod: StockFinancialStatementPeriod = .fy
+    @State private var pendingDCFValuation: DCFValuationPreset?
+    @State private var isConfirmingDCFValuationApply = false
 
     private enum ActiveSheet: String, Identifiable {
         case editValuation
@@ -56,6 +58,20 @@ struct StockDetailScreen: View {
         }
         .sheet(isPresented: $isPaywallPresented) {
             PaywallView(billingManager: billingManager)
+        }
+        .confirmationDialog(
+            "Replace valuation with DCF values?",
+            isPresented: $isConfirmingDCFValuationApply,
+            titleVisibility: .visible
+        ) {
+            Button("Replace with DCF values", role: .destructive) {
+                applyPendingDCFValuation()
+            }
+            Button("Cancel", role: .cancel) {
+                pendingDCFValuation = nil
+            }
+        } message: {
+            Text("This replaces the current bear, base, and bull ranges. Rationale and target date stay unchanged.")
         }
         .task {
             await loadStockDetails()
@@ -183,7 +199,8 @@ struct StockDetailScreen: View {
                             analysisMetricsMessage: viewModel.analysisMetricsMessage,
                             valuation: viewModel.valuation,
                             onEditAnalysis: presentEditAnalysis,
-                            onEditDCF: presentEditDCF
+                            onEditDCF: presentEditDCF,
+                            onApplyDCFToValuation: applyDCFToValuation
                         )
                     }
                 case .forecast:
@@ -191,7 +208,8 @@ struct StockDetailScreen: View {
                         StockForecastTab(
                             profile: viewModel.primaryComparisonProfile,
                             selectedScenario: $selectedScenario,
-                            onEditDCF: presentEditDCF
+                            onEditDCF: presentEditDCF,
+                            onApplyDCFToValuation: applyDCFToValuation
                         )
                     }
                 case .compare:
@@ -367,6 +385,33 @@ struct StockDetailScreen: View {
         viewModel.reloadAnalysisMetrics()
     }
 
+    private func applyDCFToValuation(bearPrice: Double, basePrice: Double, bullPrice: Double) {
+        let preset = DCFValuationPreset(bearPrice: bearPrice, basePrice: basePrice, bullPrice: bullPrice)
+
+        if viewModel.valuation == nil {
+            saveDCFValuation(preset)
+        } else {
+            pendingDCFValuation = preset
+            isConfirmingDCFValuationApply = true
+        }
+    }
+
+    private func applyPendingDCFValuation() {
+        guard let pendingDCFValuation else { return }
+        self.pendingDCFValuation = nil
+        saveDCFValuation(pendingDCFValuation)
+    }
+
+    private func saveDCFValuation(_ preset: DCFValuationPreset) {
+        Task { @MainActor in
+            _ = await viewModel.applyDCFToValuation(
+                bearPrice: preset.bearPrice,
+                basePrice: preset.basePrice,
+                bullPrice: preset.bullPrice
+            )
+        }
+    }
+
     private var thesisPayload: StockSharePayload? {
         guard let details = viewModel.details else { return nil }
         let text = details.notes?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -392,4 +437,10 @@ struct StockDetailScreen: View {
             currentPrice: viewModel.marketSnapshot?.currentPrice
         )
     }
+}
+
+private struct DCFValuationPreset {
+    let bearPrice: Double
+    let basePrice: Double
+    let bullPrice: Double
 }
