@@ -9,19 +9,16 @@ protocol MarketDataURLSessionProtocol: HTTPClientSession {
 
 extension URLSession: MarketDataURLSessionProtocol {}
 
-private let marketDataHTTPLogger = Logger(
-  subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
-  category: "MarketDataHTTPClient"
-)
+// MARK: - Client
 
-struct MarketDataHTTPClient {
-  enum Error: LocalizedError, Equatable {
+struct MarketDataHTTPClient: Sendable {
+  enum Error: HTTPClientError {
     case invalidResponse
     case invalidStatus(Int)
     case unauthorized(String?)
     case api(String)
 
-    var errorDescription: String? {
+    nonisolated var errorDescription: String? {
       switch self {
       case .invalidResponse:
         return "Invalid server response."
@@ -40,32 +37,54 @@ struct MarketDataHTTPClient {
       }
       return false
     }
+
+    nonisolated var statusCode: Int? {
+        if case let .invalidStatus(code) = self { return code }
+        return nil
+    }
+
+    nonisolated static func == (lhs: Error, rhs: Error) -> Bool {
+        switch (lhs, rhs) {
+        case (.invalidResponse, .invalidResponse): return true
+        case let (.invalidStatus(l), .invalidStatus(r)): return l == r
+        case let (.unauthorized(l), .unauthorized(r)): return l == r
+        case let (.api(l), .api(r)): return l == r
+        default: return false
+        }
+    }
+
+    static func makeInvalidResponse() -> Error { .invalidResponse }
+    static func makeInvalidStatus(_ code: Int) -> Error { .invalidStatus(code) }
+    static func makeUnauthorized(_ message: String?) -> Error { .unauthorized(message) }
+    static func makeAPI(_ message: String) -> Error { .api(message) }
   }
 
-  let baseURL: URL
-  let session: MarketDataURLSessionProtocol
-  let authTokenProvider: () -> String?
+  private let client: BaseHTTPClient
 
   init(
     baseURL: URL,
-    session: MarketDataURLSessionProtocol = URLSession.shared,
-    authTokenProvider: @escaping () -> String? = { nil }
+    session: any HTTPClientSession = URLSession.shared,
+    authTokenProvider: @escaping @Sendable () -> String? = { nil }
   ) {
-    self.baseURL = baseURL
-    self.session = session
-    self.authTokenProvider = authTokenProvider
+    self.client = BaseHTTPClient(
+        baseURL: baseURL,
+        session: session,
+        authTokenProvider: authTokenProvider,
+        logger: Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "MarketDataHTTPClient"),
+        decoder: .stockPlanShared
+    )
   }
 
   func fetchCompanyProfile(symbol: String) async throws -> CompanyProfileResponse {
-    try await call(GetCompanyProfileEndpoint(symbol: symbol))
+    try await client.call(GetCompanyProfileEndpoint(symbol: symbol), errorType: Error.self)
   }
 
   func fetchQuote(symbol: String) async throws -> QuoteResponse {
-    try await call(GetQuoteEndpoint(symbol: symbol))
+    try await client.call(GetQuoteEndpoint(symbol: symbol), errorType: Error.self)
   }
 
   func fetchAnalystConsensus(symbol: String) async throws -> StockAnalystConsensus {
-    let response = try await call(GetGradesConsensusEndpoint(symbol: symbol))
+    let response = try await client.call(GetGradesConsensusEndpoint(symbol: symbol), errorType: Error.self)
     guard let consensus = response.first else {
       throw Error.api("No analyst consensus is available for this stock right now.")
     }
@@ -73,7 +92,7 @@ struct MarketDataHTTPClient {
   }
 
   func fetchBasicFinancials(symbol: String) async throws -> StockBasicFinancials {
-    let response = try await call(GetBasicFinancialsEndpoint(symbol: symbol))
+    let response = try await client.call(GetBasicFinancialsEndpoint(symbol: symbol), errorType: Error.self)
     return response.basicFinancials
   }
 
@@ -84,158 +103,62 @@ struct MarketDataHTTPClient {
     terminalMargin: Double? = nil,
     fcfMarginAssumption: Double? = nil
   ) async throws -> StockAnalysisMetrics {
-    try await call(GetAnalysisMetricsEndpoint(
+    try await client.call(GetAnalysisMetricsEndpoint(
       symbol: symbol,
       wacc: wacc,
       terminalGrowthRate: terminalGrowthRate,
       terminalMargin: terminalMargin,
       fcfMarginAssumption: fcfMarginAssumption
-    ))
+    ), errorType: Error.self)
   }
 
   func fetchMarketCompare(symbols: [String]) async throws -> [StockAnalysisMetrics] {
-    try await call(GetMarketCompareEndpoint(symbols: symbols))
+    try await client.call(GetMarketCompareEndpoint(symbols: symbols), errorType: Error.self)
   }
 
   func fetchBalanceSheetStatement(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [BalanceSheetStatementResponse] {
-    try await call(GetBalanceSheetStatementEndpoint(symbol: symbol, limit: limit, period: period))
+    try await client.call(GetBalanceSheetStatementEndpoint(symbol: symbol, limit: limit, period: period), errorType: Error.self)
   }
 
   func fetchCashFlowStatement(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [CashFlowStatementResponse] {
-    try await call(GetCashFlowStatementEndpoint(symbol: symbol, limit: limit, period: period))
+    try await client.call(GetCashFlowStatementEndpoint(symbol: symbol, limit: limit, period: period), errorType: Error.self)
   }
 
   func fetchRatios(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [RatiosResponse] {
-    try await call(GetRatiosEndpoint(symbol: symbol, limit: limit, period: period))
+    try await client.call(GetRatiosEndpoint(symbol: symbol, limit: limit, period: period), errorType: Error.self)
   }
 
   func fetchRatiosTTM(symbol: String) async throws -> [RatiosTTMResponse] {
-    try await call(GetRatiosTTMEndpoint(symbol: symbol))
+    try await client.call(GetRatiosTTMEndpoint(symbol: symbol), errorType: Error.self)
   }
 
   func fetchFinancialGrowth(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [FinancialGrowthResponse] {
-    try await call(GetFinancialGrowthEndpoint(symbol: symbol, limit: limit, period: period))
+    try await client.call(GetFinancialGrowthEndpoint(symbol: symbol, limit: limit, period: period), errorType: Error.self)
   }
 
   func fetchAnalystEstimates(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [AnalystEstimatesResponse] {
-    try await call(GetAnalystEstimatesEndpoint(symbol: symbol, limit: limit, period: period))
+    try await client.call(GetAnalystEstimatesEndpoint(symbol: symbol, limit: limit, period: period), errorType: Error.self)
   }
 
   func fetchStockEarnings(symbol: String, limit: Int) async throws -> [EarningsEvent] {
-    try await call(GetStockEarningsEndpoint(symbol: symbol, limit: limit))
+    try await client.call(GetStockEarningsEndpoint(symbol: symbol, limit: limit), errorType: Error.self)
   }
 
   func fetchEarningsCalendar(from: String, to: String) async throws -> [EarningsEvent] {
-    try await call(GetEarningsCalendarEndpoint(from: from, to: to))
+    try await client.call(GetEarningsCalendarEndpoint(from: from, to: to), errorType: Error.self)
   }
 
   func fetchMarketNews(limit: Int?) async throws -> [StockNews] {
-    try await call(GetGeneralMarketNewsEndpoint(limit: limit))
+    try await client.call(GetGeneralMarketNewsEndpoint(limit: limit), errorType: Error.self)
   }
 
   func fetchPriceChart(symbol: String, range: String) async throws -> PriceChartSeries {
-    try await call(GetPriceChartEndpoint(symbol: symbol, range: range))
+    try await client.call(GetPriceChartEndpoint(symbol: symbol, range: range), errorType: Error.self)
   }
 
   func fetchPriceChartComparison(symbols: [String], range: String) async throws -> PriceChartComparisonResponse {
-    try await call(GetPriceChartComparisonEndpoint(symbols: symbols, range: range))
+    try await client.call(GetPriceChartComparisonEndpoint(symbols: symbols, range: range), errorType: Error.self)
   }
-
-  func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
-    let data = try await perform(endpoint)
-    do {
-      return try endpoint.decode(data)
-    } catch {
-      if let envelope = try? endpoint.decoder.decode(HTTPEnvelope<E.Response>.self, from: data) {
-        if let payload = envelope.data {
-          return payload
-        }
-        if let message = envelope.message, !message.isEmpty {
-          throw Error.api(message)
-        }
-      }
-      throw error
-    }
-  }
-
-  private func perform<E: Endpoint>(_ endpoint: E) async throws -> Data {
-    let request = try makeURLRequest(for: endpoint)
-    let (data, response) = try await session.data(for: request)
-
-    guard let httpResponse = response as? HTTPURLResponse else {
-      throw Error.invalidResponse
-    }
-
-    marketDataHTTPLogger.debug(
-      "MarketData response [\(endpoint.path, privacy: .public)] status=\(httpResponse.statusCode, privacy: .public)"
-    )
-
-    guard (200 ..< 300).contains(httpResponse.statusCode) else {
-      let message = errorMessage(from: data)
-
-      if httpResponse.statusCode == 401 {
-        throw Error.unauthorized(message)
-      }
-
-      if let message, !message.isEmpty {
-        throw Error.api(message)
-      }
-      throw Error.invalidStatus(httpResponse.statusCode)
-    }
-
-    return data
-  }
-
-  private func errorMessage(from data: Data) -> String? {
-    APIErrorDecoding.message(from: data)
-  }
-
-  private func makeURLRequest<E: Endpoint>(for endpoint: E) throws -> URLRequest {
-    let normalizedPath = endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-    let base = baseURL.appendingPathComponent(normalizedPath)
-    let parameters = try endpoint.asParameters()
-    let url = try url(for: endpoint.method, baseURL: base, parameters: parameters)
-
-    var request = URLRequest(url: url)
-    request.httpMethod = endpoint.method.rawValue
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-    if let token = authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-      request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-    }
-
-    for header in endpoint.headers {
-      request.setValue(header.value, forHTTPHeaderField: header.name)
-    }
-
-    if endpoint.method != .get, !parameters.isEmpty {
-      request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
-    }
-
-    return request
-  }
-
-  private func url(for method: HTTPMethod, baseURL: URL, parameters: Parameters) throws -> URL {
-    guard method == .get, !parameters.isEmpty else {
-      return baseURL
-    }
-
-    var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
-    components?.queryItems = parameters.compactMap { key, value in
-      URLQueryItem(name: key, value: String(describing: value))
-    }
-
-    guard let url = components?.url else {
-      throw Error.invalidResponse
-    }
-
-    return url
-  }
-}
-
-private struct HTTPEnvelope<T: Codable>: Codable {
-  let data: T?
-  let message: String?
 }
 
 struct MarketBasicFinancialsResponse: Codable, Sendable {

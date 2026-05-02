@@ -36,13 +36,13 @@ struct RedeemBillingCouponEndpoint: Endpoint {
   }
 }
 
-struct BillingCouponDiscountResponse: Codable, Equatable {
+struct BillingCouponDiscountResponse: Codable, Equatable, Sendable {
   let percentage: Int?
   let amount: Int?
   let currency: String?
 }
 
-struct BillingCouponResponse: Codable, Equatable {
+struct BillingCouponResponse: Codable, Equatable, Sendable {
   let code: String
   let grantType: String
   let trialDays: Int
@@ -50,7 +50,7 @@ struct BillingCouponResponse: Codable, Equatable {
   let expiresAt: Date?
 }
 
-struct BillingCouponRedemptionResponse: Codable, Equatable {
+struct BillingCouponRedemptionResponse: Codable, Equatable, Sendable {
   let coupon: BillingCouponResponse
   let trialDaysRemaining: Int?
   let isTrialActive: Bool

@@ -3,6 +3,12 @@ import Foundation
 import StockPlanShared
 import OSLog
 
+protocol StockURLSessionProtocol: HTTPClientSession {
+  func data(for request: URLRequest) async throws -> (Data, URLResponse)
+}
+
+extension URLSession: StockURLSessionProtocol {}
+
 // MARK: - Client
 
 struct StockHTTPClient: Sendable {
@@ -63,7 +69,7 @@ struct StockHTTPClient: Sendable {
         baseURL: baseURL,
         session: session,
         authTokenProvider: authTokenProvider,
-        requestLogger: { [logger] path, method, parameters in
+        requestLogger: { path, method, parameters in
             StockHTTPClient.logValuationRequestIfNeeded(logger: logger, path: path, method: method, parameters: parameters)
         },
         logger: logger,
@@ -89,7 +95,7 @@ struct StockHTTPClient: Sendable {
     try await client.execute(endpoint, errorType: Error.self)
   }
 
-  private static func logValuationRequestIfNeeded(logger: Logger, path: String, method: HTTPMethod, parameters: Parameters) {
+  nonisolated private static func logValuationRequestIfNeeded(logger: Logger, path: String, method: HTTPMethod, parameters: Parameters) {
     guard path.contains("/stocks/symbol/"), path.contains("/valuation") else {
       return
     }

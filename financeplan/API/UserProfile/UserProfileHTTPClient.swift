@@ -3,6 +3,12 @@ import Foundation
 import OSLog
 import StockPlanShared
 
+protocol UserProfileURLSessionProtocol: HTTPClientSession {
+  func data(for request: URLRequest) async throws -> (Data, URLResponse)
+}
+
+extension URLSession: UserProfileURLSessionProtocol {}
+
 // MARK: - Client
 
 struct UserProfileHTTPClient: Sendable {

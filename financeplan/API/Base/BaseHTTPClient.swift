@@ -16,13 +16,14 @@ public protocol HTTPClientError: LocalizedError, Equatable, Sendable {
     static func makeAPI(_ message: String) -> Self
 }
 
-/// Shared HTTP client logic. Non-generic struct to avoid compiler crashes.
+/// Shared HTTP client logic. MainActor isolated to match the project's default isolation and handle main-actor isolated DTOs.
+@MainActor
 public struct BaseHTTPClient: Sendable {
     
     // MARK: - Stored Properties
     
     public let baseURL: URL
-    public let session: URLSession
+    public let session: any HTTPClientSession
     public let authTokenProvider: @Sendable () -> String?
     public let logger: Logger
     public let errorReporter: ErrorReporting?
@@ -38,7 +39,7 @@ public struct BaseHTTPClient: Sendable {
     
     public init(
         baseURL: URL,
-        session: URLSession = .shared,
+        session: any HTTPClientSession = URLSession.shared,
         authTokenProvider: @escaping @Sendable () -> String? = { nil },
         extraHeadersProvider: @escaping @Sendable (any Endpoint) -> [(name: String, value: String)] = { _ in [] },
         requestLogger: @escaping @Sendable (String, HTTPMethod, Parameters) -> Void = { _, _, _ in },

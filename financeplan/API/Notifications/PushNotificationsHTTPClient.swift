@@ -3,6 +3,12 @@ import Foundation
 import StockPlanShared
 import OSLog
 
+protocol PushNotificationsURLSessionProtocol: HTTPClientSession {
+  func data(for request: URLRequest) async throws -> (Data, URLResponse)
+}
+
+extension URLSession: PushNotificationsURLSessionProtocol {}
+
 // MARK: - Client
 
 struct PushNotificationsHTTPClient: Sendable {
@@ -70,7 +76,8 @@ struct PushNotificationsHTTPClient: Sendable {
   }
 
   func registerDevice(_ payload: PushDeviceRegistrationRequest) async throws -> PushDeviceRegistrationResponse {
-    let request = try client.makeURLRequest(for: CustomEndpoint(path: "/v1/notifications/apns/device", method: .put, payload: payload))
+    let endpoint = CustomEndpoint(path: "/v1/notifications/apns/device", method: .put, payload: payload)
+    let request = try client.makeURLRequest(for: endpoint)
     let data = try await client.sendRequest(request, errorType: Error.self)
 
     do {
@@ -85,7 +92,8 @@ struct PushNotificationsHTTPClient: Sendable {
   }
 
   func deactivateDevice(_ payload: PushDeviceDeactivateRequest) async throws {
-    let request = try client.makeURLRequest(for: CustomEndpoint(path: "/v1/notifications/apns/device/deactivate", method: .post, payload: payload))
+    let endpoint = CustomEndpoint(path: "/v1/notifications/apns/device/deactivate", method: .post, payload: payload)
+    let request = try client.makeURLRequest(for: endpoint)
     _ = try await client.sendRequest(request, errorType: Error.self)
   }
 }
@@ -99,5 +107,16 @@ private struct CustomEndpoint<T: Encodable>: Endpoint {
     func asParameters() throws -> Parameters {
         let data = try JSONEncoder.stockPlanShared.encode(payload)
         return (try JSONSerialization.jsonObject(with: data) as? Parameters) ?? [:]
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(path, forKey: .path)
+        try container.encode(method.rawValue, forKey: .method)
+        try container.encode(payload, forKey: .payload)
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case path, method, payload
     }
 }
