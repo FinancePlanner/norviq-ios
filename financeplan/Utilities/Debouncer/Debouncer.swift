@@ -1,6 +1,7 @@
 import Combine
 import SwiftUI
 
+@MainActor
 class Debouncer<T>: ObservableObject {
   @Published var value: T
   @Published private(set) var debouncedValue: T

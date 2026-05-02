@@ -2,8 +2,9 @@ import Combine
 import SwiftUI
 
 @propertyWrapper
+@MainActor
 struct Debounced<T>: DynamicProperty {
-  @StateObject var debouncer: Debouncer<T>
+  @StateObject private var debouncer: Debouncer<T>
 
   init(
     wrappedValue: T,
@@ -21,8 +22,10 @@ struct Debounced<T>: DynamicProperty {
 
   var projectedValue: Binding<T> {
     Binding {
+      @MainActor in
       debouncer.value
     } set: {
+      @MainActor in
       debouncer.update($0)
     }
   }
