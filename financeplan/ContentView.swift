@@ -387,7 +387,7 @@ private struct AppLockOverlay: View {
           }
           .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.glassProminent)
+        .buttonStyle(.borderedProminent)
         .disabled(isUnlocking)
 
         if isSecurityCodeEnabled {
@@ -411,7 +411,7 @@ private struct AppLockOverlay: View {
             }
 
             Button("Unlock with Security Code", action: onSecurityCodeUnlock)
-              .buttonStyle(.glass)
+              .buttonStyle(.bordered)
               .frame(maxWidth: .infinity)
               .disabled(securityCodeInput.count != 6)
           }
@@ -425,7 +425,7 @@ private struct AppLockOverlay: View {
           Text("Sign Out")
             .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.glass)
+        .buttonStyle(.bordered)
       }
       .padding(24)
       .frame(maxWidth: 320)

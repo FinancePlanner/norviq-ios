@@ -45,14 +45,14 @@ struct PrivacyWelcomeScreen: View {
               .font(.headline.weight(.semibold))
               .frame(maxWidth: .infinity)
           }
-          .buttonStyle(.glassProminent)
+          .buttonStyle(.borderedProminent)
 
           Button(action: onSignUp) {
             Text("Create Account")
               .font(.headline.weight(.semibold))
               .frame(maxWidth: .infinity)
           }
-          .buttonStyle(.glass)
+          .buttonStyle(.bordered)
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 16)

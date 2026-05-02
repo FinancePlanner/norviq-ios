@@ -61,7 +61,7 @@ struct VaultMFAVerificationView: View {
               .font(.headline.weight(.semibold))
           }
         }
-        .buttonStyle(.glassProminent)
+        .buttonStyle(.borderedProminent)
         .tint(AppTheme.Colors.tint(for: colorScheme))
         .disabled(viewModel.isVerifyingMFA)
 

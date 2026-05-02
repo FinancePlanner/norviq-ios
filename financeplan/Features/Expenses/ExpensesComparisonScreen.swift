@@ -88,7 +88,7 @@ struct ExpensesComparisonScreen: View {
             } label: {
               Image(systemName: "slider.horizontal.3")
             }
-            .buttonStyle(.glass)
+.buttonStyle(.borderedProminent)
             .accessibilityIdentifier("reports.customizeButton")
           }
         }
@@ -296,7 +296,7 @@ private struct CustomizeDashboardSheet: View {
                 Image(systemName: preferences.hiddenCards.contains(card) ? "eye.slash" : "eye")
                   .foregroundStyle(preferences.hiddenCards.contains(card) ? Color.secondary : Color.blue)
               }
-              .buttonStyle(.plain)
+.buttonStyle(.bordered)
             }
           }
           .onMove { source, destination in
@@ -536,7 +536,7 @@ private struct SpendingInsightsSection: View {
               .foregroundStyle(.secondary)
           }
         }
-        .buttonStyle(.plain)
+.buttonStyle(.bordered)
       }
     }
   }
