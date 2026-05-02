@@ -142,7 +142,7 @@ struct BrokerService: BrokerServicing {
     }
   }
 
-  private func performAuthenticated<T>(
+  private func performAuthenticated<T: Sendable>(
     _ operation: (BrokerHTTPClient) async throws -> T
   ) async throws -> T {
     do {
@@ -197,5 +197,4 @@ struct BrokerService: BrokerServicing {
     "\(callbackScheme)://oauth/broker-callback"
   }
 }
-
 

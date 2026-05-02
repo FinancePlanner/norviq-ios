@@ -74,7 +74,7 @@ final class UserProfileHTTPService: UserProfileServiceProtocol {
         )
     }
 
-    private func performAuthenticated<T>(
+    private func performAuthenticated<T: Sendable>(
         _ operation: (UserProfileHTTPClient) async throws -> T
     ) async throws -> T {
         do {

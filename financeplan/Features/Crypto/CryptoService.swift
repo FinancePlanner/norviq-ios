@@ -84,7 +84,7 @@ final class CryptoHTTPService: CryptoServicing {
         )
     }
 
-    private func performAuthenticated<T>(
+    private func performAuthenticated<T: Sendable>(
         _ operation: (CryptoHTTPClient) async throws -> T
     ) async throws -> T {
         do {
@@ -115,5 +115,4 @@ final class CryptoHTTPService: CryptoServicing {
         return token
     }
 }
-
 

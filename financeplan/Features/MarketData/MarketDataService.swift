@@ -196,7 +196,7 @@ final class MarketDataHTTPService: MarketDataServicing {
     )
   }
 
-  private func performAuthenticated<T>(
+  private func performAuthenticated<T: Sendable>(
     _ operation: (MarketDataHTTPClient) async throws -> T
   ) async throws -> T {
     do {
@@ -323,21 +323,21 @@ protocol CompanyProfileCaching: Sendable {
 final class CompanyProfileCache: CompanyProfileCaching {
   static let shared = CompanyProfileCache()
   
-  private let userDefaults: UserDefaults
+  private let store: UserDefaultsProfileStore
   private let keyPrefix = "CompanyProfileCache_"
 
   init(userDefaults: UserDefaults = .standard) {
-    self.userDefaults = userDefaults
+    self.store = UserDefaultsProfileStore(userDefaults)
   }
 
   func getProfile(for symbol: String) -> CompanyProfileResponse? {
     let key = cacheKey(for: symbol)
-    guard let data = userDefaults.data(forKey: key) else { return nil }
+    guard let data = store.data(forKey: key) else { return nil }
     do {
       return try JSONDecoder().decode(CompanyProfileResponse.self, from: data)
     } catch {
       // If decoding fails (e.g. model changed), clear the stale cache
-      userDefaults.removeObject(forKey: key)
+      store.removeObject(forKey: key)
       return nil
     }
   }
@@ -346,24 +346,50 @@ final class CompanyProfileCache: CompanyProfileCaching {
     let key = cacheKey(for: symbol)
     do {
       let data = try JSONEncoder().encode(profile)
-      userDefaults.set(data, forKey: key)
+      store.set(data, forKey: key)
     } catch {
       print("Failed to encode CompanyProfileResponse for caching: \(error)")
     }
   }
 
   func clearCache(for symbol: String) {
-    userDefaults.removeObject(forKey: cacheKey(for: symbol))
+    store.removeObject(forKey: cacheKey(for: symbol))
   }
 
   func clearAllCache() {
-    let keys = userDefaults.dictionaryRepresentation().keys.filter { $0.hasPrefix(keyPrefix) }
+    let keys = store.dictionaryKeys().filter { $0.hasPrefix(keyPrefix) }
     for key in keys {
-      userDefaults.removeObject(forKey: key)
+      store.removeObject(forKey: key)
     }
   }
 
   private func cacheKey(for symbol: String) -> String {
     "\(keyPrefix)\(symbol.uppercased())"
+  }
+}
+
+// Safety: this wrapper stores no mutable state of its own and only forwards to
+// UserDefaults key-value APIs, which are internally synchronized by Foundation.
+private struct UserDefaultsProfileStore: @unchecked Sendable {
+  private let userDefaults: UserDefaults
+
+  init(_ userDefaults: UserDefaults) {
+    self.userDefaults = userDefaults
+  }
+
+  func data(forKey key: String) -> Data? {
+    userDefaults.data(forKey: key)
+  }
+
+  func set(_ data: Data, forKey key: String) {
+    userDefaults.set(data, forKey: key)
+  }
+
+  func removeObject(forKey key: String) {
+    userDefaults.removeObject(forKey: key)
+  }
+
+  func dictionaryKeys() -> [String] {
+    Array(userDefaults.dictionaryRepresentation().keys)
   }
 }

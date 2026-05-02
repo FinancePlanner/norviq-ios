@@ -32,7 +32,7 @@ struct ActivityHTTPService: ActivityServicing {
         )
     }
 
-    private func performAuthenticated<T>(
+    private func performAuthenticated<T: Sendable>(
         _ action: @escaping (ActivityHTTPClient) async throws -> T
     ) async throws -> T {
         guard let _ = try await authSessionManager.validAccessToken() else {

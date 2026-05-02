@@ -53,7 +53,7 @@ final class StatisticsHTTPService: StatisticsServicing {
     )
   }
 
-  private func performAuthenticated<T>(
+  private func performAuthenticated<T: Sendable>(
     _ operation: (MarketDataHTTPClient) async throws -> T
   ) async throws -> T {
     do {

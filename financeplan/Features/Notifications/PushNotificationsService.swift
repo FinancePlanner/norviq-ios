@@ -51,7 +51,7 @@ struct PushNotificationsService: PushNotificationsServicing {
     }
   }
 
-  private func performAuthenticated<T>(
+  private func performAuthenticated<T: Sendable>(
     _ operation: (PushNotificationsHTTPClient) async throws -> T
   ) async throws -> T {
     do {
@@ -90,5 +90,4 @@ struct PushNotificationsService: PushNotificationsServicing {
     return token
   }
 }
-
 
