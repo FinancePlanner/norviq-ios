@@ -1785,13 +1785,8 @@ private struct DashboardActionButton: View {
 
 private struct FocusInputSurfaceModifier: ViewModifier {
   func body(content: Content) -> some View {
-    if #available(iOS 26, *) {
-      content
-        .glassEffect(.regular, in: .rect(cornerRadius: 12))
-    } else {
-      content
-        .appGlassEffect(.rect(cornerRadius: 12))
-    }
+    content
+      .appGlassEffect(.rect(cornerRadius: 12))
   }
 }
 
