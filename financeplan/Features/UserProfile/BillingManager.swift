@@ -9,6 +9,8 @@ import UIKit
 @MainActor
 @Observable
 final class BillingManager {
+  typealias BillingClientFactory = @MainActor (URL, String?) -> BillingHTTPClient
+
   private enum Keys {
     static let entitlementLevel = "billing.entitlement_level"
     static let isPro = "billing.is_pro"
@@ -28,32 +30,60 @@ final class BillingManager {
   var isLoading = false
   var isPurchasing = false
   var isRestoring = false
+  var isRedeemingCoupon = false
   var errorMessage: String?
+  var couponRedemptionMessage: String?
 
   private let environmentManager: AppEnvironmentManager
   private let authSessionManager: AuthSessionManaging
   private let sessionStore: AuthSessionStoring
+  private let billingClientFactory: BillingClientFactory
   private var configuredUserID: String?
   private var didConfigureRevenueCat = false
+  private let uiTestBillingTier: String?
 
   init(
     environmentManager: AppEnvironmentManager,
     authSessionManager: AuthSessionManaging,
-    sessionStore: AuthSessionStoring
+    sessionStore: AuthSessionStoring,
+    billingClientFactory: @escaping BillingClientFactory = { baseURL, token in
+      BillingHTTPClient(
+        baseURL: baseURL,
+        authTokenProvider: { token }
+      )
+    }
   ) {
     self.environmentManager = environmentManager
     self.authSessionManager = authSessionManager
     self.sessionStore = sessionStore
+    self.billingClientFactory = billingClientFactory
+    self.uiTestBillingTier = Self.normalizedUITestBillingTier()
     loadCachedEntitlement()
+    applyUITestBillingContextIfNeeded()
   }
 
   var isPro: Bool {
-    context.map { $0.isPremium || $0.entitlementLevel == "pro" || $0.entitlementLevel.hasPrefix("pro_") }
+    if ProcessInfo.processInfo.arguments.contains("-ui_test_pro_user") {
+      return true
+    }
+    return context.map { $0.isPremium || $0.entitlementLevel == "pro" || $0.entitlementLevel.hasPrefix("pro_") }
       ?? UserDefaults.standard.bool(forKey: Keys.isPro)
   }
 
   var trialDaysRemaining: Int? {
     context?.trialDaysRemaining
+  }
+
+  /// Returns whether a named feature is available for the current user.
+  ///
+  /// Checks the `features` list from the server-provided `BillingContextResponse` first,
+  /// which allows individual features to be toggled server-side without an app update.
+  /// Falls back to `isPro` when no server-side descriptor is found for the given key.
+  ///
+  /// - Parameter key: The raw feature key (e.g. `"household_partner"`, `"year_overview"`).
+  /// - Returns: `true` if the feature is available, `false` otherwise.
+  func isFeatureAvailable(_ key: String) -> Bool {
+    context?.features.first(where: { $0.key == key })?.available ?? isPro
   }
 
   var annualPackage: Package? {
@@ -73,6 +103,7 @@ final class BillingManager {
   }
 
   func configureAnonymousIfNeeded() {
+    guard uiTestBillingTier == nil else { return }
     guard !didConfigureRevenueCat else { return }
     guard let apiKey = Bundle.main.object(forInfoDictionaryKey: "RevenueCatAPIKey") as? String,
           !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -85,12 +116,14 @@ final class BillingManager {
   }
 
   func configureForCurrentUser() {
+    guard uiTestBillingTier == nil else { return }
     let userID = sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !userID.isEmpty else { return }
     configureRevenueCat(userID: userID)
   }
 
   func configureRevenueCat(userID: String) {
+    guard uiTestBillingTier == nil else { return }
     guard configuredUserID != userID else { return }
     configuredUserID = userID
 
@@ -116,6 +149,10 @@ final class BillingManager {
   }
 
   func refreshBillingContext() async {
+    guard uiTestBillingTier == nil else {
+      applyUITestBillingContextIfNeeded()
+      return
+    }
     await performLoading {
       let context = try await billingClient(forceRefresh: false).fetchContext()
       apply(context)
@@ -185,6 +222,10 @@ final class BillingManager {
   }
 
   func restorePurchases() async {
+    guard uiTestBillingTier == nil else {
+      applyUITestBillingContextIfNeeded()
+      return
+    }
     configureForCurrentUser()
     guard didConfigureRevenueCat else { return }
 
@@ -195,6 +236,44 @@ final class BillingManager {
     do {
       _ = try await Purchases.shared.restorePurchases()
       try await restoreBackendEntitlement()
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  func redeemCoupon(code: String) async {
+    let trimmedCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmedCode.isEmpty else {
+      errorMessage = "Enter a coupon code."
+      couponRedemptionMessage = nil
+      return
+    }
+
+    isRedeemingCoupon = true
+    errorMessage = nil
+    couponRedemptionMessage = nil
+    defer { isRedeemingCoupon = false }
+
+    do {
+      let response = try await billingClient(forceRefresh: false).redeemCoupon(code: trimmedCode)
+      if let context = response.billingContext {
+        apply(context)
+      }
+      couponRedemptionMessage = isPro
+        ? "Coupon redeemed. Pro is active."
+        : "Coupon redeemed."
+    } catch let error as BillingHTTPClient.Error where error.isUnauthorized {
+      do {
+        let response = try await billingClient(forceRefresh: true).redeemCoupon(code: trimmedCode)
+        if let context = response.billingContext {
+          apply(context)
+        }
+        couponRedemptionMessage = isPro
+          ? "Coupon redeemed. Pro is active."
+          : "Coupon redeemed."
+      } catch {
+        errorMessage = error.localizedDescription
+      }
     } catch {
       errorMessage = error.localizedDescription
     }
@@ -243,10 +322,7 @@ final class BillingManager {
     let token = forceRefresh
       ? try await authSessionManager.refreshAccessToken()
       : try await authSessionManager.validAccessToken()
-    return BillingHTTPClient(
-      baseURL: environmentManager.current.apiBaseUrl,
-      authTokenProvider: { token }
-    )
+    return billingClientFactory(environmentManager.current.apiBaseUrl, token)
   }
 
   private func apply(_ context: BillingContextResponse) {
@@ -261,5 +337,113 @@ final class BillingManager {
 
   private func loadCachedEntitlement() {
     guard UserDefaults.standard.object(forKey: Keys.isPro) != nil else { return }
+  }
+
+  private static func normalizedUITestBillingTier() -> String? {
+    if ProcessInfo.processInfo.arguments.contains("-ui_test_pro_user") {
+      return "pro"
+    }
+    guard let raw = ProcessInfo.processInfo.billingArgumentValue(for: "-ui_test_billing_tier") else {
+      return nil
+    }
+    let normalized = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    guard ["free", "trial", "pro"].contains(normalized) else { return nil }
+    return normalized
+  }
+
+  private func applyUITestBillingContextIfNeeded() {
+    guard let uiTestBillingTier else { return }
+    apply(Self.makeUITestBillingContext(tier: uiTestBillingTier))
+  }
+
+  private static func makeUITestBillingContext(tier: String) -> BillingContextResponse {
+    let isPaid = tier == "trial" || tier == "pro"
+    let entitlementLevel = tier == "trial" ? "temporary" : tier
+    return BillingContextResponse(
+      plan: entitlementLevel,
+      entitlementLevel: entitlementLevel,
+      isPremium: isPaid,
+      subscription: nil,
+      features: makeUITestFeatures(available: isPaid),
+      usage: makeUITestUsage(hasFreeLimits: !isPaid),
+      trialDaysRemaining: tier == "trial" ? 7 : nil,
+      isTrialActive: tier == "trial",
+      generatedAt: Date()
+    )
+  }
+
+  private static func makeUITestFeatures(available paidFeaturesAvailable: Bool) -> [BillingFeatureDTO] {
+    let proOnlyKeys = Set([
+      "broker_sync",
+      "valuation_cases",
+      "target_alerts",
+      "household_partner",
+      "recurring_templates",
+      "year_overview",
+      "smart_suggestions",
+      "reports",
+      "statistics",
+      "market_fundamentals",
+      "advanced_research",
+      "peer_comparison",
+      "earnings_text",
+    ])
+    let keys = [
+      "broker_sync",
+      "portfolio_lists",
+      "holdings",
+      "watchlist_items",
+      "valuation_cases",
+      "csv_imports",
+      "target_alerts",
+      "report_generations",
+      "expense_planner",
+      "household_partner",
+      "recurring_templates",
+      "year_overview",
+      "smart_suggestions",
+      "reports",
+      "statistics",
+      "market_fundamentals",
+      "advanced_research",
+      "peer_comparison",
+      "earnings_text",
+    ]
+    return keys.map { key in
+      let available = !proOnlyKeys.contains(key) || paidFeaturesAvailable
+      return BillingFeatureDTO(
+        key: key,
+        title: key.replacingOccurrences(of: "_", with: " ").capitalized,
+        available: available,
+        requiredPlan: available ? nil : "pro",
+        reason: available ? nil : "Upgrade to Pro to use this feature.",
+        limit: nil,
+        used: nil,
+        remaining: nil
+      )
+    }
+  }
+
+  private static func makeUITestUsage(hasFreeLimits: Bool) -> [BillingUsageDTO] {
+    [
+      BillingUsageDTO(key: "portfolio_lists", used: 0, limit: hasFreeLimits ? 1 : nil, remaining: hasFreeLimits ? 1 : nil, periodStart: nil),
+      BillingUsageDTO(key: "holdings", used: 0, limit: hasFreeLimits ? 5 : nil, remaining: hasFreeLimits ? 5 : nil, periodStart: nil),
+      BillingUsageDTO(key: "watchlist_items", used: 0, limit: hasFreeLimits ? 10 : nil, remaining: hasFreeLimits ? 10 : nil, periodStart: nil),
+      BillingUsageDTO(key: "csv_imports", used: 0, limit: hasFreeLimits ? 1 : nil, remaining: hasFreeLimits ? 1 : nil, periodStart: Date()),
+      BillingUsageDTO(key: "report_generations", used: 0, limit: hasFreeLimits ? 10 : nil, remaining: hasFreeLimits ? 10 : nil, periodStart: Date()),
+    ]
+  }
+}
+
+private extension ProcessInfo {
+  func billingArgumentValue(for name: String) -> String? {
+    guard let index = arguments.firstIndex(of: name) else {
+      return nil
+    }
+    let valueIndex = arguments.index(after: index)
+    guard arguments.indices.contains(valueIndex) else {
+      return nil
+    }
+    return arguments[valueIndex]
   }
 }

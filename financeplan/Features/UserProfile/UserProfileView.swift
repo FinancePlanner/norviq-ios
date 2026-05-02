@@ -7,13 +7,13 @@
 
 import PostHog
 import StockPlanShared
+import StoreKit
 import SwiftUI
 import Factory
 
 private enum UserProfileDestination: Hashable {
     case securityCode
     case badges
-    case helpSupport
     case shareFeedback
     case about
     case language
@@ -30,6 +30,7 @@ public struct UserProfileView: View {
     @StateObject private var pushNotificationsCoordinator: PushNotificationsCoordinator
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.requestReview) private var requestReview
     @InjectedObservable(\Container.appEnvironment) private var environmentManager
     @InjectedObservable(\Container.billingManager) private var billingManager
     @State private var path: [UserProfileDestination] = []
@@ -182,6 +183,7 @@ public struct UserProfileView: View {
                 if let days = billingManager.trialDaysRemaining {
                     Label("Trial: \(days) days remaining", systemImage: "calendar.badge.clock")
                         .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("settings.subscription.trial")
                 } else {
                     HStack {
                         Label(LocalizedStringKey("Status"), systemImage: "checkmark.seal")
@@ -189,6 +191,7 @@ public struct UserProfileView: View {
                         Text(billingManager.isPro ? "Pro" : "Free")
                             .typography(.caption, weight: .semibold)
                             .foregroundStyle(.secondary)
+                            .accessibilityIdentifier(billingManager.isPro ? "settings.subscription.pro" : "settings.subscription.free")
                     }
                 }
 
@@ -341,8 +344,23 @@ public struct UserProfileView: View {
 
             // Support
             Section(LocalizedStringKey("Support")) {
-                NavigationLink(value: UserProfileDestination.helpSupport) {
-                    Label(LocalizedStringKey("Help & Support"), systemImage: "questionmark.circle")
+                if let mailURL = URL(string: "mailto:support@norviqa.com") {
+                    Link(destination: mailURL) {
+                        Label("Contact Developer", systemImage: "envelope.fill")
+                            .foregroundStyle(.primary)
+                    }
+                }
+                Button {
+                    requestReview()
+                } label: {
+                    Label("Rate on App Store", systemImage: "star.fill")
+                        .foregroundStyle(.primary)
+                }
+                if let appStoreURL = URL(string: "https://apps.apple.com/app/idYOUR_APP_ID") {
+                    ShareLink(item: appStoreURL) {
+                        Label("Share App", systemImage: "square.and.arrow.up")
+                            .foregroundStyle(.primary)
+                    }
                 }
                 NavigationLink(value: UserProfileDestination.dataAvailability) {
                     Label("Data Availability", systemImage: "chart.line.uptrend.xyaxis")
@@ -437,8 +455,6 @@ public struct UserProfileView: View {
             )
         case .badges:
             BadgesView()
-        case .helpSupport:
-            HelpSupportView()
         case .shareFeedback:
             ShareFeedbackView()
         case .about:

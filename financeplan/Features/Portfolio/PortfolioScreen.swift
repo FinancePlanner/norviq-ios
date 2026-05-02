@@ -138,48 +138,7 @@ struct PortfolioScreen: View {
 
   var body: some View {
     ZStack {
-      if let loadErrorMessage {
-        PortfolioLoadErrorView(error: loadErrorMessage, onRetry: retryLoad)
-          .transition(.opacity)
-      } else if isShowingLoadingState {
-        PortfolioSkeletonView()
-          .transition(.opacity)
-      } else {
-        ScrollView {
-          VStack(spacing: 16) {
-            PortfolioHeroCard(
-              colorScheme: colorScheme,
-              heroLabel: heroLabel,
-              totalValue: totalValue,
-              heroSubtitle: heroSubtitle,
-              chartData: chartData,
-              selectedTimeRange: selectedTimeRange,
-              totalShares: totalShares,
-              averagePositionValue: averagePositionValue,
-              cashBalance: cashBalance,
-              onSelectTimeRange: selectTimeRange
-            )
-
-            PortfolioAssetFilters(
-              colorScheme: colorScheme,
-              selectedAssetFilter: selectedAssetFilter,
-              onSelectFilter: selectAssetFilter
-            )
-
-            PortfolioPositionsSection(
-              stocks: filteredStocks,
-              targetAlertProvider: viewModel.targetAlert(for:),
-              onAddPosition: presentAddPositionSheet,
-              onEditStock: beginEditing,
-              onDeleteStock: deleteStock,
-              onPresentTargetAlert: presentTargetAlert
-            )
-          }
-          .padding(.horizontal, 16)
-          .padding(.vertical, 12)
-        }
-        .transition(.opacity)
-      }
+      mainContent
     }
     .animation(.smooth(duration: 0.3), value: viewModel.isLoading)
     .onAppear(perform: prepareScreen)
@@ -210,20 +169,7 @@ struct PortfolioScreen: View {
       editSheetContent
     }
     .sheet(isPresented: $isAddPositionPresented) {
-      AddPositionSheet(
-        title: "Add Position",
-        draft: AddPositionDraft(
-          symbol: "",
-          companyName: nil,
-          shares: "",
-          buyPrice: "",
-          buyDate: .now,
-          notes: "",
-          symbolLocked: false
-        ),
-        isSaving: viewModel.isSaving,
-        onSave: saveNewPosition
-      )
+      addPositionSheetContent
     }
     .sheet(isPresented: $isCSVImportPresented) {
       PortfolioCSVImportSheet(portfolioListId: viewModel.selectedPortfolioListId) {
@@ -301,6 +247,75 @@ struct PortfolioScreen: View {
         deleteStock(id: stock.id)
       }
     }
+  }
+
+  @ViewBuilder
+  private var mainContent: some View {
+    if let loadErrorMessage {
+      PortfolioLoadErrorView(error: loadErrorMessage, onRetry: retryLoad)
+        .transition(.opacity)
+    } else if isShowingLoadingState {
+      PortfolioSkeletonView()
+        .transition(.opacity)
+    } else {
+      portfolioScrollContent
+        .transition(.opacity)
+    }
+  }
+
+  private var portfolioScrollContent: some View {
+    ScrollView {
+      VStack(spacing: 16) {
+        PortfolioHeroCard(
+          colorScheme: colorScheme,
+          heroLabel: heroLabel,
+          totalValue: totalValue,
+          heroSubtitle: heroSubtitle,
+          chartData: chartData,
+          selectedTimeRange: selectedTimeRange,
+          totalShares: totalShares,
+          averagePositionValue: averagePositionValue,
+          cashBalance: cashBalance,
+          onSelectTimeRange: selectTimeRange
+        )
+
+        PortfolioAssetFilters(
+          colorScheme: colorScheme,
+          selectedAssetFilter: selectedAssetFilter,
+          onSelectFilter: selectAssetFilter
+        )
+
+        PortfolioPositionsSection(
+          stocks: filteredStocks,
+          targetAlertProvider: viewModel.targetAlert(for:),
+          onAddPosition: presentAddPositionSheet,
+          onEditStock: beginEditing,
+          onDeleteStock: deleteStock,
+          onPresentTargetAlert: presentTargetAlert,
+          onLoadMore: loadMoreIfAvailable
+        )
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 12)
+    }
+  }
+
+  private var addPositionSheetContent: some View {
+    AddPositionSheet(
+      title: "Add Position",
+      draft: AddPositionDraft(
+        symbol: "",
+        companyName: nil,
+        shares: "",
+        buyPrice: "",
+        buyDate: .now,
+        notes: "",
+        symbolLocked: false
+      ),
+      isSaving: viewModel.isSaving,
+      allocationImpactProvider: allocationImpact(for:),
+      onSave: saveNewPosition
+    )
   }
 
   private func presentTargetAlert(for stock: SDPortfolioStock) {
@@ -418,6 +433,49 @@ struct PortfolioScreen: View {
     isCSVImportPresented = true
   }
 
+  private func loadMoreIfAvailable() {
+    Task { await viewModel.loadMoreIfAvailable() }
+  }
+
+  private func allocationImpact(for draft: AddPositionDraft) -> PortfolioAllocationImpact? {
+    guard
+      let shares = Double(draft.shares),
+      let buyPrice = Double(draft.buyPrice)
+    else {
+      return nil
+    }
+
+    return PortfolioAllocationImpactCalculator.preview(
+      holdings: allocationHoldings,
+      cashBalance: cashBalance,
+      change: .newPosition(symbol: draft.symbol, shares: shares, buyPrice: buyPrice)
+    )
+  }
+
+  private func allocationImpact(for stock: StockResponse) -> PortfolioAllocationImpact? {
+    PortfolioAllocationImpactCalculator.preview(
+      holdings: allocationHoldings,
+      cashBalance: cashBalance,
+      change: .replacePosition(
+        id: stock.id,
+        symbol: stock.symbol,
+        shares: stock.shares,
+        buyPrice: stock.buyPrice
+      )
+    )
+  }
+
+  private var allocationHoldings: [PortfolioAllocationImpactCalculator.Holding] {
+    scopedStocks.map {
+      PortfolioAllocationImpactCalculator.Holding(
+        id: $0.id,
+        symbol: $0.symbol,
+        shares: $0.shares,
+        buyPrice: $0.buyPrice
+      )
+    }
+  }
+
   private func deleteStock(id: String) {
     destructiveFeedbackTrigger += 1
     Task {
@@ -448,6 +506,7 @@ struct PortfolioScreen: View {
         stock: stock,
         isSaving: viewModel.isSaving,
         isDeleting: viewModel.isDeletingStock,
+        allocationImpactProvider: allocationImpact(for:),
         onCancel: dismissEditSheet,
         onSave: saveEditedStock,
         onDelete: {
@@ -651,6 +710,7 @@ private struct PortfolioPositionsSection: View {
   let onEditStock: (StockResponse) -> Void
   let onDeleteStock: (String) -> Void
   let onPresentTargetAlert: (SDPortfolioStock) -> Void
+  let onLoadMore: (() -> Void)?
 
   var body: some View {
     if stocks.isEmpty {
@@ -673,6 +733,11 @@ private struct PortfolioPositionsSection: View {
           onDelete: onDeleteStock,
           onPresentTargetAlert: onPresentTargetAlert
         )
+        .onAppear {
+          if let last = stocks.last, last.id == stock.id {
+            onLoadMore?()
+          }
+        }
       }
     }
   }

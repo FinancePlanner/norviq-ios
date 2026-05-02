@@ -103,3 +103,64 @@ Status snapshot for the current iOS app scope.
 - App-side structure is ahead of backend integration.
 - Expenses and Reports are the biggest remaining MVP gap because they still rely on client-side state.
 - Stock projections and stock comparison are intentionally mocked on the client for now and should later read from your API.
+
+## App Store & TestFlight Release Checklist
+
+### Requires Apple Developer Account ($99/year) — Blocks Everything
+
+- [ ] Apple Developer Program membership active
+- [ ] Apple Sign In — Services ID, redirect URIs, ES256 key (.p8)
+- [ ] APNS — team ID, key ID, .p8 key configured on backend
+- [ ] RevenueCat in-app purchase products created in App Store Connect
+- [ ] TestFlight distribution
+- [ ] App Store submission
+
+### App Store Connect Setup (One-Time)
+
+- [ ] Create app record (bundle ID `com.norviqa.app`, name, SKU)
+- [ ] Create subscription group + 3 products: `pro_annual`, `pro_monthly`, `pro_weekly`
+- [ ] Configure 14-day free trial on `pro_annual`
+- [ ] Add app screenshots (6.7" iPhone minimum, required)
+- [ ] Write app description, keywords, support URL, privacy policy URL
+- [ ] Set age rating
+- [ ] Complete privacy nutrition labels (data collection disclosure)
+
+### Technical
+
+- [ ] Set `REVENUECAT_IOS_API_KEY` in Xcode build settings
+- [ ] Set `REVENUECAT_API_KEY` + `REVENUECAT_WEBHOOK_SECRET` on backend production
+- [ ] Configure RevenueCat dashboard: link App Store app, create `pro` entitlement, link products
+- [ ] APNS configured on backend (`APNS_TEAM_ID`, `APNS_KEY_ID`, `APNS_PRIVATE_KEY_P8`, `APNS_TOPIC`)
+- [x] MFA working end-to-end (Resend configured with verified domain)
+- [ ] Production server stable with passing health checks
+- [ ] OAuth: Google Sign In redirect URIs registered for production domain
+- [ ] OAuth: X (Twitter) OAuth 2.0 redirect URIs registered for production domain
+
+### Legal (Required by Apple)
+
+- [ ] Privacy Policy URL live at `https://norviqa.com/privacy`
+- [ ] Terms of Service URL live at `https://norviqa.com/terms`
+- [ ] Account deletion flow working end-to-end (Apple requirement)
+
+### TestFlight First (Recommended Order)
+
+1. Get Apple Developer account
+2. Create App Store Connect app record + bundle ID
+3. Configure APNS + Apple Sign In
+4. Archive with `Norviqa TestFlight Dev` scheme → upload via Xcode Organizer
+5. Add internal testers (your Apple ID) — no review needed, instant
+6. Set up RevenueCat + subscription products
+7. Test purchases via TestFlight sandbox
+8. External TestFlight (public link) — requires brief Apple review (~1 day)
+9. Submit for App Store review
+
+### Already Done
+
+- [x] `Norviqa TestFlight Dev` scheme configured with `Beta` build configuration
+- [x] `AppEnvironmentManager` auto-routes TestFlight builds to `dev-norviq.online`
+- [x] `AppEnvironmentManager` auto-routes App Store builds to `prod-norviq.online`
+- [x] Pro paywall UI (`PaywallView`) implemented with all 3 plan options
+- [x] Pro gates on stock detail tabs (Statements, Analysis, Compare, Earnings)
+- [x] Pro gates on expense features (Year Overview, Smart Suggestions, Household Partner, Recurring, Reports, Sync)
+- [x] Account deletion API endpoint implemented
+- [x] Privacy Policy and Terms draft documents in `docs/legal`

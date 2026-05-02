@@ -26,7 +26,7 @@ protocol ExpensesServicing: ExpenseBudgetSetupServicing, Sendable {
     func deletePlanItem(itemId: String) async throws
 
     // Expenses
-    func getExpenses(from: String?, to: String?) async throws -> [ExpenseResponse]
+    func getExpenses(from: String?, to: String?, cursor: String?, limit: Int?) async throws -> (items: [ExpenseResponse], nextCursor: String?)
     func updateExpense(expenseId: String, payload: ExpenseRequest) async throws -> ExpenseResponse
     func deleteExpense(expenseId: String) async throws
 
@@ -47,6 +47,17 @@ protocol ExpensesServicing: ExpenseBudgetSetupServicing, Sendable {
     func getYearlyExpenseReports(from: String?, to: String?) async throws -> [BudgetYearSummaryResponse]
     func getReportSuggestions(from: String?, to: String?) async throws -> ReportSuggestionsResponse
     func dismissReportSuggestion(id: String) async throws
+}
+
+// MARK: - Convenience overloads (default parameters)
+extension ExpensesServicing {
+    func getExpenses() async throws -> (items: [ExpenseResponse], nextCursor: String?) {
+        try await getExpenses(from: nil, to: nil, cursor: nil, limit: nil)
+    }
+
+    func getExpenses(from: String? = nil, to: String? = nil) async throws -> (items: [ExpenseResponse], nextCursor: String?) {
+        try await getExpenses(from: from, to: to, cursor: nil, limit: nil)
+    }
 }
 
 struct ExpensesHTTPService: ExpensesServicing {
@@ -105,8 +116,8 @@ struct ExpensesHTTPService: ExpensesServicing {
         try await client.deletePlanItem(itemId: itemId)
     }
 
-    func getExpenses(from: String? = nil, to: String? = nil) async throws -> [ExpenseResponse] {
-        try await client.getExpenses(from: from, to: to)
+    func getExpenses(from: String?, to: String?, cursor: String?, limit: Int?) async throws -> (items: [ExpenseResponse], nextCursor: String?) {
+        try await client.getExpenses(from: from, to: to, cursor: cursor, limit: limit)
     }
 
     func createExpense(request: ExpenseRequest) async throws -> ExpenseResponse {
@@ -170,59 +181,4 @@ struct ExpensesHTTPService: ExpensesServicing {
     }
 }
 
-struct ExpensesServiceStub: ExpensesServicing {
-    func getHouseholdPartner() async throws -> HouseholdPartnerProfileResponse { HouseholdPartnerProfileResponse(displayName: nil) }
-    func updateHouseholdPartner(payload: HouseholdPartnerProfileRequest) async throws -> HouseholdPartnerProfileResponse { HouseholdPartnerProfileResponse(displayName: payload.displayName) }
-    func getSnapshots(year: Int? = nil, month: Int? = nil) async throws -> [BudgetSnapshotResponse] { [] }
-    func createBudgetSnapshot(request: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse { fatalError("Stub not implemented") }
-    func updateSnapshot(snapshotId: String, payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse { fatalError("Stub not implemented") }
-    func deleteSnapshot(snapshotId: String) async throws {}
-    func getSnapshotItems(snapshotId: String) async throws -> [BudgetPlanItemResponse] { [] }
 
-    func getAllPlanItems() async throws -> [BudgetPlanItemResponse] { [] }
-    func createPlanItem(payload: BudgetPlanItemRequest) async throws -> BudgetPlanItemResponse { fatalError("Stub not implemented") }
-    func updatePlanItem(itemId: String, payload: BudgetPlanItemRequest) async throws -> BudgetPlanItemResponse { fatalError("Stub not implemented") }
-    func deletePlanItem(itemId: String) async throws {}
-
-    func getExpenses(from: String? = nil, to: String? = nil) async throws -> [ExpenseResponse] { [] }
-    func createExpense(request: ExpenseRequest) async throws -> ExpenseResponse { fatalError("Stub not implemented") }
-    func updateExpense(expenseId: String, payload: ExpenseRequest) async throws -> ExpenseResponse { fatalError("Stub not implemented") }
-    func deleteExpense(expenseId: String) async throws {}
-
-    func getCategories() async throws -> [ExpenseCategoryResponse] { [] }
-    func createCategory(payload: ExpenseCategoryRequest) async throws -> ExpenseCategoryResponse { fatalError("Stub not implemented") }
-    func deleteCategory(categoryId: String) async throws {}
-
-    func getRecurringTemplates() async throws -> [RecurringTemplateResponse] { [] }
-    func createRecurringTemplate(payload: RecurringTemplateRequest) async throws -> RecurringTemplateResponse { fatalError("Stub not implemented") }
-    func updateRecurringTemplate(templateId: String, payload: RecurringTemplateRequest) async throws -> RecurringTemplateResponse { fatalError("Stub not implemented") }
-    func deleteRecurringTemplate(templateId: String) async throws {}
-
-    func getReportsOverview(from: String? = nil, to: String? = nil) async throws -> ReportsOverviewResponse {
-        ReportsOverviewResponse(
-            generatedAt: "",
-            portfolioStatistics: ImportedStocksStatisticsDTO(
-                totalPositions: 0,
-                totalMarketValue: 0,
-                totalCostBasis: 0,
-                totalUnrealizedPnl: 0,
-                totalRealizedPnl: 0,
-                stockSummaries: [],
-                stockAllocations: [],
-                sectorAllocations: [],
-                calendarPerformance: []
-            ),
-            monthlySummaries: [],
-            yearlySummaries: [],
-            latestMonthSummary: nil,
-            latestPillarSummaries: [],
-            cashFlow: []
-        )
-    }
-    func getMonthlyExpenseReports(from: String? = nil, to: String? = nil) async throws -> [BudgetMonthSummaryResponse] { [] }
-    func getYearlyExpenseReports(from: String? = nil, to: String? = nil) async throws -> [BudgetYearSummaryResponse] { [] }
-    func getReportSuggestions(from: String? = nil, to: String? = nil) async throws -> ReportSuggestionsResponse {
-        ReportSuggestionsResponse(generatedAt: "", suggestions: [])
-    }
-    func dismissReportSuggestion(id _: String) async throws {}
-}

@@ -52,40 +52,41 @@ struct PaywallView: View {
             .foregroundStyle(.secondary)
         }
       }
-      .task {
+    .task {
         await billingManager.loadOfferings()
       }
       .onChange(of: billingManager.isPro) { _, isPro in
         if isPro { dismiss() }
       }
-    }
+      .accessibilityIdentifier("PaywallView")
+  }
   }
 
   // MARK: - Hero
 
   private var hero: some View {
-    VStack(spacing: 16) {
-      // Logo
-      ZStack {
-        Circle()
-          .fill(AppTheme.Colors.tintSoft(for: scheme))
-          .frame(width: 80, height: 80)
-        Image(scheme == .dark ? "NorviqaLogo" : "NorviqaLogoLight")
-          .resizable()
-          .scaledToFit()
-          .frame(width: 52, height: 52)
-      }
+    ZStack {
+      RadialGradient(
+        colors: [AppTheme.Colors.tint(for: scheme).opacity(scheme == .dark ? 0.4 : 0.2), .clear],
+        center: .center,
+        startRadius: 0,
+        endRadius: 200
+      )
+      .frame(height: 250)
+      .offset(y: -20)
+      .blur(radius: 20)
 
-      VStack(spacing: 10) {
-        Text("Unlock Norviqa Pro")
-          .typography(.heading, weight: .bold)
+      VStack(spacing: 16) {
+        Text("Unlock your\nfinancial potential")
+          .font(.largeTitle.weight(.heavy))
           .multilineTextAlignment(.center)
           .foregroundStyle(.primary)
 
-        Text("Get unlimited tracking, cloud sync, and deep portfolio insights.")
+        Text("Get full clarity on your net worth and make better decisions with Pro.")
           .typography(.body)
           .multilineTextAlignment(.center)
           .foregroundStyle(.secondary)
+          .padding(.horizontal, 24)
       }
     }
     .frame(maxWidth: .infinity)
@@ -94,86 +95,50 @@ struct PaywallView: View {
   // MARK: - Feature List
 
   private var featureList: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      Text("Included in Free")
-        .typography(.label, weight: .bold)
-        .foregroundStyle(.primary)
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 12)
-
-      ForEach(featureRows.filter { $0.tier == .free }, id: \.feature) { row in
+    VStack(spacing: 12) {
+      ForEach(Array(featureRows.filter { $0.tier == .pro }.prefix(4)), id: \.feature) { row in
         featureRow(row: row, scheme: scheme)
       }
-
-      Divider()
-        .padding(.vertical, 16)
-
-      Text("Unlocked with Pro")
-        .typography(.label, weight: .bold)
-        .foregroundStyle(AppTheme.Colors.tint(for: scheme))
-        .padding(.horizontal, 20)
-        .padding(.bottom, 12)
-
-      ForEach(featureRows.filter { $0.tier == .pro }, id: \.feature) { row in
-        featureRow(row: row, scheme: scheme)
-      }
-
-      Spacer(minLength: 20)
     }
-    .background(AppTheme.Colors.cardBackground(for: scheme), in: RoundedRectangle(cornerRadius: 20))
   }
 
   @ViewBuilder
   private func featureRow(row: FeatureRow, scheme: ColorScheme) -> some View {
-    HStack(spacing: 14) {
+    HStack(spacing: 16) {
       ZStack {
-        Circle()
-          .fill(AppTheme.Colors.tintSoft(for: scheme))
-          .frame(width: 36, height: 36)
+        RoundedRectangle(cornerRadius: 12)
+          .fill(AppTheme.Colors.tintSoft(for: scheme).opacity(0.5))
+          .frame(width: 44, height: 44)
         Image(systemName: row.icon)
-          .font(.caption.weight(.medium))
-          .symbolRenderingMode(.hierarchical)
+          .font(.body.weight(.semibold))
           .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+          .accessibilityHidden(true)
       }
 
-      Text(row.feature)
-        .typography(.body)
-        .foregroundStyle(.primary)
-        .frame(maxWidth: .infinity, alignment: .leading)
-
-      // Free column
-      Group {
-        if row.tier == .free {
-          Image(systemName: "checkmark.circle.fill")
-            .font(.body)
-            .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(.green)
-        } else {
-          Image(systemName: "xmark")
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(AppTheme.Colors.tertiaryFill(for: scheme).opacity(0.4))
-        }
+      VStack(alignment: .leading, spacing: 2) {
+        Text(row.feature)
+          .typography(.body, weight: .semibold)
+          .foregroundStyle(.primary)
       }
-      .frame(width: 28)
+      .frame(maxWidth: .infinity, alignment: .leading)
 
-      // Pro column
-      Group {
-        if row.tier == .pro {
-          Image(systemName: "checkmark.circle.fill")
-            .font(.body)
-            .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(AppTheme.Colors.tint(for: scheme))
-        } else {
-          Image(systemName: "xmark")
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(AppTheme.Colors.tertiaryFill(for: scheme).opacity(0.4))
-        }
-      }
-      .frame(width: 28)
+      Text("PRO")
+        .typography(.nano, weight: .bold)
+        .foregroundStyle(.white)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            LinearGradient(colors: [.blue, AppTheme.Colors.tint(for: scheme)], startPoint: .topLeading, endPoint: .bottomTrailing),
+            in: Capsule()
+        )
     }
-    .padding(.horizontal, 20)
-    .padding(.vertical, 14)
+    .padding(16)
+    .background(AppTheme.Colors.cardBackground(for: scheme))
+    .clipShape(.rect(cornerRadius: 16))
+    .overlay(
+      RoundedRectangle(cornerRadius: 16)
+        .stroke(Color.white.opacity(scheme == .dark ? 0.08 : 0.0), lineWidth: 1)
+    )
   }
 
   private struct FeatureRow {
@@ -227,20 +192,20 @@ struct PaywallView: View {
   private var planCards: some View {
     VStack(spacing: 12) {
       planCard(
-        title: "Yearly",
-        subtitle: "Save 33%",
-        price: price(for: billingManager.annualPackage, fallback: "$79.99"),
+        title: "Annual",
+        subtitle: "7-day free trial",
+        price: price(for: billingManager.annualPackage, fallback: "$49.99"),
         priceUnit: "/yr",
-        priceDetail: "Billed annually",
+        priceDetail: nil,
         productID: "pro_annual",
-        badge: "BEST VALUE",
+        badge: "Save 2 months",
         isProminent: true
       )
 
       planCard(
         title: "Monthly",
-        subtitle: "Flexible billing",
-        price: price(for: billingManager.monthlyPackage, fallback: "$9.99"),
+        subtitle: "Cancel anytime",
+        price: price(for: billingManager.monthlyPackage, fallback: "$4.99"),
         priceUnit: "/mo",
         priceDetail: nil,
         productID: "pro_monthly",
@@ -250,8 +215,8 @@ struct PaywallView: View {
 
       planCard(
         title: "Weekly",
-        subtitle: "Short-term access",
-        price: price(for: billingManager.weeklyPackage, fallback: "$2.99"),
+        subtitle: "Short term",
+        price: price(for: billingManager.weeklyPackage, fallback: "$0.99"),
         priceUnit: "/wk",
         priceDetail: nil,
         productID: "pro_weekly",
@@ -277,14 +242,38 @@ struct PaywallView: View {
       billingManager.select(productID: productID)
     } label: {
       ZStack(alignment: .topLeading) {
-        HStack(spacing: 0) {
+        HStack(spacing: 16) {
+          // Radio button
+          ZStack {
+            Circle()
+              .strokeBorder(selected ? AppTheme.Colors.tint(for: scheme) : AppTheme.Colors.separator(for: scheme), lineWidth: selected ? 0 : 1.5)
+              .background(Circle().fill(selected ? AppTheme.Colors.tint(for: scheme) : Color.clear))
+              .frame(width: 24, height: 24)
+            if selected {
+              Image(systemName: "checkmark")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white)
+                .accessibilityHidden(true)
+            }
+          }
+
           VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-              .typography(.label, weight: .bold)
-              .foregroundStyle(.primary)
+            HStack(spacing: 8) {
+              Text(title)
+                .typography(.body, weight: .semibold)
+                .foregroundStyle(.primary)
+              if let badge {
+                Text(badge)
+                  .typography(.nano, weight: .bold)
+                  .foregroundStyle(.white)
+                  .padding(.horizontal, 8)
+                  .padding(.vertical, 4)
+                  .background(Color.green.opacity(0.9), in: Capsule())
+              }
+            }
             Text(subtitle)
               .typography(.caption)
-              .foregroundStyle(isProminent ? AppTheme.Colors.tint(for: scheme) : .secondary)
+              .foregroundStyle(.secondary)
           }
 
           Spacer()
@@ -292,7 +281,7 @@ struct PaywallView: View {
           VStack(alignment: .trailing, spacing: 2) {
             HStack(alignment: .lastTextBaseline, spacing: 1) {
               Text(price)
-                .typography(.title, weight: .bold)
+                .typography(.body, weight: .semibold)
                 .foregroundStyle(.primary)
               Text(priceUnit)
                 .typography(.caption)
@@ -306,29 +295,19 @@ struct PaywallView: View {
           }
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, isProminent ? 22 : 18)
+        .padding(.vertical, 20)
         .background(
-          isProminent
-            ? AppTheme.Colors.elevatedCardBackground(for: scheme)
-            : AppTheme.Colors.pageBackground(for: scheme),
-          in: RoundedRectangle(cornerRadius: 18)
+          selected
+            ? AppTheme.Colors.tintSoft(for: scheme).opacity(0.3)
+            : AppTheme.Colors.cardBackground(for: scheme),
+          in: RoundedRectangle(cornerRadius: 16)
         )
         .overlay {
-          RoundedRectangle(cornerRadius: 18)
+          RoundedRectangle(cornerRadius: 16)
             .stroke(
-              selected || isProminent ? AppTheme.Colors.tint(for: scheme) : AppTheme.Colors.separator(for: scheme),
-              lineWidth: selected || isProminent ? 1.5 : 0.5
+              selected ? AppTheme.Colors.tint(for: scheme) : AppTheme.Colors.separator(for: scheme),
+              lineWidth: selected ? 2 : 1
             )
-        }
-
-        if let badge {
-          Text(badge)
-            .typography(.nano, weight: .bold)
-            .foregroundStyle(.white)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(AppTheme.Colors.tint(for: scheme), in: Capsule())
-            .offset(x: 16, y: -10)
         }
       }
     }
@@ -356,13 +335,24 @@ struct PaywallView: View {
             if billingManager.isPurchasing {
               ProgressView().tint(.white)
             }
-            Text(billingManager.isPurchasing ? "Purchasing..." : "Get Pro Access")
+            Text(billingManager.isPurchasing ? "Purchasing..." : "Start Free Trial")
               .font(.headline.weight(.semibold))
               .frame(maxWidth: .infinity)
           }
+          .padding(.vertical, 16)
+          .background(AppTheme.Colors.tint(for: scheme), in: Capsule())
+          .foregroundStyle(.white)
+          .shadow(color: AppTheme.Colors.tint(for: scheme).opacity(0.3), radius: 8, x: 0, y: 4)
         }
-        .buttonStyle(.glassProminent)
+        .buttonStyle(.plain)
         .disabled(billingManager.isPurchasing || billingManager.selectedPackage == nil)
+
+        Button("Continue with Free") {
+          dismiss()
+        }
+        .font(.subheadline.weight(.medium))
+        .foregroundStyle(.secondary)
+        .padding(.top, 4)
 
         if let message = billingManager.errorMessage, !message.isEmpty {
           Text(message)
@@ -376,12 +366,8 @@ struct PaywallView: View {
             Task { await billingManager.restorePurchases() }
           }
           Text("•").foregroundStyle(.tertiary)
-          Button("Terms") {
-            openURL(URL(string: "https://norviqa.com/terms")!)
-          }
-          Text("•").foregroundStyle(.tertiary)
           Button("Privacy Policy") {
-            openURL(URL(string: "https://norviqa.com/privacy")!)
+            openURL(URL(string: "https://your-privacy-policy-url.com")!)
           }
         }
         .typography(.nano)

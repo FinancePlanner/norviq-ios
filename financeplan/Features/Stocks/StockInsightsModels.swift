@@ -33,6 +33,13 @@ enum StockDetailTab: String, CaseIterable, Identifiable {
             "Earnings"
         }
     }
+
+    var isProOnly: Bool {
+        switch self {
+        case .chart, .overview, .news: return false
+        case .forecast, .statements, .analysis, .compare, .earnings: return true
+        }
+    }
 }
 
 enum StockProjectionScenarioKind: String, CaseIterable, Identifiable {

@@ -129,6 +129,7 @@ struct UnifiedActivityFeed: View {
                     Image(systemName: activity.symbol)
                       .foregroundStyle(activity.isGrowth ? .green : .red)
                       .font(.title3)
+                      .accessibilityHidden(true)
                   )
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -173,6 +174,7 @@ struct UnifiedActivityFeed: View {
               HStack(spacing: 10) {
                 Image(systemName: activity.pillar.symbol)
                   .foregroundStyle(activity.pillar.color(for: .dark))
+                  .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                   Text(activity.title)
                     .font(.subheadline.weight(.semibold))

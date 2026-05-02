@@ -67,8 +67,8 @@ struct FormCard<Content: View>: View {
       VStack(spacing: 0) {
         content()
       }
-      .appGlassEffect(.rect(cornerRadius: 16))
-      .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+      .appGlassEffect(.rect(cornerRadius: 18))
+      .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
   }
 }
@@ -115,7 +115,11 @@ struct FormRow<Trailing: View>: View {
         .multilineTextAlignment(.trailing)
     }
     .padding(.horizontal, 16)
-    .padding(.vertical, 13)
+    .padding(.vertical, 12)
+    .background(
+      AppTheme.Colors.elevatedCardBackground(for: colorScheme)
+        .opacity(0.6)
+    )
   }
 }
 
@@ -169,7 +173,62 @@ struct FormTextField: View {
         .accessibilityIdentifier(accessibilityIdentifier ?? "")
     }
     .padding(.horizontal, 16)
-    .padding(.vertical, 13)
+    .padding(.vertical, 12)
+    .background(
+      AppTheme.Colors.elevatedCardBackground(for: colorScheme)
+        .opacity(0.6)
+    )
+  }
+}
+
+// MARK: - Form Toggle
+
+/// A form row with a toggle as the trailing content.
+struct FormToggle: View {
+  let icon: String?
+  let iconColor: Color?
+  let label: String
+  @Binding var isOn: Bool
+
+  @Environment(\.colorScheme) private var colorScheme
+
+  init(
+    icon: String? = nil,
+    iconColor: Color? = nil,
+    label: String,
+    isOn: Binding<Bool>
+  ) {
+    self.icon = icon
+    self.iconColor = iconColor
+    self.label = label
+    self._isOn = isOn
+  }
+
+  var body: some View {
+    HStack(spacing: 12) {
+      if let icon {
+        Image(systemName: icon)
+          .font(.subheadline.weight(.medium))
+          .foregroundStyle(iconColor ?? .secondary)
+          .frame(width: 24, alignment: .center)
+      }
+
+      Text(label)
+        .typography(.label)
+        .foregroundStyle(.primary)
+
+      Spacer(minLength: 4)
+
+      Toggle("", isOn: $isOn)
+        .labelsHidden()
+        .tint(AppTheme.Colors.tint(for: colorScheme))
+    }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 12)
+    .background(
+      AppTheme.Colors.elevatedCardBackground(for: colorScheme)
+        .opacity(0.6)
+    )
   }
 }
 
@@ -177,13 +236,13 @@ struct FormTextField: View {
 
 /// A thin divider used between form rows inside a FormCard.
 struct FormDivider: View {
-  var leadingInset: CGFloat = 52
+  var leadingInset: CGFloat = 16
 
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
     Rectangle()
-      .fill(AppTheme.Colors.separator(for: colorScheme).opacity(0.35))
+      .fill(AppTheme.Colors.separator(for: colorScheme).opacity(0.3))
       .frame(height: 0.5)
       .padding(.leading, leadingInset)
   }

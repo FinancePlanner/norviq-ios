@@ -13,8 +13,7 @@ protocol StockServicing: Sendable {
   func create(stock: StockRequest, portfolioListId: String?) async throws -> StockResponse
   @discardableResult
   func bulkCreate(stocks: [StockRequest]) async throws -> BulkStockResponse
-  func fetchPortfolio() async throws -> [StockResponse]
-  func fetchPortfolio(portfolioListId: String?) async throws -> [StockResponse]
+  func fetchPortfolio(portfolioListId: String?, cursor: String?, limit: Int?) async throws -> (items: [StockResponse], nextCursor: String?)
   func fetchStockDetails(stockId: String) async throws -> StockDetails
   func fetchStockInsights(symbol: String) async throws -> StockInsightsResponse
   func fetchPortfolioPerformance() async throws -> PortfolioPerformanceResponse
@@ -90,9 +89,6 @@ extension StockServicing {
     try await create(stock: stock, portfolioListId: nil)
   }
 
-  func fetchPortfolio() async throws -> [StockResponse] {
-    try await fetchPortfolio(portfolioListId: nil)
-  }
 
   func fetchStockInsights(symbol _: String) async throws -> StockInsightsResponse {
     throw StockHTTPClient.Error.api("Stock insights endpoint is unavailable.")
@@ -104,6 +100,10 @@ extension StockServicing {
 
   func fetchPortfolioSummary() async throws -> PortfolioSummaryResponse {
     try await fetchPortfolioSummary(portfolioListId: nil)
+  }
+
+  func fetchPortfolio(portfolioListId: String? = nil, cursor: String? = nil, limit: Int? = nil) async throws -> (items: [StockResponse], nextCursor: String?) {
+    try await fetchPortfolio(portfolioListId: portfolioListId, cursor: cursor, limit: limit)
   }
 
   func updateStock(_ stock: StockResponse) async throws -> StockResponse {
@@ -210,10 +210,12 @@ final class StockService: StockServicing {
     }
   }
 
-  func fetchPortfolio(portfolioListId: String? = nil) async throws -> [StockResponse] {
+  func fetchPortfolio(portfolioListId: String? = nil, cursor: String? = nil, limit: Int? = nil) async throws -> (items: [StockResponse], nextCursor: String?) {
     try await performAuthenticated { client in
-      let endpoint = GetStocksEndpoint(portfolioListId: portfolioListId)
-      return try await client.call(endpoint)
+      let endpoint = GetStocksEndpoint(portfolioListId: portfolioListId, cursor: cursor, limit: limit)
+      let (items, response) = try await client.callWithHeaders(endpoint)
+      let nextCursor = response.value(forHTTPHeaderField: "X-Next-Cursor")
+      return (items, nextCursor)
     }
   }
 

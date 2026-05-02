@@ -224,7 +224,7 @@ private final class MockExpensesService: ExpensesServicing {
     throw MockExpensesError.notConfigured
   }
 
-  func getExpenses(from _: String?, to _: String?) async throws -> [ExpenseResponse] {
+  func getExpenses(from _: String?, to _: String?, cursor _: String? = nil, limit _: Int? = nil) async throws -> (items: [ExpenseResponse], nextCursor: String?) {
     throw MockExpensesError.notConfigured
   }
 

@@ -7,8 +7,6 @@ struct PrivacyWelcomeScreen: View {
 
   var body: some View {
     ZStack {
-      MeshGradientBackground()
-
       VStack(spacing: 24) {
         NorviqaLogo(size: 78)
           .padding(.top, 60)
@@ -57,8 +55,13 @@ struct PrivacyWelcomeScreen: View {
           .buttonStyle(.glass)
         }
         .padding(.horizontal, 24)
-        .padding(.bottom, 40)
+        .padding(.bottom, 16)
+
+        AuthFooter()
       }
+    }
+    .background {
+      MeshGradientBackground()
     }
   }
 

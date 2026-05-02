@@ -5,7 +5,7 @@ import OSLog
 
 private let stockHTTPLogger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "StockHTTPClient")
 
-protocol StockURLSessionProtocol {
+protocol StockURLSessionProtocol: HTTPClientSession {
   func data(for request: URLRequest) async throws -> (Data, URLResponse)
 }
 
@@ -72,6 +72,46 @@ struct StockHTTPClient {
 
   func callWithoutResponse<E: Endpoint>(_ endpoint: E) async throws {
     _ = try await perform(endpoint)
+  }
+
+  /// Calls the endpoint and returns both the decoded response and the raw `HTTPURLResponse`,
+  /// allowing callers to inspect headers (e.g. `X-Next-Cursor` for pagination).
+  func callWithHeaders<E: Endpoint>(_ endpoint: E) async throws -> (response: E.Response, headers: HTTPURLResponse) where E.Response: Codable {
+    let request = try makeURLRequest(for: endpoint)
+    logRequest(request, endpoint: endpoint)
+    let (data, urlResponse) = try await session.data(for: request)
+
+    guard let httpResponse = urlResponse as? HTTPURLResponse else {
+      throw Error.invalidResponse
+    }
+
+    stockHTTPLogger.debug("Stock response [\(endpoint.path, privacy: .public)] status=\(httpResponse.statusCode, privacy: .public)")
+    logValuationResponseIfNeeded(data, endpointPath: endpoint.path, statusCode: httpResponse.statusCode)
+
+    guard (200..<300).contains(httpResponse.statusCode) else {
+      let message = errorMessage(from: data)
+      if httpResponse.statusCode == 401 {
+        throw Error.unauthorized(message)
+      }
+      if let message, !message.isEmpty {
+        throw Error.api(message)
+      }
+      throw Error.invalidStatus(httpResponse.statusCode)
+    }
+
+    do {
+      return (try endpoint.decode(data), httpResponse)
+    } catch {
+      if let envelope = try? endpoint.decoder.decode(HTTPEnvelope<E.Response>.self, from: data) {
+        if let payload = envelope.data {
+          return (payload, httpResponse)
+        }
+        if let message = envelope.message, !message.isEmpty {
+          throw Error.api(message)
+        }
+      }
+      throw error
+    }
   }
 
   private func perform<E: Endpoint>(_ endpoint: E) async throws -> Data {

@@ -28,29 +28,4 @@ struct DefaultDashboardService: DashboardServicing {
     }
 }
 
-struct DashboardServiceStub: DashboardServicing {
-    func getDashboard() async throws -> DashboardResponse {
-        DashboardResponse(
-            totalValue: 124830.42,
-            dailyChange: 2854.12,
-            dailyChangePercent: 2.31,
-            topPerformers: [],
-            bottomPerformers: [],
-            sectorAllocation: []
-        )
-    }
 
-    func getInsights() async throws -> DashboardInsightsResponse {
-        DashboardInsightsResponse(
-            savingsRate: 15.0,
-            budgetStreak: 3,
-            watchlistCount: 5,
-            cashBuffer: 10000.0,
-            financialHealth: DashboardFinancialHealthDTO(
-                score: 72,
-                maxScore: 100,
-                status: .healthy
-            )
-        )
-    }
-}

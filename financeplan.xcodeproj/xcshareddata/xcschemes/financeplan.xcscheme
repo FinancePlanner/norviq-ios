@@ -29,6 +29,30 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
+      <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "60AFA8042F3E406A00FA3135"
+               BuildableName = "financeplanTests.xctest"
+               BlueprintName = "financeplanTests"
+               ReferencedContainer = "container:financeplan.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "60AFA80E2F3E406A00FA3135"
+               BuildableName = "financeplanUITests.xctest"
+               BlueprintName = "financeplanUITests"
+               ReferencedContainer = "container:financeplan.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+      </Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -51,6 +75,12 @@
             ReferencedContainer = "container:financeplan.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <CommandLineArguments>
+         <CommandLineArgument
+            argument = "NORVIQA_ENVIRONMENT"
+            isEnabled = "YES">
+         </CommandLineArgument>
+      </CommandLineArguments>
       <EnvironmentVariables>
          <EnvironmentVariable
             key = "POSTHOG_PROJECT_TOKEN"
@@ -60,6 +90,11 @@
          <EnvironmentVariable
             key = "POSTHOG_HOST"
             value = "https://us.i.posthog.com"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "NORVIQA_ENVIRONMENT"
+            value = "local"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>

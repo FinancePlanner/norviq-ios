@@ -116,17 +116,4 @@ final class CryptoHTTPService: CryptoServicing {
     }
 }
 
-struct CryptoServiceStub: CryptoServicing {
-    func fetchCryptoList() async throws -> [CryptoAssetResponse] { [] }
-    func fetchCryptoQuote(symbols: String) async throws -> [CryptoQuoteResponse] { [] }
-    func fetchCryptoBatchQuotes(short: Bool) async throws -> [CryptoQuoteShortResponse] { [] }
-    func fetchGeneralCryptoNews() async throws -> [NewsItemResponse] { [] }
-    func fetchPortfolio() async throws -> [CryptoPortfolioItemResponse] { [] }
-    func addToPortfolio(payload: CryptoPortfolioItemRequest) async throws -> CryptoPortfolioItemResponse {
-        throw CryptoHTTPClient.Error.invalidStatus(404)
-    }
-    func updatePortfolioItem(itemId: String, payload: CryptoPortfolioItemRequest) async throws -> CryptoPortfolioItemResponse {
-        throw CryptoHTTPClient.Error.invalidStatus(404)
-    }
-    func removeFromPortfolio(itemId: String) async throws {}
-}
+

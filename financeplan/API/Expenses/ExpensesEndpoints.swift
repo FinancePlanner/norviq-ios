@@ -150,13 +150,19 @@ struct GetExpensesEndpoint: Endpoint {
     typealias Response = [ExpenseResponse]
     let from: String?
     let to: String?
+    let cursor: String?
+    let limit: Int?
+
     var method: HTTPMethod { .get }
     var path: String { "/v1/expenses" }
     var decoder: JSONDecoder { .stockPlanShared }
+
     func asParameters() throws -> Parameters {
         var params: Parameters = [:]
         if let from { params["from"] = from }
         if let to { params["to"] = to }
+        if let cursor { params["cursor"] = cursor }
+        if let limit { params["limit"] = String(limit) }
         return params
     }
 }

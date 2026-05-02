@@ -1,7 +1,7 @@
 import XCTest
 
 extension XCUIApplication {
-  func launchAuthenticatedWithExpenses(userID: String, resetSession: Bool = true) {
+  func launchAuthenticatedWithExpenses(userID: String, resetSession: Bool = true, billingTier: String? = nil) {
     var args = [
       "-ui_test_skip_splash",
       "-ui_test_auth_token", "ui-test-token",
@@ -10,6 +10,9 @@ extension XCUIApplication {
     ]
     if resetSession {
       args.append("-ui_test_reset_session")
+    }
+    if let billingTier {
+      args += ["-ui_test_billing_tier", billingTier]
     }
     launchArguments += args
     launch()

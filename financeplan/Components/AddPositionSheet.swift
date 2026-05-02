@@ -19,10 +19,25 @@ struct AddPositionSheet: View {
   let title: String
   @State var draft: AddPositionDraft
   let isSaving: Bool
+  let allocationImpactProvider: ((AddPositionDraft) -> PortfolioAllocationImpact?)?
   let onSave: @MainActor (AddPositionDraft) async -> String?
 
   @State private var errorMessage: String?
   @State private var successFeedbackTrigger = 0
+
+  init(
+    title: String,
+    draft: AddPositionDraft,
+    isSaving: Bool,
+    allocationImpactProvider: ((AddPositionDraft) -> PortfolioAllocationImpact?)? = nil,
+    onSave: @escaping @MainActor (AddPositionDraft) async -> String?
+  ) {
+    self.title = title
+    _draft = State(initialValue: draft)
+    self.isSaving = isSaving
+    self.allocationImpactProvider = allocationImpactProvider
+    self.onSave = onSave
+  }
 
   var body: some View {
     VStack(spacing: 0) {
@@ -48,7 +63,11 @@ struct AddPositionSheet: View {
               disableAutocorrection: true
             )
             .disabled(draft.symbolLocked)
-            .opacity(draft.symbolLocked ? 0.6 : 1)
+              .opacity(draft.symbolLocked ? 0.6 : 1)
+          }
+
+          if let impact = allocationImpactProvider?(draft), impact.didChange {
+            AllocationImpactPreviewCard(impact: impact)
           }
 
           // MARK: - Position section

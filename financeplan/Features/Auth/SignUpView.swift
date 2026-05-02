@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SignUpView: View {
   @ObservedObject var viewModel: LoginViewModel
-  @Binding var isEnvironmentPresented: Bool
   @State private var isPasswordVisible = false
   @State private var isConfirmPasswordVisible = false
   @State private var isDatePickerPresented = false
@@ -31,7 +30,7 @@ struct SignUpView: View {
         // Hero
         VStack(alignment: .center, spacing: 16) {
           NorviqaLogo(size: 78)
-            .padding(.top, 60)
+            .padding(.top, 24)
 
           Text("Create your\naccount")
             .font(.largeTitle.weight(.bold))
@@ -184,8 +183,9 @@ struct SignUpView: View {
 //          .padding(.top, 40)
 //          .padding(.bottom, 40)
 
-        // Footer
-        AuthFooter(isEnvironmentPresented: $isEnvironmentPresented)
+        Spacer(minLength: 40)
+
+        AuthFooter()
       }
     }
     .scrollDismissesKeyboard(.interactively)

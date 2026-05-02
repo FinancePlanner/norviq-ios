@@ -27,6 +27,7 @@ struct ProGateView<Content: View>: View {
                     Color.clear
                         .contentShape(Rectangle())
                         .onTapGesture { showPaywall = true }
+                        .accessibilityIdentifier("proGate.lockedOverlay")
                 )
                 .sheet(isPresented: $showPaywall) {
                     PaywallView(billingManager: billingManager)
@@ -42,6 +43,7 @@ struct ProGateView<Content: View>: View {
 
             Text("Pro Feature")
                 .typography(.title, weight: .bold)
+                .accessibilityIdentifier("proGate.title")
 
             Text("Subscribe to unlock this view.\nFree trial available.")
                 .typography(.body)
@@ -50,9 +52,11 @@ struct ProGateView<Content: View>: View {
 
             Button("Unlock Pro") { showPaywall = true }
                 .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("proGate.unlockButton")
         }
         .padding(32)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
         .allowsHitTesting(true)
+        .accessibilityIdentifier("proGate.overlay")
     }
 }

@@ -36,12 +36,12 @@ protocol AuthSessionStoring: AnyObject {
 
 final class AuthService: AuthServicing {
   private let environmentManager: AppEnvironmentManager
-  private let session: AuthURLSessionProtocol
+  private let session: any HTTPClientSession
   private let webAuthenticator: OAuthWebAuthenticating
 
   init(
     environmentManager: AppEnvironmentManager,
-    session: AuthURLSessionProtocol = URLSession.shared,
+    session: any HTTPClientSession = URLSession.shared,
     webAuthenticator: OAuthWebAuthenticating = OAuthWebAuthenticator()
   ) {
     self.environmentManager = environmentManager
