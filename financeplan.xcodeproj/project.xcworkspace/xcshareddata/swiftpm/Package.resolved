@@ -249,8 +249,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/benedom/SwiftyCrop",
       "state" : {
-        "revision" : "0374ffb9862ccb1473abeedbc24e6c9f9a8d25e4",
-        "version" : "2.2.0"
+        "revision" : "2f1950b3bd864063c8031cc41b7b0d82e004e7e5",
+        "version" : "1.0.15"
       }
     }
   ],
