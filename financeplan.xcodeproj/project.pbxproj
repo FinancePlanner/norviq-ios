@@ -913,8 +913,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/benedom/SwiftyCrop";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.0.0;
+				kind = exactVersion;
+				version = 1.0.15;
 			};
 		};
 		605462DB2F9B5B3C001A3351 /* XCRemoteSwiftPackageReference "AmplitudeUnified-Swift" */ = {
