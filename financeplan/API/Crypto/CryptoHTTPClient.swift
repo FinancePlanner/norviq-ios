@@ -3,19 +3,16 @@ import Foundation
 import OSLog
 import StockPlanShared
 
-private let cryptoHTTPLogger = Logger(
-    subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
-    category: "CryptoHTTPClient"
-)
+// MARK: - Client
 
-struct CryptoHTTPClient {
-    enum Error: LocalizedError, Equatable {
+struct CryptoHTTPClient: Sendable {
+    enum Error: HTTPClientError {
         case invalidResponse
         case invalidStatus(Int)
         case unauthorized(String?)
         case api(String)
 
-        var errorDescription: String? {
+        nonisolated var errorDescription: String? {
             switch self {
             case .invalidResponse:
                 return "Invalid server response."
@@ -34,148 +31,77 @@ struct CryptoHTTPClient {
             }
             return false
         }
+
+        nonisolated var statusCode: Int? {
+            if case let .invalidStatus(code) = self { return code }
+            return nil
+        }
+
+        nonisolated static func == (lhs: Error, rhs: Error) -> Bool {
+            switch (lhs, rhs) {
+            case (.invalidResponse, .invalidResponse): return true
+            case let (.invalidStatus(l), .invalidStatus(r)): return l == r
+            case let (.unauthorized(l), .unauthorized(r)): return l == r
+            case let (.api(l), .api(r)): return l == r
+            default: return false
+            }
+        }
+
+        static func makeInvalidResponse() -> Error { .invalidResponse }
+        static func makeInvalidStatus(_ code: Int) -> Error { .invalidStatus(code) }
+        static func makeUnauthorized(_ message: String?) -> Error { .unauthorized(message) }
+        static func makeAPI(_ message: String) -> Error { .api(message) }
     }
 
-    let baseURL: URL
-    let session: MarketDataURLSessionProtocol
-    let authTokenProvider: () -> String?
+    private let client: BaseHTTPClient
 
     init(
         baseURL: URL,
-        session: MarketDataURLSessionProtocol = URLSession.shared,
-        authTokenProvider: @escaping () -> String? = { nil }
+        session: any HTTPClientSession = URLSession.shared,
+        authTokenProvider: @escaping @Sendable () -> String? = { nil }
     ) {
-        self.baseURL = baseURL
-        self.session = session
-        self.authTokenProvider = authTokenProvider
+        self.client = BaseHTTPClient(
+            baseURL: baseURL,
+            session: session,
+            authTokenProvider: authTokenProvider,
+            logger: Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "CryptoHTTPClient"),
+            decoder: .stockPlanShared
+        )
     }
 
     // MARK: - Market Data
 
     func fetchCryptoList() async throws -> [CryptoAssetResponse] {
-        try await call(GetCryptoListEndpoint())
+        try await client.call(GetCryptoListEndpoint(), errorType: Error.self)
     }
 
     func fetchCryptoQuote(symbols: String) async throws -> [CryptoQuoteResponse] {
-        try await call(GetCryptoQuoteEndpoint(symbols: symbols))
+        try await client.call(GetCryptoQuoteEndpoint(symbols: symbols), errorType: Error.self)
     }
 
     func fetchCryptoBatchQuotes(short: Bool = false) async throws -> [CryptoQuoteShortResponse] {
-        try await call(GetCryptoBatchQuotesEndpoint(short: short))
+        try await client.call(GetCryptoBatchQuotesEndpoint(short: short), errorType: Error.self)
     }
 
     func fetchGeneralCryptoNews() async throws -> [NewsItemResponse] {
-        try await call(GetGeneralCryptoNewsEndpoint())
+        try await client.call(GetGeneralCryptoNewsEndpoint(), errorType: Error.self)
     }
 
     // MARK: - Portfolio
 
     func listPortfolio() async throws -> [CryptoPortfolioItemResponse] {
-        try await call(ListCryptoPortfolioEndpoint())
+        try await client.call(ListCryptoPortfolioEndpoint(), errorType: Error.self)
     }
 
     func addToPortfolio(payload: CryptoPortfolioItemRequest) async throws -> CryptoPortfolioItemResponse {
-        try await call(AddToCryptoPortfolioEndpoint(payload: payload))
+        try await client.call(AddToCryptoPortfolioEndpoint(payload: payload), errorType: Error.self)
     }
 
     func updatePortfolioItem(itemId: String, payload: CryptoPortfolioItemRequest) async throws -> CryptoPortfolioItemResponse {
-        try await call(UpdateCryptoPortfolioItemEndpoint(itemId: itemId, payload: payload))
+        try await client.call(UpdateCryptoPortfolioItemEndpoint(itemId: itemId, payload: payload), errorType: Error.self)
     }
 
     func removeFromPortfolio(itemId: String) async throws {
-        _ = try await perform(RemoveFromCryptoPortfolioEndpoint(itemId: itemId))
-    }
-
-    // MARK: - Core Logic (Mirrored from MarketDataHTTPClient)
-
-    private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable & Sendable {
-        let data = try await perform(endpoint)
-        do {
-            return try endpoint.decode(data)
-        } catch {
-            if let envelope = try? endpoint.decoder.decode(APIEnvelope<E.Response>.self, from: data) {
-                if let payload = envelope.data {
-                    return payload
-                }
-                if let message = envelope.message, !message.isEmpty {
-                    throw Error.api(message)
-                }
-            }
-            throw error
-        }
-    }
-
-    private func perform<E: Endpoint>(_ endpoint: E) async throws -> Data {
-        let request = try makeURLRequest(for: endpoint)
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw Error.invalidResponse
-        }
-
-        cryptoHTTPLogger.debug(
-            "Crypto response [\(endpoint.path, privacy: .public)] status=\(httpResponse.statusCode, privacy: .public)"
-        )
-
-        guard (200 ..< 300).contains(httpResponse.statusCode) else {
-            let message = errorMessage(from: data)
-
-            if httpResponse.statusCode == 401 {
-                throw Error.unauthorized(message)
-            }
-
-            if let message, !message.isEmpty {
-                throw Error.api(message)
-            }
-            throw Error.invalidStatus(httpResponse.statusCode)
-        }
-
-        return data
-    }
-
-    private func errorMessage(from data: Data) -> String? {
-        APIErrorDecoding.message(from: data)
-    }
-
-    private func makeURLRequest<E: Endpoint>(for endpoint: E) throws -> URLRequest {
-        let normalizedPath = endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        let base = baseURL.appendingPathComponent(normalizedPath)
-        let parameters = try endpoint.asParameters()
-        let url = try url(for: endpoint.method, baseURL: base, parameters: parameters)
-
-        var request = URLRequest(url: url)
-        request.httpMethod = endpoint.method.rawValue
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        if let token = authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-
-        for header in endpoint.headers {
-            request.setValue(header.value, forHTTPHeaderField: header.name)
-        }
-
-        if endpoint.method != .get, !parameters.isEmpty {
-            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
-        }
-
-        return request
-    }
-
-    private func url(for method: HTTPMethod, baseURL: URL, parameters: Parameters) throws -> URL {
-        guard method == .get, !parameters.isEmpty else {
-            return baseURL
-        }
-
-        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
-        components?.queryItems = parameters.compactMap { key, value in
-            URLQueryItem(name: key, value: String(describing: value))
-        }
-
-        guard let url = components?.url else {
-            throw Error.invalidResponse
-        }
-
-        return url
+        try await client.callWithoutResponse(RemoveFromCryptoPortfolioEndpoint(itemId: itemId), errorType: Error.self)
     }
 }

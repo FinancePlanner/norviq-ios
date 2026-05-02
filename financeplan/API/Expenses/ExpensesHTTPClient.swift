@@ -3,19 +3,16 @@ import Foundation
 import OSLog
 import StockPlanShared
 
-private let expensesHTTPLogger = Logger(
-    subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
-    category: "ExpensesHTTPClient"
-)
+// MARK: - Client
 
-struct ExpensesHTTPClient {
-    enum Error: LocalizedError, Equatable {
+struct ExpensesHTTPClient: Sendable {
+    enum Error: HTTPClientError {
         case invalidResponse
         case invalidStatus(Int)
         case unauthorized(String?)
         case api(String)
 
-        var errorDescription: String? {
+        nonisolated var errorDescription: String? {
             switch self {
             case .invalidResponse:
                 return "Invalid server response."
@@ -27,307 +24,184 @@ struct ExpensesHTTPClient {
                 return message
             }
         }
+
+        nonisolated var statusCode: Int? {
+            if case let .invalidStatus(code) = self { return code }
+            return nil
+        }
+
+        nonisolated static func == (lhs: Error, rhs: Error) -> Bool {
+            switch (lhs, rhs) {
+            case (.invalidResponse, .invalidResponse): return true
+            case let (.invalidStatus(l), .invalidStatus(r)): return l == r
+            case let (.unauthorized(l), .unauthorized(r)): return l == r
+            case let (.api(l), .api(r)): return l == r
+            default: return false
+            }
+        }
+
+        static func makeInvalidResponse() -> Error { .invalidResponse }
+        static func makeInvalidStatus(_ code: Int) -> Error { .invalidStatus(code) }
+        static func makeUnauthorized(_ message: String?) -> Error { .unauthorized(message) }
+        static func makeAPI(_ message: String) -> Error { .api(message) }
     }
 
-    let baseURL: URL
-    let session: URLSession
-    let authTokenProvider: () -> String?
+    private let client: BaseHTTPClient
 
     init(
         baseURL: URL,
-        session: URLSession = .shared,
-        authTokenProvider: @escaping () -> String? = { nil }
+        session: any HTTPClientSession = URLSession.shared,
+        authTokenProvider: @escaping @Sendable () -> String? = { nil }
     ) {
-        self.baseURL = baseURL
-        self.session = session
-        self.authTokenProvider = authTokenProvider
+        let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "ExpensesHTTPClient")
+        self.client = BaseHTTPClient(
+            baseURL: baseURL,
+            session: session,
+            authTokenProvider: authTokenProvider,
+            requestLogger: { path, method, parameters in
+                ExpensesHTTPClient.logRequest(logger: logger, path: path, method: method, parameters: parameters)
+            },
+            logger: logger,
+            decoder: .stockPlanShared
+        )
     }
 
     // MARK: - Snapshots
 
     func getSnapshots(year: Int? = nil, month: Int? = nil) async throws -> [BudgetSnapshotResponse] {
-        try await call(GetSnapshotsEndpoint(year: year, month: month))
+        try await client.call(GetSnapshotsEndpoint(year: year, month: month), errorType: Error.self)
     }
 
     func createBudgetSnapshot(request: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
-        try await call(CreateSnapshotEndpoint(payload: request))
+        try await client.call(CreateSnapshotEndpoint(payload: request), errorType: Error.self)
     }
 
     func updateSnapshot(snapshotId: String, payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
-        try await call(UpdateSnapshotEndpoint(snapshotId: snapshotId, payload: payload))
+        try await client.call(UpdateSnapshotEndpoint(snapshotId: snapshotId, payload: payload), errorType: Error.self)
     }
 
     func deleteSnapshot(snapshotId: String) async throws {
-        _ = try await call(DeleteSnapshotEndpoint(snapshotId: snapshotId))
+        try await client.callWithoutResponse(DeleteSnapshotEndpoint(snapshotId: snapshotId), errorType: Error.self)
     }
 
     func getSnapshotItems(snapshotId: String) async throws -> [BudgetPlanItemResponse] {
-        try await call(GetSnapshotItemsEndpoint(snapshotId: snapshotId))
+        try await client.call(GetSnapshotItemsEndpoint(snapshotId: snapshotId), errorType: Error.self)
     }
 
     // MARK: - Plan Items
 
     func getAllPlanItems() async throws -> [BudgetPlanItemResponse] {
-        try await call(GetAllPlanItemsEndpoint())
+        try await client.call(GetAllPlanItemsEndpoint(), errorType: Error.self)
     }
 
     func createPlanItem(payload: BudgetPlanItemRequest) async throws -> BudgetPlanItemResponse {
-        try await call(CreatePlanItemEndpoint(payload: payload))
+        try await client.call(CreatePlanItemEndpoint(payload: payload), errorType: Error.self)
     }
 
     func updatePlanItem(itemId: String, payload: BudgetPlanItemRequest) async throws -> BudgetPlanItemResponse {
-        try await call(UpdatePlanItemEndpoint(itemId: itemId, payload: payload))
+        try await client.call(UpdatePlanItemEndpoint(itemId: itemId, payload: payload), errorType: Error.self)
     }
 
     func deletePlanItem(itemId: String) async throws {
-        _ = try await call(DeletePlanItemEndpoint(itemId: itemId))
+        try await client.callWithoutResponse(DeletePlanItemEndpoint(itemId: itemId), errorType: Error.self)
     }
 
     // MARK: - Expenses
 
     func getHouseholdPartner() async throws -> HouseholdPartnerProfileResponse {
-        try await call(GetHouseholdPartnerEndpoint())
+        try await client.call(GetHouseholdPartnerEndpoint(), errorType: Error.self)
     }
 
     func updateHouseholdPartner(payload: HouseholdPartnerProfileRequest) async throws -> HouseholdPartnerProfileResponse {
-        try await call(UpdateHouseholdPartnerEndpoint(payload: payload))
+        try await client.call(UpdateHouseholdPartnerEndpoint(payload: payload), errorType: Error.self)
     }
 
     func getExpenses(from: String? = nil, to: String? = nil, cursor: String? = nil, limit: Int? = nil) async throws -> (items: [ExpenseResponse], nextCursor: String?) {
         let endpoint = GetExpensesEndpoint(from: from, to: to, cursor: cursor, limit: limit)
-        let (items, httpResponse) = try await callWithHeaders(endpoint)
+        let (items, httpResponse) = try await client.callWithHeaders(endpoint, errorType: Error.self)
         let nextCursor = httpResponse.value(forHTTPHeaderField: "X-Next-Cursor")
         return (items, nextCursor)
     }
 
     func createExpense(request: ExpenseRequest) async throws -> ExpenseResponse {
-        try await call(CreateExpenseEndpoint(payload: request))
+        try await client.call(CreateExpenseEndpoint(payload: request), errorType: Error.self)
     }
 
     func updateExpense(expenseId: String, payload: ExpenseRequest) async throws -> ExpenseResponse {
-        try await call(UpdateExpenseEndpoint(expenseId: expenseId, payload: payload))
+        try await client.call(UpdateExpenseEndpoint(expenseId: expenseId, payload: payload), errorType: Error.self)
     }
 
     func deleteExpense(expenseId: String) async throws {
-        _ = try await call(DeleteExpenseEndpoint(expenseId: expenseId))
+        try await client.callWithoutResponse(DeleteExpenseEndpoint(expenseId: expenseId), errorType: Error.self)
     }
 
     // MARK: - Categories
 
     func getCategories() async throws -> [ExpenseCategoryResponse] {
-        try await call(GetCategoriesEndpoint())
+        try await client.call(GetCategoriesEndpoint(), errorType: Error.self)
     }
 
     func createCategory(payload: ExpenseCategoryRequest) async throws -> ExpenseCategoryResponse {
-        try await call(CreateCategoryEndpoint(payload: payload))
+        try await client.call(CreateCategoryEndpoint(payload: payload), errorType: Error.self)
     }
 
     func deleteCategory(categoryId: String) async throws {
-        _ = try await call(DeleteCategoryEndpoint(categoryId: categoryId))
+        try await client.callWithoutResponse(DeleteCategoryEndpoint(categoryId: categoryId), errorType: Error.self)
     }
 
     // MARK: - Recurring Templates
 
     func getRecurringTemplates() async throws -> [RecurringTemplateResponse] {
-        try await call(GetRecurringTemplatesEndpoint())
+        try await client.call(GetRecurringTemplatesEndpoint(), errorType: Error.self)
     }
 
     func createRecurringTemplate(payload: RecurringTemplateRequest) async throws -> RecurringTemplateResponse {
-        try await call(CreateRecurringTemplateEndpoint(payload: payload))
+        try await client.call(CreateRecurringTemplateEndpoint(payload: payload), errorType: Error.self)
     }
 
     func updateRecurringTemplate(templateId: String, payload: RecurringTemplateRequest) async throws -> RecurringTemplateResponse {
-        try await call(UpdateRecurringTemplateEndpoint(templateId: templateId, payload: payload))
+        try await client.call(UpdateRecurringTemplateEndpoint(templateId: templateId, payload: payload), errorType: Error.self)
     }
 
     func deleteRecurringTemplate(templateId: String) async throws {
-        _ = try await call(DeleteRecurringTemplateEndpoint(templateId: templateId))
+        try await client.callWithoutResponse(DeleteRecurringTemplateEndpoint(templateId: templateId), errorType: Error.self)
     }
 
     // MARK: - Reports
 
     func getReportsOverview(from: String? = nil, to: String? = nil) async throws -> ReportsOverviewResponse {
-        try await call(GetReportsOverviewEndpoint(from: from, to: to))
+        try await client.call(GetReportsOverviewEndpoint(from: from, to: to), errorType: Error.self)
     }
 
     func getMonthlyExpenseReports(from: String? = nil, to: String? = nil) async throws -> [BudgetMonthSummaryResponse] {
-        try await call(GetMonthlyExpenseReportsEndpoint(from: from, to: to))
+        try await client.call(GetMonthlyExpenseReportsEndpoint(from: from, to: to), errorType: Error.self)
     }
 
     func getYearlyExpenseReports(from: String? = nil, to: String? = nil) async throws -> [BudgetYearSummaryResponse] {
-        try await call(GetYearlyExpenseReportsEndpoint(from: from, to: to))
+        try await client.call(GetYearlyExpenseReportsEndpoint(from: from, to: to), errorType: Error.self)
     }
 
     func getReportSuggestions(from: String? = nil, to: String? = nil) async throws -> ReportSuggestionsResponse {
-        try await call(GetReportSuggestionsEndpoint(from: from, to: to))
+        try await client.call(GetReportSuggestionsEndpoint(from: from, to: to), errorType: Error.self)
     }
 
     func dismissReportSuggestion(id: String) async throws -> APISuccess {
-        try await call(DismissReportSuggestionEndpoint(suggestionId: id))
+        try await client.call(DismissReportSuggestionEndpoint(suggestionId: id), errorType: Error.self)
     }
 
-    // MARK: - Core Logic
-
-    /// Variant of `call` that also returns the raw `HTTPURLResponse` for header inspection
-    /// (e.g. `X-Next-Cursor` for paginated endpoints).
-    private func callWithHeaders<E: Endpoint>(_ endpoint: E) async throws -> (E.Response, HTTPURLResponse) where E.Response: Codable {
-        let request = try makeURLRequest(for: endpoint)
-        logRequest(request, endpoint: endpoint)
-        logSnapshotRequestIfNeeded(request, endpointPath: endpoint.path)
-        logExpenseRequestIfNeeded(request, endpointPath: endpoint.path)
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw Error.invalidResponse
-        }
-
-        expensesHTTPLogger.debug(
-            "Expenses response [\(endpoint.path, privacy: .public)] status=\(httpResponse.statusCode, privacy: .public)"
+    // MARK: - Logging
+    
+    nonisolated private static func logRequest(logger: Logger, path: String, method: HTTPMethod, parameters: Parameters) {
+        logger.debug(
+            "Expenses request [\(method.rawValue, privacy: .public)] \(path, privacy: .public)"
         )
-
-        guard (200..<300).contains(httpResponse.statusCode) else {
-            let message = errorMessage(from: data)
-            if httpResponse.statusCode == 401 { throw Error.unauthorized(message) }
-            if let message, !message.isEmpty { throw Error.api(message) }
-            throw Error.invalidStatus(httpResponse.statusCode)
-        }
-
-        do {
-            return (try endpoint.decode(data), httpResponse)
-        } catch {
-            if let envelope = try? endpoint.decoder.decode(HTTPEnvelope<E.Response>.self, from: data) {
-                if let payload = envelope.data { return (payload, httpResponse) }
-                if let message = envelope.message, !message.isEmpty { throw Error.api(message) }
-            }
-            throw error
+        
+        if path == "/v1/budget/snapshots" || path.hasPrefix("/v1/budget/snapshots/") 
+            || (path == "/v1/expenses" || path.hasPrefix("/v1/expenses/")) && method != .get {
+            let body = (try? JSONSerialization.data(withJSONObject: parameters)).flatMap { String(data: $0, encoding: .utf8) } ?? "<empty>"
+            logger.debug(
+                "Expenses payload [\(path, privacy: .public)] body=\(body, privacy: .public)"
+            )
         }
     }
-
-    private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
-        let data = try await perform(endpoint)
-        do {
-            return try endpoint.decode(data)
-        } catch {
-            if let envelope = try? endpoint.decoder.decode(HTTPEnvelope<E.Response>.self, from: data) {
-                if let payload = envelope.data {
-                    return payload
-                }
-                if let message = envelope.message, !message.isEmpty {
-                    throw Error.api(message)
-                }
-            }
-            throw error
-        }
-    }
-
-    private func perform<E: Endpoint>(_ endpoint: E) async throws -> Data {
-        let request = try makeURLRequest(for: endpoint)
-        logRequest(request, endpoint: endpoint)
-        logSnapshotRequestIfNeeded(request, endpointPath: endpoint.path)
-        logExpenseRequestIfNeeded(request, endpointPath: endpoint.path)
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw Error.invalidResponse
-        }
-
-        expensesHTTPLogger.debug(
-            "Expenses response [\(endpoint.path, privacy: .public)] status=\(httpResponse.statusCode, privacy: .public)"
-        )
-
-        guard (200 ..< 300).contains(httpResponse.statusCode) else {
-            let message = errorMessage(from: data)
-
-            if httpResponse.statusCode == 401 {
-                throw Error.unauthorized(message)
-            }
-
-            if let message, !message.isEmpty {
-                throw Error.api(message)
-            }
-            throw Error.invalidStatus(httpResponse.statusCode)
-        }
-
-        return data
-    }
-
-    private func logRequest<E: Endpoint>(_ request: URLRequest, endpoint: E) {
-        let method = request.httpMethod ?? endpoint.method.rawValue
-        let urlString =
-            request.url?.absoluteString ?? baseURL.appendingPathComponent(endpoint.path).absoluteString
-        expensesHTTPLogger.debug(
-            "Expenses request [\(method, privacy: .public)] \(urlString, privacy: .public)"
-        )
-    }
-
-    private func logSnapshotRequestIfNeeded(_ request: URLRequest, endpointPath: String) {
-        guard endpointPath == "/v1/budget/snapshots" || endpointPath.hasPrefix("/v1/budget/snapshots/") else {
-            return
-        }
-
-        let body = request.httpBody.flatMap {
-            String(data: $0, encoding: .utf8)
-        } ?? "<empty>"
-
-        expensesHTTPLogger.debug(
-            "Expenses request [\(endpointPath, privacy: .public)] body=\(body, privacy: .public)"
-        )
-    }
-
-    private func logExpenseRequestIfNeeded(_ request: URLRequest, endpointPath: String) {
-        guard endpointPath == "/v1/expenses" || endpointPath.hasPrefix("/v1/expenses/") else {
-            return
-        }
-        guard request.httpMethod != HTTPMethod.get.rawValue else { return }
-
-        let body = request.httpBody.flatMap {
-            String(data: $0, encoding: .utf8)
-        } ?? "<empty>"
-
-        expensesHTTPLogger.debug(
-            "Expenses request [\(endpointPath, privacy: .public)] body=\(body, privacy: .public)"
-        )
-    }
-
-    private func errorMessage(from data: Data) -> String? {
-        APIErrorDecoding.message(from: data)
-    }
-
-    private func makeURLRequest<E: Endpoint>(for endpoint: E) throws -> URLRequest {
-        let normalizedPath = endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        let base = baseURL.appendingPathComponent(normalizedPath)
-        let parameters = try endpoint.asParameters()
-        let url = try url(for: endpoint.method, baseURL: base, parameters: parameters)
-
-        var request = URLRequest(url: url)
-        request.httpMethod = endpoint.method.rawValue
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        if let token = authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-
-        if endpoint.method != .get, !parameters.isEmpty {
-            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
-        }
-
-        return request
-    }
-
-    private func url(for method: HTTPMethod, baseURL: URL, parameters: Parameters) throws -> URL {
-        guard method == .get, !parameters.isEmpty else { return baseURL }
-
-        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
-        components?.queryItems = parameters.compactMap { key, value in
-            URLQueryItem(name: key, value: String(describing: value))
-        }
-
-        guard let url = components?.url else { throw Error.invalidResponse }
-        return url
-    }
-}
-
-private struct HTTPEnvelope<T: Codable>: Codable {
-    let data: T?
-    let message: String?
 }
