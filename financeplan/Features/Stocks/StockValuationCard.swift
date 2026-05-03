@@ -42,6 +42,7 @@ struct StockValuationCard: View {
 }
 
 @ViewBuilder
+@MainActor
 private func valuationRow(title: String, range: PriceRange?) -> some View {
     HStack {
         Text(title)

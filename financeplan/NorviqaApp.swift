@@ -11,10 +11,7 @@ enum PostHogEnv: String {
   case host = "POSTHOG_HOST"
 
   var value: String {
-    guard let value = ProcessInfo.processInfo.environment[rawValue] else {
-      fatalError("Set \(rawValue) in the Xcode scheme Run environment variables.")
-    }
-    return value
+    ProcessInfo.processInfo.environment[rawValue] ?? ""
   }
 }
 
@@ -50,9 +47,13 @@ struct NorviqaApp: App {
     }
 
     AppLanguage.applyStoredLanguage()
-    let config = PostHogConfig(apiKey: PostHogEnv.projectToken.value, host: PostHogEnv.host.value)
-    config.captureApplicationLifecycleEvents = true
-    PostHogSDK.shared.setup(config)
+    let token = PostHogEnv.projectToken.value
+    let host = PostHogEnv.host.value
+    if !token.isEmpty, !host.isEmpty {
+      let config = PostHogConfig(apiKey: token, host: host)
+      config.captureApplicationLifecycleEvents = true
+      PostHogSDK.shared.setup(config)
+    }
   }
 
   var body: some Scene {
