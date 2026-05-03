@@ -46,7 +46,7 @@
 	<key>RevenueCatAPIKey</key>
 	<string>appl_WhkrrqIARwWCJUrxETkxkzdZzni</string>
 	<key>SENTRY_DSN</key>
-	<string>https://a1f5f1436a7d29c0641a5578ed1ab4b0@o4509175874715648.ingest.us.sentry.io/4509175940644864</string>
+	<string>https://411b556d71653054edc88bb96f8a6cbc@o4511327200215040.ingest.de.sentry.io/4511327202115664</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

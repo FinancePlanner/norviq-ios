@@ -1,6 +1,7 @@
 import Combine
 import Foundation
 import PostHog
+import Sentry
 import StockPlanShared
 
 @MainActor
@@ -298,9 +299,13 @@ final class LoginViewModel: ObservableObject {
 
   private func persistAuth(_ auth: AuthResponse) {
     sessionStore.store(authResponse: auth)
-    // PostHog: Identify user and track login
     let userId = auth.userId.uuidString
     let username = auth.username.trimmingCharacters(in: .whitespacesAndNewlines)
+    // Sentry: attach user to crash reports
+    let sentryUser = Sentry.User(userId: userId)
+    sentryUser.username = username
+    SentrySDK.setUser(sentryUser)
+    // PostHog: Identify user and track login
     PostHogSDK.shared.identify(userId, userProperties: [
       "username": username,
     ])

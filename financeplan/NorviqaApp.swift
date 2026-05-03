@@ -41,6 +41,7 @@ struct NorviqaApp: App {
     if let dsn = Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String {
       SentrySDK.start { options in
         options.dsn = dsn
+        options.tracesSampleRate = 0.2
         options.enableAppHangTracking = true
         options.enableCaptureFailedRequests = true
       }

@@ -36,3 +36,5 @@ DerivedData/
 .env
 .env.*
 *.local
+
+.sentryclirc
