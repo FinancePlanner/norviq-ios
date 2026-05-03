@@ -2,7 +2,7 @@ import Foundation
 import StockPlanShared
 import Factory
 
-protocol BadgesServicing {
+protocol BadgesServicing: Sendable {
     func getBadges() async throws -> BadgesListResponse
 }
 
