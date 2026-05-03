@@ -236,6 +236,8 @@ final class BillingManager {
     do {
       _ = try await Purchases.shared.restorePurchases()
       try await restoreBackendEntitlement()
+      // PostHog: Track successful subscription restore
+      PostHogSDK.shared.capture("subscription_restored")
     } catch {
       errorMessage = error.localizedDescription
     }

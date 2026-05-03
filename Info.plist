@@ -39,6 +39,10 @@
 	<string>norviqa</string>
 	<key>PexelsAPIKey</key>
 	<string>WVDa5RXl1hx8Xw70OH94iXkSKwRvsVeOUopxx8cvvLKVouilEMVMukf2</string>
+	<key>PostHogHost</key>
+	<string>https://eu.i.posthog.com</string>
+	<key>PostHogProjectToken</key>
+	<string>phc_BAj6KZPSu8JD7oSoj6Mev957eNp6bHsNiNEqzPofDTDp</string>
 	<key>RevenueCatAPIKey</key>
 	<string>appl_WhkrrqIARwWCJUrxETkxkzdZzni</string>
 	<key>SENTRY_DSN</key>

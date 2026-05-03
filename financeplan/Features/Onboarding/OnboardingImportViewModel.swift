@@ -1,4 +1,5 @@
 import Combine
+import PostHog
 import SwiftUI
 
 @MainActor
@@ -89,5 +90,12 @@ final class OnboardingImportViewModel: ObservableObject {
     }
   }
 
-  func complete() { step = .done }
+  func complete() {
+    // PostHog: Track onboarding completion
+    PostHogSDK.shared.capture("onboarding_completed", properties: [
+      "completed_stocks": hasCompletedStocksSetup,
+      "completed_expenses": hasCompletedExpensesSetup,
+    ])
+    step = .done
+  }
 }
