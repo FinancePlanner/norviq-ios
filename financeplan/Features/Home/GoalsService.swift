@@ -17,7 +17,7 @@ struct DefaultGoalsService: GoalsServicing {
         let env = environmentManager.current
         self.client = GoalsHTTPClient(
             baseURL: env.apiBaseUrl,
-            session: .shared,
+            session: URLSession.shared,
             authTokenProvider: { Container.shared.authSessionStore().authToken }
         )
     }

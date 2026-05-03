@@ -2,25 +2,27 @@ import Combine
 import Foundation
 import SwiftUI
 
-struct StockInsightsResponse: Codable, Equatable {
-  let generatedAt: String
-  let symbol: String
-  let profile: StockInsightProfileDTO
-  let peers: [StockInsightPeerDTO]
-  let projectionScenarios: [StockInsightProjectionScenarioDTO]
-}
+struct StockInsightsResponse: Sendable, Equatable {
+    let generatedAt: String
+    let symbol: String
+    let profile: StockInsightProfileDTO
+    let peers: [StockInsightPeerDTO]
+    let projectionScenarios: [StockInsightProjectionScenarioDTO]
+  }
+  nonisolated extension StockInsightsResponse: Codable {}
 
-struct StockInsightProfileDTO: Codable, Equatable {
-  let symbol: String
-  let companyName: String
-  let currentPrice: Double
-  let marketCap: Double
-  let sharesOutstanding: Double
-  let metrics: [String: Double]
-  let dcfBasePrice: Double?
-  let dcfBearPrice: Double?
-  let dcfBullPrice: Double?
-}
+  struct StockInsightProfileDTO: Sendable, Equatable {
+    let symbol: String
+    let companyName: String
+    let currentPrice: Double
+    let marketCap: Double
+    let sharesOutstanding: Double
+    let metrics: [String: Double]
+    let dcfBasePrice: Double?
+    let dcfBearPrice: Double?
+    let dcfBullPrice: Double?
+  }
+  nonisolated extension StockInsightProfileDTO: Codable {}
 
 struct StockInsightPeerDTO: Codable, Equatable, Identifiable {
   var id: String { symbol }

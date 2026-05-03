@@ -83,6 +83,14 @@ struct MarketDataHTTPClient: Sendable {
     try await client.call(GetQuoteEndpoint(symbol: symbol), errorType: Error.self)
   }
 
+  func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable & Sendable {
+    try await client.call(endpoint, errorType: Error.self)
+  }
+
+  func callWithoutResponse<E: Endpoint>(_ endpoint: E) async throws where E.Response: Codable {
+    try await client.callWithoutResponse(endpoint, errorType: Error.self)
+  }
+
   func fetchAnalystConsensus(symbol: String) async throws -> StockAnalystConsensus {
     let response = try await client.call(GetGradesConsensusEndpoint(symbol: symbol), errorType: Error.self)
     guard let consensus = response.first else {
