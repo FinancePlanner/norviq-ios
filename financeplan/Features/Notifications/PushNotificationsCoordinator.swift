@@ -106,12 +106,12 @@ struct SystemPushPermissionProvider: PushPermissionProviding {
 }
 
 protocol PushRemoteNotificationsRegistering {
-  func registerForRemoteNotifications()
+  @MainActor func registerForRemoteNotifications()
   func openSystemSettings()
 }
 
 struct SystemPushRemoteNotificationsRegistrar: PushRemoteNotificationsRegistering {
-  func registerForRemoteNotifications() {
+  @MainActor func registerForRemoteNotifications() {
     UIApplication.shared.registerForRemoteNotifications()
   }
 
