@@ -21,7 +21,7 @@ enum Constants {
 }
 
 @Observable
-final class AppEnvironmentManager {
+final class AppEnvironmentManager: @unchecked Sendable {
   private(set) var current: AppEnvironment
   private let defaults: UserDefaults
 

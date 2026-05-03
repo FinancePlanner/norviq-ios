@@ -19,7 +19,7 @@ enum AuthSessionError: LocalizedError, Equatable {
   }
 }
 
-protocol AuthSessionManaging: AnyObject {
+protocol AuthSessionManaging: AnyObject, Sendable {
   func restoreSessionIfNeeded() async -> Bool
   func validAccessToken() async throws -> String?
   func refreshAccessToken() async throws -> String?
@@ -27,7 +27,7 @@ protocol AuthSessionManaging: AnyObject {
   func invalidateSession() async
 }
 
-final class AuthSessionManager: AuthSessionManaging {
+final class AuthSessionManager: AuthSessionManaging, @unchecked Sendable {
   private let authService: AuthServicing
   private let sessionStore: AuthSessionStoring
   private let nowProvider: () -> Date
