@@ -27,7 +27,9 @@ jobs:
             ${{ runner.os }}-xcode-derived-data-
 
       - name: Resolve Package Dependencies
-        run: xcodebuild -project financeplan.xcodeproj -scheme financeplan -resolvePackageDependencies
+        run: |
+          rm -rf ~/Library/Caches/org.swift.swiftpm
+          xcodebuild -project financeplan.xcodeproj -scheme financeplan -resolvePackageDependencies
 
       - name: Patch SwiftyCrop for Compatibility
         run: |
