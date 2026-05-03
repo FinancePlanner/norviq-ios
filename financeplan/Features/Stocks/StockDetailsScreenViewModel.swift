@@ -38,7 +38,7 @@ final class StockDetailsViewModel: ObservableObject {
         let message: String?
     }
 
-    private struct FinancialStatementsSectionLoadResult<Value> {
+    private struct FinancialStatementsSectionLoadResult<Value: Sendable>: Sendable {
         let value: Value
         let message: String?
         let isUnsupportedPlan: Bool
@@ -798,7 +798,7 @@ final class StockDetailsViewModel: ObservableObject {
         return FinancialStatementsLoadResult(statements: statements, message: nil)
     }
 
-    private func loadFinancialStatementsSection<Value>(
+    private func loadFinancialStatementsSection<Value: Sendable>(
         emptyValue: Value,
         operation: () async throws -> Value
     ) async -> FinancialStatementsSectionLoadResult<Value> {
