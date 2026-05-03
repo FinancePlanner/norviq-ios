@@ -1,11 +1,11 @@
 import Foundation
 import StockPlanShared
 
-protocol FeedbackServicing {
+protocol FeedbackServicing: Sendable {
   func submitFeedback(topic: String, message: String) async throws -> FeedbackResponse
 }
 
-final class FeedbackService: FeedbackServicing {
+final class FeedbackService: FeedbackServicing, @unchecked Sendable {
   private let environmentManager: AppEnvironmentManager
   private let session: StockURLSessionProtocol
   private let authSessionManager: AuthSessionManaging

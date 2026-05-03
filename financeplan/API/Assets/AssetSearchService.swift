@@ -9,11 +9,11 @@ struct AssetSearchResult: Identifiable, Equatable {
   var id: String { symbol }
 }
 
-protocol AssetSearchServicing {
+protocol AssetSearchServicing: Sendable {
   func searchAssets(query: String) async throws -> [AssetSearchResult]
 }
 
-final class AssetSearchService: AssetSearchServicing {
+final class AssetSearchService: AssetSearchServicing, @unchecked Sendable {
   private let client: MarketDataHTTPClient
 
   init(client: MarketDataHTTPClient) {
