@@ -13,7 +13,7 @@ struct DefaultBadgesService: BadgesServicing {
         let env = environmentManager.current
         self.client = BadgesHTTPClient(
             baseURL: env.apiBaseUrl,
-            session: .shared,
+            session: URLSession.shared,
             authTokenProvider: { Container.shared.authSessionStore().authToken }
         )
     }

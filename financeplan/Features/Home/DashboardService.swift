@@ -14,7 +14,7 @@ struct DefaultDashboardService: DashboardServicing {
         let env = environmentManager.current
         self.client = DashboardHTTPClient(
             baseURL: env.apiBaseUrl,
-            session: .shared,
+            session: URLSession.shared,
             authTokenProvider: { Container.shared.authSessionStore().authToken }
         )
     }

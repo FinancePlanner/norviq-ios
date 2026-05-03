@@ -67,7 +67,7 @@ struct ExpensesHTTPService: ExpensesServicing {
         let env = environmentManager.current
         self.client = ExpensesHTTPClient(
             baseURL: env.apiBaseUrl,
-            session: .shared,
+            session: URLSession.shared,
             authTokenProvider: { Container.shared.authSessionStore().authToken }
         )
     }
