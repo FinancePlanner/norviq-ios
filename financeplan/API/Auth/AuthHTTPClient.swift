@@ -9,8 +9,8 @@ final class AuthHTTPClient: Sendable {
     
     // MARK: - Static Constants
     
-    nonisolated(unsafe) private static let mfaCapabilityHeader = "X-StockPlan-Client-Capabilities"
-    nonisolated(unsafe) private static let mfaCapabilityToken = "mfa-auth-v1"
+    private static let mfaCapabilityHeader = "X-StockPlan-Client-Capabilities"
+    private static let mfaCapabilityToken = "mfa-auth-v1"
     private static let dbStyleDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)

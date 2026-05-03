@@ -28,12 +28,12 @@ enum OAuthWebAuthenticationError: LocalizedError {
   }
 }
 
-protocol OAuthWebAuthenticating: AnyObject {
+protocol OAuthWebAuthenticating: AnyObject, Sendable {
   @MainActor
   func authenticate(url: URL, callbackScheme: String) async throws -> URL
 }
 
-final class OAuthWebAuthenticator: NSObject, OAuthWebAuthenticating {
+final class OAuthWebAuthenticator: NSObject, OAuthWebAuthenticating, @unchecked Sendable {
   @MainActor
   func authenticate(url: URL, callbackScheme: String) async throws -> URL {
     let coordinator = OAuthWebAuthenticationCoordinator()

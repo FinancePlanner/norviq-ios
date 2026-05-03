@@ -156,14 +156,14 @@ final class AuthService: AuthServicing {
 
 final class UserDefaultsAuthSessionStore: AuthSessionStoring, @unchecked Sendable {
   private enum Keys {
-    nonisolated(unsafe) static let authToken = "auth_token"
-    nonisolated(unsafe) static let refreshToken = "refresh_token"
-    nonisolated(unsafe) static let authTokenExpiresAt = "auth_token_expires_at"
-    nonisolated(unsafe) static let refreshTokenExpiresAt = "refresh_token_expires_at"
-    nonisolated(unsafe) static let loginIsSignup = "login_isSignup"
-    nonisolated(unsafe) static let currentUserID = "current_user_id"
-    nonisolated(unsafe) static let currentUsername = "current_username"
-    nonisolated(unsafe) static let initialStockImportUserIDs = "initial_stock_import_user_ids"
+    static let authToken = "auth_token"
+    static let refreshToken = "refresh_token"
+    static let authTokenExpiresAt = "auth_token_expires_at"
+    static let refreshTokenExpiresAt = "refresh_token_expires_at"
+    static let loginIsSignup = "login_isSignup"
+    static let currentUserID = "current_user_id"
+    static let currentUsername = "current_username"
+    static let initialStockImportUserIDs = "initial_stock_import_user_ids"
   }
 
   nonisolated(unsafe) private let defaults: UserDefaults
