@@ -16,8 +16,7 @@ public protocol HTTPClientError: LocalizedError, Equatable, Sendable {
     static func makeAPI(_ message: String) -> Self
 }
 
-/// Shared HTTP client logic. MainActor isolated to match the project's default isolation and handle main-actor isolated DTOs.
-@MainActor
+/// Shared HTTP client logic.
 public struct BaseHTTPClient: Sendable {
     
     // MARK: - Stored Properties

@@ -6,7 +6,7 @@ class Debouncer<T>: ObservableObject {
   @Published var value: T
   @Published private(set) var debouncedValue: T
 
-  private var cancellable: AnyCancellable?
+  nonisolated(unsafe) private var cancellable: AnyCancellable?
 
   init(
     value: T,
@@ -25,5 +25,9 @@ class Debouncer<T>: ObservableObject {
 
   func update(_ value: T) {
     self.value = value
+  }
+
+  deinit {
+    cancellable = nil
   }
 }
