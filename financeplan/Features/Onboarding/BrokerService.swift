@@ -19,7 +19,7 @@ enum BrokerConnectionAuthError: LocalizedError {
   }
 }
 
-protocol BrokerServicing {
+protocol BrokerServicing: Sendable {
   func listConnections() async throws -> [BrokerConnectionResponse]
   func getConnection(provider: String) async throws -> BrokerConnectionResponse
   @MainActor
