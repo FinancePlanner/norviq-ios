@@ -32,6 +32,7 @@ public enum ImageType: Hashable, Equatable {
     }
   }
 
+  @MainActor
   public var icon: Icon {
     Icon(self)
   }
@@ -40,6 +41,7 @@ public enum ImageType: Hashable, Equatable {
     image.resizable().renderingMode(.template)
   }
 
+  @MainActor
   public func icon(withSize size: CGSize) -> Icon {
     Icon(self, size: size)
   }
