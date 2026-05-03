@@ -26,14 +26,18 @@ struct PriceChartPoint: Codable, Sendable, Equatable {
     let volume: Int?
 }
 
-struct PriceChartSeries: Codable, Sendable, Equatable {
+struct PriceChartSeries: Sendable, Equatable {
     let symbol: String
     let currency: String
     let range: String
     let points: [PriceChartPoint]
 }
 
-struct PriceChartComparisonResponse: Codable, Sendable, Equatable {
+nonisolated extension PriceChartSeries: Codable {}
+
+struct PriceChartComparisonResponse: Sendable, Equatable {
     let series: [PriceChartSeries]
     let range: String
 }
+
+nonisolated extension PriceChartComparisonResponse: Codable {}

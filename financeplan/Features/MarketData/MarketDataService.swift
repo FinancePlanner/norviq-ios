@@ -1,7 +1,6 @@
 import Foundation
 import StockPlanShared
 
-@MainActor
 protocol MarketDataServicing: Sendable {
   func fetchCompanyProfile(symbol: String) async throws -> CompanyProfileResponse
   func fetchQuote(symbol: String) async throws -> QuoteResponse

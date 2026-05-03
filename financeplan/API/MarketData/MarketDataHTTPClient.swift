@@ -159,9 +159,28 @@ struct MarketDataHTTPClient: Sendable {
   func fetchPriceChartComparison(symbols: [String], range: String) async throws -> PriceChartComparisonResponse {
     try await client.call(GetPriceChartComparisonEndpoint(symbols: symbols, range: range), errorType: Error.self)
   }
+
+  func searchAssets(query: String, limit: Int) async throws -> [SearchResultResponse] {
+    try await client.call(SearchAssetsEndpoint(query: query, limit: limit), errorType: Error.self)
+  }
 }
 
-struct MarketBasicFinancialsResponse: Codable, Sendable {
+private struct SearchAssetsEndpoint: Endpoint {
+  typealias Response = [SearchResultResponse]
+
+  let query: String
+  let limit: Int
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/assets/search" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    ["q": query, "limit": limit]
+  }
+}
+
+struct MarketBasicFinancialsResponse: Sendable {
   let series: MarketBasicFinancialSeriesResponse
   let metricType: String
   let metric: [String: MarketBasicFinancialMetricValue]
@@ -211,7 +230,11 @@ struct MarketBasicFinancialsResponse: Codable, Sendable {
   }
 }
 
-struct MarketBasicFinancialSeriesResponse: Codable, Sendable {
+nonisolated extension MarketBasicFinancialsResponse: Codable {}
+
+nonisolated extension MarketBasicFinancialSeriesResponse: Codable {}
+
+struct MarketBasicFinancialSeriesResponse: Sendable {
   let annual: [String: [MarketBasicFinancialSeriesValue]]
   let quarterly: [String: [MarketBasicFinancialSeriesValue]]
 
@@ -262,12 +285,12 @@ enum MarketBasicFinancialSeriesFrequency: Sendable {
   case quarterly
 }
 
-enum MarketBasicFinancialMetricValue: Codable, Equatable, Sendable {
+enum MarketBasicFinancialMetricValue: Equatable, Sendable {
   case number(Double)
   case string(String)
   case null
 
-  init(from decoder: Decoder) throws {
+  nonisolated init(from decoder: Decoder) throws {
     let container = try decoder.singleValueContainer()
 
     if container.decodeNil() {
@@ -299,7 +322,7 @@ enum MarketBasicFinancialMetricValue: Codable, Equatable, Sendable {
     )
   }
 
-  func encode(to encoder: Encoder) throws {
+  nonisolated func encode(to encoder: Encoder) throws {
     var container = encoder.singleValueContainer()
 
     switch self {
@@ -312,6 +335,8 @@ enum MarketBasicFinancialMetricValue: Codable, Equatable, Sendable {
     }
   }
 }
+
+nonisolated extension MarketBasicFinancialMetricValue: Codable {}
 
 private extension Dictionary where Key == String, Value == MarketBasicFinancialMetricValue {
   func number(_ key: String) -> Double? {

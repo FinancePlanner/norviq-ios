@@ -9,7 +9,7 @@ import UIKit
 @MainActor
 @Observable
 final class BillingManager {
-  typealias BillingClientFactory = @MainActor (URL, String?) -> BillingHTTPClient
+  typealias BillingClientFactory = @MainActor @Sendable (URL, String?) -> BillingHTTPClient
 
   private enum Keys {
     static let entitlementLevel = "billing.entitlement_level"

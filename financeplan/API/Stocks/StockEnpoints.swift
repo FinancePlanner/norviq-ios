@@ -10,6 +10,10 @@ import Foundation
 import OSLog
 import StockPlanShared
 
+protocol StockRequestBodyEndpoint {
+  func bodyData() throws -> Data?
+}
+
 struct CreateStockEndpoint: Endpoint {
   typealias Response = StockResponse
 

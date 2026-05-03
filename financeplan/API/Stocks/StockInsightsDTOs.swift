@@ -32,10 +32,12 @@ struct StockInsightPeerDTO: Codable, Equatable, Identifiable {
   let sharesOutstanding: Double
 }
 
-struct StockInsightProjectionScenarioDTO: Codable, Equatable {
+struct StockInsightProjectionScenarioDTO: Equatable, Sendable {
   let kind: String
   let years: [StockInsightProjectionYearDTO]
 }
+
+nonisolated extension StockInsightProjectionScenarioDTO: Codable {}
 
 struct StockInsightProjectionYearDTO: Codable, Equatable {
   let year: Int

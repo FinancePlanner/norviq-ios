@@ -1,4 +1,3 @@
-import AnyAPI
 import Foundation
 import StockPlanShared
 
@@ -14,24 +13,6 @@ protocol AssetSearchServicing {
   func searchAssets(query: String) async throws -> [AssetSearchResult]
 }
 
-private struct SearchAssetsEndpoint: Endpoint {
-  typealias Response = [SearchResultResponse]
-
-  let query: String
-  let limit: Int
-
-  var method: HTTPMethod { .get }
-  var path: String { "/v1/assets/search" }
-  var decoder: JSONDecoder { .stockPlanShared }
-
-  func asParameters() throws -> Parameters {
-    [
-      "q": query,
-      "limit": limit
-    ]
-  }
-}
-
 final class AssetSearchService: AssetSearchServicing {
   private let client: MarketDataHTTPClient
 
@@ -43,7 +24,7 @@ final class AssetSearchService: AssetSearchServicing {
     let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return [] }
 
-    let response = try await client.call(SearchAssetsEndpoint(query: trimmed, limit: 20))
+    let response = try await client.searchAssets(query: trimmed, limit: 20)
     return response.map { item in
       let normalizedExchange = item.exchange.trimmingCharacters(in: .whitespacesAndNewlines)
       return AssetSearchResult(

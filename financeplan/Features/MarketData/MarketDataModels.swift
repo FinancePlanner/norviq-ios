@@ -47,7 +47,7 @@ struct YearlyProjection: Equatable, Sendable {
   let fcfMargin: Double?
 }
 
-struct StockAnalysisMetrics: Codable, Equatable, Sendable {
+struct StockAnalysisMetrics: Equatable, Sendable {
   let symbol: String
   let ttmPE: Double?
   let forwardPE: Double?

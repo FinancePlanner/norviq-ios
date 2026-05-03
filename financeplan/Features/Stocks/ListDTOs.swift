@@ -1,8 +1,10 @@
 import Foundation
 
-struct PortfolioListDTORequest: Codable, Sendable, Equatable {
+struct PortfolioListDTORequest: Sendable, Equatable {
   let name: String
 }
+
+nonisolated extension PortfolioListDTORequest: Codable {}
 
 struct PortfolioListDTOResponse: Codable, Sendable, Equatable, Identifiable {
   let id: String
@@ -12,9 +14,11 @@ struct PortfolioListDTOResponse: Codable, Sendable, Equatable, Identifiable {
   let updatedAt: String?
 }
 
-struct WatchlistListDTORequest: Codable, Sendable, Equatable {
+struct WatchlistListDTORequest: Sendable, Equatable {
   let name: String
 }
+
+nonisolated extension WatchlistListDTORequest: Codable {}
 
 struct WatchlistListDTOResponse: Codable, Sendable, Equatable, Identifiable {
   let id: String
@@ -23,3 +27,5 @@ struct WatchlistListDTOResponse: Codable, Sendable, Equatable, Identifiable {
   let createdAt: String?
   let updatedAt: String?
 }
+
+

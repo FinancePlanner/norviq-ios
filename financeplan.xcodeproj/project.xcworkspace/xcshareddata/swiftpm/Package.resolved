@@ -69,8 +69,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/segmentio/analytics-swift",
       "state" : {
-        "revision" : "acfd5fc1baaf78520d962884672ce1224745c5d1",
-        "version" : "1.9.3"
+        "revision" : "729d6ae08b5488123f5c8e973cd4385ffa84f46a",
+        "version" : "1.9.4"
       }
     },
     {
@@ -114,8 +114,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/amplitude/experiment-ios-client.git",
       "state" : {
-        "revision" : "d9c02e9758e27394fd825506eaff1ad397876741",
-        "version" : "1.19.0"
+        "revision" : "8b0146bb4a3207a8bcf4b51bee137843ea860c20",
+        "version" : "1.20.0"
       }
     },
     {
@@ -186,8 +186,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/PostHog/posthog-ios",
       "state" : {
-        "revision" : "1783865d79a1cabc472cf2d56a1fe3f797417b52",
-        "version" : "3.40.0"
+        "revision" : "218fb6fe016a27baa3651613d53dae5c6e36af15",
+        "version" : "3.57.3"
       }
     },
     {
@@ -195,8 +195,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/RevenueCat/purchases-ios-spm.git",
       "state" : {
-        "revision" : "a06accc1543fcedc3094d4b5b9a40b84e2213e8e",
-        "version" : "5.69.0"
+        "revision" : "8f5f5e1b95506f89524cdbb70bcaf096a6f6fcc2",
+        "version" : "5.70.0"
       }
     },
     {
@@ -204,8 +204,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/getsentry/sentry-cocoa.git",
       "state" : {
-        "revision" : "a49e7c2148ac9e38bd35ef4f13bc9d6ea3ff0b81",
-        "version" : "9.11.0"
+        "revision" : "0baded16c4bd1f2471949e89bf36289ca2b93080",
+        "version" : "9.12.0"
       }
     },
     {
