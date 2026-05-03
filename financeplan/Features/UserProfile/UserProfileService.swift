@@ -8,7 +8,7 @@
 import Foundation
 import StockPlanShared
 
-public protocol UserProfileServiceProtocol {
+public protocol UserProfileServiceProtocol: Sendable {
     func fetchProfile() async throws -> UserProfile
     func updateProfile(_ profile: UserProfile) async throws -> UserProfile
     func updateUsername(_ username: String) async throws -> UserProfile
@@ -16,7 +16,7 @@ public protocol UserProfileServiceProtocol {
     func updatePassword(current: String, new: String) async throws
 }
 
-final class UserProfileHTTPService: UserProfileServiceProtocol {
+final class UserProfileHTTPService: UserProfileServiceProtocol, @unchecked Sendable {
     private let environmentManager: AppEnvironmentManager
     private let session: UserProfileURLSessionProtocol
     private let authSessionManager: AuthSessionManaging
@@ -106,7 +106,7 @@ final class UserProfileHTTPService: UserProfileServiceProtocol {
     }
 }
 
-public final class UserProfileServiceStub: UserProfileServiceProtocol {
+public final class UserProfileServiceStub: UserProfileServiceProtocol, @unchecked Sendable {
     public init() {}
 
     public func fetchProfile() async throws -> UserProfile {

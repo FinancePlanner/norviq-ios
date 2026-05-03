@@ -7,11 +7,11 @@ import SwiftData
 import TelemetryDeck
 
 enum PostHogEnv: String {
-  case projectToken = "POSTHOG_PROJECT_TOKEN"
-  case host = "POSTHOG_HOST"
+  case projectToken = "PostHogProjectToken"
+  case host = "PostHogHost"
 
   var value: String {
-    ProcessInfo.processInfo.environment[rawValue] ?? ""
+    Bundle.main.object(forInfoDictionaryKey: rawValue) as? String ?? ""
   }
 }
 

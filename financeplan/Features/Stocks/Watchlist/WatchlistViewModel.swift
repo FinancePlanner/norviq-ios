@@ -2,6 +2,7 @@ import Combine
 import Factory
 import Foundation
 import OSLog
+import PostHog
 import StockPlanShared
 import SwiftData
 
@@ -90,6 +91,11 @@ final class WatchlistViewModel: ObservableObject {
 
       try localStore?.upsert(created, in: selectedWatchlistListId)
 
+      // PostHog: Track watchlist item added
+      PostHogSDK.shared.capture("watchlist_item_added", properties: [
+        "symbol": created.symbol,
+      ])
+
       addWatchlistDraft = AddWatchlistDraft()
       return nil
     } catch {
@@ -132,6 +138,11 @@ final class WatchlistViewModel: ObservableObject {
       try await service.deleteWatchlistItem(id: item.id)
 
       try localStore?.delete(id: item.id)
+
+      // PostHog: Track watchlist item removed
+      PostHogSDK.shared.capture("watchlist_item_removed", properties: [
+        "symbol": item.symbol,
+      ])
     } catch {
       errorMessage = error.localizedDescription
     }

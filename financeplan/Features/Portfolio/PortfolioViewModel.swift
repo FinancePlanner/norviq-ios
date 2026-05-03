@@ -2,6 +2,7 @@ import Combine
 import Factory
 import Foundation
 import OSLog
+import PostHog
 import StockPlanShared
 import SwiftData
 
@@ -261,6 +262,11 @@ final class PortfolioViewModel: ObservableObject {
         )
       )
       targetAlertsBySymbol[normalizedSymbol] = created
+      // PostHog: Track price target alert set
+      PostHogSDK.shared.capture("target_alert_set", properties: [
+        "symbol": normalizedSymbol,
+        "direction": direction.rawValue,
+      ])
       return nil
     } catch {
       let message = (error as? LocalizedError)?.errorDescription ?? "Failed to save price alert."
@@ -321,6 +327,10 @@ final class PortfolioViewModel: ObservableObject {
       selectedPortfolioListId = created.id
       hasLoadedOnce = false
       await load(force: true)
+      // PostHog: Track portfolio list created
+      PostHogSDK.shared.capture("portfolio_list_created", properties: [
+        "name": normalized,
+      ])
       return nil
     } catch {
       return error.localizedDescription

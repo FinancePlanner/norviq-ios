@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import PostHog
 
 @MainActor
 final class CSVImportViewModel: ObservableObject {
@@ -14,6 +15,10 @@ final class CSVImportViewModel: ObservableObject {
       }
       previewRows = parseCSV(text)
       errorMessage = nil
+      // PostHog: Track CSV import file loaded
+      PostHogSDK.shared.capture("csv_import_loaded", properties: [
+        "row_count": previewRows.count,
+      ])
     } catch {
       errorMessage = "Failed to read CSV: \(error.localizedDescription)"
       previewRows = []
