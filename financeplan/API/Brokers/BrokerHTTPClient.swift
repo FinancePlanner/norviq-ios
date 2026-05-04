@@ -121,7 +121,7 @@ final class BrokerHTTPClient: Sendable {
     portfolioListId: String?,
     csvData: Data
   ) async throws -> CsvImportCommitResponse {
-    let request = try makeCSVUploadRequest(
+    let request = try await makeCSVUploadRequest(
       path: "/v1/brokers/import/csv/commit",
       provider: provider,
       portfolioListId: portfolioListId,
@@ -144,7 +144,7 @@ final class BrokerHTTPClient: Sendable {
     provider: String,
     portfolioListId: String?,
     csvData: Data
-  ) throws -> URLRequest {
+  ) async throws -> URLRequest {
     let normalizedPath = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     let base = client.baseURL.appendingPathComponent(normalizedPath)
 
@@ -162,7 +162,7 @@ final class BrokerHTTPClient: Sendable {
     request.httpMethod = HTTPMethod.post.rawValue
     request.setValue("text/csv", forHTTPHeaderField: "Content-Type")
 
-    if let token = client.authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+    if let token = await client.authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
       request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     }
 

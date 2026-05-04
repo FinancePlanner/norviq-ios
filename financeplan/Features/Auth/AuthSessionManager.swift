@@ -2,9 +2,9 @@ import Foundation
 import StockPlanShared
 
 extension Notification.Name {
-  static let authSessionWillInvalidate = Notification.Name("authSessionWillInvalidate")
-  static let authSessionDidInvalidate = Notification.Name("authSessionDidInvalidate")
-  static let authSessionStorageFailure = Notification.Name("authSessionStorageFailure")
+  nonisolated static let authSessionWillInvalidate = Notification.Name("authSessionWillInvalidate")
+  nonisolated static let authSessionDidInvalidate = Notification.Name("authSessionDidInvalidate")
+  nonisolated static let authSessionStorageFailure = Notification.Name("authSessionStorageFailure")
 }
 
 enum AuthSessionError: LocalizedError, Equatable {
@@ -27,7 +27,7 @@ protocol AuthSessionManaging: Sendable {
   func invalidateSession() async
 }
 
-actor AuthSessionManager: AuthSessionManaging {
+final class AuthSessionManager: AuthSessionManaging, @unchecked Sendable {
   private let authService: AuthServicing
   private let sessionStore: AuthSessionStoring
   private let nowProvider: @Sendable () -> Date
@@ -170,7 +170,10 @@ actor AuthSessionManager: AuthSessionManaging {
   }
 
   private func accessTokenExpiry(for token: String) async -> Date? {
-    JWTTokenInspector.expirationDate(in: token) ?? (await sessionStore.authTokenExpiresAt)
+    if let expiry = JWTTokenInspector.expirationDate(in: token) {
+      return expiry
+    }
+    return await sessionStore.authTokenExpiresAt
   }
 
   private func hasUsableRefreshToken(now: Date) async -> Bool {

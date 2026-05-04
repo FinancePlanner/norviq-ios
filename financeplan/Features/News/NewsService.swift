@@ -22,7 +22,7 @@ struct NewsHTTPService: NewsServicing {
         self.client = NewsHTTPClient(
             baseURL: environmentManager.current.apiBaseUrl,
             session: URLSession.shared,
-            authTokenProvider: { Container.shared.authSessionStore().authToken }
+            authTokenProvider: { await Container.shared.authSessionStore().authToken }
         )
     }
 
