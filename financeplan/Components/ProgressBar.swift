@@ -25,39 +25,39 @@ struct ProgressBar: View {
   }
   
   var body: some View {
-    GeometryReader { geo in
-      ZStack(alignment: .leading) {
-        RoundedRectangle(cornerRadius: height / 2)
-          .fill(Color.white.opacity(0.1))
-          .frame(height: height)
-        
-        RoundedRectangle(cornerRadius: height / 2)
-          .fill(color)
-          .frame(width: geo.size.width * progress, height: height)
-          .overlay(
-            Group {
-              if showPattern && isOverBudget {
-                // Diagonal stripes pattern for over-budget (accessibility)
-                GeometryReader { barGeo in
-                  Path { path in
-                    let spacing: CGFloat = 4
-                    var x: CGFloat = -barGeo.size.height
-                    while x < barGeo.size.width {
-                      path.move(to: CGPoint(x: x, y: barGeo.size.height))
-                      path.addLine(to: CGPoint(x: x + barGeo.size.height, y: 0))
-                      x += spacing
-                    }
-                  }
-                  .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                }
-              }
-            }
-          )
-          .clipShape(RoundedRectangle(cornerRadius: height / 2))
-      }
+    ZStack(alignment: .leading) {
+      Capsule()
+        .fill(Color.white.opacity(0.1))
+        .frame(height: height)
+      
+      Capsule()
+        .fill(color)
+        .frame(height: height)
+        .scaleEffect(x: progress, y: 1.0, anchor: .leading)
+        .overlay {
+          if showPattern && isOverBudget {
+            DiagonalStripes()
+              .stroke(Color.white.opacity(0.3), lineWidth: 1)
+              .clipShape(.capsule)
+          }
+        }
     }
     .frame(height: height)
     .accessibilityLabel("Progress: \(Int(progress * 100))%")
     .accessibilityValue(isOverBudget ? "Over budget" : "\(Int((1 - progress) * 100))% remaining")
+  }
+}
+
+private struct DiagonalStripes: Shape {
+  func path(in rect: CGRect) -> Path {
+    var path = Path()
+    let spacing: CGFloat = 4
+    var x: CGFloat = -rect.height
+    while x < rect.width {
+      path.move(to: CGPoint(x: x, y: rect.height))
+      path.addLine(to: CGPoint(x: x + rect.height, y: 0))
+      x += spacing
+    }
+    return path
   }
 }
