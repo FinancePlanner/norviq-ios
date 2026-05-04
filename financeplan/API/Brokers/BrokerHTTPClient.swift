@@ -58,7 +58,7 @@ final class BrokerHTTPClient: Sendable {
 
   private let client: BaseHTTPClient
 
-  init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping @Sendable () -> String? = { nil }) {
+  init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping @Sendable () async -> String? = { nil }) {
     self.client = BaseHTTPClient(
         baseURL: baseURL,
         session: session,
@@ -98,7 +98,7 @@ final class BrokerHTTPClient: Sendable {
     portfolioListId: String?,
     csvData: Data
   ) async throws -> CsvImportPreviewResponse {
-    let request = try makeCSVUploadRequest(
+    let request = try await makeCSVUploadRequest(
       path: "/v1/brokers/import/csv",
       provider: provider,
       portfolioListId: portfolioListId,

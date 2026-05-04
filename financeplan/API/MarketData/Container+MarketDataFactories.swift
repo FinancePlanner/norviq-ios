@@ -9,7 +9,7 @@ extension Container {
       return MarketDataHTTPClient(
         baseURL: env.current.apiBaseUrl,
         session: URLSession.shared,
-        authTokenProvider: { store.authToken }
+        authTokenProvider: { await store.authToken }
       )
     }
   }

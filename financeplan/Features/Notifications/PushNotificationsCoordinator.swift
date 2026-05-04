@@ -166,14 +166,14 @@ final class PushNotificationsCoordinator: ObservableObject {
   }
 
   func handleAuthenticatedSessionBecameActive() {
-    currentUserID = normalized(sessionStore.currentUserID)
-    guard !currentUserID.isEmpty else {
-      return
-    }
-
-    isOptedIn = optedInUsers.contains(currentUserID)
-
     Task {
+      currentUserID = normalized(await sessionStore.currentUserID)
+      guard !currentUserID.isEmpty else {
+        return
+      }
+
+      isOptedIn = optedInUsers.contains(currentUserID)
+
       await refreshAuthorizationStatus()
 
       if authorizationStatus == .notDetermined && !hasSeenExplainer(for: currentUserID) {
@@ -261,7 +261,7 @@ final class PushNotificationsCoordinator: ObservableObject {
   }
 
   func enableFromExplainer() async {
-    let userID = normalized(sessionStore.currentUserID)
+    let userID = normalized(await sessionStore.currentUserID)
     guard !userID.isEmpty else {
       return
     }
@@ -274,19 +274,21 @@ final class PushNotificationsCoordinator: ObservableObject {
   }
 
   func dismissExplainer() {
-    let userID = normalized(sessionStore.currentUserID)
-    guard !userID.isEmpty else {
-      showPostLoginExplainer = false
-      return
-    }
+    Task {
+      let userID = normalized(await sessionStore.currentUserID)
+      guard !userID.isEmpty else {
+        showPostLoginExplainer = false
+        return
+      }
 
-    markExplainerSeen(for: userID)
-    setOptIn(false, for: userID)
-    showPostLoginExplainer = false
+      markExplainerSeen(for: userID)
+      setOptIn(false, for: userID)
+      showPostLoginExplainer = false
+    }
   }
 
   func setNotificationsEnabled(_ enabled: Bool) async {
-    let userID = normalized(sessionStore.currentUserID)
+    let userID = normalized(await sessionStore.currentUserID)
     guard !userID.isEmpty else {
       return
     }
@@ -351,7 +353,7 @@ final class PushNotificationsCoordinator: ObservableObject {
       return
     }
 
-    let userID = normalized(sessionStore.currentUserID)
+    let userID = normalized(await sessionStore.currentUserID)
     guard !userID.isEmpty else {
       return
     }

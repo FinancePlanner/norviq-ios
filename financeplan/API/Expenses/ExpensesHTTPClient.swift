@@ -48,11 +48,7 @@ struct ExpensesHTTPClient: Sendable {
 
     private let client: BaseHTTPClient
 
-    init(
-        baseURL: URL,
-        session: any HTTPClientSession = URLSession.shared,
-        authTokenProvider: @escaping @Sendable () -> String? = { nil }
-    ) {
+    init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping @Sendable () async -> String? = { nil }) {
         let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "ExpensesHTTPClient")
         self.client = BaseHTTPClient(
             baseURL: baseURL,

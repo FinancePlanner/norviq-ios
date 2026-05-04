@@ -40,41 +40,11 @@ public struct ContentView: View {
     splashDelay =
       processInfo.arguments.contains("-ui_test_skip_splash") ? .zero : .seconds(2)
 
-    let store = Container.shared.authSessionStore()
-
-    if processInfo.arguments.contains("-ui_test_reset_session") {
-      store.clearSession()
-      let defaults = UserDefaults.standard
-      defaults.removeObject(forKey: "initial_stock_import_user_ids")
-    }
-
     authSessionManager = Container.shared.authSessionManager()
     appLockManager = Container.shared.appLockManager()
     securityCodeManager = Container.shared.securityCodeManager()
+    sessionStore = Container.shared.authSessionStore()
 
-    if let forcedAuthToken = processInfo.argumentValue(for: "-ui_test_auth_token") {
-      store.authToken = forcedAuthToken
-      store.authTokenExpiresAt = JWTTokenInspector.expirationDate(in: forcedAuthToken) ?? .distantFuture
-    }
-
-    if let forcedRefreshToken = processInfo.argumentValue(for: "-ui_test_refresh_token") {
-      store.refreshToken = forcedRefreshToken
-      store.refreshTokenExpiresAt = .distantFuture
-    }
-
-    if let forcedUserID = processInfo.argumentValue(for: "-ui_test_user_id") {
-      store.currentUserID = forcedUserID
-    }
-
-    if let forcedUsername = processInfo.argumentValue(for: "-ui_test_username") {
-      store.currentUsername = forcedUsername
-    }
-
-    if let importedUserID = processInfo.argumentValue(for: "-ui_test_imported_user_id") {
-      store.markInitialStockImportCompleted(for: importedUserID)
-    }
-
-    sessionStore = store
     _pushNotificationsCoordinator = StateObject(
       wrappedValue: Container.shared.pushNotificationsCoordinator()
     )
@@ -93,8 +63,11 @@ public struct ContentView: View {
             if requiresInitialStockImport {
               OnboardingImportFlow(
                 onFinished: {
-                  sessionStore.markInitialStockImportCompleted(for: sessionStore.currentUserID)
-                  requiresInitialStockImport = false
+                  Task {
+                    let userID = await sessionStore.currentUserID
+                    await sessionStore.markInitialStockImportCompleted(for: userID)
+                    requiresInitialStockImport = false
+                  }
                 },
                 onSignOut: {
                   await authSessionManager.logout()
@@ -171,7 +144,9 @@ public struct ContentView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 //    .environment(\.dynamicTypeSize, .xSmall)
     .onAppear {
-      syncSessionUsername()
+      Task {
+        await syncSessionUsername()
+      }
     }
     .onReceive(NotificationCenter.default.publisher(for: .authSessionDidInvalidate)) { _ in
       handleSessionInvalidation()
@@ -222,6 +197,36 @@ public struct ContentView: View {
       }
 
       launchStarted = true
+      
+      let processInfo = ProcessInfo.processInfo
+      if processInfo.arguments.contains("-ui_test_reset_session") {
+        await sessionStore.clearSession()
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: "initial_stock_import_user_ids")
+      }
+
+      if let forcedAuthToken = processInfo.argumentValue(for: "-ui_test_auth_token") {
+        await sessionStore.setAuthToken(forcedAuthToken)
+        await sessionStore.setAuthTokenExpiresAt(JWTTokenInspector.expirationDate(in: forcedAuthToken) ?? .distantFuture)
+      }
+
+      if let forcedRefreshToken = processInfo.argumentValue(for: "-ui_test_refresh_token") {
+        await sessionStore.setRefreshToken(forcedRefreshToken)
+        await sessionStore.setRefreshTokenExpiresAt(.distantFuture)
+      }
+
+      if let forcedUserID = processInfo.argumentValue(for: "-ui_test_user_id") {
+        await sessionStore.setCurrentUserID(forcedUserID)
+      }
+
+      if let forcedUsername = processInfo.argumentValue(for: "-ui_test_username") {
+        await sessionStore.setCurrentUsername(forcedUsername)
+      }
+
+      if let importedUserID = processInfo.argumentValue(for: "-ui_test_imported_user_id") {
+        await sessionStore.markInitialStockImportCompleted(for: importedUserID)
+      }
+
       if splashDelay != .zero {
         try? await Task.sleep(for: splashDelay)
       }
@@ -253,9 +258,10 @@ public struct ContentView: View {
     }
   }
 
-  private func syncSessionUsername() {
+  private func syncSessionUsername() async {
     if isAuthenticated {
-      sessionManager.updateUsername(sessionStore.currentUsername)
+      let username = await sessionStore.currentUsername
+      sessionManager.updateUsername(username)
     } else {
       sessionManager.reset()
     }
@@ -263,11 +269,14 @@ public struct ContentView: View {
 
   private func applyAuthenticatedState() {
     isAuthenticated = true
-    let userID = sessionStore.currentUserID
-    requiresInitialStockImport =
-      userID.isEmpty || !sessionStore.hasCompletedInitialStockImport(for: userID)
-    sessionManager.updateUsername(sessionStore.currentUsername)
     Task {
+      let userID = await sessionStore.currentUserID
+      let hasImported = await sessionStore.hasCompletedInitialStockImport(for: userID)
+      requiresInitialStockImport = userID.isEmpty || !hasImported
+      
+      let username = await sessionStore.currentUsername
+      sessionManager.updateUsername(username)
+      
       billingManager.configureForCurrentUser()
       await billingManager.refreshBillingContext()
       pushNotificationsCoordinator.handleAuthenticatedSessionBecameActive()

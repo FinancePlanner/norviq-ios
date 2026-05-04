@@ -117,9 +117,11 @@ final class BillingManager {
 
   func configureForCurrentUser() {
     guard uiTestBillingTier == nil else { return }
-    let userID = sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !userID.isEmpty else { return }
-    configureRevenueCat(userID: userID)
+    Task {
+      let userID = await sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !userID.isEmpty else { return }
+      configureRevenueCat(userID: userID)
+    }
   }
 
   func configureRevenueCat(userID: String) {
@@ -160,11 +162,11 @@ final class BillingManager {
   }
 
   func loadOfferings() async {
-    let userID = sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+    let userID = await sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
     if userID.isEmpty {
       configureAnonymousIfNeeded()
     } else {
-      configureForCurrentUser()
+      configureRevenueCat(userID: userID)
     }
     
     guard didConfigureRevenueCat else { return }
@@ -190,11 +192,11 @@ final class BillingManager {
       return false
     }
 
-    let userID = sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+    let userID = await sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
     if userID.isEmpty {
       configureAnonymousIfNeeded()
     } else {
-      configureForCurrentUser()
+      configureRevenueCat(userID: userID)
     }
 
     guard didConfigureRevenueCat else { return false }

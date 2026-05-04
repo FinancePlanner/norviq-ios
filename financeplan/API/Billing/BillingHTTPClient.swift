@@ -55,11 +55,7 @@ struct BillingHTTPClient: Sendable {
 
   private let client: BaseHTTPClient
 
-  init(
-    baseURL: URL,
-    session: any HTTPClientSession = URLSession.shared,
-    authTokenProvider: @escaping @Sendable () -> String? = { nil }
-  ) {
+  init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping @Sendable () async -> String? = { nil }) {
     self.client = BaseHTTPClient(
         baseURL: baseURL,
         session: session,
