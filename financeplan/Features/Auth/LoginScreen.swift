@@ -7,17 +7,7 @@ struct LoginScreen: View {
   @InjectedObservable(\Container.appEnvironment) private var environment
   @Environment(\.colorScheme) private var colorScheme
   @StateObject private var viewModel: LoginViewModel
-
-  private var isMFAPresented: Binding<Bool> {
-    Binding(
-      get: { viewModel.pendingMFAChallenge != nil },
-      set: { isPresented in
-        if !isPresented {
-          viewModel.dismissMFAFlow()
-        }
-      }
-    )
-  }
+  @State private var isShowingMFA = false
 
   @MainActor
   init(onAuthenticated: @escaping () -> Void = {}, startWithSignup: Bool = false) {
@@ -67,8 +57,16 @@ struct LoginScreen: View {
     .sheet(isPresented: $viewModel.isForgotPasswordPresented) {
       forgotPasswordSheet
     }
-    .sheet(isPresented: isMFAPresented) {
+    .sheet(isPresented: $isShowingMFA) {
       mfaSheet
+    }
+    .onChange(of: viewModel.pendingMFAChallenge) { _, newValue in
+      isShowingMFA = (newValue != nil)
+    }
+    .onChange(of: isShowingMFA) { _, newValue in
+      if !newValue {
+        viewModel.dismissMFAFlow()
+      }
     }
     .task(id: viewModel.infoMessage) {
       await autoDismissInfoMessage()

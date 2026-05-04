@@ -27,14 +27,12 @@ struct FormSheetHeader: View {
 
       // Dismiss
       HStack {
-        Button(action: onDismiss) {
-          Image(systemName: "xmark")
-            .font(.system(size: 12, weight: .bold))
-            .foregroundStyle(.secondary)
-            .frame(width: 30, height: 30)
-            .appGlassEffect(.circle, interactive: true)
-        }
-        .accessibilityLabel("Dismiss")
+        Button("Dismiss", systemImage: "xmark", action: onDismiss)
+          .labelStyle(.iconOnly)
+          .font(.system(size: 12, weight: .bold))
+          .foregroundStyle(.secondary)
+          .frame(width: 30, height: 30)
+          .appGlassEffect(.circle, interactive: true)
 
         Spacer()
       }
@@ -68,7 +66,7 @@ struct FormCard<Content: View>: View {
         content()
       }
       .appGlassEffect(.rect(cornerRadius: 18))
-      .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+      .clipShape(.rect(cornerRadius: 18))
     }
   }
 }
@@ -100,6 +98,7 @@ struct FormRow<Trailing: View>: View {
     HStack(spacing: 12) {
       if let icon {
         Image(systemName: icon)
+          .accessibilityHidden(true)
           .font(.subheadline.weight(.medium))
           .foregroundStyle(iconColor ?? .secondary)
           .frame(width: 24, alignment: .center)
@@ -160,6 +159,7 @@ struct FormTextField: View {
     HStack(spacing: 12) {
       if let icon {
         Image(systemName: icon)
+          .accessibilityHidden(true)
           .font(.subheadline.weight(.medium))
           .foregroundStyle(iconColor ?? .secondary)
           .frame(width: 24, alignment: .center)
@@ -208,6 +208,7 @@ struct FormToggle: View {
     HStack(spacing: 12) {
       if let icon {
         Image(systemName: icon)
+          .accessibilityHidden(true)
           .font(.subheadline.weight(.medium))
           .foregroundStyle(iconColor ?? .secondary)
           .frame(width: 24, alignment: .center)

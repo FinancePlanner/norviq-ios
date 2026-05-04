@@ -5,7 +5,7 @@ import XCTest
 
 @MainActor
 final class PushNotificationsServiceTests: XCTestCase {
-  private final class SessionMock: PushNotificationsURLSessionProtocol, @unchecked Sendable, @unchecked Sendable {
+  private final class SessionMock: PushNotificationsURLSessionProtocol, @unchecked Sendable {
     var handler: ((URLRequest) throws -> (Data, URLResponse))?
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {

@@ -28,11 +28,9 @@ public struct GlowingButton: View {
     }
 
     public var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.headline)
-                .fontWeight(.bold)
-        }
-        .buttonStyle(GlowingButtonStyle())
+        Button(title, action: action)
+            .buttonStyle(GlowingButtonStyle())
+            .font(.headline)
+            .fontWeight(.bold)
     }
 }

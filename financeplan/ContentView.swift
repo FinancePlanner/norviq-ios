@@ -251,9 +251,7 @@ public struct ContentView: View {
         }
       )
     }
-    .alert("Session Recovery Needed", isPresented: $showSessionRecoveryAlert) {
-      Button("OK", role: .cancel) {}
-    } message: {
+    .alert("Session Recovery Needed", isPresented: $showSessionRecoveryAlert) { } message: {
       Text(sessionRecoveryMessage)
     }
   }
@@ -380,6 +378,7 @@ private struct AppLockOverlay: View {
 
       VStack(spacing: 16) {
         Image(systemName: "lock.shield.fill")
+          .accessibilityHidden(true)
           .font(.system(size: 40))
           .foregroundStyle(.primary)
 
@@ -426,20 +425,18 @@ private struct AppLockOverlay: View {
           }
         }
 
-        Button(role: .destructive) {
+        Button("Sign Out", role: .destructive) {
           Task { @MainActor in
             await onSignOut()
           }
-        } label: {
-          Text("Sign Out")
-            .frame(maxWidth: .infinity)
         }
         .buttonStyle(.bordered)
+        .frame(maxWidth: .infinity)
       }
       .padding(24)
       .frame(maxWidth: 320)
-      .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
       .appGlassEffect(.rect(cornerRadius: 20))
+      .clipShape(.rect(cornerRadius: 20))
       .padding(.horizontal, 24)
     }
     .transition(.opacity)
