@@ -2,7 +2,7 @@ import Foundation
 import StockPlanShared
 import StockPlanShared
 
-protocol PushNotificationsServicing {
+protocol PushNotificationsServicing: Sendable {
   func registerDevice(
     deviceToken: String,
     apnsEnvironment: PushAPNSEnvironment,
@@ -11,7 +11,7 @@ protocol PushNotificationsServicing {
   func deactivateDevice(deviceToken: String) async throws
 }
 
-struct PushNotificationsService: PushNotificationsServicing {
+struct PushNotificationsService: PushNotificationsServicing, @unchecked Sendable {
   private let environmentManager: AppEnvironmentManager
   private let authSessionManager: AuthSessionManaging
   private let session: PushNotificationsURLSessionProtocol
