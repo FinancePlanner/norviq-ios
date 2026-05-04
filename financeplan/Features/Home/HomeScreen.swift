@@ -25,7 +25,7 @@ struct HomeScreen: View {
 
   var body: some View {
     TabView(selection: $selectedTab) {
-      Tab(HomeTab.dashboard.title(language: appLanguage), systemImage: "house", value: .dashboard) {
+      Tab(HomeTab.dashboard.title, systemImage: "house", value: .dashboard) {
         DashboardRoot(
           selectedTab: $selectedTab,
           isSettingsPresented: $isSettingsPresented,
@@ -33,19 +33,19 @@ struct HomeScreen: View {
         )
       }
 
-      Tab(HomeTab.portfolio.title(language: appLanguage), systemImage: "chart.line.uptrend.xyaxis", value: .portfolio) {
+      Tab(HomeTab.portfolio.title, systemImage: "chart.line.uptrend.xyaxis", value: .portfolio) {
         PortfolioRoot(
           isSettingsPresented: $isSettingsPresented,
           pendingOpenSymbol: $pendingPortfolioOpenSymbol
         )
       }
 
-      Tab(HomeTab.expenses.title(language: appLanguage), systemImage: "creditcard", value: .expenses) {
+      Tab(HomeTab.expenses.title, systemImage: "creditcard", value: .expenses) {
         ExpensesPlannerScreen(isSettingsPresented: $isSettingsPresented, viewModel: budgetPlannerViewModel)
           .accessibilityIdentifier("tab.expenses")
       }
 
-      Tab(HomeTab.reports.title(language: appLanguage), systemImage: "chart.bar.xaxis", value: .reports) {
+      Tab(HomeTab.reports.title, systemImage: "chart.bar.xaxis", value: .reports) {
         ExpensesComparisonScreen()
           .accessibilityIdentifier("tab.reports")
       }

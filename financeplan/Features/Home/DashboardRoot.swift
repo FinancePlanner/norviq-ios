@@ -48,30 +48,30 @@ struct DashboardRoot: View {
 
     return [
         .init(
-            title: appLanguage.localized(english: "Savings rate", portuguese: "Taxa de poupança"),
+            title: String(localized: "Savings rate"),
             value: "\(Int(insights.savingsRate))%",
-            detail: appLanguage.localized(english: "Based on monthly planned vs actuals.", portuguese: "Baseado no planeado vs real mensal."),
+            detail: String(localized: "Based on monthly planned vs actuals."),
             symbol: "arrow.down.circle",
             tint: AppTheme.Colors.success
         ),
         .init(
-            title: appLanguage.localized(english: "Budget streak", portuguese: "Série de orçamento"),
-            value: appLanguage.localized(english: "\(insights.budgetStreak) months", portuguese: "\(insights.budgetStreak) meses"),
-            detail: appLanguage.localized(english: "Staying under your spending plan.", portuguese: "Mantendo-se abaixo do seu plano de gastos."),
+            title: String(localized: "Budget streak"),
+            value: String(localized: "\(insights.budgetStreak) months"),
+            detail: String(localized: "Staying under your spending plan."),
             symbol: "flame",
             tint: .orange
         ),
         .init(
-            title: appLanguage.localized(english: "Watchlist", portuguese: "Seguimento"),
-            value: appLanguage.localized(english: "\(insights.watchlistCount) names", portuguese: "\(insights.watchlistCount) ativos"),
-            detail: appLanguage.localized(english: "Review candidates before earnings.", portuguese: "Analise candidatos antes dos resultados."),
+            title: String(localized: "Watchlist"),
+            value: String(localized: "\(insights.watchlistCount) names"),
+            detail: String(localized: "Review candidates before earnings."),
             symbol: "star",
             tint: .indigo
         ),
         .init(
-            title: appLanguage.localized(english: "Cash buffer", portuguese: "Reserva de caixa"),
+            title: String(localized: "Cash buffer"),
             value: insights.cashBuffer.formatted(.currency(code: "USD").presentation(.narrow)),
-            detail: appLanguage.localized(english: "Enough for short-term volatility.", portuguese: "Suficiente para volatilidade de curto prazo."),
+            detail: String(localized: "Enough for short-term volatility."),
             symbol: "shield",
             tint: AppTheme.Colors.tint(for: .light)
         )
@@ -81,10 +81,10 @@ struct DashboardRoot: View {
   private var greetingText: String {
     let hour = Calendar.current.component(.hour, from: Date())
     switch hour {
-    case 5..<12: return appLanguage.localized(english: "Good morning", portuguese: "Bom dia")
-    case 12..<17: return appLanguage.localized(english: "Good afternoon", portuguese: "Boa tarde")
-    case 17..<22: return appLanguage.localized(english: "Good evening", portuguese: "Boa noite")
-    default: return appLanguage.localized(english: "Good night", portuguese: "Boa noite")
+    case 5..<12: return String(localized: "Good morning")
+    case 12..<17: return String(localized: "Good afternoon")
+    case 17..<22: return String(localized: "Good evening")
+    default: return String(localized: "Good night")
     }
   }
 
@@ -367,42 +367,44 @@ private struct DashboardContentSection: View {
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
-    DashboardHeroCard(
-      totalValue: portfolioTotalValue,
-      totalSpending: spendingTotalValue,
-      portfolioDeltaPercent: portfolioDeltaPercent,
-      spendingDeltaPercent: spendingDeltaPercent,
-      portfolioPoints: portfolioChartPoints,
-      spendingPoints: spendingChartPoints,
-      onPortfolioTap: onPortfolioTap,
-      onExpensesTap: onExpensesTap,
-      onReportsTap: onReportsTap
-    )
-    .redacted(reason: isHomeMetricsRedacted ? .placeholder : [])
+    VStack(spacing: 20) {
+      DashboardHeroCard(
+        totalValue: portfolioTotalValue,
+        totalSpending: spendingTotalValue,
+        portfolioDeltaPercent: portfolioDeltaPercent,
+        spendingDeltaPercent: spendingDeltaPercent,
+        portfolioPoints: portfolioChartPoints,
+        spendingPoints: spendingChartPoints,
+        onPortfolioTap: onPortfolioTap,
+        onExpensesTap: onExpensesTap,
+        onReportsTap: onReportsTap
+      )
+      .redacted(reason: isHomeMetricsRedacted ? .placeholder : [])
 
-    if isSearchResultsVisible {
-      AssetSearchCard(viewModel: searchViewModel)
-        .transition(.opacity.combined(with: .move(edge: .top)))
-    }
-
-    UnifiedActivityFeed(
-      viewModel: activityViewModel,
-      recentExpenses: recentExpenses,
-      financialHealth: financialHealth,
-      isFinancialHealthLoading: isFinancialHealthLoading,
-      financialHealthUnavailable: financialHealthUnavailable
-    )
-
-    QuickAddEntryButton(action: onQuickAddTap)
-
-    DisclosureGroup(LocalizedStringKey("More Insights")) {
-      VStack(spacing: 20) {
-        InsightsGrid(cards: insightCards)
-        FocusListCard(viewModel: focusPointsViewModel)
+      if isSearchResultsVisible {
+        AssetSearchCard(viewModel: searchViewModel)
+          .transition(.opacity.combined(with: .move(edge: .top)))
       }
-      .padding(.top, 16)
+
+      UnifiedActivityFeed(
+        viewModel: activityViewModel,
+        recentExpenses: recentExpenses,
+        financialHealth: financialHealth,
+        isFinancialHealthLoading: isFinancialHealthLoading,
+        financialHealthUnavailable: financialHealthUnavailable
+      )
+
+      QuickAddEntryButton(action: onQuickAddTap)
+
+      DisclosureGroup(LocalizedStringKey("More Insights")) {
+        VStack(spacing: 20) {
+          InsightsGrid(cards: insightCards)
+          FocusListCard(viewModel: focusPointsViewModel)
+        }
+        .padding(.top, 16)
+      }
+      .tint(AppTheme.Colors.tint(for: colorScheme))
     }
-    .tint(AppTheme.Colors.tint(for: colorScheme))
   }
 }
 
@@ -441,9 +443,9 @@ private struct DashboardHeroCard: View {
 
   private var currentTitle: String {
     if showingPortfolio {
-        return appLanguage.localized(english: "Total Wealth", portuguese: "Riqueza Total")
+        return String(localized: "Total Wealth")
     } else {
-        return appLanguage.localized(english: "Monthly Spending", portuguese: "Gastos Mensais")
+        return String(localized: "Monthly Spending")
     }
   }
 
@@ -481,11 +483,11 @@ private struct DashboardHeroCard: View {
 
   private var deltaText: String {
     guard let currentDeltaPercent else {
-        return appLanguage.localized(english: "No baseline for trend yet", portuguese: "Sem dados para tendência ainda")
+        return String(localized: "No baseline for trend yet")
     }
     let sign = currentDeltaPercent > 0 ? "+" : ""
     let percent = (currentDeltaPercent * 100).formatted(.number.precision(.fractionLength(1)))
-    let vsLastPeriod = appLanguage.localized(english: "vs last period", portuguese: "vs período anterior")
+    let vsLastPeriod = String(localized: "vs last period")
     return "\(sign)\(percent)% \(vsLastPeriod)"
   }
 
@@ -519,7 +521,7 @@ private struct DashboardHeroCard: View {
             Spacer()
             // Custom segmented picker to look like standard Apple toggle
             HStack(spacing: 0) {
-                Text(appLanguage.localized(english: "Portfolio", portuguese: "Portefólio"))
+                Text(LocalizedStringKey("Portfolio"))
                     .font(.subheadline)
                     .foregroundStyle(showingPortfolio ? .primary : .secondary)
                     .padding(.trailing, 8)
@@ -528,7 +530,7 @@ private struct DashboardHeroCard: View {
                     .labelsHidden()
                     .tint(.white.opacity(0.8))
 
-                Text(appLanguage.localized(english: "Spending", portuguese: "Gastos"))
+                Text(LocalizedStringKey("Spending"))
                     .font(.subheadline)
                     .foregroundStyle(!showingPortfolio ? .primary : .secondary)
                     .padding(.leading, 8)

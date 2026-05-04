@@ -16,110 +16,207 @@ struct OnboardingQuestionnaireFlow: View {
   let onLogInRequested: () -> Void
   let onCompleted: () -> Void
 
+  @Environment(\.colorScheme) private var colorScheme
+
   var body: some View {
     ZStack {
       MeshGradientBackground().ignoresSafeArea()
 
       VStack(spacing: 0) {
-        if viewModel.progressBarVisible {
-          ProgressBar(
-            value: viewModel.progressFraction,
-            total: 1.0,
-            color: AppTheme.Colors.tint(for: .dark),
-            height: 4,
-            showPattern: false
-          )
-          .padding(.horizontal, 20)
-          .padding(.top, 8)
-          .transition(.opacity)
-        }
-
-        Group {
-          switch viewModel.step {
-          case .welcome:
-            placeholderScreen("Welcome")
-          case .goal:
-            placeholderScreen("Goal question")
-          case .painPoints:
-            placeholderScreen("Pain points")
-          case .socialProof:
-            placeholderScreen("Social proof")
-          case .swipeStatements:
-            placeholderScreen("Swipe statements")
-          case .solution:
-            placeholderScreen("Personalised solution")
-          case .comparison:
-            placeholderScreen("Comparison table")
-          case .holdingsPreference:
-            placeholderScreen("Holdings preference")
-          case .spendingPreference:
-            placeholderScreen("Spending preference")
-          case .processing:
-            placeholderScreen("Processing")
-          case .demoBuild:
-            placeholderScreen("Demo: swipe to build watchlist")
-          case .valueReveal:
-            placeholderScreen("Value reveal")
-          case .accountCreation:
-            placeholderScreen("Account creation")
-          case .paywall:
-            placeholderScreen("Paywall")
-          }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        topChrome
+        screenContent
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .transition(.asymmetric(
+            insertion: .opacity.combined(with: .move(edge: .trailing)),
+            removal: .opacity.combined(with: .move(edge: .leading))
+          ))
       }
     }
-    .animation(.spring(response: 0.45, dampingFraction: 0.85), value: viewModel.step)
+    .animation(.spring(response: 0.42, dampingFraction: 0.85), value: viewModel.step)
   }
 
-  // MARK: - Placeholders (swapped out screen-by-screen in subsequent chunks)
+  // MARK: - Chrome
 
   @ViewBuilder
-  private func placeholderScreen(_ title: String) -> some View {
-    VStack(spacing: 24) {
-      Spacer()
-
-      Text("Step \(viewModel.step.rawValue + 1) / \(OnboardingQuestionnaireViewModel.Step.allCases.count)")
-        .typography(.caption)
-        .foregroundStyle(.secondary)
-
-      Text(title)
-        .typography(.title, weight: .bold)
-        .multilineTextAlignment(.center)
-
-      Spacer()
-
-      VStack(spacing: 12) {
-        Button {
-          if viewModel.step == .paywall {
-            viewModel.captureCompleted(authenticated: true, purchased: false)
-            onCompleted()
-          } else {
-            viewModel.advance()
-          }
-        } label: {
-          Text(viewModel.step == .paywall ? "Finish" : "Continue")
-            .font(.headline.weight(.bold))
-            .frame(maxWidth: .infinity)
+  private var topChrome: some View {
+    let showsBack = viewModel.step != .welcome && viewModel.step != .paywall && viewModel.step != .processing
+    HStack(spacing: 12) {
+      if showsBack {
+        Button { viewModel.goBack() } label: {
+          Image(systemName: "chevron.left")
+            .font(.body.weight(.semibold))
+            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+            .padding(8)
         }
-        .buttonStyle(GlowingButtonStyle())
-
-        if viewModel.step == .welcome {
-          Button("Already have an account? Log in", action: onLogInRequested)
-            .typography(.small, weight: .semibold)
-            .foregroundStyle(.secondary)
-        }
-
-        if viewModel.step.rawValue > 0 && viewModel.step != .paywall {
-          Button("Back") { viewModel.goBack() }
-            .typography(.caption)
-            .foregroundStyle(.secondary)
-        }
+        .accessibilityLabel("Back")
+      } else {
+        Color.clear.frame(width: 36, height: 36)
       }
-      .padding(.horizontal, 24)
-      .padding(.bottom, 40)
+
+      if viewModel.progressBarVisible {
+        ProgressBar(
+          value: viewModel.progressFraction,
+          total: 1.0,
+          color: AppTheme.Colors.tint(for: colorScheme),
+          height: 4,
+          showPattern: false
+        )
+        .frame(maxWidth: .infinity)
+      } else {
+        Spacer()
+      }
+
+      Color.clear.frame(width: 36, height: 36)
+    }
+    .padding(.horizontal, 12)
+    .padding(.top, 8)
+    .padding(.bottom, 4)
+  }
+
+  // MARK: - Screens
+
+  @ViewBuilder
+  private var screenContent: some View {
+    switch viewModel.step {
+    case .welcome:
+      OnboardingWelcomeScreen(
+        onGetStarted: { viewModel.advance() },
+        onLogIn: onLogInRequested
+      )
+
+    case .goal:
+      OnboardingGoalScreen(
+        selectedGoal: Binding(
+          get: { viewModel.answers.goal },
+          set: { newValue in if let newValue { viewModel.setGoal(newValue) } }
+        ),
+        onContinue: {
+          if let goal = viewModel.answers.goal {
+            viewModel.captureAnswered(.goal, properties: ["goal": goal.rawValue])
+          }
+          viewModel.advance()
+        }
+      )
+
+    case .painPoints:
+      OnboardingPainPointsScreen(
+        selectedPainPoints: Binding(
+          get: { viewModel.answers.painPoints },
+          set: { viewModel.answers.painPoints = $0 }
+        ),
+        onContinue: {
+          viewModel.captureAnswered(.painPoints, properties: [
+            "count": viewModel.answers.painPoints.count,
+            "values": viewModel.answers.painPoints.map(\.rawValue)
+          ])
+          viewModel.advance()
+        }
+      )
+
+    case .socialProof:
+      OnboardingSocialProofScreen(onContinue: { viewModel.advance() })
+
+    case .swipeStatements:
+      OnboardingSwipeStatementsScreen(
+        onSwipe: { index, agreed in
+          viewModel.recordSwipe(at: index, agreed: agreed)
+        },
+        onComplete: {
+          viewModel.captureAnswered(.swipeStatements, properties: [
+            "agreed_count": viewModel.answers.swipeStatementsAgreed.count
+          ])
+          viewModel.advance()
+        }
+      )
+
+    case .solution:
+      OnboardingSolutionScreen(onContinue: { viewModel.advance() })
+
+    case .comparison:
+      OnboardingComparisonScreen(onContinue: { viewModel.advance() })
+
+    case .holdingsPreference:
+      OnboardingHoldingsPrefScreen(
+        selectedHoldings: Binding(
+          get: { viewModel.answers.holdings },
+          set: { viewModel.answers.holdings = $0 }
+        ),
+        onContinue: {
+          viewModel.captureAnswered(.holdingsPreference, properties: [
+            "count": viewModel.answers.holdings.count,
+            "values": viewModel.answers.holdings.map(\.rawValue)
+          ])
+          viewModel.advance()
+        }
+      )
+
+    case .spendingPreference:
+      OnboardingSpendingPrefScreen(
+        selectedLeaks: Binding(
+          get: { viewModel.answers.spendingLeaks },
+          set: { viewModel.answers.spendingLeaks = $0 }
+        ),
+        onContinue: {
+          viewModel.captureAnswered(.spendingPreference, properties: [
+            "count": viewModel.answers.spendingLeaks.count,
+            "values": viewModel.answers.spendingLeaks.map(\.rawValue)
+          ])
+          viewModel.advance()
+        }
+      )
+
+    case .processing:
+      OnboardingProcessingScreen(onComplete: { viewModel.advance() })
+
+    case .demoBuild:
+      OnboardingDemoBuildScreen(
+        holdingsHint: viewModel.answers.holdings,
+        onPick: { viewModel.recordDemoPick($0) },
+        onComplete: { picks, usedFallback in
+          if usedFallback {
+            viewModel.resetDemoPicksAndSeedFallback()
+          } else {
+            viewModel.answers.demoPicks = picks
+          }
+          viewModel.captureAnswered(.demoBuild, properties: [
+            "picks": viewModel.answers.demoPicks,
+            "used_fallback": usedFallback
+          ])
+          viewModel.advance()
+        }
+      )
+
+    case .valueReveal:
+      OnboardingValueRevealScreen(
+        demoPicks: viewModel.answers.demoPicks,
+        leakTier: viewModel.answers.leakCalloutTier,
+        leakInlinePhrase: viewModel.answers.spendingLeaksInlinePhrase,
+        onSavePlan: {
+          viewModel.captureAnswered(.valueReveal, properties: [:])
+          viewModel.advance()
+        }
+      )
+
+    case .accountCreation:
+      OnboardingAccountCreationScreen(
+        demoPicks: viewModel.answers.demoPicks,
+        onAuthenticated: {
+          viewModel.captureAnswered(.accountCreation, properties: ["method": "auth_success"])
+          viewModel.advance()
+        },
+        onLogInRequested: onLogInRequested
+      )
+
+    case .paywall:
+      OnboardingQuestionnairePaywallScreen(
+        onCompleted: { purchased in
+          viewModel.captureCompleted(authenticated: true, purchased: purchased)
+          onCompleted()
+        }
+      )
     }
   }
+
 }
 
 #Preview {

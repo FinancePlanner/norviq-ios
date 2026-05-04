@@ -125,7 +125,7 @@ public struct UserProfileView: View {
                     HStack(spacing: 14) {
                         avatarView(profile)
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(profile?.username ?? appLanguage.localized(english: "Unknown User", portuguese: "Utilizador desconhecido"))
+                            Text(profile?.username ?? String(localized: "Unknown User"))
                                 .typography(.label, weight: .semibold)
                                 .foregroundStyle(.primary)
                             Text(LocalizedStringKey("View and edit your account"))

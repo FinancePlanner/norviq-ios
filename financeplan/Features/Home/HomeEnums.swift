@@ -6,16 +6,16 @@ enum HomeTab: Hashable {
   case expenses
   case reports
 
-  func title(language: AppLanguage) -> String {
+  var title: String {
     switch self {
     case .dashboard:
-      language.localized(english: "Home", portuguese: "Início")
+      return String(localized: "Home")
     case .portfolio:
-      language.localized(english: "Portfolio", portuguese: "Portefólio")
+      return String(localized: "Portfolio")
     case .expenses:
-      language.localized(english: "Expenses", portuguese: "Despesas")
+      return String(localized: "Expenses")
     case .reports:
-      language.localized(english: "Reports", portuguese: "Relatórios")
+      return String(localized: "Reports")
     }
   }
 }
@@ -38,18 +38,18 @@ enum PortfolioSegment: String, CaseIterable, Identifiable {
     }
   }
 
-  func title(language: AppLanguage) -> String {
+  var title: String {
     switch self {
     case .holdings:
-      return language.localized(english: "Holdings", portuguese: "Posições")
+      return String(localized: "Holdings")
     case .allocation:
-      return language.localized(english: "Allocation", portuguese: "Alocação")
+      return String(localized: "Allocation")
     case .watchlist:
-      return language.localized(english: "Watchlist", portuguese: "Lista de seguimento")
+      return String(localized: "Watchlist")
     case .earnings:
-      return language.localized(english: "Earnings", portuguese: "Resultados")
+      return String(localized: "Earnings")
     case .news:
-      return language.localized(english: "News", portuguese: "Notícias")
+      return String(localized: "News")
     }
   }
 }

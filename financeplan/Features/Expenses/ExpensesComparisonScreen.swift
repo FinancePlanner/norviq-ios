@@ -42,12 +42,12 @@ struct ExpensesComparisonScreen: View {
     case spending = "Spending"
     case trends = "Trends"
     
-    func title(language: AppLanguage) -> String {
+    var title: String {
       switch self {
-      case .overview: return language.localized(english: "Overview", portuguese: "Visão Geral")
-      case .portfolio: return language.localized(english: "Portfolio", portuguese: "Portefólio")
-      case .spending: return language.localized(english: "Spending", portuguese: "Gastos")
-      case .trends: return language.localized(english: "Trends", portuguese: "Tendências")
+      case .overview: return String(localized: "Overview")
+      case .portfolio: return String(localized: "Portfolio")
+      case .spending: return String(localized: "Spending")
+      case .trends: return String(localized: "Trends")
       }
     }
 
@@ -111,7 +111,7 @@ struct ExpensesComparisonScreen: View {
   private var tabPicker: some View {
     Picker("Report Section", selection: $selectedTab.animation(.easeInOut(duration: 0.3))) {
       ForEach(ReportTab.allCases, id: \.self) { tab in
-        Label(tab.title(language: appLanguage), systemImage: tab.icon).tag(tab)
+        Label(tab.title, systemImage: tab.icon).tag(tab)
       }
     }
     .pickerStyle(.segmented)
