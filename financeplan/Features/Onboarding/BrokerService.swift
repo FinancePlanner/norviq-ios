@@ -143,7 +143,7 @@ struct BrokerService: BrokerServicing {
   }
 
   private func performAuthenticated<T: Sendable>(
-    _ operation: (BrokerHTTPClient) async throws -> T
+    _ operation: @Sendable (BrokerHTTPClient) async throws -> T
   ) async throws -> T {
     do {
       let client = try await makeClient()
