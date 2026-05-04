@@ -131,7 +131,9 @@ struct SplashScreen: View {
 
       // Animate dots
       Timer.scheduledTimer(withTimeInterval: 0.6, repeats: true) { _ in
-        dotsAnimation = (dotsAnimation + 1) % 3
+        Task { @MainActor in
+          dotsAnimation = (dotsAnimation + 1) % 3
+        }
       }
     }
   }

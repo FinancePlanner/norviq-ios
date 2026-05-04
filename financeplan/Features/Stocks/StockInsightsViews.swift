@@ -677,18 +677,7 @@ struct PriceComparisonChartCard: View {
     }
 
     private var chartStyleScale: KeyValuePairs<String, Color> {
-        let colors = [
-            AppTheme.Colors.secondaryTint(for: colorScheme),
-            AppTheme.Colors.warning,
-            AppTheme.Colors.danger,
-            AppTheme.Colors.success
-        ]
-        
-        let otherSymbols = Set((response?.series ?? []).map { $0.symbol.uppercased() })
-            .filter { $0 != primarySymbol.uppercased() }
-            .sorted()
-            
-        var dict: KeyValuePairs<String, Color> = [
+        let dict: KeyValuePairs<String, Color> = [
             primarySymbol.uppercased(): AppTheme.Colors.tint(for: colorScheme)
         ]
         

@@ -51,7 +51,7 @@ struct NorviqaApp: App {
     let token = PostHogEnv.projectToken.value
     let host = PostHogEnv.host.value
     if !token.isEmpty, !host.isEmpty {
-      let config = PostHogConfig(apiKey: token, host: host)
+      let config = PostHogConfig(projectToken: token, host: host)
       config.captureApplicationLifecycleEvents = true
       PostHogSDK.shared.setup(config)
     }
