@@ -27,8 +27,7 @@ public struct ContentView: View {
   @State private var startWithSignup = false
   @StateObject private var pushNotificationsCoordinator: PushNotificationsCoordinator
   @AppStorage("useFaceID") private var useFaceID: Bool = true
-  @AppStorage("hasSeenPrivacyScreen") private var hasSeenPrivacyScreen: Bool = false
-  @AppStorage("hasSeenPreLoginPaywall") private var hasSeenPreLoginPaywall: Bool = false
+  @AppStorage("hasCompletedOnboardingQuestionnaire") private var hasCompletedOnboardingQuestionnaire: Bool = false
   private let splashDelay: Duration
   private let authSessionManager: AuthSessionManaging
   private let sessionStore: AuthSessionStoring
@@ -110,20 +109,14 @@ public struct ContentView: View {
           }
         } else {
           Group {
-            if !hasSeenPreLoginPaywall {
-              PreLoginPaywallScreen(
-                onContinue: {
-                  hasSeenPreLoginPaywall = true
-                }
-              )
-            } else if !hasSeenPrivacyScreen {
-              PrivacyWelcomeScreen(
-                onSignIn: {
-                  hasSeenPrivacyScreen = true
+            if !hasCompletedOnboardingQuestionnaire {
+              OnboardingQuestionnaireFlow(
+                onLogInRequested: {
+                  hasCompletedOnboardingQuestionnaire = true
                 },
-                onSignUp: {
-                  startWithSignup = true
-                  hasSeenPrivacyScreen = true
+                onCompleted: {
+                  hasCompletedOnboardingQuestionnaire = true
+                  applyAuthenticatedState()
                 }
               )
             } else {

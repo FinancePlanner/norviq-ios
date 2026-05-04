@@ -1,40 +1,74 @@
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
 
-# Local editor settings
-.vscode/
+# Xcode
+#
+# gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
 
-# Local caches and build output
-.cache/
+## User settings
+xcuserdata/
+*.xcuserstate
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+
+## Architecture-specific build artifacts
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+
+## Build artifacts
+DerivedData/
 build/
 .build/
+
+## App packaging
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+## Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# Swift Package Manager
+#
+# Add this line if you want to avoid checking in source code from SPM dependencies.
 .swiftpm/
 .SourcePackages/
 SourcePackages/
 
-# Xcode user-specific data
-*.xcuserstate
-*.xccheckout
-*.xcscmblueprint
-xcuserdata/
-*.xcodeproj/xcuserdata/
-*.xcworkspace/xcuserdata/
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
 
-# Derived data
-DerivedData/
-.DerivedData/
+# Local editor settings
+.vscode/
+.idea/
+*.swp
+*.lock
 
-# Swift / package manager lock noise
-.package.resolved
-
-# Archives and symbol output
-*.ipa
-*.dSYM
-*.dSYM.zip
+# Local caches
+.cache/
 
 # Local environment files
 .env
 .env.*
 *.local
-
 .sentryclirc
+
+# Project specific
+raw/

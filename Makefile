@@ -1,7 +1,7 @@
 IOS_PROJECT ?= financeplan.xcodeproj
 IOS_SCHEME ?= Norviqa TestFlight Dev
 IOS_BUILD_DESTINATION ?= generic/platform=iOS Simulator
-IOS_TEST_DESTINATION ?= platform=iOS Simulator,name=iPhone 17,OS=26.4
+IOS_TEST_DESTINATION ?= platform=iOS Simulator,name=iPhone 17,OS=26.4.1
 
 .PHONY: help ios-build ios-test ios-ui-test
 
