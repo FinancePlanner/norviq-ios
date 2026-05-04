@@ -7,16 +7,16 @@ final class AppEnvironmentManagerTests: XCTestCase {
   private let defaultsSuiteName = "AppEnvironmentManagerTests"
   private var defaults: UserDefaults!
 
-  override func setUp() {
-    super.setUp()
+  override func setUp() async throws {
+    try await super.setUp()
     defaults = UserDefaults(suiteName: defaultsSuiteName)
     defaults.removePersistentDomain(forName: defaultsSuiteName)
   }
 
-  override func tearDown() {
+  override func tearDown() async throws {
     defaults.removePersistentDomain(forName: defaultsSuiteName)
     defaults = nil
-    super.tearDown()
+    try await super.tearDown()
   }
 
   func testBuildSettingForcesDevEnvironmentForBetaArchives() {

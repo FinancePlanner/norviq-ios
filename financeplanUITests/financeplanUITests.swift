@@ -168,7 +168,7 @@ final class FinanceplanUITests: XCTestCase {
     allocationSegment.tap()
 
     // Paywall should appear
-    let paywallTitle = app.staticTexts["Unlock Pro"] // Assuming paywall has "Unlock Pro" or similar, just checking if paywall elements exist
+    _ = app.staticTexts["Unlock Pro"] // Assuming paywall has "Unlock Pro" or similar, just checking if paywall elements exist
     // Alternatively, verify that the segment didn't change
     XCTAssertTrue(app.buttons["Holdings"].isSelected || app.otherElements["PaywallView"].exists || app.buttons["Continue with Free"].waitForExistence(timeout: 5))
   }
