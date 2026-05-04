@@ -101,6 +101,7 @@ private struct AppTopBarSearchField: View {
   var body: some View {
     HStack(spacing: 10) {
       Image(systemName: "magnifyingglass")
+        .accessibilityHidden(true)
         .foregroundStyle(.secondary)
 
       TextField(placeholder, text: $text)
@@ -110,12 +111,11 @@ private struct AppTopBarSearchField: View {
         .onSubmit(onSubmit)
 
       if !text.isEmpty {
-        Button {
+        Button("Clear", systemImage: "xmark.circle.fill") {
           text = ""
-        } label: {
-          Image(systemName: "xmark.circle.fill")
-            .foregroundStyle(.secondary)
         }
+        .labelStyle(.iconOnly)
+        .foregroundStyle(.secondary)
       }
     }
     .padding(.horizontal, 12)

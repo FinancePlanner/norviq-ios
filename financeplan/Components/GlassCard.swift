@@ -17,11 +17,11 @@ public struct GlassCard<Content: View>: View {
           .padding()
           .background {
             if let backgroundColor {
-              RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(backgroundColor)
+              backgroundColor
+                .clipShape(.rect(cornerRadius: cornerRadius))
             }
           }
-          .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+          .clipShape(.rect(cornerRadius: cornerRadius))
           .appGlassEffect(.rect(cornerRadius: cornerRadius))
       }
 }

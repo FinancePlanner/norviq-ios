@@ -255,7 +255,7 @@ final class BillingHTTPClientTests: XCTestCase {
 }
 
 // Minimal mocks for testing
-private final class MockAuthSessionManager: AuthSessionManaging {
+private final class MockAuthSessionManager: AuthSessionManaging, @unchecked Sendable {
   var validAccessTokenResult: Result<String?, Error> = .success(nil)
   var refreshAccessTokenResult: Result<String?, Error> = .success(nil)
 
@@ -269,12 +269,13 @@ private final class MockAuthSessionManager: AuthSessionManaging {
 }
 
 private final class MockAuthSessionStore: AuthSessionStoring, @unchecked Sendable {
+  private var _authToken = ""
   var authToken: String { get async { _authToken } }
   private var _refreshToken = ""
   var refreshToken: String { get async { _refreshToken } }
-  private var _authTokenExpiresAt = nil
+  private var _authTokenExpiresAt: Date? = nil
   var authTokenExpiresAt: Date? { get async { _authTokenExpiresAt } }
-  private var _refreshTokenExpiresAt = nil
+  private var _refreshTokenExpiresAt: Date? = nil
   var refreshTokenExpiresAt: Date? { get async { _refreshTokenExpiresAt } }
   private var _loginIsSignup = false
   var loginIsSignup: Bool { get async { _loginIsSignup } }
@@ -305,7 +306,7 @@ private final class MockAuthSessionStore: AuthSessionStoring, @unchecked Sendabl
   func markInitialStockImportCompleted(for userID: String) async {}
 }
 
-private final class BillingSessionMock: PushNotificationsURLSessionProtocol, @unchecked Sendable, @unchecked Sendable {
+private final class BillingSessionMock: PushNotificationsURLSessionProtocol, @unchecked Sendable {
   enum Response {
     case success(Payload)
     case failure(statusCode: Int, message: String)
