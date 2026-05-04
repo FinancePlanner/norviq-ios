@@ -2,22 +2,19 @@ import SwiftUI
 
 struct VaultPlatinumCard: View {
   @Environment(\.colorScheme) private var colorScheme
+var body: some View {
+  ZStack(alignment: .leading) {
+    LinearGradient(
+      colors: [
+        AppTheme.Colors.elevatedCardBackground(for: colorScheme),
+        AppTheme.Colors.cardBackground(for: colorScheme)
+      ],
+      startPoint: .topLeading,
+      endPoint: .bottomTrailing
+    )
+    .clipShape(.rect(cornerRadius: 24))
 
-  var body: some View {
-    ZStack(alignment: .leading) {
-      RoundedRectangle(cornerRadius: 24)
-        .fill(
-          LinearGradient(
-            colors: [
-              AppTheme.Colors.elevatedCardBackground(for: colorScheme),
-              AppTheme.Colors.cardBackground(for: colorScheme)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-          )
-        )
-
-      VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: 8) {
         Text("NORDIQ")
           .font(.caption.weight(.bold))
           .tracking(1.5)

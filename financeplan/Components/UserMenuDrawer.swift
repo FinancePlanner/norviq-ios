@@ -1,143 +1,113 @@
-//
-//  UserMenuDrawer.swift
-//  financeplan
-//
-//  Created by Fernando Correia on 04.03.26.
-//
-
 import SwiftUI
 
 struct UserMenuDrawer: View {
-  @Binding var isPresented: Bool
-  let username: String
-
-  let onProfile: (() -> Void)?
-  let onNotifications: (() -> Void)?
-  let onHelp: (() -> Void)?
-  let onAbout: (() -> Void)?
-  let onSettings: (() -> Void)?
-  let onSignOut: (() -> Void)?
-
-  init(
-    isPresented: Binding<Bool>,
-    username: String,
-    onProfile: (() -> Void)? = nil,
-    onNotifications: (() -> Void)? = nil,
-    onHelp: (() -> Void)? = nil,
-    onAbout: (() -> Void)? = nil,
-    onSettings: (() -> Void)? = nil,
-    onSignOut: (() -> Void)? = nil
-  ) {
-    self._isPresented = isPresented
-    self.username = username
-    self.onProfile = onProfile
-    self.onNotifications = onNotifications
-    self.onHelp = onHelp
-    self.onAbout = onAbout
-    self.onSettings = onSettings
-    self.onSignOut = onSignOut
-  }
-
   @Environment(\.colorScheme) private var colorScheme
-  @GestureState private var dragY: CGFloat = 0
-
-  private let height: CGFloat = 420
+  @Binding var isPresented: Bool
+  @Binding var showLogoutConfirmation: Bool
+  let username: String
+  let email: String?
 
   var body: some View {
-    VStack(spacing: 12) {
-      Capsule()
-        .fill(.secondary.opacity(0.35))
-        .frame(width: 42, height: 5)
-        .padding(.top, 10)
+    ZStack {
+      if isPresented {
+        Color.black.opacity(0.3)
+          .ignoresSafeArea()
+          .onTapGesture {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+              isPresented = false
+            }
+          }
+          .transition(.opacity)
+      }
 
+      HStack {
+        Spacer()
+
+        if isPresented {
+          drawerContent
+            .transition(.move(edge: .trailing).combined(with: .opacity))
+        }
+      }
+    }
+    .ignoresSafeArea()
+  }
+
+  private var drawerContent: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      headerSection
+        .padding(.horizontal, 24)
+        .padding(.top, 60)
+        .padding(.bottom, 24)
+
+      ScrollView {
+        VStack(alignment: .leading, spacing: 12) {
+          drawerRow(icon: "gearshape.fill", title: String(localized: "Settings")) {
+            // Settings action
+          }
+
+          drawerRow(icon: "person.badge.shield.check.fill", title: String(localized: "Privacy & Security")) {
+            // Privacy action
+          }
+
+          drawerRow(icon: "questionmark.circle.fill", title: String(localized: "Help & Support")) {
+            // Help action
+          }
+
+          Divider()
+            .padding(.vertical, 8)
+
+          drawerRow(icon: "arrow.right.square.fill", title: String(localized: "Logout")) {
+            showLogoutConfirmation = true
+          }
+        }
+        .padding(.horizontal, 24)
+        .padding(.bottom, 32)
+      }
+
+      Spacer()
+    }
+    .frame(width: 280)
+    .background {
+      AppTheme.Colors.pageBackground(for: colorScheme)
+        .overlay {
+          MeshGradientBackground()
+            .opacity(colorScheme == .dark ? 0.3 : 0.2)
+        }
+    }
+    .clipShape(.rect(topLeadingRadius: 32, bottomLeadingRadius: 32))
+    .shadow(color: .black.opacity(0.2), radius: 20, x: -10)
+  }
+
+  private var headerSection: some View {
+    VStack(alignment: .leading, spacing: 16) {
       HStack(spacing: 12) {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-          .fill(AppTheme.Colors.tint(for: colorScheme).opacity(0.18))
+        AppTheme.Colors.tint(for: colorScheme).opacity(0.18)
           .frame(width: 44, height: 44)
-          .overlay(
+          .clipShape(.rect(cornerRadius: 14))
+          .overlay {
             Image(systemName: "person.fill")
+              .accessibilityHidden(true)
               .font(.system(size: 16, weight: .semibold))
               .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-          )
+          }
 
         VStack(alignment: .leading, spacing: 2) {
           Text(username)
-            .font(.system(size: 16, weight: .semibold, design: .rounded))
-          Text("View profile")
-            .font(.system(size: 12, weight: .medium))
-            .foregroundStyle(.secondary)
-        }
+            .font(.system(size: 18, weight: .bold, design: .rounded))
+            .foregroundStyle(.primary)
 
-        Spacer()
-
-        Button {
-          dismiss()
-        } label: {
-          Image(systemName: "xmark")
-            .font(.system(size: 12, weight: .semibold))
-            .padding(10)
-            .appGlassEffect(.circle, tint: .secondary.opacity(0.12), interactive: true)
+          if let email {
+            Text(email)
+              .font(.system(size: 13, weight: .medium, design: .rounded))
+              .foregroundStyle(.secondary)
+              .lineLimit(1)
+          }
         }
-        .buttonStyle(.plain)
       }
-      .padding(.horizontal, 16)
 
-      Divider().opacity(0.6)
-
-      VStack(spacing: 8) {
-          drawerRow(icon: "person", title: "Profile") {
-            dismiss()
-            onProfile?()
-          }
-          drawerRow(icon: "bell", title: "Notifications") {
-            dismiss()
-            onNotifications?()
-          }
-          drawerRow(icon: "questionmark.circle", title: "Help & Support") {
-            dismiss()
-            onHelp?()
-          }
-          drawerRow(icon: "info.circle", title: "About Norviq") {
-            dismiss()
-            onAbout?()
-          }
-          drawerRow(icon: "gearshape", title: "Settings") {
-            dismiss()
-            onSettings?()
-          }
-          drawerRow(icon: "rectangle.portrait.and.arrow.right", title: "Sign out") {
-            dismiss()
-            onSignOut?()
-          }
-      }
-      .padding(.horizontal, 10)
-
-      Spacer(minLength: 0)
-    }
-    .frame(maxWidth: .infinity)
-    .frame(height: height, alignment: .top)
-    .appGlassEffect(.rect(cornerRadius: 24))
-    .padding(.horizontal, 10)
-    .padding(.bottom, 10)
-    .frame(maxHeight: .infinity, alignment: .bottom)
-    .offset(y: max(0, dragY))
-    .gesture(
-      DragGesture()
-        .updating($dragY) { value, state, _ in
-          state = value.translation.height
-        }
-        .onEnded { value in
-          if value.translation.height > 120 {
-            dismiss()
-          }
-        }
-    )
-    .animation(.spring(response: 0.28, dampingFraction: 0.9), value: dragY)
-  }
-
-  private func dismiss() {
-    withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
-      isPresented = false
+      AppTheme.Colors.tint(for: colorScheme).opacity(0.1)
+        .frame(height: 1)
+        .padding(.top, 4)
     }
   }
 
@@ -145,6 +115,7 @@ struct UserMenuDrawer: View {
     Button(action: action) {
       HStack(spacing: 12) {
         Image(systemName: icon)
+          .accessibilityHidden(true)
           .frame(width: 22)
           .foregroundStyle(.primary.opacity(0.85))
 
@@ -155,6 +126,7 @@ struct UserMenuDrawer: View {
         Spacer()
 
         Image(systemName: "chevron.right")
+          .accessibilityHidden(true)
           .font(.system(size: 12, weight: .semibold))
           .foregroundStyle(.secondary)
       }

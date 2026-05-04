@@ -17,7 +17,7 @@ final class BrokerServiceTests: XCTestCase {
     }
   }
 
-  private final class WebAuthenticatorMock: OAuthWebAuthenticating, @unchecked Sendable, @unchecked Sendable {
+  private final class WebAuthenticatorMock: OAuthWebAuthenticating, @unchecked Sendable {
     var result: Result<URL, Error> = .failure(MockError.notConfigured)
 
     func authenticate(url: URL, callbackScheme: String) async throws -> URL {

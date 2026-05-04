@@ -5,7 +5,7 @@ import XCTest
 
 @MainActor
 final class StockServiceTests: XCTestCase {
-  private final class SessionMock: StockURLSessionProtocol, @unchecked Sendable, @unchecked Sendable {
+  private final class SessionMock: StockURLSessionProtocol, @unchecked Sendable {
     var handler: ((URLRequest) throws -> (Data, URLResponse))?
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {

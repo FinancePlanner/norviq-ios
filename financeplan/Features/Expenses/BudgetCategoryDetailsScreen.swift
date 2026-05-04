@@ -97,23 +97,16 @@ private struct BudgetCategoryCard: View {
         }
         Spacer()
         Menu {
-          Button("Plan item", systemImage: "plus.rectangle.on.folder") {
-            onAddPlanItem()
-          }
-          Button("Record expense", systemImage: "plus.circle") {
-            onRecordExpense()
-          }
+          Button("Plan item", systemImage: "plus.rectangle.on.folder", action: onAddPlanItem)
+          Button("Record expense", systemImage: "plus.circle", action: onRecordExpense)
         } label: {
-          HStack(spacing: 4) {
-            Image(systemName: "plus")
-            Text("Add")
-          }
-          .font(.subheadline.weight(.semibold))
-          .padding(.horizontal, 12)
-          .padding(.vertical, 6)
-          .background(Color.white.opacity(0.1))
-          .cornerRadius(8)
-          .foregroundStyle(.white)
+          Label("Add", systemImage: "plus")
+            .font(.subheadline.weight(.semibold))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color.white.opacity(0.1))
+            .clipShape(.rect(cornerRadius: 8))
+            .foregroundStyle(.white)
         }
       }
       .padding(16)
@@ -155,7 +148,7 @@ private struct BudgetCategoryCard: View {
           )
           
           HStack(spacing: 4) {
-            Image(systemName: progressPercentage > 90 ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+            Image(systemName: progressPercentage > 90 ? "exclamationmark.triangle.fill" : "checkmark.circle.fill").accessibilityHidden(true)
               .font(.caption2)
               .foregroundStyle(progressPercentage > 100 ? .red : progressPercentage > 90 ? .orange : .green)
             
@@ -167,6 +160,7 @@ private struct BudgetCategoryCard: View {
               Spacer()
               HStack(spacing: 2) {
                 Image(systemName: change.amount >= 0 ? "arrow.up.right" : "arrow.down.right")
+                  .accessibilityHidden(true)
                   .font(.system(size: 8))
                 Text("\(abs(Int(change.percentage)))% vs last month")
                   .font(.caption2)
@@ -180,11 +174,11 @@ private struct BudgetCategoryCard: View {
       .padding(.vertical, 12)
     }
     .background(Color(uiColor: .secondarySystemGroupedBackground))
-    .cornerRadius(16)
-    .overlay(
+    .clipShape(.rect(cornerRadius: 16))
+    .overlay {
       RoundedRectangle(cornerRadius: 16)
         .stroke(Color.white.opacity(0.05), lineWidth: 1)
-    )
+    }
   }
   
   private var statusMessage: String {
