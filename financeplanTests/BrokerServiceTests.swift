@@ -6,7 +6,7 @@ import XCTest
 @MainActor
 final class BrokerServiceTests: XCTestCase {
   @MainActor
-  private final class SessionMock: HTTPClientSession {
+  private final class SessionMock: HTTPClientSession, @unchecked Sendable, @unchecked Sendable {
     var handler: ((URLRequest) throws -> (Data, URLResponse))?
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
@@ -17,7 +17,7 @@ final class BrokerServiceTests: XCTestCase {
     }
   }
 
-  private final class WebAuthenticatorMock: OAuthWebAuthenticating, @unchecked Sendable {
+  private final class WebAuthenticatorMock: OAuthWebAuthenticating, @unchecked Sendable, @unchecked Sendable {
     var result: Result<URL, Error> = .failure(MockError.notConfigured)
 
     func authenticate(url: URL, callbackScheme: String) async throws -> URL {
@@ -25,7 +25,7 @@ final class BrokerServiceTests: XCTestCase {
     }
   }
 
-  private final class AuthSessionManagerMock: AuthSessionManaging {
+  private final class AuthSessionManagerMock: AuthSessionManaging, @unchecked Sendable {
     var validAccessTokenCalls = 0
     var refreshAccessTokenCalls = 0
     var logoutCalls = 0

@@ -38,7 +38,7 @@ final class CryptoViewModelTests: XCTestCase {
 }
 
 @MainActor
-private final class CryptoServiceMock: CryptoServicing {
+private final class CryptoServiceMock: CryptoServicing, @unchecked Sendable {
   var fetchCryptoListCalls = 0
   var fetchGeneralCryptoNewsCalls = 0
   var fetchPortfolioCalls = 0

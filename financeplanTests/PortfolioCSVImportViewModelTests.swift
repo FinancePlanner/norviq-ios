@@ -5,7 +5,7 @@ import XCTest
 
 @MainActor
 final class PortfolioCSVImportViewModelTests: XCTestCase {
-  private final class BrokerServiceMock: BrokerServicing, @unchecked Sendable {
+  private final class BrokerServiceMock: BrokerServicing, @unchecked Sendable, @unchecked Sendable {
     var listConnectionsResult: Result<[BrokerConnectionResponse], Error> = .success([])
     var connectResult: Result<BrokerConnectionResponse, Error> = .success(
       BrokerConnectionResponse(id: UUID().uuidString, provider: "ibkr", status: "connected")

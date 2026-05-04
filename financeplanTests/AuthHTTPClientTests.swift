@@ -6,7 +6,7 @@ import XCTest
 @MainActor
 final class AuthHTTPClientTests: XCTestCase {
   @MainActor
-  private final class SessionMock: HTTPClientSession {
+  private final class SessionMock: HTTPClientSession, @unchecked Sendable, @unchecked Sendable {
     var handler: ((URLRequest) throws -> (Data, URLResponse))?
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
