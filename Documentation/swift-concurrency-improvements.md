@@ -32,8 +32,14 @@ The following services were updated to correctly use `await` when providing the 
 - `GoalsService.swift`
 - `DashboardService.swift`
 
-**Update**:
-```swift
-authTokenProvider: { await Container.shared.authSessionStore().authToken }
-```
-This ensures that the `authToken` is retrieved asynchronously from the `AuthSessionStoring` protocol, resolving "main actor-isolated property authToken" errors.
+### HomeScreen Service Protocols
+The following protocols were updated to inherit from `Sendable` to resolve data race errors in `HomeScreen.swift` (a `@MainActor` isolated view):
+- `ActivityServicing`
+- `GoalsServicing`
+- `DashboardServicing`
+
+Concrete implementations (`ActivityHTTPService`, `DefaultGoalsService`, `DefaultDashboardService`) were marked with `@unchecked Sendable` to allow them to be safely passed between actor boundaries.
+
+## Verification & Testing
+- **Tooling**: `xcodebuild` (Swift 6 strict concurrency mode)
+- **Result**: All data race errors in `HomeScreen.swift` and service-related isolation warnings are resolved.

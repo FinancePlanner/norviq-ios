@@ -2,12 +2,12 @@ import Foundation
 import StockPlanShared
 import Factory
 
-protocol DashboardServicing {
+protocol DashboardServicing: Sendable {
     func getDashboard() async throws -> DashboardResponse
     func getInsights() async throws -> DashboardInsightsResponse
 }
 
-struct DefaultDashboardService: DashboardServicing {
+struct DefaultDashboardService: DashboardServicing, @unchecked Sendable {
     let client: DashboardHTTPClient
 
     init(environmentManager: AppEnvironmentManager, authSessionManager: any AuthSessionManaging) {

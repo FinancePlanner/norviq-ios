@@ -2,11 +2,11 @@ import Foundation
 import StockPlanShared
 import Factory
 
-protocol ActivityServicing {
+protocol ActivityServicing: Sendable {
     func fetchActivities(limit: Int?) async throws -> [UserActivityResponse]
 }
 
-struct ActivityHTTPService: ActivityServicing {
+struct ActivityHTTPService: ActivityServicing, @unchecked Sendable {
     private let environmentManager: AppEnvironmentManager
     private let authSessionManager: AuthSessionManaging
 

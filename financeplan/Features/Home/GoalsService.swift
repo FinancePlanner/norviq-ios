@@ -2,7 +2,7 @@ import Foundation
 import StockPlanShared
 import Factory
 
-protocol GoalsServicing {
+protocol GoalsServicing: Sendable {
     func getGoals() async throws -> [GoalResponse]
     func createGoal(payload: GoalRequest) async throws -> GoalResponse
     func updateGoal(id: String, payload: GoalRequest) async throws -> GoalResponse
@@ -10,7 +10,7 @@ protocol GoalsServicing {
     func deleteGoal(id: String) async throws
 }
 
-struct DefaultGoalsService: GoalsServicing {
+struct DefaultGoalsService: GoalsServicing, @unchecked Sendable {
     let client: GoalsHTTPClient
 
     init(environmentManager: AppEnvironmentManager, authSessionManager: any AuthSessionManaging) {
