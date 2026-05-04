@@ -5,7 +5,7 @@ import XCTest
 
 @MainActor
 final class AuthSessionManagerTests: XCTestCase {
-  private final class AuthServiceMock: AuthServicing {
+  private final class AuthServiceMock: AuthServicing, @unchecked Sendable {
     var refreshCalls = 0
     var logoutCalls = 0
     var lastRefreshToken: String?
@@ -55,7 +55,7 @@ final class AuthSessionManagerTests: XCTestCase {
     }
   }
 
-  private final class SessionStoreMock: AuthSessionStoring {
+  private final class SessionStoreMock: AuthSessionStoring, @unchecked Sendable {
     var authToken = ""
     var refreshToken = ""
     var authTokenExpiresAt: Date?
@@ -64,7 +64,15 @@ final class AuthSessionManagerTests: XCTestCase {
     var currentUserID = ""
     var currentUsername = ""
 
-    func store(authResponse: AuthResponse) {
+    func setAuthToken(_ value: String) async { authToken = value }
+    func setRefreshToken(_ value: String) async { refreshToken = value }
+    func setAuthTokenExpiresAt(_ value: Date?) async { authTokenExpiresAt = value }
+    func setRefreshTokenExpiresAt(_ value: Date?) async { refreshTokenExpiresAt = value }
+    func setLoginIsSignup(_ value: Bool) async { loginIsSignup = value }
+    func setCurrentUserID(_ value: String) async { currentUserID = value }
+    func setCurrentUsername(_ value: String) async { currentUsername = value }
+
+    func store(authResponse: AuthResponse) async {
       authToken = authResponse.token
       refreshToken = authResponse.refreshToken
       currentUserID = authResponse.userId.uuidString
@@ -73,7 +81,7 @@ final class AuthSessionManagerTests: XCTestCase {
       refreshTokenExpiresAt = Date().addingTimeInterval(TimeInterval(authResponse.refreshExpiresIn))
     }
 
-    func clearSession() {
+    func clearSession() async {
       authToken = ""
       refreshToken = ""
       authTokenExpiresAt = nil

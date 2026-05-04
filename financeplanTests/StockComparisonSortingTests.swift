@@ -9,7 +9,7 @@ final class StockComparisonSortingTests: XCTestCase {
         case notConfigured
     }
 
-    private final class StockServiceMock: StockServicing {
+    private final class StockServiceMock: StockServicing, @unchecked Sendable {
         var fetchStockDetailsResult: Result<StockDetails, Error> = .failure(MockError.notConfigured)
         var fetchStockInsightsResult: Result<StockInsightsResponse, Error> = .failure(MockError.notConfigured)
         

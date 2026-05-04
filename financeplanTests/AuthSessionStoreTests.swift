@@ -6,7 +6,7 @@ import XCTest
 
 @MainActor
 final class AuthSessionStoreTests: XCTestCase {
-  private final class InMemorySecureStore: SecureStringStoring {
+  private final class InMemorySecureStore: SecureStringStoring, @unchecked Sendable {
     private var values: [String: String] = [:]
 
     func string(for key: String) throws -> String? {

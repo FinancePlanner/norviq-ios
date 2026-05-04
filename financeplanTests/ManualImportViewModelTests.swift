@@ -94,7 +94,7 @@ final class ManualImportViewModelTests: XCTestCase {
 }
 
 @MainActor
-private final class ExpenseBudgetSetupServiceMock: ExpenseBudgetSetupServicing {
+private final class ExpenseBudgetSetupServiceMock: ExpenseBudgetSetupServicing, @unchecked Sendable {
     private(set) var snapshotRequests: [BudgetSnapshotRequest] = []
     private(set) var expenseRequests: [ExpenseRequest] = []
 

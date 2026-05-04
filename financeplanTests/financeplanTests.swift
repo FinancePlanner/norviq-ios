@@ -268,30 +268,44 @@ private final class MockAuthSessionManager: AuthSessionManaging {
   func refreshAccessToken() async throws -> String? { try refreshAccessTokenResult.get() }
 }
 
-private final class MockAuthSessionStore: AuthSessionStoring {
-  var authToken: String = ""
-  var refreshToken: String = ""
-  var authTokenExpiresAt: Date? = nil
-  var refreshTokenExpiresAt: Date? = nil
-  var loginIsSignup: Bool = false
-  var currentUserID = "mock-user-id"
-  var currentUsername = "mock-user"
+private final class MockAuthSessionStore: AuthSessionStoring, @unchecked Sendable {
+  var authToken: String { get async { _authToken } }
+  private var _refreshToken = ""
+  var refreshToken: String { get async { _refreshToken } }
+  private var _authTokenExpiresAt = nil
+  var authTokenExpiresAt: Date? { get async { _authTokenExpiresAt } }
+  private var _refreshTokenExpiresAt = nil
+  var refreshTokenExpiresAt: Date? { get async { _refreshTokenExpiresAt } }
+  private var _loginIsSignup = false
+  var loginIsSignup: Bool { get async { _loginIsSignup } }
+  private var _currentUserID = "mock-user-id"
+  var currentUserID: String { get async { _currentUserID } }
+  private var _currentUsername = "mock-user"
+  var currentUsername: String { get async { _currentUsername } }
   var isSetupComplete = false
   var hasPassedSecurity = false
   var hasAppLockEnabled = false
   var currentSecurityCodeHash: String? = nil
 
-  func store(authResponse: StockPlanShared.AuthResponse) {}
+  func setAuthToken(_ value: String) async { _authToken = value }
+  func setRefreshToken(_ value: String) async { _refreshToken = value }
+  func setAuthTokenExpiresAt(_ value: Date?) async { _authTokenExpiresAt = value }
+  func setRefreshTokenExpiresAt(_ value: Date?) async { _refreshTokenExpiresAt = value }
+  func setLoginIsSignup(_ value: Bool) async { _loginIsSignup = value }
+  func setCurrentUserID(_ value: String) async { _currentUserID = value }
+  func setCurrentUsername(_ value: String) async { _currentUsername = value }
+
+  func store(authResponse: StockPlanShared.AuthResponse) async {}
   func saveTokens(access: String, refresh: String) throws {}
   func loadTokens() throws -> (access: String, refresh: String)? { return nil }
   func clearTokens() throws {}
   func saveUserProfile(id: String, username: String) {}
-  func clearSession() {}
-  func hasCompletedInitialStockImport(for userID: String) -> Bool { return false }
-  func markInitialStockImportCompleted(for userID: String) {}
+  func clearSession() async {}
+  func hasCompletedInitialStockImport(for userID: String) async -> Bool { return false }
+  func markInitialStockImportCompleted(for userID: String) async {}
 }
 
-private final class BillingSessionMock: BillingURLSessionProtocol, @unchecked Sendable {
+private final class BillingSessionMock: PushNotificationsURLSessionProtocol, @unchecked Sendable, @unchecked Sendable {
   enum Response {
     case success(Payload)
     case failure(statusCode: Int, message: String)

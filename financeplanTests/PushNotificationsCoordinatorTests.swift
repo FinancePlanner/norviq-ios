@@ -5,7 +5,7 @@ import XCTest
 
 @MainActor
 final class PushNotificationsCoordinatorTests: XCTestCase {
-  private final class PushNotificationsServiceMock: PushNotificationsServicing {
+  private final class PushNotificationsServiceMock: PushNotificationsServicing, @unchecked Sendable {
     var registerCalls = 0
     var deactivateCalls = 0
     var lastRegisterDeviceToken: String?
@@ -37,7 +37,7 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     }
   }
 
-  private final class PushPermissionProviderMock: PushPermissionProviding {
+  private final class PushPermissionProviderMock: PushPermissionProviding, @unchecked Sendable {
     var status: PushAuthorizationStatus
     var requestAuthorizationCalls = 0
 
@@ -55,7 +55,7 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     }
   }
 
-  private final class PushRemoteRegistrarMock: PushRemoteNotificationsRegistering {
+  private final class PushRemoteRegistrarMock: PushRemoteNotificationsRegistering, @unchecked Sendable {
     var registerCalls = 0
     var openSettingsCalls = 0
 
@@ -68,7 +68,7 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     }
   }
 
-  private final class SessionStoreMock: AuthSessionStoring {
+  private final class SessionStoreMock: AuthSessionStoring, @unchecked Sendable {
     var authToken: String = ""
     func setAuthToken(_ value: String) async { authToken = value }
 

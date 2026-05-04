@@ -6,7 +6,7 @@ import XCTest
 @MainActor
 final class StockDetailsViewModelTests: XCTestCase {
   @MainActor
-  private final class StockServiceMock: StockServicing {
+  private final class StockServiceMock: StockServicing, @unchecked Sendable {
     var fetchStockDetailsCalls = 0
     var createValuationCalls = 0
     var updateValuationCalls = 0
@@ -239,7 +239,7 @@ final class StockDetailsViewModelTests: XCTestCase {
   }
 
   @MainActor
-  private final class MarketDataServiceMock: MarketDataServicing {
+  private final class MarketDataServiceMock: MarketDataServicing, @unchecked Sendable {
     var fetchAnalystConsensusCalls = 0
     var lastFetchAnalystConsensusSymbol: String?
     var fetchStockEarningsCalls = 0

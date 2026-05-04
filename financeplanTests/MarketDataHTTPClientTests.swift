@@ -5,7 +5,7 @@ import XCTest
 
 @MainActor
 final class MarketDataHTTPClientTests: XCTestCase {
-  private final class SessionMock: MarketDataURLSessionProtocol {
+  private final class SessionMock: MarketDataURLSessionProtocol, @unchecked Sendable, @unchecked Sendable {
     var handler: ((URLRequest) throws -> (Data, URLResponse))?
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {

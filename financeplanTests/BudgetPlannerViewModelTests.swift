@@ -1008,7 +1008,7 @@ final class BudgetPlannerViewModelTests: XCTestCase {
   }
 }
 
-private final class BudgetPlannerServiceMock: ExpensesServicing {
+private final class BudgetPlannerServiceMock: ExpensesServicing, @unchecked Sendable {
   var snapshotsResult: Result<[BudgetSnapshotResponse], Error> = .success(
     [
       BudgetSnapshotResponse(
