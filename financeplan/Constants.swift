@@ -4,7 +4,7 @@ import SwiftUI
 
 // swiftlint:disable force_unwrapping
 enum Constants {
-  enum Norviqa {
+  enum Norviq {
     static let filesBaseUrl = URL(string: "https://files.norviqa.io")!
 
     static let appStoreUrl = URL(string: "https://apps.apple.com/us/app/norviqa/id6745227236")!
@@ -57,12 +57,12 @@ final class AppEnvironmentManager: @unchecked Sendable {
     let forcedEnvironment: AppEnvironment?
 
     // 1. Check runtime env var (set by Xcode LaunchAction)
-    if let runtimeEnvironment = Self.environment(from: environmentVariables["NORVIQA_ENVIRONMENT"]) {
+    if let runtimeEnvironment = Self.environment(from: environmentVariables["NORVIQ_ENVIRONMENT"]) {
       forcedEnvironment = runtimeEnvironment
       resolvedEnvironment = runtimeEnvironment
     // 2. Check build-time Info.plist value (set by build configuration for archives/TestFlight)
     } else if let bundleEnvironment = Self.environment(
-      from: infoDictionary?["NorviqaAPIEnvironment"] as? String
+      from: infoDictionary?["NorviqAPIEnvironment"] as? String
     ) {
       forcedEnvironment = bundleEnvironment
       resolvedEnvironment = bundleEnvironment

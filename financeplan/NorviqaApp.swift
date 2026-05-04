@@ -17,7 +17,7 @@ enum PostHogEnv: String {
 
 @main
 @MainActor
-struct NorviqaApp: App {
+struct NorviqApp: App {
   @UIApplicationDelegateAdaptor(PushNotificationsAppDelegate.self) var pushNotificationsAppDelegate
   @InjectedObservable(\Container.appEnvironment) var environmentManager
   @StateObject private var sessionManager = SessionManager()

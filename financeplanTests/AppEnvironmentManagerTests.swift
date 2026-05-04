@@ -22,7 +22,7 @@ final class AppEnvironmentManagerTests: XCTestCase {
   func testBuildSettingForcesDevEnvironmentForBetaArchives() {
     let manager = AppEnvironmentManager(
       environmentVariables: [:],
-      infoDictionary: ["NorviqaAPIEnvironment": "dev"],
+      infoDictionary: ["NorviqAPIEnvironment": "dev"],
       defaults: defaults,
       schemeEnvironmentValue: nil,
       isDebugBuild: false
@@ -35,7 +35,7 @@ final class AppEnvironmentManagerTests: XCTestCase {
   func testBuildSettingForcesProductionEnvironmentForAppStoreRelease() {
     let manager = AppEnvironmentManager(
       environmentVariables: [:],
-      infoDictionary: ["NorviqaAPIEnvironment": "production"],
+      infoDictionary: ["NorviqAPIEnvironment": "production"],
       defaults: defaults,
       schemeEnvironmentValue: nil,
       isDebugBuild: false
@@ -50,7 +50,7 @@ final class AppEnvironmentManagerTests: XCTestCase {
 
     let manager = AppEnvironmentManager(
       environmentVariables: [:],
-      infoDictionary: ["NorviqaAPIEnvironment": "dev"],
+      infoDictionary: ["NorviqAPIEnvironment": "dev"],
       defaults: defaults,
       schemeEnvironmentValue: nil,
       isDebugBuild: false
@@ -114,7 +114,7 @@ final class AppEnvironmentManagerTests: XCTestCase {
 
   func testAllowedEnvironmentsReturnsEmptyWhenProduction() {
     let manager = AppEnvironmentManager(
-      environmentVariables: ["NORVIQA_ENVIRONMENT": "production"],
+      environmentVariables: ["NORVIQ_ENVIRONMENT": "production"],
       infoDictionary: [:],
       defaults: defaults,
       schemeEnvironmentValue: nil,

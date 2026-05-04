@@ -22,7 +22,7 @@ struct ShareFeedbackView: View {
                         .font(.largeTitle.bold())
                         .foregroundStyle(AppTheme.Colors.tint(for: scheme))
 
-                    Text("Your feedback shapes Norviqa")
+                    Text("Your feedback shapes Norviq")
                         .typography(.label, weight: .semibold)
                         .multilineTextAlignment(.center)
 

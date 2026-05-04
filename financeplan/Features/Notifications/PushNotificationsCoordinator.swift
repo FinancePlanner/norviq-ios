@@ -77,7 +77,7 @@ protocol PushPermissionProviding: Sendable {
   func currentAuthorizationStatus() async -> PushAuthorizationStatus
 }
 
-struct SystemPushPermissionProvider: PushPermissionProviding, Sendable {
+struct SystemPushPermissionProvider: PushPermissionProviding, @unchecked Sendable {
   private let center: UNUserNotificationCenter
 
   init(center: UNUserNotificationCenter = .current()) {

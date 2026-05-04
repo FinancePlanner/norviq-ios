@@ -369,7 +369,7 @@ public struct UserProfileView: View {
                     Label(LocalizedStringKey("Share Feedback"), systemImage: "quote.bubble")
                 }
                 NavigationLink(value: UserProfileDestination.about) {
-                    Label(LocalizedStringKey("About Norviqa"), systemImage: "info.circle")
+                    Label(LocalizedStringKey("About Norviq"), systemImage: "info.circle")
                 }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
@@ -458,7 +458,7 @@ public struct UserProfileView: View {
         case .shareFeedback:
             ShareFeedbackView()
         case .about:
-            AboutNorviqaView()
+            AboutNorviqView()
         case .language:
             LanguageSettingsView()
         case .dataHandling:
@@ -535,7 +535,7 @@ public struct UserProfileView: View {
     private var versionString: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "–"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "–"
-        return "NORVIQA V\(version) (BUILD \(build))"
+        return "NORVIQ V\(version) (BUILD \(build))"
     }
 
     // MARK: - Components
@@ -556,7 +556,7 @@ public struct UserProfileView: View {
         }
 
         let result = await appLockManager.authenticateDevice(
-            localizedReason: "Enable Face ID to unlock Norviqa"
+            localizedReason: "Enable Face ID to unlock Norviq"
         )
 
         switch result {
@@ -631,7 +631,7 @@ private struct AIModelIntegrationsInfoSheet: View {
                         Label("Why connect an AI model?", systemImage: "sparkles")
                             .typography(.headline, weight: .semibold)
 
-                        Text("Connect your AI tools so they can work with your Norviqa data directly.")
+                        Text("Connect your AI tools so they can work with your Norviq data directly.")
                             .typography(.body)
                             .foregroundStyle(.secondary)
                     }
@@ -737,7 +737,7 @@ private struct DataAvailabilityView: View {
                     Label("Market data coverage", systemImage: "chart.line.uptrend.xyaxis")
                         .typography(.label, weight: .semibold)
 
-                    Text("Some analysis, statements, consensus, and forecast data depends on the market data coverage currently connected to Norviqa.")
+                    Text("Some analysis, statements, consensus, and forecast data depends on the market data coverage currently connected to Norviq.")
                         .typography(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -761,12 +761,12 @@ private struct DataAvailabilityView: View {
             } header: {
                 Text("Data Coverage")
             } footer: {
-                Text("Market data coverage is separate from your Norviqa subscription. If a data source does not cover a symbol or date range, the app keeps the rest of the stock page usable.")
+                Text("Market data coverage is separate from your Norviq subscription. If a data source does not cover a symbol or date range, the app keeps the rest of the stock page usable.")
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
             Section("App Subscription Limits") {
-                Text("Norviqa subscription limits control app features such as portfolio capacity, imports, alerts, reports, and advanced research access.")
+                Text("Norviq subscription limits control app features such as portfolio capacity, imports, alerts, reports, and advanced research access.")
                     .typography(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -824,7 +824,7 @@ private struct SecurityCodeView: View {
                     Label(title, systemImage: isEnabled ? "lock.shield.fill" : "lock.open.fill")
                     .typography(.label, weight: .semibold)
 
-                    Text("Use a 6-digit code to unlock Norviqa when Face ID or device passcode is unavailable.")
+                    Text("Use a 6-digit code to unlock Norviq when Face ID or device passcode is unavailable.")
                         .typography(.caption)
                         .foregroundStyle(.secondary)
                 }

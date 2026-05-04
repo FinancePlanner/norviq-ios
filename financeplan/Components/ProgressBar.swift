@@ -41,7 +41,6 @@ struct ProgressBar: View {
                 GeometryReader { barGeo in
                   Path { path in
                     let spacing: CGFloat = 4
-                    let lineWidth: CGFloat = 2
                     var x: CGFloat = -barGeo.size.height
                     while x < barGeo.size.width {
                       path.move(to: CGPoint(x: x, y: barGeo.size.height))

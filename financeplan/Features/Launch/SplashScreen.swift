@@ -66,7 +66,7 @@ struct SplashScreen: View {
         .padding(.bottom, 40)
 
         // App name
-        Text("Norviqa")
+        Text("Norviq")
           .font(.system(size: 48, weight: .bold, design: .rounded))
           .foregroundStyle(
             LinearGradient(

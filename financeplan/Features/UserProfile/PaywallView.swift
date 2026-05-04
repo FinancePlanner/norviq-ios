@@ -46,7 +46,7 @@ struct PaywallView: View {
           .accessibilityLabel("Close")
         }
         ToolbarItem(placement: .principal) {
-          Text("NORVIQA")
+          Text("NORVIQ")
             .typography(.caption, weight: .bold)
             .tracking(2)
             .foregroundStyle(.secondary)

@@ -1,10 +1,10 @@
 import SwiftUI
 
-struct NorviqaLogo: View {
+struct NorviqLogo: View {
   var size: CGFloat = 64
 
   var body: some View {
-    Image("NorviqaLogoLight")
+    Image("NorviqLogoLight")
       .resizable()
       .scaledToFit()
       .frame(width: size, height: size)

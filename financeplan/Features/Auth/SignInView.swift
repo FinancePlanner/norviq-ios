@@ -11,7 +11,7 @@ struct SignInView: View {
       VStack(spacing: 32) {
         // Header
         VStack(spacing: 16) {
-          NorviqaLogo(size: 78)
+          NorviqLogo(size: 78)
             .padding(.top, 24)
 
           VStack(spacing: 8) {

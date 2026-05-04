@@ -1,5 +1,5 @@
 //
-//  AboutNorviqaView.swift
+//  AboutNorviqView.swift
 //  financeplan
 //
 //  Created by Fernando Correia on 11.04.26.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct AboutNorviqaView: View {
+struct AboutNorviqView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.openURL) private var openURL
 
@@ -38,7 +38,7 @@ struct AboutNorviqaView: View {
                         )
 
                     VStack(spacing: 4) {
-                        Text("Norviqa")
+                        Text("Norviq")
                             .typography(.hero, weight: .bold)
 
                         Text("A focused investing workspace for portfolios, watchlists, targets, and market context.")
@@ -56,7 +56,7 @@ struct AboutNorviqaView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
-            Section("What Norviqa Does") {
+            Section("What Norviq Does") {
                 aboutRow(
                     title: "Portfolio clarity",
                     detail: "Track holdings, cost basis, and valuation changes from one place.",
@@ -109,7 +109,7 @@ struct AboutNorviqaView: View {
         .scrollContentBackground(.hidden)
         .listStyle(.insetGrouped)
         .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-        .navigationTitle("About Norviqa")
+        .navigationTitle("About Norviq")
         .navigationBarTitleDisplayMode(.inline)
     }
 
