@@ -8,7 +8,7 @@ import SwiftUI
 
 // MARK: - Dummy Types
 public struct Glass: Sendable {
-    public nonisolated(unsafe) static let regular = Glass()
+    public static let regular = Glass()
     public func tint(_ color: Color) -> Glass { self }
     public func interactive() -> Glass { self }
 }
