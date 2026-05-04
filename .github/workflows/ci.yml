@@ -26,10 +26,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-xcode-derived-data-
 
-      - name: Resolve Package Dependencies
+      - name: Cache SwiftPM repositories
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/org.swift.swiftpm
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+          key: ${{ runner.os }}-swiftpm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-swiftpm-
+
+      - name: Resolve Package Dependencies (retry)
         run: |
-          rm -rf ~/Library/Caches/org.swift.swiftpm
-          xcodebuild -project financeplan.xcodeproj -scheme financeplan -resolvePackageDependencies
+          set -euo pipefail
+          for i in 1 2 3; do
+            xcodebuild -project financeplan.xcodeproj -scheme financeplan -resolvePackageDependencies && break
+            echo "Resolve attempt $i failed; retrying in 20s..."
+            sleep 20
+          done
 
       - name: Patch SwiftyCrop for Compatibility
         run: |
