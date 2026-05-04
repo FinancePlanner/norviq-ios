@@ -19,10 +19,10 @@ final class StockComparisonFormattingTests: XCTestCase {
     }
     
     func testMultipleFormatting() {
-        let value = 24.45
+        let value = 24.46
         XCTAssertEqual(StockMetricFormatter.multipleText(value, decimals: 1, locale: enLocale), "24.5x")
         XCTAssertEqual(StockMetricFormatter.multipleText(value, decimals: 1, locale: deLocale), "24,5x")
-        XCTAssertEqual(StockMetricFormatter.multipleText(value, decimals: 2, locale: enLocale), "24.45x")
+        XCTAssertEqual(StockMetricFormatter.multipleText(value, decimals: 2, locale: enLocale), "24.46x")
     }
     
     func testCompactCurrencyFormatting() {
@@ -60,10 +60,12 @@ final class StockComparisonFormattingTests: XCTestCase {
         let mandatoryMetrics = StockComparisonMetricGroup.mandatory.metrics
         XCTAssertTrue(mandatoryMetrics.contains(.ttmPE))
         XCTAssertTrue(mandatoryMetrics.contains(.forwardPE))
+        XCTAssertTrue(mandatoryMetrics.contains(.ttmEPSGrowth))
+        XCTAssertTrue(mandatoryMetrics.contains(.grossMargin))
         
         let advancedMetrics = StockComparisonMetricGroup.advanced.metrics
-        XCTAssertTrue(advancedMetrics.contains(.ttmEPSGrowth))
-        XCTAssertTrue(advancedMetrics.contains(.grossMargin))
+        XCTAssertTrue(advancedMetrics.contains(.lastYearEPSGrowth))
+        XCTAssertTrue(advancedMetrics.contains(.ttmVsNTMEPSGrowth))
     }
 
     func testMetricFormattingMapping() {

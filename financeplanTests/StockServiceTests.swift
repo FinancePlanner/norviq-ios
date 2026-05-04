@@ -608,7 +608,7 @@ final class StockServiceTests: XCTestCase {
     XCTAssertEqual(endpoint.path, "/v1/stocks/symbol/AAPL/valuation")
     XCTAssertTrue(try endpoint.asParameters().isEmpty)
 
-    let bodyEndpoint = try XCTUnwrap(endpoint as? any StockRequestBodyEndpoint)
+    let bodyEndpoint = endpoint
     let body = try XCTUnwrap(bodyEndpoint.bodyData())
     let decoded = try JSONDecoder().decode(StockValuationRequest.self, from: body)
 
@@ -627,7 +627,7 @@ final class StockServiceTests: XCTestCase {
       rationale: nil,
       targetDate: nil
     )
-    let bodyEndpoint = try XCTUnwrap(endpoint as? any StockRequestBodyEndpoint)
+    let bodyEndpoint = endpoint
     let body = try XCTUnwrap(bodyEndpoint.bodyData())
     let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
 
@@ -661,7 +661,7 @@ final class StockServiceTests: XCTestCase {
     XCTAssertEqual(endpoint.path, "/v1/stocks/symbol/AAPL/valuation")
     XCTAssertTrue(try endpoint.asParameters().isEmpty)
 
-    let bodyEndpoint = try XCTUnwrap(endpoint as? any StockRequestBodyEndpoint)
+    let bodyEndpoint = endpoint
     let body = try XCTUnwrap(bodyEndpoint.bodyData())
     let decoded = try JSONDecoder().decode(StockValuationRequest.self, from: body)
 
@@ -680,7 +680,7 @@ final class StockServiceTests: XCTestCase {
       rationale: nil,
       targetDate: nil
     )
-    let bodyEndpoint = try XCTUnwrap(endpoint as? any StockRequestBodyEndpoint)
+    let bodyEndpoint = endpoint
     let body = try XCTUnwrap(bodyEndpoint.bodyData())
     let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
 
@@ -705,9 +705,8 @@ final class StockServiceTests: XCTestCase {
       targetDate: "2026-12-31"
     )
 
-    XCTAssertTrue(endpoint is any StockRequestBodyEndpoint)
 
-    let bodyEndpoint = try XCTUnwrap(endpoint as? any StockRequestBodyEndpoint)
+    let bodyEndpoint = endpoint
     let body = try XCTUnwrap(bodyEndpoint.bodyData())
     let decoded = try JSONDecoder().decode(StockValuationRequest.self, from: body)
 
@@ -727,9 +726,8 @@ final class StockServiceTests: XCTestCase {
       targetDate: "2026-12-31"
     )
 
-    XCTAssertTrue(endpoint is any StockRequestBodyEndpoint)
 
-    let bodyEndpoint = try XCTUnwrap(endpoint as? any StockRequestBodyEndpoint)
+    let bodyEndpoint = endpoint
     let body = try XCTUnwrap(bodyEndpoint.bodyData())
     let decoded = try JSONDecoder().decode(StockValuationRequest.self, from: body)
 

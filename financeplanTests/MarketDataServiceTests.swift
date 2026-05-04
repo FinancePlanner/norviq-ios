@@ -448,7 +448,7 @@ final class MarketDataServiceTests: XCTestCase {
     var requestedPaths: Set<String> = []
 
     session.handler = { request in
-      requestedPathsLock.withLock {
+      _ = requestedPathsLock.withLock {
         requestedPaths.insert(request.url?.path ?? "")
       }
       XCTAssertEqual(request.httpMethod, "GET")
