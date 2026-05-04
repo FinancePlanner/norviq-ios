@@ -23,7 +23,7 @@ public struct BaseHTTPClient: Sendable {
     
     public let baseURL: URL
     public let session: any HTTPClientSession
-    public let authTokenProvider: @Sendable () -> String?
+    public let authTokenProvider: @Sendable () async -> String?
     public let logger: Logger
     public let errorReporter: ErrorReporting?
     
@@ -39,7 +39,7 @@ public struct BaseHTTPClient: Sendable {
     public init(
         baseURL: URL,
         session: any HTTPClientSession = URLSession.shared,
-        authTokenProvider: @escaping @Sendable () -> String? = { nil },
+        authTokenProvider: @escaping @Sendable () async -> String? = { nil },
         extraHeadersProvider: @escaping @Sendable (any Endpoint) -> [(name: String, value: String)] = { _ in [] },
         requestLogger: @escaping @Sendable (String, HTTPMethod, Parameters) -> Void = { _, _, _ in },
         logger: Logger? = nil,
@@ -154,7 +154,7 @@ public struct BaseHTTPClient: Sendable {
     
     // MARK: - Request Building
     
-    public func makeURLRequest<E: Endpoint>(for endpoint: E) throws -> URLRequest where E.Response: Codable {
+    public func makeURLRequest<E: Endpoint>(for endpoint: E) async throws -> URLRequest where E.Response: Codable {
         let normalizedPath = endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         let base = baseURL.appendingPathComponent(normalizedPath)
         let parameters = try endpoint.asParameters()
@@ -170,7 +170,7 @@ public struct BaseHTTPClient: Sendable {
         request.httpMethod = endpoint.method.rawValue
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        if let token = authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if let token = await authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         
@@ -194,12 +194,12 @@ public struct BaseHTTPClient: Sendable {
     // MARK: - Network Execution
     
     public func execute<E: Endpoint, ErrorType: HTTPClientError>(_ endpoint: E, errorType: ErrorType.Type) async throws -> Data where E.Response: Codable {
-        let request = try makeURLRequest(for: endpoint)
+        let request = try await makeURLRequest(for: endpoint)
         return try await sendRequest(request, errorType: ErrorType.self)
     }
     
     public func executeWithResponse<E: Endpoint, ErrorType: HTTPClientError>(_ endpoint: E, errorType: ErrorType.Type) async throws -> (Data, HTTPURLResponse) where E.Response: Codable {
-        let request = try makeURLRequest(for: endpoint)
+        let request = try await makeURLRequest(for: endpoint)
         return try await sendRequestWithResponse(request, errorType: ErrorType.self)
     }
     

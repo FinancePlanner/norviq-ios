@@ -19,19 +19,32 @@ protocol AuthServicing {
   func oauthSignIn(provider: OAuthProviderKind) async throws -> AuthLoginOutcomePayload
 }
 
-protocol AuthSessionStoring: AnyObject, Sendable {
-  nonisolated var authToken: String { get set }
-  nonisolated var refreshToken: String { get set }
-  nonisolated var authTokenExpiresAt: Date? { get set }
-  nonisolated var refreshTokenExpiresAt: Date? { get set }
-  nonisolated var loginIsSignup: Bool { get set }
-  nonisolated var currentUserID: String { get set }
-  nonisolated var currentUsername: String { get set }
+protocol AuthSessionStoring: Sendable {
+  var authToken: String { get async }
+  func setAuthToken(_ value: String) async
 
-  nonisolated func store(authResponse: AuthResponse)
-  nonisolated func clearSession()
-  nonisolated func hasCompletedInitialStockImport(for userID: String) -> Bool
-  nonisolated func markInitialStockImportCompleted(for userID: String)
+  var refreshToken: String { get async }
+  func setRefreshToken(_ value: String) async
+
+  var authTokenExpiresAt: Date? { get async }
+  func setAuthTokenExpiresAt(_ value: Date?) async
+
+  var refreshTokenExpiresAt: Date? { get async }
+  func setRefreshTokenExpiresAt(_ value: Date?) async
+
+  var loginIsSignup: Bool { get async }
+  func setLoginIsSignup(_ value: Bool) async
+
+  var currentUserID: String { get async }
+  func setCurrentUserID(_ value: String) async
+
+  var currentUsername: String { get async }
+  func setCurrentUsername(_ value: String) async
+
+  func store(authResponse: AuthResponse) async
+  func clearSession() async
+  func hasCompletedInitialStockImport(for userID: String) async -> Bool
+  func markInitialStockImportCompleted(for userID: String) async
 }
 
 final class AuthService: AuthServicing {
@@ -154,23 +167,22 @@ final class AuthService: AuthServicing {
   }
 }
 
-final class UserDefaultsAuthSessionStore: AuthSessionStoring, @unchecked Sendable {
+actor UserDefaultsAuthSessionStore: AuthSessionStoring {
   private enum Keys {
-    static let authToken = "auth_token"
-    static let refreshToken = "refresh_token"
-    static let authTokenExpiresAt = "auth_token_expires_at"
-    static let refreshTokenExpiresAt = "refresh_token_expires_at"
-    static let loginIsSignup = "login_isSignup"
-    static let currentUserID = "current_user_id"
-    static let currentUsername = "current_username"
-    static let initialStockImportUserIDs = "initial_stock_import_user_ids"
+    nonisolated(unsafe) static let authToken = "auth_token"
+    nonisolated(unsafe) static let refreshToken = "refresh_token"
+    nonisolated(unsafe) static let authTokenExpiresAt = "auth_token_expires_at"
+    nonisolated(unsafe) static let refreshTokenExpiresAt = "refresh_token_expires_at"
+    nonisolated(unsafe) static let loginIsSignup = "login_isSignup"
+    nonisolated(unsafe) static let currentUserID = "current_user_id"
+    nonisolated(unsafe) static let currentUsername = "current_username"
+    nonisolated(unsafe) static let initialStockImportUserIDs = "initial_stock_import_user_ids"
   }
 
-  nonisolated(unsafe) private let defaults: UserDefaults
-  nonisolated(unsafe) private let secureStore: SecureStringStoring
-  nonisolated private let nowProvider: @Sendable () -> Date
-  nonisolated private let stateLock = NSRecursiveLock()
-  nonisolated(unsafe) private var didReportSecureStoreFailure = false
+  private let defaults: UserDefaults
+  private let secureStore: SecureStringStoring
+  private let nowProvider: @Sendable () -> Date
+  private var didReportSecureStoreFailure = false
 
   init(
     defaults: UserDefaults = .standard,
@@ -184,104 +196,110 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring, @unchecked Sendabl
     migrateLegacyTokenStorageIfNeeded()
   }
 
-  nonisolated var authToken: String {
-    get { withStateLock { secureToken(for: Keys.authToken) ?? "" } }
-    set { withStateLock { setSecureValue(newValue, for: Keys.authToken) } }
+  var authToken: String {
+    secureToken(for: Keys.authToken) ?? ""
   }
 
-  nonisolated var refreshToken: String {
-    get { withStateLock { secureToken(for: Keys.refreshToken) ?? "" } }
-    set { withStateLock { setSecureValue(newValue, for: Keys.refreshToken) } }
+  func setAuthToken(_ value: String) {
+    setSecureValue(value, for: Keys.authToken)
   }
 
-  nonisolated var authTokenExpiresAt: Date? {
-    get { withStateLock { defaults.object(forKey: Keys.authTokenExpiresAt) as? Date } }
-    set { withStateLock { setDate(newValue, for: Keys.authTokenExpiresAt) } }
+  var refreshToken: String {
+    secureToken(for: Keys.refreshToken) ?? ""
   }
 
-  nonisolated var refreshTokenExpiresAt: Date? {
-    get { withStateLock { defaults.object(forKey: Keys.refreshTokenExpiresAt) as? Date } }
-    set { withStateLock { setDate(newValue, for: Keys.refreshTokenExpiresAt) } }
+  func setRefreshToken(_ value: String) {
+    setSecureValue(value, for: Keys.refreshToken)
   }
 
-  nonisolated var loginIsSignup: Bool {
-    get { withStateLock {
-      if defaults.object(forKey: Keys.loginIsSignup) == nil {
-        return true
-      }
-      return defaults.bool(forKey: Keys.loginIsSignup)
-    } }
-    set { withStateLock { defaults.set(newValue, forKey: Keys.loginIsSignup) } }
+  var authTokenExpiresAt: Date? {
+    defaults.object(forKey: Keys.authTokenExpiresAt) as? Date
   }
 
-  nonisolated var currentUserID: String {
-    get { withStateLock { defaults.string(forKey: Keys.currentUserID) ?? "" } }
-    set { withStateLock { defaults.set(newValue, forKey: Keys.currentUserID) } }
+  func setAuthTokenExpiresAt(_ value: Date?) {
+    setDate(value, for: Keys.authTokenExpiresAt)
   }
 
-  nonisolated var currentUsername: String {
-    get { withStateLock { defaults.string(forKey: Keys.currentUsername) ?? "" } }
-    set { withStateLock { defaults.set(newValue, forKey: Keys.currentUsername) } }
+  var refreshTokenExpiresAt: Date? {
+    defaults.object(forKey: Keys.refreshTokenExpiresAt) as? Date
   }
 
-  nonisolated func store(authResponse: AuthResponse) {
-    withStateLock {
-      authToken = authResponse.token
-      refreshToken = authResponse.refreshToken
-      guard !didReportSecureStoreFailure else {
-        return
-      }
-      currentUserID = authResponse.userId.uuidString
-      currentUsername = authResponse.username.trimmingCharacters(in: .whitespacesAndNewlines)
+  func setRefreshTokenExpiresAt(_ value: Date?) {
+    setDate(value, for: Keys.refreshTokenExpiresAt)
+  }
 
-      authTokenExpiresAt = JWTTokenInspector.expirationDate(in: authResponse.token)
-        ?? nowProvider().addingTimeInterval(TimeInterval(authResponse.expiresIn))
-      refreshTokenExpiresAt = nowProvider().addingTimeInterval(TimeInterval(authResponse.refreshExpiresIn))
+  var loginIsSignup: Bool {
+    if defaults.object(forKey: Keys.loginIsSignup) == nil {
+      return true
     }
+    return defaults.bool(forKey: Keys.loginIsSignup)
   }
 
-  nonisolated func clearSession() {
-    withStateLock {
-      didReportSecureStoreFailure = false
-      authToken = ""
-      refreshToken = ""
-      authTokenExpiresAt = nil
-      refreshTokenExpiresAt = nil
-      currentUserID = ""
-      currentUsername = ""
+  func setLoginIsSignup(_ value: Bool) {
+    defaults.set(value, forKey: Keys.loginIsSignup)
+  }
+
+  var currentUserID: String {
+    defaults.string(forKey: Keys.currentUserID) ?? ""
+  }
+
+  func setCurrentUserID(_ value: String) {
+    defaults.set(value, forKey: Keys.currentUserID)
+  }
+
+  var currentUsername: String {
+    defaults.string(forKey: Keys.currentUsername) ?? ""
+  }
+
+  func setCurrentUsername(_ value: String) {
+    defaults.set(value, forKey: Keys.currentUsername)
+  }
+
+  func store(authResponse: AuthResponse) {
+    setAuthToken(authResponse.token)
+    setRefreshToken(authResponse.refreshToken)
+    guard !didReportSecureStoreFailure else {
+      return
     }
+    setCurrentUserID(authResponse.userId.uuidString)
+    setCurrentUsername(authResponse.username.trimmingCharacters(in: .whitespacesAndNewlines))
+
+    setAuthTokenExpiresAt(JWTTokenInspector.expirationDate(in: authResponse.token)
+      ?? nowProvider().addingTimeInterval(TimeInterval(authResponse.expiresIn)))
+    setRefreshTokenExpiresAt(nowProvider().addingTimeInterval(TimeInterval(authResponse.refreshExpiresIn)))
   }
 
-  nonisolated func hasCompletedInitialStockImport(for userID: String) -> Bool {
+  func clearSession() {
+    didReportSecureStoreFailure = false
+    setAuthToken("")
+    setRefreshToken("")
+    setAuthTokenExpiresAt(nil)
+    setRefreshTokenExpiresAt(nil)
+    setCurrentUserID("")
+    setCurrentUsername("")
+  }
+
+  func hasCompletedInitialStockImport(for userID: String) -> Bool {
     guard !userID.isEmpty else {
       return false
     }
-    return withStateLock { initialStockImportUserIDs.contains(userID) }
+    return initialStockImportUserIDs.contains(userID)
   }
 
-  nonisolated func markInitialStockImportCompleted(for userID: String) {
+  func markInitialStockImportCompleted(for userID: String) {
     guard !userID.isEmpty else {
       return
     }
-    withStateLock {
-      var allUserIDs = initialStockImportUserIDs
-      allUserIDs.insert(userID)
-      defaults.set(Array(allUserIDs), forKey: Keys.initialStockImportUserIDs)
-    }
+    var allUserIDs = initialStockImportUserIDs
+    allUserIDs.insert(userID)
+    defaults.set(Array(allUserIDs), forKey: Keys.initialStockImportUserIDs)
   }
 
-  nonisolated private var initialStockImportUserIDs: Set<String> {
+  private var initialStockImportUserIDs: Set<String> {
     Set(defaults.stringArray(forKey: Keys.initialStockImportUserIDs) ?? [])
   }
 
-  @inline(__always)
-  nonisolated private func withStateLock<T>(_ operation: () throws -> T) rethrows -> T {
-    stateLock.lock()
-    defer { stateLock.unlock() }
-    return try operation()
-  }
-
-  nonisolated private func setSecureValue(_ value: String, for key: String) {
+  private func setSecureValue(_ value: String, for key: String) {
     let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
     if trimmed.isEmpty {
       do {
@@ -300,7 +318,7 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring, @unchecked Sendabl
     }
   }
 
-  nonisolated private func secureToken(for key: String) -> String? {
+  private func secureToken(for key: String) -> String? {
     do {
       if let secureValue = try secureStore.string(for: key),
        !secureValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -313,7 +331,7 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring, @unchecked Sendabl
     return nil
   }
 
-  nonisolated private func setDate(_ value: Date?, for key: String) {
+  private func setDate(_ value: Date?, for key: String) {
     if let value {
       defaults.set(value, forKey: key)
     } else {
@@ -321,7 +339,7 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring, @unchecked Sendabl
     }
   }
 
-  nonisolated private func migrateLegacyTokenStorageIfNeeded() {
+  private func migrateLegacyTokenStorageIfNeeded() {
     if let legacyToken = defaults.string(forKey: Keys.authToken),
        !legacyToken.isEmpty {
       do {
@@ -347,28 +365,25 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring, @unchecked Sendabl
     }
   }
 
-  nonisolated private func handleSecureStoreFailure(_ error: Error) {
-    let shouldNotify: Bool = withStateLock {
-      authTokenExpiresAt = nil
-      refreshTokenExpiresAt = nil
-      currentUserID = ""
-      currentUsername = ""
-      defaults.removeObject(forKey: Keys.authToken)
-      defaults.removeObject(forKey: Keys.refreshToken)
+  private func handleSecureStoreFailure(_ error: Error) {
+    setAuthTokenExpiresAt(nil)
+    setRefreshTokenExpiresAt(nil)
+    setCurrentUserID("")
+    setCurrentUsername("")
+    defaults.removeObject(forKey: Keys.authToken)
+    defaults.removeObject(forKey: Keys.refreshToken)
 
-      guard !didReportSecureStoreFailure else {
-        return false
-      }
-      didReportSecureStoreFailure = true
-      return true
+    guard !didReportSecureStoreFailure else {
+      return
     }
+    didReportSecureStoreFailure = true
 
-    guard shouldNotify else { return }
+    let errorDescription = String(describing: error)
     Task { @MainActor in
       NotificationCenter.default.post(
         name: .authSessionStorageFailure,
         object: nil,
-        userInfo: ["error": String(describing: error)]
+        userInfo: ["error": errorDescription]
       )
     }
   }

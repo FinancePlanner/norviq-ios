@@ -61,11 +61,7 @@ struct PushNotificationsHTTPClient: Sendable {
 
   private let client: BaseHTTPClient
 
-  init(
-    baseURL: URL,
-    session: any HTTPClientSession = URLSession.shared,
-    authTokenProvider: @escaping @Sendable () -> String? = { nil }
-  ) {
+  init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping @Sendable () async -> String? = { nil }) {
     self.client = BaseHTTPClient(
         baseURL: baseURL,
         session: session,
@@ -77,7 +73,7 @@ struct PushNotificationsHTTPClient: Sendable {
 
   func registerDevice(_ payload: PushDeviceRegistrationRequest) async throws -> PushDeviceRegistrationResponse {
     let endpoint = CustomEndpoint(path: "/v1/notifications/apns/device", method: .put, payload: payload)
-    let request = try client.makeURLRequest(for: endpoint)
+    let request = try await client.makeURLRequest(for: endpoint)
     let data = try await client.sendRequest(request, errorType: Error.self)
 
     do {
@@ -93,7 +89,7 @@ struct PushNotificationsHTTPClient: Sendable {
 
   func deactivateDevice(_ payload: PushDeviceDeactivateRequest) async throws {
     let endpoint = CustomEndpoint(path: "/v1/notifications/apns/device/deactivate", method: .post, payload: payload)
-    let request = try client.makeURLRequest(for: endpoint)
+    let request = try await client.makeURLRequest(for: endpoint)
     _ = try await client.sendRequest(request, errorType: Error.self)
   }
 }

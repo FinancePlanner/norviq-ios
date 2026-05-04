@@ -70,17 +70,30 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
 
   private final class SessionStoreMock: AuthSessionStoring {
     var authToken: String = ""
-    var refreshToken: String = ""
-    var authTokenExpiresAt: Date?
-    var refreshTokenExpiresAt: Date?
-    var loginIsSignup: Bool = true
-    var currentUserID: String = ""
-    var currentUsername: String = ""
+    func setAuthToken(_ value: String) async { authToken = value }
 
-    func store(authResponse _: AuthResponse) {}
-    func clearSession() {}
-    func hasCompletedInitialStockImport(for _: String) -> Bool { false }
-    func markInitialStockImportCompleted(for _: String) {}
+    var refreshToken: String = ""
+    func setRefreshToken(_ value: String) async { refreshToken = value }
+
+    var authTokenExpiresAt: Date?
+    func setAuthTokenExpiresAt(_ value: Date?) async { authTokenExpiresAt = value }
+
+    var refreshTokenExpiresAt: Date?
+    func setRefreshTokenExpiresAt(_ value: Date?) async { refreshTokenExpiresAt = value }
+
+    var loginIsSignup: Bool = true
+    func setLoginIsSignup(_ value: Bool) async { loginIsSignup = value }
+
+    var currentUserID: String = ""
+    func setCurrentUserID(_ value: String) async { currentUserID = value }
+
+    var currentUsername: String = ""
+    func setCurrentUsername(_ value: String) async { currentUsername = value }
+
+    func store(authResponse _: AuthResponse) async {}
+    func clearSession() async {}
+    func hasCompletedInitialStockImport(for _: String) async -> Bool { false }
+    func markInitialStockImportCompleted(for _: String) async {}
   }
 
   private func makeDefaults() -> UserDefaults {
@@ -101,7 +114,7 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     let permission = PushPermissionProviderMock(status: .notDetermined)
     let registrar = PushRemoteRegistrarMock()
     let sessionStore = SessionStoreMock()
-    sessionStore.currentUserID = "user-1"
+    await sessionStore.setCurrentUserID("user-1")
 
     let coordinator = PushNotificationsCoordinator(
       service: service,
@@ -125,7 +138,7 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     let permission = PushPermissionProviderMock(status: .notDetermined)
     let registrar = PushRemoteRegistrarMock()
     let sessionStore = SessionStoreMock()
-    sessionStore.currentUserID = "user-1"
+    await sessionStore.setCurrentUserID("user-1")
 
     let coordinator = PushNotificationsCoordinator(
       service: service,
@@ -157,7 +170,7 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     let permission = PushPermissionProviderMock(status: .authorized)
     let registrar = PushRemoteRegistrarMock()
     let sessionStore = SessionStoreMock()
-    sessionStore.currentUserID = "user-1"
+    await sessionStore.setCurrentUserID("user-1")
 
     let coordinator = PushNotificationsCoordinator(
       service: service,
@@ -180,7 +193,7 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     let permission = PushPermissionProviderMock(status: .authorized)
     let registrar = PushRemoteRegistrarMock()
     let sessionStore = SessionStoreMock()
-    sessionStore.currentUserID = "user-1"
+    await sessionStore.setCurrentUserID("user-1")
 
     let coordinator = PushNotificationsCoordinator(
       service: service,

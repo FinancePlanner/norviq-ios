@@ -8,10 +8,10 @@ import StockPlanShared
 final class AuthHTTPClient: Sendable {
     
     // MARK: - Static Constants
-    
-    private static let mfaCapabilityHeader = "X-StockPlan-Client-Capabilities"
-    private static let mfaCapabilityToken = "mfa-auth-v1"
-    private static let dbStyleDateFormatter: DateFormatter = {
+
+    nonisolated(unsafe) private static let mfaCapabilityHeader = "X-StockPlan-Client-Capabilities"
+    nonisolated(unsafe) private static let mfaCapabilityToken = "mfa-auth-v1"
+    nonisolated(unsafe) private static let dbStyleDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -19,8 +19,7 @@ final class AuthHTTPClient: Sendable {
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
         return formatter
     }()
-    private static let decoder: JSONDecoder = .stockPlanShared
-    
+    nonisolated(unsafe) private static let decoder: JSONDecoder = .stockPlanShared    
     // MARK: - Error Type
     
     enum Error: HTTPClientError {
@@ -73,7 +72,7 @@ final class AuthHTTPClient: Sendable {
 
     // MARK: - Init
     
-    init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping @Sendable () -> String? = { nil }) {
+    init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping @Sendable () async -> String? = { nil }) {
         let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "AuthHTTPClient")
         self.logger = logger
         self.client = BaseHTTPClient(

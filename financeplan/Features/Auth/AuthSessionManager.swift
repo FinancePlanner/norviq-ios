@@ -19,7 +19,7 @@ enum AuthSessionError: LocalizedError, Equatable {
   }
 }
 
-protocol AuthSessionManaging: AnyObject, Sendable {
+protocol AuthSessionManaging: Sendable {
   func restoreSessionIfNeeded() async -> Bool
   func validAccessToken() async throws -> String?
   func refreshAccessToken() async throws -> String?
@@ -27,12 +27,11 @@ protocol AuthSessionManaging: AnyObject, Sendable {
   func invalidateSession() async
 }
 
-final class AuthSessionManager: AuthSessionManaging, @unchecked Sendable {
+actor AuthSessionManager: AuthSessionManaging {
   private let authService: AuthServicing
   private let sessionStore: AuthSessionStoring
-  private let nowProvider: () -> Date
+  private let nowProvider: @Sendable () -> Date
   private let refreshLeeway: TimeInterval
-  private let refreshTaskLock = NSLock()
 
   private var refreshTask: Task<String?, Error>?
   private var refreshTaskID: UUID?
@@ -40,7 +39,7 @@ final class AuthSessionManager: AuthSessionManaging, @unchecked Sendable {
   init(
     authService: AuthServicing,
     sessionStore: AuthSessionStoring,
-    nowProvider: @escaping () -> Date = Date.init,
+    nowProvider: @escaping @Sendable () -> Date = Date.init,
     refreshLeeway: TimeInterval = 10
   ) {
     self.authService = authService
@@ -60,12 +59,12 @@ final class AuthSessionManager: AuthSessionManaging, @unchecked Sendable {
 
   func validAccessToken() async throws -> String? {
     let now = nowProvider()
-    let token = trimmed(sessionStore.authToken)
+    let token = trimmed(await sessionStore.authToken)
 
     if !token.isEmpty {
-      syncClaimsIfPossible(from: token)
+      await syncClaimsIfPossible(from: token)
 
-      guard let expiry = accessTokenExpiry(for: token) else {
+      guard let expiry = await accessTokenExpiry(for: token) else {
         return token
       }
 
@@ -75,7 +74,7 @@ final class AuthSessionManager: AuthSessionManaging, @unchecked Sendable {
       }
 
       if remainingLifetime > 0 {
-        guard hasUsableRefreshToken(now: now) else {
+        guard await hasUsableRefreshToken(now: now) else {
           return token
         }
 
@@ -86,20 +85,20 @@ final class AuthSessionManager: AuthSessionManaging, @unchecked Sendable {
         }
       }
 
-      if hasUsableRefreshToken(now: now) {
+      if await hasUsableRefreshToken(now: now) {
         return try await refreshAccessToken()
       }
 
-      clearSession(notify: true)
+      await clearSession(notify: true)
       throw AuthSessionError.sessionExpired
     }
 
-    if hasUsableRefreshToken(now: now) {
+    if await hasUsableRefreshToken(now: now) {
       return try await refreshAccessToken()
     }
 
-    if !trimmed(sessionStore.refreshToken).isEmpty {
-      clearSession(notify: true)
+    if !trimmed(await sessionStore.refreshToken).isEmpty {
+      await clearSession(notify: true)
       throw AuthSessionError.sessionExpired
     }
 
@@ -112,43 +111,48 @@ final class AuthSessionManager: AuthSessionManaging, @unchecked Sendable {
 
   private func refreshAccessToken(clearSessionOnFailure: Bool) async throws -> String? {
     let now = nowProvider()
-    guard hasUsableRefreshToken(now: now) else {
+    guard await hasUsableRefreshToken(now: now) else {
       if clearSessionOnFailure {
-        clearSession(notify: true)
+        await clearSession(notify: true)
       }
       throw AuthSessionError.notAuthenticated
     }
 
-    if let task = currentRefreshTask() {
+    if let task = refreshTask {
       return try await task.value
     }
 
     let refreshID = UUID()
-    let task = Task<String?, Error> { [weak self] in
-      guard let self else { return nil }
-
-      let refreshToken = self.trimmed(self.sessionStore.refreshToken)
+    let task = Task<String?, Error> {
+      let refreshToken = self.trimmed(await self.sessionStore.refreshToken)
       guard !refreshToken.isEmpty else {
         if clearSessionOnFailure {
-          self.clearSession(notify: true)
+          await self.clearSession(notify: true)
         }
         throw AuthSessionError.notAuthenticated
       }
 
       let response = try await self.authService.refresh(refreshToken: refreshToken)
-      self.sessionStore.store(authResponse: response)
-      self.syncClaimsIfPossible(from: response.token)
-      return self.trimmed(self.sessionStore.authToken)
+      await self.sessionStore.store(authResponse: response)
+      await self.syncClaimsIfPossible(from: response.token)
+      return self.trimmed(await self.sessionStore.authToken)
     }
 
-    setRefreshTask(task, id: refreshID)
-    defer { clearRefreshTask(id: refreshID) }
+    refreshTask = task
+    refreshTaskID = refreshID
+    
+    defer {
+      if refreshTaskID == refreshID {
+        refreshTask = nil
+        refreshTaskID = nil
+      }
+    }
 
     do {
       return try await task.value
     } catch {
       if clearSessionOnFailure {
-        clearSession(notify: true)
+        await clearSession(notify: true)
       }
       throw error
     }
@@ -156,82 +160,55 @@ final class AuthSessionManager: AuthSessionManaging, @unchecked Sendable {
 
   func logout() async {
     NotificationCenter.default.post(name: .authSessionWillInvalidate, object: nil)
-    await authService.logout(refreshToken: sessionStore.refreshToken)
-    clearSession(notify: true)
+    await authService.logout(refreshToken: await sessionStore.refreshToken)
+    await clearSession(notify: true)
   }
 
   func invalidateSession() async {
     NotificationCenter.default.post(name: .authSessionWillInvalidate, object: nil)
-    clearSession(notify: true)
+    await clearSession(notify: true)
   }
 
-  private func accessTokenExpiry(for token: String) -> Date? {
-    JWTTokenInspector.expirationDate(in: token) ?? sessionStore.authTokenExpiresAt
+  private func accessTokenExpiry(for token: String) async -> Date? {
+    JWTTokenInspector.expirationDate(in: token) ?? (await sessionStore.authTokenExpiresAt)
   }
 
-  private func hasUsableRefreshToken(now: Date) -> Bool {
-    let refreshToken = trimmed(sessionStore.refreshToken)
+  private func hasUsableRefreshToken(now: Date) async -> Bool {
+    let refreshToken = trimmed(await sessionStore.refreshToken)
     guard !refreshToken.isEmpty else {
       return false
     }
 
-    guard let expiry = sessionStore.refreshTokenExpiresAt else {
+    guard let expiry = await sessionStore.refreshTokenExpiresAt else {
       return true
     }
 
     return expiry > now
   }
 
-  private func syncClaimsIfPossible(from token: String) {
-    if sessionStore.currentUserID.isEmpty,
+  private func syncClaimsIfPossible(from token: String) async {
+    if await sessionStore.currentUserID.isEmpty,
        let userID = JWTTokenInspector.userID(in: token) {
-      sessionStore.currentUserID = userID.uuidString
+      await sessionStore.setCurrentUserID(userID.uuidString)
     }
 
-    if sessionStore.authTokenExpiresAt == nil,
+    if await sessionStore.authTokenExpiresAt == nil,
        let expiry = JWTTokenInspector.expirationDate(in: token) {
-      sessionStore.authTokenExpiresAt = expiry
+      await sessionStore.setAuthTokenExpiresAt(expiry)
     }
   }
 
-  private func clearSession(notify: Bool) {
-    sessionStore.clearSession()
+  private func clearSession(notify: Bool) async {
+    await sessionStore.clearSession()
 
     guard notify else {
       return
     }
 
-    Task { @MainActor in
-      NotificationCenter.default.post(name: .authSessionDidInvalidate, object: nil)
-    }
+    NotificationCenter.default.post(name: .authSessionDidInvalidate, object: nil)
   }
 
   private func trimmed(_ value: String) -> String {
     value.trimmingCharacters(in: .whitespacesAndNewlines)
-  }
-
-  private func currentRefreshTask() -> Task<String?, Error>? {
-    refreshTaskLock.lock()
-    defer { refreshTaskLock.unlock() }
-    return refreshTask
-  }
-
-  private func setRefreshTask(_ task: Task<String?, Error>, id: UUID) {
-    refreshTaskLock.lock()
-    defer { refreshTaskLock.unlock() }
-    refreshTask = task
-    refreshTaskID = id
-  }
-
-  private func clearRefreshTask(id: UUID) {
-    refreshTaskLock.lock()
-    defer { refreshTaskLock.unlock() }
-
-    guard refreshTaskID == id else {
-      return
-    }
-
-    refreshTask = nil
-    refreshTaskID = nil
   }
 }

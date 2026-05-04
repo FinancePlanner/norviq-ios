@@ -72,9 +72,14 @@ final class LoginViewModel: ObservableObject {
     self.sessionStore = sessionStore
     self.onAuthenticated = onAuthenticated
 
-    let storedIsSignup = sessionStore.loginIsSignup
-    isSignup = storedIsSignup
-    signupFieldsOpacity = storedIsSignup ? 1 : 0
+    self.isSignup = false
+    self.signupFieldsOpacity = 0
+    
+    Task {
+      let storedIsSignup = await sessionStore.loginIsSignup
+      self.isSignup = storedIsSignup
+      self.signupFieldsOpacity = storedIsSignup ? 1 : 0
+    }
   }
 
   deinit {
@@ -110,7 +115,9 @@ final class LoginViewModel: ObservableObject {
     dismissMFAFlow()
     isSignup = true
     signupFieldsOpacity = 1
-    sessionStore.loginIsSignup = true
+    Task {
+      await sessionStore.setLoginIsSignup(true)
+    }
     error = nil
     infoMessage = nil
   }
@@ -119,7 +126,9 @@ final class LoginViewModel: ObservableObject {
     dismissMFAFlow()
     isSignup = false
     signupFieldsOpacity = 0
-    sessionStore.loginIsSignup = false
+    Task {
+      await sessionStore.setLoginIsSignup(false)
+    }
     confirmPassword = ""
     error = nil
     infoMessage = nil
@@ -177,7 +186,7 @@ final class LoginViewModel: ObservableObject {
 
     do {
       let auth = try await authService.verifyMFA(challengeId: challenge.challengeId, code: trimmed)
-      persistAuth(auth)
+      await persistAuth(auth)
       dismissMFAFlow()
       error = nil
     } catch {
@@ -223,7 +232,7 @@ final class LoginViewModel: ObservableObject {
 
     do {
       let outcome = try await authService.oauthSignIn(provider: provider)
-      try handleAuthOutcome(
+      try await handleAuthOutcome(
         outcome,
         fallbackOnMissingPayload: "Could not complete sign in. Please try again."
       )
@@ -250,7 +259,7 @@ final class LoginViewModel: ObservableObject {
         email: username.trimmingCharacters(in: .whitespacesAndNewlines),
         password: password
       )
-      try handleAuthOutcome(
+      try await handleAuthOutcome(
         outcome,
         fallbackOnMissingPayload: "Could not complete sign in. Please try again."
       )
@@ -297,8 +306,8 @@ final class LoginViewModel: ObservableObject {
     }
   }
 
-  private func persistAuth(_ auth: AuthResponse) {
-    sessionStore.store(authResponse: auth)
+  private func persistAuth(_ auth: AuthResponse) async {
+    await sessionStore.store(authResponse: auth)
     let userId = auth.userId.uuidString
     let username = auth.username.trimmingCharacters(in: .whitespacesAndNewlines)
     // Sentry: attach user to crash reports
@@ -318,14 +327,14 @@ final class LoginViewModel: ObservableObject {
   private func handleAuthOutcome(
     _ outcome: AuthLoginOutcomePayload,
     fallbackOnMissingPayload: String
-  ) throws {
+  ) async throws {
     switch outcome.status {
     case .authenticated:
       guard let auth = outcome.auth else {
         throw AuthHTTPClient.Error.api(fallbackOnMissingPayload)
       }
       dismissMFAFlow()
-      persistAuth(auth)
+      await persistAuth(auth)
     case .mfaRequired:
       guard let challenge = outcome.mfa else {
         throw AuthHTTPClient.Error.api(fallbackOnMissingPayload)
@@ -349,7 +358,7 @@ final class LoginViewModel: ObservableObject {
       guard let self else { return }
       while !Task.isCancelled && self.mfaResendAvailableIn > 0 {
         try? await Task.sleep(nanoseconds: 1_000_000_000)
-        guard !Task.isCancelled else { return }
+        if Task.isCancelled { return }
         self.mfaResendAvailableIn = max(0, self.mfaResendAvailableIn - 1)
       }
     }

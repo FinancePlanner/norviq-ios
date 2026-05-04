@@ -9,7 +9,7 @@ extension Container {
       return ExpensesHTTPClient(
         baseURL: env.current.apiBaseUrl,
         session: URLSession.shared,
-        authTokenProvider: { store.authToken }
+        authTokenProvider: { await store.authToken }
       )
     }
   }
