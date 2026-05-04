@@ -72,12 +72,12 @@ enum PushNotificationUserAction: Equatable {
   case openPortfolio
 }
 
-protocol PushPermissionProviding {
+protocol PushPermissionProviding: Sendable {
   func requestAuthorization() async throws -> Bool
   func currentAuthorizationStatus() async -> PushAuthorizationStatus
 }
 
-struct SystemPushPermissionProvider: PushPermissionProviding {
+struct SystemPushPermissionProvider: PushPermissionProviding, Sendable {
   private let center: UNUserNotificationCenter
 
   init(center: UNUserNotificationCenter = .current()) {
@@ -105,12 +105,12 @@ struct SystemPushPermissionProvider: PushPermissionProviding {
   }
 }
 
-protocol PushRemoteNotificationsRegistering {
+protocol PushRemoteNotificationsRegistering: Sendable {
   @MainActor func registerForRemoteNotifications()
   func openSystemSettings()
 }
 
-struct SystemPushRemoteNotificationsRegistrar: PushRemoteNotificationsRegistering {
+struct SystemPushRemoteNotificationsRegistrar: PushRemoteNotificationsRegistering, Sendable {
   @MainActor func registerForRemoteNotifications() {
     UIApplication.shared.registerForRemoteNotifications()
   }
