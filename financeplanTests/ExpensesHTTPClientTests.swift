@@ -37,7 +37,6 @@ final class ExpensesHTTPClientTests: XCTestCase {
   nonisolated(unsafe) private var client: ExpensesHTTPClient!
 
   override func setUp() async throws {
-    try await super.setUp()
     let config = URLSessionConfiguration.ephemeral
     config.protocolClasses = [MockURLProtocol.self]
     session = URLSession(configuration: config)
@@ -49,7 +48,6 @@ final class ExpensesHTTPClientTests: XCTestCase {
     MockURLProtocol.handler = nil
     session = nil
     client = nil
-    try await super.tearDown()
   }
 
   private func jsonBody(from request: URLRequest) throws -> [String: Any] {
