@@ -43,7 +43,6 @@ final class BillingManagerTests: XCTestCase {
   private var sessionStore: MockAuthSessionStore!
 
   override func setUp() async throws {
-    try await super.setUp()
     environmentManager = AppEnvironmentManager()
     authSessionManager = MockAuthSessionManager()
     sessionStore = MockAuthSessionStore()

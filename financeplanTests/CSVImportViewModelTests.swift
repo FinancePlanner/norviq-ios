@@ -6,7 +6,6 @@ final class CSVImportViewModelTests: XCTestCase {
   private var viewModel: CSVImportViewModel!
 
   override func setUp() async throws {
-    try await super.setUp()
     viewModel = CSVImportViewModel()
   }
 
