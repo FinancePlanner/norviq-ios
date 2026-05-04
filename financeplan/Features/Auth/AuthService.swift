@@ -1,7 +1,7 @@
 import Foundation
 import StockPlanShared
 
-protocol AuthServicing {
+protocol AuthServicing: Sendable {
   func login(email: String, password: String) async throws -> AuthLoginOutcomePayload
   func signup(
     username: String,
@@ -47,7 +47,7 @@ protocol AuthSessionStoring: Sendable {
   func markInitialStockImportCompleted(for userID: String) async
 }
 
-final class AuthService: AuthServicing {
+final class AuthService: AuthServicing, @unchecked Sendable {
   private let environmentManager: AppEnvironmentManager
   private let session: any HTTPClientSession
   private let webAuthenticator: OAuthWebAuthenticating
