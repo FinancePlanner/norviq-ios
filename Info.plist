@@ -5,7 +5,7 @@
 	<key>AmplitudeAPIKey</key>
 	<string>57c03f2418ee11b11a26ba7a21827187</string>
 	<key>CFBundleDisplayName</key>
-	<string>Norviqa</string>
+	<string>Norviq</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -32,9 +32,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
-	<string>Norviqa uses Face ID to unlock your app session.</string>
-	<key>NorviqaAPIEnvironment</key>
-	<string>$(NORVIQA_API_ENVIRONMENT)</string>
+	<string>Norviq uses Face ID to unlock your app session.</string>
+	<key>NorviqAPIEnvironment</key>
+	<string>$(NORVIQ_API_ENVIRONMENT)</string>
 	<key>OAuthCallbackScheme</key>
 	<string>norviqa</string>
 	<key>PexelsAPIKey</key>

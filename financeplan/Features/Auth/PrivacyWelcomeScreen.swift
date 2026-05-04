@@ -8,7 +8,7 @@ struct PrivacyWelcomeScreen: View {
   var body: some View {
     ZStack {
       VStack(spacing: 24) {
-        NorviqaLogo(size: 78)
+        NorviqLogo(size: 78)
           .padding(.top, 60)
 
         VStack(spacing: 8) {
@@ -16,7 +16,7 @@ struct PrivacyWelcomeScreen: View {
             .font(.largeTitle.weight(.bold))
             .multilineTextAlignment(.center)
 
-          Text("We built Norviqa around one principle: your financial data belongs to you.")
+          Text("We built Norviq around one principle: your financial data belongs to you.")
             .font(.subheadline)
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)

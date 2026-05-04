@@ -69,7 +69,7 @@ final class AppLockManager: AppLockManaging {
     }
 
     isLocked = true
-    switch await performUnlock(localizedReason: "Unlock Norviqa") {
+    switch await performUnlock(localizedReason: "Unlock Norviq") {
     case .unlocked:
       isLocked = false
       return .unlocked
@@ -92,7 +92,7 @@ final class AppLockManager: AppLockManaging {
   }
 
   func unlock() async -> Bool {
-    switch await performUnlock(localizedReason: "Unlock Norviqa") {
+    switch await performUnlock(localizedReason: "Unlock Norviq") {
     case .unlocked:
       isLocked = false
       return true

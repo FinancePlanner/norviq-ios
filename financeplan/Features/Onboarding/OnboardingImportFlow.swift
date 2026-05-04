@@ -90,7 +90,7 @@ struct OnboardingMainMenu: View {
   var body: some View {
     VStack(spacing: 32) {
       VStack(spacing: 12) {
-        Text("Welcome to Norviqa")
+        Text("Welcome to Norviq")
           .typography(.hero, weight: .bold)
 
         Text("How would you like to start building your workspace?")

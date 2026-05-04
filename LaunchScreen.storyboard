@@ -27,7 +27,7 @@
                                             <constraint firstAttribute="height" constant="64" id="gbP-FL-GiP"/>
                                         </constraints>
                                     </imageView>
-                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" text="Norviqa" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="dEl-xM-SBv">
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" text="Norviq" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="dEl-xM-SBv">
                                         <rect key="frame" x="0.0" y="84" width="137" height="39"/>
                                         <fontDescription key="fontDescription" type="system" weight="semibold" pointSize="32"/>
                                         <nil key="textColor"/>

@@ -12,7 +12,7 @@ struct SignUpView: View {
       VStack(alignment: .leading, spacing: 0) {
         // Header
         HStack {
-          Text("Norviqa")
+          Text("Norviq")
             .font(.title3.weight(.bold))
             .foregroundStyle(.primary)
           Spacer()
@@ -29,7 +29,7 @@ struct SignUpView: View {
 
         // Hero
         VStack(alignment: .center, spacing: 16) {
-          NorviqaLogo(size: 78)
+          NorviqLogo(size: 78)
             .padding(.top, 24)
 
           Text("Create your\naccount")

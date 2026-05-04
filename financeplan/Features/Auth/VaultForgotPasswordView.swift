@@ -27,7 +27,7 @@ struct VaultForgotPasswordView: View {
 
           Spacer()
 
-          Text("Norviqa")
+          Text("Norviq")
             .font(.title3.weight(.bold))
             .foregroundStyle(.primary)
 
@@ -43,7 +43,7 @@ struct VaultForgotPasswordView: View {
 
         ScrollView {
           VStack(spacing: 32) {
-            NorviqaLogo(size: 80)
+            NorviqLogo(size: 80)
               .padding(.top, 40)
 
             VStack(spacing: 12) {
@@ -117,7 +117,7 @@ struct VaultForgotPasswordView: View {
             // Secure Vault Protection Badge
             HStack(spacing: 8) {
               Image(systemName: "shield.fill")
-              Text("SECURE NORVIQA PROTECTION")
+              Text("SECURE NORVIQ PROTECTION")
             }
             .font(.caption.weight(.semibold))
             .tracking(1.0)

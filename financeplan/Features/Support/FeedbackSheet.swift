@@ -39,7 +39,7 @@ struct FeedbackSheet: View {
           } header: {
             Text("Details")
           } footer: {
-            Text("We appreciate your feedback! It helps us make Norviqa better for everyone.")
+            Text("We appreciate your feedback! It helps us make Norviq better for everyone.")
           }
         }
         .scrollContentBackground(.hidden)
