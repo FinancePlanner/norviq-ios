@@ -9,9 +9,9 @@ final class AuthHTTPClient: Sendable {
     
     // MARK: - Static Constants
 
-    private static let mfaCapabilityHeader = "X-StockPlan-Client-Capabilities"
-    private static let mfaCapabilityToken = "mfa-auth-v1"
-    private static let dbStyleDateFormatter: DateFormatter = {
+    nonisolated private static let mfaCapabilityHeader = "X-StockPlan-Client-Capabilities"
+    nonisolated private static let mfaCapabilityToken = "mfa-auth-v1"
+    nonisolated private static let dbStyleDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -19,7 +19,7 @@ final class AuthHTTPClient: Sendable {
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
         return formatter
     }()
-    private static let decoder: JSONDecoder = .stockPlanShared    
+    nonisolated private static let decoder: JSONDecoder = .stockPlanShared    
     // MARK: - Error Type
     
     enum Error: HTTPClientError {

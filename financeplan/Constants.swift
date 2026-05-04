@@ -32,8 +32,8 @@ final class AppEnvironmentManager: @unchecked Sendable {
   #endif
 
   private static var defaultIsTestFlight: Bool {
-    guard let receiptUrl = Bundle.main.appStoreReceiptURL else { return false }
-    return receiptUrl.lastPathComponent == "sandboxReceipt"
+    let receiptURL = Bundle.main.bundleURL.appendingPathComponent("StoreKit/sandboxReceipt")
+    return FileManager.default.fileExists(atPath: receiptURL.path)
   }
 
   let isDebugBuild: Bool

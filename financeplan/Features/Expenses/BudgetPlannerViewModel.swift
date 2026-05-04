@@ -604,7 +604,7 @@ final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol
       do {
         let snapshot = try await ensureSnapshotExistsForSelectedMonth()
         let targetSnapshotID = snapshot.id
-        guard let selectedMonthSnapshotIndex = monthlySnapshots.firstIndex(where: { $0.id == targetSnapshotID }) else {
+        guard monthlySnapshots.contains(where: { $0.id == targetSnapshotID }) else {
           throw NSError(
             domain: "BudgetPlannerViewModel",
             code: 1003,
