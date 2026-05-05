@@ -40,6 +40,7 @@ public struct UserProfileView: View {
     @State private var isLoggingOut = false
     @State private var securityCodeEnabled = false
     @State private var faceIDErrorMessage: String?
+    @State private var isNotificationsOn = false
 
     // Appearance State
     @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system.rawValue
@@ -83,7 +84,10 @@ public struct UserProfileView: View {
             .task {
                 await initialLoad()
             }
-            .alert("Face ID", isPresented: faceIDAlertBinding) {
+            .alert("Face ID", isPresented: Binding(
+                get: { faceIDErrorMessage != nil },
+                set: { if !$0 { faceIDErrorMessage = nil } }
+            )) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(faceIDErrorMessage ?? "")
@@ -205,10 +209,13 @@ public struct UserProfileView: View {
 
             // Security
             Section(LocalizedStringKey("Security")) {
-                Toggle(isOn: faceIDToggleBinding) {
+                Toggle(isOn: $useFaceID) {
                     HStack(spacing: 12) {
                         Label(LocalizedStringKey("Face ID"), systemImage: "faceid")
                     }
+                }
+                .onChange(of: useFaceID) { _, enabled in
+                    Task { await setFaceIDEnabled(enabled) }
                 }
 
                 NavigationLink(value: UserProfileDestination.securityCode) {
@@ -224,8 +231,11 @@ public struct UserProfileView: View {
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
             Section(LocalizedStringKey("Alerts")) {
-                Toggle(isOn: notificationsToggleBinding) {
+                Toggle(isOn: $isNotificationsOn) {
                     Label(LocalizedStringKey("Price target alerts"), systemImage: "bell.badge")
+                }
+                .onChange(of: isNotificationsOn) { _, enabled in
+                    Task { await pushNotificationsCoordinator.setNotificationsEnabled(enabled) }
                 }
 
                 HStack(spacing: 12) {
@@ -260,10 +270,10 @@ public struct UserProfileView: View {
 
             // Appearance
             Section(LocalizedStringKey("Appearance")) {
-                Picker(LocalizedStringKey("Appearance"), selection: appAppearanceBinding) {
+                Picker(LocalizedStringKey("Appearance"), selection: $appAppearanceRawValue) {
                     ForEach(AppAppearance.allCases, id: \.self) { appearance in
                         Text(appearance.title)
-                            .tag(appearance)
+                            .tag(appearance.rawValue)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -480,17 +490,11 @@ public struct UserProfileView: View {
         await viewModel.load()
         pushNotificationsCoordinator.handleAuthenticatedSessionBecameActive()
         securityCodeEnabled = securityCodeManager.isEnabled
+        isNotificationsOn = pushNotificationsCoordinator.isOptedIn
     }
 
     private func retryLoad() {
         Task { await viewModel.load(force: true) }
-    }
-
-    private var appAppearanceBinding: Binding<AppAppearance> {
-        Binding(
-            get: { AppAppearance.from(appAppearanceRawValue) },
-            set: { appAppearanceRawValue = $0.rawValue }
-        )
     }
 
     private var selectedAppearance: AppAppearance {
@@ -499,37 +503,6 @@ public struct UserProfileView: View {
 
     private var appLanguage: AppLanguage {
         AppLanguage.from(appLanguageRawValue)
-    }
-
-    private var notificationsToggleBinding: Binding<Bool> {
-        Binding(
-            get: { pushNotificationsCoordinator.isOptedIn },
-            set: { enabled in
-                Task {
-                    await pushNotificationsCoordinator.setNotificationsEnabled(enabled)
-                }
-            }
-        )
-    }
-
-    private var faceIDToggleBinding: Binding<Bool> {
-        Binding(
-            get: { useFaceID },
-            set: { enabled in
-                Task { await setFaceIDEnabled(enabled) }
-            }
-        )
-    }
-
-    private var faceIDAlertBinding: Binding<Bool> {
-        Binding(
-            get: { faceIDErrorMessage != nil },
-            set: { isPresented in
-                if !isPresented {
-                    faceIDErrorMessage = nil
-                }
-            }
-        )
     }
 
     private var versionString: String {
