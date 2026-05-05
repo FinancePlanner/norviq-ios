@@ -836,7 +836,7 @@ struct AddCryptoHoldingSheet: View {
                     ProgressView()
                         .padding()
                         .background(.ultraThinMaterial)
-                        .cornerRadius(8)
+                        .clipShape(.rect(cornerRadius: 8))
                 }
             }
         }
@@ -1301,7 +1301,7 @@ struct EditCryptoHoldingSheet: View {
                     ProgressView()
                         .padding()
                         .background(.ultraThinMaterial)
-                        .cornerRadius(8)
+                        .clipShape(.rect(cornerRadius: 8))
                 }
             }
         }

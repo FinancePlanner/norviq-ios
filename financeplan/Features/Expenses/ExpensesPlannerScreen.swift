@@ -811,9 +811,9 @@ private struct PillarAllocationTableCard: View {
                 SectorMark(
                     angle: .value("Amount", summary.actualAmount),
                     innerRadius: .ratio(0.65),
-                    angularInset: 2.0
+                    angularInset: 2.0,
+                    cornerRadius: 4
                 )
-                .cornerRadius(4)
                 .foregroundStyle(summary.pillar.color(for: colorScheme))
             }
             .frame(height: 200)
@@ -1053,7 +1053,7 @@ private struct MonthlyPlanItemsCard: View {
               Rectangle()
                 .fill(template.pillar.color(for: colorScheme).opacity(0.6))
                 .frame(width: 3)
-                .cornerRadius(1.5)
+                .clipShape(.rect(cornerRadius: 1.5))
 
               VStack(alignment: .leading, spacing: 2) {
                 Text(template.title)
@@ -1728,7 +1728,7 @@ private struct PlanItemEditorSheet: View {
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(Color.white.opacity(0.1))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                   }
                 }
               }
@@ -2420,9 +2420,9 @@ private struct ExpensesByCategoryCard: View {
                   SectorMark(
                       angle: .value("Amount", summary.actualAmount),
                       innerRadius: .ratio(0.65),
-                      angularInset: 2.0
+                      angularInset: 2.0,
+                      cornerRadius: 4
                   )
-                  .cornerRadius(4)
                   .foregroundStyle(summary.pillar.color(for: colorScheme))
               }
               .frame(height: 180)

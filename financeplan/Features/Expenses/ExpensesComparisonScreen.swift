@@ -461,7 +461,7 @@ private struct SpendingInsightsSection: View {
                   }
                   .foregroundStyle(.white)
                   .padding(4)
-                  .background(Color.black.opacity(0.3).cornerRadius(4))
+                  .background(Color.black.opacity(0.3), in: .rect(cornerRadius: 4))
               }
           }
         }
@@ -794,18 +794,18 @@ private struct PerformanceBreakdownCard: View {
                 SectorMark(
                   angle: .value("Amount", winnersValue),
                   innerRadius: .ratio(0.6),
-                  angularInset: 2
+                  angularInset: 2,
+                  cornerRadius: 4
                 )
                 .foregroundStyle(.green.gradient)
-                .cornerRadius(4)
 
                 SectorMark(
                   angle: .value("Amount", losersValue),
                   innerRadius: .ratio(0.6),
-                  angularInset: 2
+                  angularInset: 2,
+                  cornerRadius: 4
                 )
                 .foregroundStyle(.red.gradient)
-                .cornerRadius(4)
               }
             }
             .frame(minHeight: 180)
@@ -901,19 +901,19 @@ private struct BudgetTrackingCard: View {
                 SectorMark(
                   angle: .value("Amount", latest.actual),
                   innerRadius: .ratio(0.6),
-                  angularInset: 2
+                  angularInset: 2,
+                  cornerRadius: 4
                 )
                 .foregroundStyle(latest.actual > latest.planned ? Color.red.gradient : AppTheme.Colors.tint(for: colorScheme).gradient)
-                .cornerRadius(4)
 
                 if latest.planned > latest.actual {
                   SectorMark(
                     angle: .value("Amount", latest.planned - latest.actual),
                     innerRadius: .ratio(0.6),
-                    angularInset: 2
+                    angularInset: 2,
+                    cornerRadius: 4
                   )
                   .foregroundStyle(Color.gray.opacity(0.3))
-                  .cornerRadius(4)
                 }
               }
             }
@@ -1025,18 +1025,18 @@ private struct SavingsRateCard: View {
                 SectorMark(
                   angle: .value("Amount", savingsAmount > 0 ? savingsAmount : 0),
                   innerRadius: .ratio(0.6),
-                  angularInset: 2
+                  angularInset: 2,
+                  cornerRadius: 4
                 )
                 .foregroundStyle(.green.gradient)
-                .cornerRadius(4)
 
                 SectorMark(
                   angle: .value("Amount", latest.actual),
                   innerRadius: .ratio(0.6),
-                  angularInset: 2
+                  angularInset: 2,
+                  cornerRadius: 4
                 )
                 .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme).gradient)
-                .cornerRadius(4)
               }
             }
             .frame(minHeight: 180)

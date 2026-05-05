@@ -272,7 +272,7 @@ private struct RecordedSpendCard: View {
     }
     .padding(16)
     .background(Color(uiColor: .secondarySystemGroupedBackground))
-    .cornerRadius(16)
+    .clipShape(.rect(cornerRadius: 16))
     .overlay(
       RoundedRectangle(cornerRadius: 16)
         .stroke(Color.white.opacity(0.05), lineWidth: 1)

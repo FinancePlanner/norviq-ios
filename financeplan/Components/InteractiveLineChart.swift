@@ -95,7 +95,7 @@ struct InteractiveLineChart: View {
                     }
                     .padding(6)
                     .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                     .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                     .position(
                         x: max(50, min(geometry.size.width - 50, xPos)),

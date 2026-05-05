@@ -44,7 +44,7 @@ struct ShareableChartView<Content: View>: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(Color.white.opacity(0.1))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
       }
       .padding(.top, 12)
     }
