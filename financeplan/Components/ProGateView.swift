@@ -27,6 +27,8 @@ struct ProGateView<Content: View>: View {
                     Color.clear
                         .contentShape(Rectangle())
                         .onTapGesture { showPaywall = true }
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityLabel("Unlock Pro feature")
                         .accessibilityIdentifier("proGate.lockedOverlay")
                 )
                 .sheet(isPresented: $showPaywall) {

@@ -2556,22 +2556,24 @@ private struct RecurringTemplatesManagerSheet: View {
     NavigationStack {
       List {
         ForEach(templates) { template in
-          HStack {
-            VStack(alignment: .leading, spacing: 4) {
-              Text(template.title).font(.subheadline.weight(.semibold))
-              HStack(spacing: 6) {
-                Text(template.pillar.title).font(.caption).foregroundStyle(.secondary)
-                Text("·").foregroundStyle(.secondary)
-                Text(template.frequency == .monthly ? "Monthly" : "Weekly")
-                  .font(.caption)
-                  .foregroundStyle(template.pillar.color(for: colorScheme))
+          Button { editingTemplate = template } label: {
+            HStack {
+              VStack(alignment: .leading, spacing: 4) {
+                Text(template.title).font(.subheadline.weight(.semibold))
+                HStack(spacing: 6) {
+                  Text(template.pillar.title).font(.caption).foregroundStyle(.secondary)
+                  Text("·").foregroundStyle(.secondary)
+                  Text(template.frequency == .monthly ? "Monthly" : "Weekly")
+                    .font(.caption)
+                    .foregroundStyle(template.pillar.color(for: colorScheme))
+                }
               }
+              Spacer()
+              Text(template.amount.currency).font(.subheadline.weight(.semibold))
             }
-            Spacer()
-            Text(template.amount.currency).font(.subheadline.weight(.semibold))
+            .contentShape(Rectangle())
           }
-          .contentShape(Rectangle())
-          .onTapGesture { editingTemplate = template }
+          .buttonStyle(.plain)
           .swipeActions(edge: .trailing) {
             Button(role: .destructive) { onDelete(template.id) } label: {
               Label("Delete", systemImage: "trash")
