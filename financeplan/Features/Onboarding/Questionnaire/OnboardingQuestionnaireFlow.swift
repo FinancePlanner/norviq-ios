@@ -11,7 +11,7 @@ import SwiftUI
 ///   paywall outcome on Screen 13). At this point the user IS authenticated; the caller
 ///   should apply authenticated state.
 struct OnboardingQuestionnaireFlow: View {
-  @StateObject private var viewModel = OnboardingQuestionnaireViewModel()
+  @State private var viewModel = OnboardingQuestionnaireViewModel()
 
   let onLogInRequested: () -> Void
   let onCompleted: () -> Void

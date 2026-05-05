@@ -1,10 +1,10 @@
-import Combine
 import Foundation
+import Observation
 import OSLog
 import PostHog
 
-@MainActor
-final class OnboardingQuestionnaireViewModel: ObservableObject {
+@Observable @MainActor
+final class OnboardingQuestionnaireViewModel {
   enum Step: Int, CaseIterable {
     case welcome = 0
     case goal
@@ -22,8 +22,8 @@ final class OnboardingQuestionnaireViewModel: ObservableObject {
     case paywall
   }
 
-  @Published private(set) var step: Step = .welcome
-  @Published var answers = OnboardingQuestionnaireAnswers()
+  private(set) var step: Step = .welcome
+  var answers = OnboardingQuestionnaireAnswers()
 
   private static let logger = Logger(
     subsystem: Bundle.main.bundleIdentifier ?? "financeplan",

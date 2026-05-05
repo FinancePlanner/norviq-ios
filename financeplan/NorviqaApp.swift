@@ -20,7 +20,7 @@ enum PostHogEnv: String {
 struct NorviqApp: App {
   @UIApplicationDelegateAdaptor(PushNotificationsAppDelegate.self) var pushNotificationsAppDelegate
   @InjectedObservable(\Container.appEnvironment) var environmentManager
-  @StateObject private var sessionManager = SessionManager()
+  @State private var sessionManager = SessionManager()
   @Injected(\.analytics) private var analytics
   @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system
     .rawValue
@@ -63,7 +63,7 @@ struct NorviqApp: App {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .id(appLanguage.localeIdentifier)
         .id(environmentManager.current)
-        .environmentObject(sessionManager)
+        .environment(sessionManager)
         .environment(\.locale, Locale(identifier: appLanguage.localeIdentifier))
         .preferredColorScheme(appAppearance.colorScheme)
         .tint(AppTheme.Colors.tint(for: appAppearance.colorScheme ?? .light))

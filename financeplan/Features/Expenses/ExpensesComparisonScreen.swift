@@ -4,8 +4,8 @@ import StockPlanShared
 import Factory
 
 struct ExpensesComparisonScreen: View {
-  @StateObject private var reportsViewModel = ReportsViewModel()
-  @StateObject private var dashboardPrefs = ReportsDashboardPreferences()
+  @State private var reportsViewModel = ReportsViewModel()
+  @State private var dashboardPrefs = ReportsDashboardPreferences()
   @Environment(\.colorScheme) private var colorScheme
   @InjectedObservable(\Container.billingManager) private var billingManager
   @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
@@ -286,7 +286,7 @@ private struct ShareableChartButton<Content: View>: View {
 }
 
 private struct CustomizeDashboardSheet: View {
-  @ObservedObject var preferences: ReportsDashboardPreferences
+  @Bindable var preferences: ReportsDashboardPreferences
   @Environment(\.dismiss) private var dismiss
   @Environment(\.colorScheme) private var colorScheme
   

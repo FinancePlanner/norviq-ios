@@ -1,10 +1,11 @@
-import Combine
 import Foundation
+import Observation
 
-final class SessionManager: ObservableObject {
+@Observable @MainActor
+final class SessionManager {
   static let guestUsername = "Guest"
 
-  @Published var username: String
+  var username: String
 
   init(username: String = SessionManager.guestUsername) {
     self.username = username

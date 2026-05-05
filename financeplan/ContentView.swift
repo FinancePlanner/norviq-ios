@@ -9,7 +9,7 @@ public struct ContentView: View {
     category: "PushNotificationsUX"
   )
 
-  @EnvironmentObject private var sessionManager: SessionManager
+  @Environment(SessionManager.self) private var sessionManager
   @InjectedObservable(\Container.billingManager) private var billingManager
   @InjectedObservable(\Container.appEnvironment) private var environmentManager
   @Environment(\.colorScheme) private var colorScheme

@@ -1,19 +1,19 @@
-import Combine
 import Foundation
 import Factory
+import Observation
 import StockPlanShared
 
-@MainActor
-final class ReportsViewModel: ObservableObject {
-  @Published var portfolioStatistics: ImportedStocksStatisticsDTO?
-  @Published var monthlySummaries: [BudgetMonthSummary] = []
-  @Published var yearlySummaries: [BudgetYearSummaryResponse] = []
-  @Published var latestMonthSummary: BudgetMonthSummary?
-  @Published var latestPillarSummaries: [PillarPlanningSummaryResponse] = []
-  @Published var cashFlow: [ReportsCashFlowPointResponse] = []
-  @Published var partnerDisplayName: String = "Partner"
-  @Published var isLoading = false
-  @Published var errorMessage: String?
+@Observable @MainActor
+final class ReportsViewModel {
+  var portfolioStatistics: ImportedStocksStatisticsDTO?
+  var monthlySummaries: [BudgetMonthSummary] = []
+  var yearlySummaries: [BudgetYearSummaryResponse] = []
+  var latestMonthSummary: BudgetMonthSummary?
+  var latestPillarSummaries: [PillarPlanningSummaryResponse] = []
+  var cashFlow: [ReportsCashFlowPointResponse] = []
+  var partnerDisplayName: String = "Partner"
+  var isLoading = false
+  var errorMessage: String?
 
   private let expensesService: any ExpensesServicing
   private var hasLoadedOnce = false

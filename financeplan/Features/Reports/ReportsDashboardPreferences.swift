@@ -1,5 +1,5 @@
 import Foundation
-import Combine
+import Observation
 import SwiftUI
 
 enum ReportCard: String, Codable, CaseIterable, Identifiable {
@@ -32,10 +32,10 @@ enum ReportCard: String, Codable, CaseIterable, Identifiable {
   }
 }
 
-@MainActor
-class ReportsDashboardPreferences: ObservableObject {
-  @Published var cardOrder: [ReportCard]
-  @Published var hiddenCards: Set<ReportCard>
+@Observable @MainActor
+class ReportsDashboardPreferences {
+  var cardOrder: [ReportCard]
+  var hiddenCards: Set<ReportCard>
   
   private let orderKey = "reportsDashboardOrder"
   private let hiddenKey = "reportsDashboardHidden"
