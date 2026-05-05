@@ -53,12 +53,13 @@ public struct ContentView: View {
 
   public var body: some View {
     ZStack(alignment: .top) {
-      AppTheme.Colors.topBarBackground(for: colorScheme).ignoresSafeArea()
       WindowSizeSyncView()
 
       if launchCompleted {
         if isAuthenticated {
           ZStack {
+            AppTheme.Colors.topBarBackground(for: colorScheme).ignoresSafeArea()
+
             if requiresInitialStockImport {
               OnboardingImportFlow(
                 onFinished: {
