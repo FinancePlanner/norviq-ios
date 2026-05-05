@@ -153,7 +153,7 @@ private struct SwipeCard: View {
   @Environment(\.colorScheme) private var colorScheme
 
   private var rotationDegrees: Double {
-    Double(dragTranslation.width / 18)
+    Double(dragTranslation.width) / 18.0
   }
 
   var body: some View {

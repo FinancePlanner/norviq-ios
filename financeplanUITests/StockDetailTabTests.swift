@@ -91,7 +91,8 @@ final class StockDetailTabTests: XCTestCase {
             "-ui_test_user_id",
             userID,
             "-ui_test_imported_user_id",
-            userID
+            userID,
+            "-ui_test_pro_user"
         ]
         if resetSession {
             launchArguments.append("-ui_test_reset_session")
