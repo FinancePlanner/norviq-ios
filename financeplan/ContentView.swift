@@ -136,10 +136,8 @@ public struct ContentView: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 //    .environment(\.dynamicTypeSize, .xSmall)
-    .onAppear {
-      Task {
-        await syncSessionUsername()
-      }
+    .task {
+      await syncSessionUsername()
     }
     .onReceive(NotificationCenter.default.publisher(for: .authSessionDidInvalidate)) { _ in
       handleSessionInvalidation()

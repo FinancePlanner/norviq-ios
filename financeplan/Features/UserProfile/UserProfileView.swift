@@ -546,7 +546,7 @@ public struct UserProfileView: View {
             .foregroundStyle(foregroundColor)
             .frame(width: 28, height: 28)
             .background(backgroundColor)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .clipShape(.rect(cornerRadius: 6))
     }
 
     private func setFaceIDEnabled(_ enabled: Bool) async {
@@ -596,11 +596,11 @@ public struct UserProfileView: View {
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
-        .overlay(
+        .overlay {
             Text(placeholderInitial(for: profile))
                 .font(.title2.bold())
                 .foregroundStyle(.white)
-        )
+        }
     }
 
     private func normalized(_ value: String?) -> String? {
@@ -680,7 +680,7 @@ private struct AIModelIntegrationsInfoSheet: View {
                 .foregroundStyle(AppTheme.Colors.tint(for: scheme))
                 .frame(width: 28, height: 28)
                 .background(AppTheme.Colors.tint(for: scheme).opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .clipShape(.rect(cornerRadius: 6))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)

@@ -1,7 +1,6 @@
 import Charts
 import SwiftUI
 import StockPlanShared
-import UIKit
 import Factory
 
 struct ExpensesComparisonScreen: View {
