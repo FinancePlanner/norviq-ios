@@ -202,8 +202,8 @@ private struct TickerSwipeCard: View {
   let stackOffset: Int
   @Environment(\.colorScheme) private var colorScheme
 
-  private var rotationDegrees: Double { Double(dragTranslation.width / 18) }
-  private var stampOpacity: Double { min(abs(dragTranslation.width) / 120, 1) }
+  private var rotationDegrees: Double { Double(dragTranslation.width) / 18.0 }
+  private var stampOpacity: Double { min(Double(abs(dragTranslation.width)) / 120.0, 1.0) }
 
   var body: some View {
     GlassCard(cornerRadius: 28) {
