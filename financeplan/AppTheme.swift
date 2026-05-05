@@ -133,6 +133,20 @@ enum AppTheme {
     static let scrim = Color.black.opacity(0.5)
     static let splashRing = Color.blue.opacity(0.25)
     static let splashCore = Color.teal.opacity(0.8)
+
+    // MARK: - Premium / Paywall
+
+    static func premiumGradient(for scheme: ColorScheme) -> LinearGradient {
+      LinearGradient(
+        colors: premiumGradientColors(for: scheme),
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+      )
+    }
+
+    static func premiumGradientColors(for scheme: ColorScheme) -> [Color] {
+      [tint(for: scheme), secondaryTint(for: scheme)]
+    }
   }
 
   static func avatarGradient(for scheme: ColorScheme) -> [Color] {
