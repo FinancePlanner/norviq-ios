@@ -10,14 +10,17 @@ struct UserMenuDrawer: View {
   var body: some View {
     ZStack {
       if isPresented {
-        Color.black.opacity(0.3)
-          .ignoresSafeArea()
-          .onTapGesture {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-              isPresented = false
-            }
+        Button {
+          withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            isPresented = false
           }
-          .transition(.opacity)
+        } label: {
+          Color.black.opacity(0.3)
+            .ignoresSafeArea()
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Dismiss menu")
+        .transition(.opacity)
       }
 
       HStack {
