@@ -71,10 +71,17 @@ struct ExpensesComparisonScreen: View {
             tabPicker
 
             ScrollView {
-              reportContent
-                .padding(.horizontal, 16)
-                .padding(.vertical, 20)
-                .accessibilityIdentifier("reports.scrollContent")
+              ReportContentView(
+                isShowingLoadingState: isShowingLoadingState,
+                loadErrorMessage: loadErrorMessage,
+                shouldShowEmptyState: shouldShowEmptyState,
+                cards: visibleCards,
+                onRetry: retryLoad,
+                cardContent: cardView(for:)
+              )
+              .padding(.horizontal, 16)
+              .padding(.vertical, 20)
+              .accessibilityIdentifier("reports.scrollContent")
             }
           }
         }
@@ -116,26 +123,6 @@ struct ExpensesComparisonScreen: View {
     .pickerStyle(.segmented)
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
-  }
-
-  @ViewBuilder
-  private var reportContent: some View {
-    VStack(spacing: 24) {
-      if isShowingLoadingState {
-        ProgressView()
-          .padding(.top, 40)
-      } else if let loadErrorMessage {
-        ErrorRetryView(message: loadErrorMessage, onRetry: retryLoad)
-      } else if shouldShowEmptyState {
-        EmptyStateView(
-          icon: "chart.pie",
-          title: "No reports yet",
-          message: "Reports appear once you have expenses recorded."
-        )
-      } else {
-        ReportCardsSection(cards: visibleCards, content: cardView(for:))
-      }
-    }
   }
 
   @ViewBuilder
@@ -226,6 +213,34 @@ private struct ReportCardsSection<Content: View>: View {
     ForEach(cards) { card in
       content(card)
         .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+  }
+}
+
+private struct ReportContentView<CardContent: View>: View {
+  let isShowingLoadingState: Bool
+  let loadErrorMessage: String?
+  let shouldShowEmptyState: Bool
+  let cards: [ReportCard]
+  let onRetry: () -> Void
+  let cardContent: (ReportCard) -> CardContent
+
+  var body: some View {
+    VStack(spacing: 24) {
+      if isShowingLoadingState {
+        ProgressView()
+          .padding(.top, 40)
+      } else if let loadErrorMessage {
+        ErrorRetryView(message: loadErrorMessage, onRetry: onRetry)
+      } else if shouldShowEmptyState {
+        EmptyStateView(
+          icon: "chart.pie",
+          title: "No reports yet",
+          message: "Reports appear once you have expenses recorded."
+        )
+      } else {
+        ReportCardsSection(cards: cards, content: cardContent)
+      }
     }
   }
 }
