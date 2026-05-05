@@ -501,7 +501,6 @@ private struct DashboardHeroCard: View {
         VStack(alignment: .leading, spacing: 8) {
           Text(currentValue.currency)
             .typography(.display, weight: .bold)
-            .minimumScaleFactor(0.7)
             .lineLimit(1)
             .contentTransition(.numericText())
 
