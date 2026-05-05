@@ -1159,12 +1159,16 @@ private struct CashFlowAnalysisCard: View {
     }
   }
 
+  private static let monthStartParser: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "yyyy-MM-dd"
+    f.locale = Locale(identifier: "en_US_POSIX")
+    f.timeZone = TimeZone(secondsFromGMT: 0)
+    return f
+  }()
+
   private func monthLabel(for monthStart: String) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = TimeZone(secondsFromGMT: 0)
-    guard let date = formatter.date(from: monthStart) else { return monthStart }
+    guard let date = Self.monthStartParser.date(from: monthStart) else { return monthStart }
     return date.formatted(.dateTime.month(.abbreviated))
   }
 }
