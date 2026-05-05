@@ -16,7 +16,7 @@ struct DashboardRoot: View {
   @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
   @Binding var selectedTab: HomeTab
   @Binding var isSettingsPresented: Bool
-  @ObservedObject var budgetStore: BudgetPlannerViewModel
+  @Bindable var budgetStore: BudgetPlannerViewModel
   @State private var searchViewModel = AssetSearchViewModel()
   @State private var activityViewModel = ActivityViewModel()
   @State private var focusPointsViewModel = FocusPointsViewModel()

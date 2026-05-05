@@ -1,24 +1,24 @@
-import Combine
 import Foundation
 import OSLog
 import Factory
+import Observation
 import StockPlanShared
 
-@MainActor
-final class BudgetPlannerViewModel: ObservableObject, BudgetPlannerStoreProtocol, ActivityTimelineStoreProtocol {
-  @Published private(set) var monthlySnapshots: [MonthlyBudgetSnapshot] = []
-  @Published private(set) var activities: [BudgetActivity] = []
-  @Published private(set) var monthlySummaries: [BudgetMonthSummary] = []
-  @Published private(set) var yearlySummaries: [BudgetYearSummary] = []
-  @Published private(set) var reportSuggestions: [ReportSuggestionResponse] = []
-  @Published private(set) var categories: [ExpenseCategoryResponse] = []
-  @Published private(set) var recurringTemplates: [RecurringTemplateResponse] = []
-  @Published private(set) var isSuggestionsLoading = false
-  @Published private(set) var suggestionsUnavailable = false
-  @Published private(set) var partnerDisplayName: String = "Partner"
-  @Published var selectedMonthStart: Date = .now
-  @Published var isLoading = false
-  @Published var errorMessage: String?
+@Observable @MainActor
+final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimelineStoreProtocol {
+  private(set) var monthlySnapshots: [MonthlyBudgetSnapshot] = []
+  private(set) var activities: [BudgetActivity] = []
+  private(set) var monthlySummaries: [BudgetMonthSummary] = []
+  private(set) var yearlySummaries: [BudgetYearSummary] = []
+  private(set) var reportSuggestions: [ReportSuggestionResponse] = []
+  private(set) var categories: [ExpenseCategoryResponse] = []
+  private(set) var recurringTemplates: [RecurringTemplateResponse] = []
+  private(set) var isSuggestionsLoading = false
+  private(set) var suggestionsUnavailable = false
+  private(set) var partnerDisplayName: String = "Partner"
+  var selectedMonthStart: Date = .now
+  var isLoading = false
+  var errorMessage: String?
 
   private let calendar: Calendar
   private let expensesService: any ExpensesServicing

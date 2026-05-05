@@ -5,7 +5,7 @@ import Factory
 
 struct ExpensesPlannerScreen: View {
   @Binding var isSettingsPresented: Bool
-  @ObservedObject var viewModel: BudgetPlannerViewModel
+  @Bindable var viewModel: BudgetPlannerViewModel
 
   @Environment(\.colorScheme) private var colorScheme
   @InjectedObservable(\Container.billingManager) private var billingManager
