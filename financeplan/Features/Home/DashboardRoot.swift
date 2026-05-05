@@ -516,26 +516,12 @@ private struct DashboardHeroCard: View {
           .frame(height: 140)
           .padding(.horizontal, -12)
 
-        HStack {
-            Spacer()
-            // Custom segmented picker to look like standard Apple toggle
-            HStack(spacing: 0) {
-                Text(LocalizedStringKey("Portfolio"))
-                    .font(.subheadline)
-                    .foregroundStyle(showingPortfolio ? .primary : .secondary)
-                    .padding(.trailing, 8)
-
-                Toggle("", isOn: $showingPortfolio)
-                    .labelsHidden()
-                    .tint(.white.opacity(0.8))
-
-                Text(LocalizedStringKey("Spending"))
-                    .font(.subheadline)
-                    .foregroundStyle(!showingPortfolio ? .primary : .secondary)
-                    .padding(.leading, 8)
-            }
-            Spacer()
+        Picker("View", selection: $showingPortfolio) {
+          Text(LocalizedStringKey("Portfolio")).tag(true)
+          Text(LocalizedStringKey("Spending")).tag(false)
         }
+        .pickerStyle(.segmented)
+        .frame(maxWidth: 220)
         .padding(.top, 4)
       }
     }
