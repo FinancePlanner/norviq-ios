@@ -200,6 +200,6 @@ private struct SwipeCard: View {
   }
 
   private var agreementOpacity: Double {
-    min(abs(dragTranslation.width) / 120, 1)
+    min(Double(abs(dragTranslation.width)) / 120.0, 1.0)
   }
 }

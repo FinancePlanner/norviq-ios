@@ -10,6 +10,9 @@ struct OnboardingQuestionnairePaywallScreen: View {
 
   @InjectedObservable(\Container.billingManager) private var billingManager
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  @State private var featuresAppeared = false
 
   var body: some View {
     ScrollView {
@@ -18,11 +21,28 @@ struct OnboardingQuestionnairePaywallScreen: View {
         headlineBlock
         testimonialCard
         featuresCard
-        packageSelector
-        primaryCTA
+        planCards
+
+        OnboardingPrimaryButton(
+          title: "Start my 7-day free trial",
+          isLoading: billingManager.isPurchasing,
+          action: {
+            Task {
+              let success = await billingManager.purchaseSelectedPackage()
+              if success { onCompleted(true) }
+            }
+          }
+        )
+
         secondaryLinks
-        trustStrip
-        finePrint
+
+        PaywallTrustStrip()
+
+        Text("We'll remind you 3 days before billing.")
+          .font(.caption)
+          .foregroundStyle(.secondary.opacity(0.7))
+          .multilineTextAlignment(.center)
+          .padding(.top, 4)
       }
       .padding(.horizontal, 20)
       .padding(.top, 8)
@@ -30,6 +50,9 @@ struct OnboardingQuestionnairePaywallScreen: View {
     }
     .task {
       await billingManager.loadOfferings()
+    }
+    .sensoryFeedback(.success, trigger: billingManager.isPro) { _, newValue in
+      newValue
     }
     .overlay(alignment: .top) {
       if let error = billingManager.errorMessage {
@@ -44,9 +67,7 @@ struct OnboardingQuestionnairePaywallScreen: View {
   // MARK: - Logo
 
   private var logoBlock: some View {
-    VStack(spacing: 8) {
-      NorviqLogo(size: 56)
-    }
+    NorviqLogo(size: 56)
   }
 
   // MARK: - Headline
@@ -54,11 +75,11 @@ struct OnboardingQuestionnairePaywallScreen: View {
   private var headlineBlock: some View {
     VStack(spacing: 8) {
       Text("Your full financial picture, locked in.")
-        .typography(.title, weight: .bold)
+        .font(.title.bold())
         .multilineTextAlignment(.center)
 
       Text("7 days free. Cancel anytime.")
-        .typography(.label)
+        .font(.subheadline)
         .foregroundStyle(.secondary)
     }
   }
@@ -72,17 +93,18 @@ struct OnboardingQuestionnairePaywallScreen: View {
         HStack(spacing: 4) {
           ForEach(0..<5, id: \.self) { _ in
             Image(systemName: "star.fill")
-              .font(.caption2)
+              .font(.caption)
               .foregroundStyle(AppTheme.Colors.warning)
           }
         }
+        .accessibilityLabel("5 stars")
 
         Text("\u{201C}Found $200/month I didn't know I was wasting. Paid for itself in week one.\u{201D}")
-          .typography(.small, weight: .medium)
+          .font(.subheadline.weight(.medium))
           .fixedSize(horizontal: false, vertical: true)
 
         Text("— Marcus R. · Saver-investor")
-          .typography(.nano)
+          .font(.caption)
           .foregroundStyle(.secondary)
       }
       .padding(.vertical, 4)
@@ -95,118 +117,69 @@ struct OnboardingQuestionnairePaywallScreen: View {
   private var featuresCard: some View {
     GlassCard(cornerRadius: 20) {
       VStack(alignment: .leading, spacing: 12) {
-        feature(icon: "chart.line.uptrend.xyaxis", text: "Unlimited holdings, watchlists & alerts")
-        feature(icon: "creditcard.fill", text: "Auto-categorised expense tracking")
-        feature(icon: "chart.xyaxis.line", text: "10-year projections on every position")
-        feature(icon: "scale.3d", text: "Allocation visuals & concentration alerts")
-        feature(icon: "icloud.and.arrow.up", text: "Live syncing across devices")
+        ForEach(Array(OnboardingQuestionnairePaywallScreen.features.enumerated()), id: \.element.title) { index, feature in
+          HStack(spacing: 12) {
+            Image(systemName: feature.icon)
+              .font(.body.weight(.semibold))
+              .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme))
+              .frame(width: 24)
+              .accessibilityHidden(true)
+            Text(feature.title)
+              .font(.subheadline.weight(.medium))
+              .fixedSize(horizontal: false, vertical: true)
+          }
+          .opacity(featuresAppeared ? 1 : 0)
+          .offset(y: featuresAppeared ? 0 : 10)
+          .animation(
+            reduceMotion
+              ? .easeOut(duration: 0.15)
+              : .spring(response: 0.4, dampingFraction: 0.8).delay(Double(index) * 0.06),
+            value: featuresAppeared
+          )
+          .accessibilityElement(children: .combine)
+        }
       }
       .padding(.vertical, 4)
       .frame(maxWidth: .infinity, alignment: .leading)
     }
+    .onAppear { featuresAppeared = true }
   }
 
-  private func feature(icon: String, text: String) -> some View {
-    HStack(spacing: 12) {
-      Image(systemName: icon)
-        .font(.body.weight(.semibold))
-        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-        .frame(width: 24)
-      Text(text)
-        .typography(.small, weight: .medium)
-        .fixedSize(horizontal: false, vertical: true)
-    }
-  }
+  // MARK: - Plan Cards
 
-  // MARK: - Package selector
-
-  private var packageSelector: some View {
+  private var planCards: some View {
     VStack(spacing: 10) {
-      planRow(
+      PaywallPlanCard(
         title: "Annual",
         subtitle: "7-day free trial",
-        price: price(for: billingManager.annualPackage, fallback: "$49.99/yr"),
-        productID: "pro_annual",
-        badge: "Save 2 months"
+        price: price(for: billingManager.annualPackage, fallback: "$49.99"),
+        priceUnit: "/yr",
+        badge: "Save 2 months",
+        isSelected: billingManager.selectedProductID == "pro_annual",
+        onSelect: { billingManager.select(productID: "pro_annual") }
       )
-      planRow(
+
+      PaywallPlanCard(
         title: "Monthly",
         subtitle: "Cancel anytime",
-        price: price(for: billingManager.monthlyPackage, fallback: "$4.99/mo"),
-        productID: "pro_monthly",
-        badge: nil
+        price: price(for: billingManager.monthlyPackage, fallback: "$4.99"),
+        priceUnit: "/mo",
+        isSelected: billingManager.selectedProductID == "pro_monthly",
+        onSelect: { billingManager.select(productID: "pro_monthly") }
       )
-      planRow(
+
+      PaywallPlanCard(
         title: "Weekly",
         subtitle: "Short term",
-        price: price(for: billingManager.weeklyPackage, fallback: "$0.99/wk"),
-        productID: "pro_weekly",
-        badge: nil
+        price: price(for: billingManager.weeklyPackage, fallback: "$0.99"),
+        priceUnit: "/wk",
+        isSelected: billingManager.selectedProductID == "pro_weekly",
+        onSelect: { billingManager.select(productID: "pro_weekly") }
       )
     }
   }
 
-  private func planRow(title: String, subtitle: String, price: String, productID: String, badge: String?) -> some View {
-    let selected = billingManager.selectedProductID == productID
-    return Button {
-      billingManager.select(productID: productID)
-    } label: {
-      HStack(spacing: 14) {
-        Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-          .imageScale(.large)
-          .foregroundStyle(selected ? AppTheme.Colors.tint(for: colorScheme) : .secondary)
-
-        VStack(alignment: .leading, spacing: 4) {
-          HStack(spacing: 8) {
-            Text(title)
-              .typography(.label, weight: .bold)
-            if let badge {
-              Text(badge)
-                .typography(.nano, weight: .bold)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(AppTheme.Colors.success, in: Capsule())
-            }
-          }
-          Text(subtitle)
-            .typography(.caption)
-            .foregroundStyle(.secondary)
-        }
-
-        Spacer()
-
-        Text(price)
-          .typography(.label, weight: .semibold)
-      }
-      .padding(16)
-      .background(AppTheme.Colors.elevatedCardBackground(for: colorScheme), in: RoundedRectangle(cornerRadius: 18))
-      .overlay {
-        RoundedRectangle(cornerRadius: 18)
-          .stroke(selected ? AppTheme.Colors.tint(for: colorScheme) : .clear, lineWidth: 2)
-      }
-    }
-    .buttonStyle(PressEffectStyle())
-  }
-
-  // MARK: - Primary CTA
-
-  private var primaryCTA: some View {
-    OnboardingPrimaryButton(
-      title: "Start my 7-day free trial",
-      isLoading: billingManager.isPurchasing,
-      action: {
-        Task {
-          let success = await billingManager.purchaseSelectedPackage()
-          if success {
-            onCompleted(true)
-          }
-        }
-      }
-    )
-  }
-
-  // MARK: - Secondary links
+  // MARK: - Secondary Links
 
   private var secondaryLinks: some View {
     VStack(spacing: 14) {
@@ -218,7 +191,7 @@ struct OnboardingQuestionnairePaywallScreen: View {
             ProgressView().scaleEffect(0.7)
           }
           Text("Restore purchases")
-            .typography(.small, weight: .semibold)
+            .font(.subheadline.weight(.semibold))
         }
         .foregroundStyle(.secondary)
       }
@@ -227,42 +200,10 @@ struct OnboardingQuestionnairePaywallScreen: View {
         onCompleted(false)
       } label: {
         Text("Continue with limited Norviq")
-          .typography(.caption, weight: .medium)
+          .font(.caption.weight(.medium))
           .foregroundStyle(.secondary.opacity(0.8))
       }
     }
-  }
-
-  // MARK: - Trust + fine print
-
-  private var trustStrip: some View {
-    HStack(spacing: 14) {
-      trustItem(icon: "lock.shield.fill", text: "Bank-level encryption")
-      trustItem(icon: "clock.fill", text: "Cancel anytime")
-      trustItem(icon: "creditcard.fill", text: "Charged after trial")
-    }
-    .padding(.top, 4)
-  }
-
-  private func trustItem(icon: String, text: String) -> some View {
-    VStack(spacing: 4) {
-      Image(systemName: icon)
-        .font(.caption)
-        .foregroundStyle(.secondary)
-      Text(text)
-        .typography(.nano)
-        .foregroundStyle(.secondary)
-        .multilineTextAlignment(.center)
-    }
-    .frame(maxWidth: .infinity)
-  }
-
-  private var finePrint: some View {
-    Text("We'll remind you 3 days before billing.")
-      .typography(.nano)
-      .foregroundStyle(.secondary.opacity(0.7))
-      .multilineTextAlignment(.center)
-      .padding(.top, 4)
   }
 
   // MARK: - Helpers
@@ -270,4 +211,19 @@ struct OnboardingQuestionnairePaywallScreen: View {
   private func price(for package: Package?, fallback: String) -> String {
     package?.localizedPriceString ?? fallback
   }
+
+  // MARK: - Feature Data
+
+  private struct FeatureInfo: Hashable {
+    let icon: String
+    let title: String
+  }
+
+  private static let features: [FeatureInfo] = [
+    FeatureInfo(icon: "chart.line.uptrend.xyaxis", title: "Unlimited holdings, watchlists & alerts"),
+    FeatureInfo(icon: "creditcard.fill", title: "Auto-categorised expense tracking"),
+    FeatureInfo(icon: "chart.xyaxis.line", title: "10-year projections on every position"),
+    FeatureInfo(icon: "scale.3d", title: "Allocation visuals & concentration alerts"),
+    FeatureInfo(icon: "icloud.and.arrow.up", title: "Live syncing across devices"),
+  ]
 }
