@@ -516,17 +516,14 @@ private struct SpendingInsightsSection: View {
 
                   Spacer()
 
-                  GeometryReader { geo in
-                      ZStack(alignment: .leading) {
-                          RoundedRectangle(cornerRadius: 4)
-                              .fill(Color.white.opacity(0.05))
-                              .frame(height: 6)
-                          RoundedRectangle(cornerRadius: 4)
-                              .fill(summary.pillar.color(for: colorScheme))
-                              .frame(width: geo.size.width * CGFloat(min(percentage / 100, 1.0)), height: 6)
-                      }
-                  }
-                  .frame(width: 100, height: 6)
+                  ProgressBar(
+                      value: summary.actualAmount,
+                      total: summary.plannedAmount > 0 ? summary.plannedAmount : summary.actualAmount,
+                      color: summary.pillar.color(for: colorScheme),
+                      height: 6,
+                      showPattern: false
+                  )
+                  .frame(width: 100)
               }
             }
             
