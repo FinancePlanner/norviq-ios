@@ -232,38 +232,41 @@ private struct ReportCardsSection<Content: View>: View {
 
 // MARK: - Customize Dashboard Sheet
 
+private struct IdentifiedImage: Identifiable {
+  let id = UUID()
+  let uiImage: UIImage
+}
+
 private struct ShareableChartButton<Content: View>: View {
   let title: String
-  let content: () -> Content
-  @State private var showingShareSheet = false
-  @State private var exportedImage: UIImage?
-  
+  @ViewBuilder let content: Content
+  @State private var exportedImage: IdentifiedImage?
+
   var body: some View {
-    Button {
+    Button("Share chart", systemImage: "square.and.arrow.up") {
       exportChart()
-    } label: {
-      Image(systemName: "square.and.arrow.up")
-        .font(.subheadline)
     }
-    .sheet(isPresented: $showingShareSheet) {
-      if let image = exportedImage {
-        ShareSheet(items: [image])
-      }
+    .labelStyle(.iconOnly)
+    .font(.subheadline)
+    .sheet(item: $exportedImage) { identified in
+      ShareSheet(items: [identified.uiImage])
     }
   }
-  
+
+  @MainActor
   private func exportChart() {
     let exportView = VStack(spacing: 16) {
       Text(title)
         .font(.title2.bold())
         .frame(maxWidth: .infinity, alignment: .leading)
-      content()
+      content
     }
     .padding(24)
     .background(Color(uiColor: .systemBackground))
-    
-    exportedImage = ChartExporter.exportToImage(exportView, size: CGSize(width: 800, height: 600))
-    showingShareSheet = true
+
+    if let image = ChartExporter.exportToImage(exportView, size: CGSize(width: 800, height: 600)) {
+      exportedImage = IdentifiedImage(uiImage: image)
+    }
   }
 }
 
