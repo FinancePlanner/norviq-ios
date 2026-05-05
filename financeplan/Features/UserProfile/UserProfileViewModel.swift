@@ -5,15 +5,15 @@
 //  Created by Fernando Correia on 05.03.26.
 //
 
-import Combine
 import Factory
 import Foundation
+import Observation
 
-@MainActor
-public final class UserProfileViewModel: ObservableObject {
-    @Published public private(set) var profile: UserProfile?
-    @Published public private(set) var isLoading: Bool = false
-    @Published public private(set) var errorMessage: String?
+@Observable @MainActor
+public final class UserProfileViewModel {
+    public private(set) var profile: UserProfile?
+    public private(set) var isLoading: Bool = false
+    public private(set) var errorMessage: String?
 
     private let service: UserProfileServiceProtocol
     private var hasLoadedOnce = false

@@ -17,7 +17,7 @@ struct DashboardRoot: View {
   @Binding var selectedTab: HomeTab
   @Binding var isSettingsPresented: Bool
   @ObservedObject var budgetStore: BudgetPlannerViewModel
-  @StateObject private var searchViewModel = AssetSearchViewModel()
+  @State private var searchViewModel = AssetSearchViewModel()
   @State private var activityViewModel = ActivityViewModel()
   @State private var focusPointsViewModel = FocusPointsViewModel()
   @State private var dashboardInsights: DashboardInsightsResponse?
@@ -663,7 +663,7 @@ private struct FocusListCard: View {
 }
 
 private struct AssetSearchCard: View {
-  @ObservedObject var viewModel: AssetSearchViewModel
+  var viewModel: AssetSearchViewModel
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {

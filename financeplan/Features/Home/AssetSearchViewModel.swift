@@ -1,13 +1,13 @@
-import Combine
 import Factory
 import Foundation
+import Observation
 
-@MainActor
-final class AssetSearchViewModel: ObservableObject {
-  @Published var query = ""
-  @Published private(set) var results: [AssetSearchResult] = []
-  @Published private(set) var isLoading = false
-  @Published var errorMessage: String?
+@Observable @MainActor
+final class AssetSearchViewModel {
+  var query = ""
+  private(set) var results: [AssetSearchResult] = []
+  private(set) var isLoading = false
+  var errorMessage: String?
 
   private let service: AssetSearchServicing
   private var searchTask: Task<Void, Never>?
