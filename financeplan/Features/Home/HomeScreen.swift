@@ -17,7 +17,7 @@ struct HomeScreen: View {
   @State private var isSettingsPresented = false
   @State private var isPaywallPresented = false
   @State private var pendingPortfolioOpenSymbol: String?
-  @StateObject private var budgetPlannerViewModel = BudgetPlannerViewModel()
+  @State private var budgetPlannerViewModel = BudgetPlannerViewModel()
 
   private var appLanguage: AppLanguage {
     AppLanguage.from(appLanguageRawValue)
