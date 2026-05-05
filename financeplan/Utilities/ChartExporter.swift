@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 @MainActor
 class ChartExporter {
@@ -7,14 +6,11 @@ class ChartExporter {
     _ content: Content,
     size: CGSize = CGSize(width: 800, height: 600)
   ) -> UIImage? {
-    let controller = UIHostingController(rootView: content)
-    controller.view.bounds = CGRect(origin: .zero, size: size)
-    controller.view.backgroundColor = .clear
-    
-    let renderer = UIGraphicsImageRenderer(size: size)
-    return renderer.image { _ in
-      controller.view.drawHierarchy(in: controller.view.bounds, afterScreenUpdates: true)
-    }
+    let renderer = ImageRenderer(content:
+      content.frame(width: size.width, height: size.height)
+    )
+    renderer.scale = UIScreen.main.scale
+    return renderer.uiImage
   }
 }
 
