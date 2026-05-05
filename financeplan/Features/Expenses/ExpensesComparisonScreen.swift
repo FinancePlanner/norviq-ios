@@ -809,16 +809,16 @@ private struct PerformanceBreakdownCard: View {
                 SectorMark(
                   angle: .value("Amount", winnersValue),
                   innerRadius: .ratio(0.6),
-                  angularInset: 2,
-                  cornerRadius: 4
+                  outerRadius: .ratio(1.0),
+                  angularInset: 2
                 )
                 .foregroundStyle(.green.gradient)
 
                 SectorMark(
                   angle: .value("Amount", losersValue),
                   innerRadius: .ratio(0.6),
-                  angularInset: 2,
-                  cornerRadius: 4
+                  outerRadius: .ratio(1.0),
+                  angularInset: 2
                 )
                 .foregroundStyle(.red.gradient)
               }
@@ -916,8 +916,8 @@ private struct BudgetTrackingCard: View {
                 SectorMark(
                   angle: .value("Amount", latest.actual),
                   innerRadius: .ratio(0.6),
-                  angularInset: 2,
-                  cornerRadius: 4
+                  outerRadius: .ratio(1.0),
+                  angularInset: 2
                 )
                 .foregroundStyle(latest.actual > latest.planned ? Color.red.gradient : AppTheme.Colors.tint(for: colorScheme).gradient)
 
@@ -925,8 +925,8 @@ private struct BudgetTrackingCard: View {
                   SectorMark(
                     angle: .value("Amount", latest.planned - latest.actual),
                     innerRadius: .ratio(0.6),
-                    angularInset: 2,
-                    cornerRadius: 4
+                    outerRadius: .ratio(1.0),
+                    angularInset: 2
                   )
                   .foregroundStyle(Color.gray.opacity(0.3))
                 }
@@ -1040,16 +1040,16 @@ private struct SavingsRateCard: View {
                 SectorMark(
                   angle: .value("Amount", savingsAmount > 0 ? savingsAmount : 0),
                   innerRadius: .ratio(0.6),
-                  angularInset: 2,
-                  cornerRadius: 4
+                  outerRadius: .ratio(1.0),
+                  angularInset: 2
                 )
                 .foregroundStyle(.green.gradient)
 
                 SectorMark(
                   angle: .value("Amount", latest.actual),
                   innerRadius: .ratio(0.6),
-                  angularInset: 2,
-                  cornerRadius: 4
+                  outerRadius: .ratio(1.0),
+                  angularInset: 2
                 )
                 .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme).gradient)
               }

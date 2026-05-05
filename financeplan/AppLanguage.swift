@@ -30,6 +30,15 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     }
   }
 
+  func localized(english: String, portuguese: String) -> String {
+    switch self {
+    case .english:
+      english
+    case .portuguesePortugal:
+      portuguese
+    }
+  }
+
   static func from(_ rawValue: String) -> AppLanguage {
     AppLanguage(rawValue: rawValue) ?? defaultLanguage
   }

@@ -212,8 +212,8 @@ struct PortfolioAllocationScreen: View {
                 SectorMark(
                     angle: .value("Value", slice.value * animationProgress),
                     innerRadius: .ratio(0.56),
-                    angularInset: 1.2,
-                    cornerRadius: 3
+                    outerRadius: .ratio(1.0),
+                    angularInset: 1.2
                 )
                 .foregroundStyle(by: .value("Symbol", slice.symbol))
             }

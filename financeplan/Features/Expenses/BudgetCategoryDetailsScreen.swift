@@ -2,7 +2,7 @@ import SwiftUI
 import StockPlanShared
 
 struct BudgetCategoryDetailsScreen: View {
-  @ObservedObject var viewModel: BudgetPlannerViewModel
+  @Bindable var viewModel: BudgetPlannerViewModel
   @Binding var isActivitySheetPresented: Bool
   let onAddPlannedItem: (BudgetPillar) -> Void
   let onRecordExpense: (BudgetPillar) -> Void

@@ -92,6 +92,52 @@ struct PushNotificationsHTTPClient: Sendable {
     let request = try await client.makeURLRequest(for: endpoint)
     _ = try await client.sendRequest(request, errorType: Error.self)
   }
+
+  func fetchEarningsPreferences() async throws -> EarningsNotificationPreferencesResponse {
+    let endpoint = EmptyEndpoint(path: "/v1/notifications/earnings/preferences", method: .get)
+    let request = try await client.makeURLRequest(for: endpoint)
+    let data = try await client.sendRequest(request, errorType: Error.self)
+    return try decodeEarningsPreferences(from: data)
+  }
+
+  func updateEarningsPreferences(
+    _ payload: UpdateEarningsNotificationPreferencesRequest
+  ) async throws -> EarningsNotificationPreferencesResponse {
+    let endpoint = CustomEndpoint(path: "/v1/notifications/earnings/preferences", method: .put, payload: payload)
+    let request = try await client.makeURLRequest(for: endpoint)
+    let data = try await client.sendRequest(request, errorType: Error.self)
+    return try decodeEarningsPreferences(from: data)
+  }
+
+  private func decodeEarningsPreferences(from data: Data) throws -> EarningsNotificationPreferencesResponse {
+    do {
+      return try JSONDecoder.stockPlanShared.decode(EarningsNotificationPreferencesResponse.self, from: data)
+    } catch {
+      if let envelope = try? JSONDecoder.stockPlanShared.decode(APIEnvelope<EarningsNotificationPreferencesResponse>.self, from: data),
+         let payload = envelope.data {
+        return payload
+      }
+      throw error
+    }
+  }
+}
+
+private struct EmptyEndpoint: Endpoint {
+    typealias Response = EmptyAPIResponse
+    let path: String
+    let method: HTTPMethod
+
+    func asParameters() throws -> Parameters { [:] }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(path, forKey: .path)
+        try container.encode(method.rawValue, forKey: .method)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case path, method
+    }
 }
 
 private struct CustomEndpoint<T: Encodable>: Endpoint {

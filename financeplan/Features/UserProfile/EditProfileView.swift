@@ -18,7 +18,7 @@ struct EditProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
 
-    @ObservedObject var viewModel: UserProfileViewModel
+    @Bindable var viewModel: UserProfileViewModel
 
     // Local editable copy
     @State private var username: String

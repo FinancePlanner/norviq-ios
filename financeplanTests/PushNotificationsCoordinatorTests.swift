@@ -11,6 +11,7 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     var lastRegisterDeviceToken: String?
     var lastRegisterEnvironment: PushAPNSEnvironment?
     var lastRegisterAuthorizationStatus: PushAuthorizationStatus?
+    var earningsPreferences = EarningsNotificationPreferencesResponse(enabled: true)
 
     func registerDevice(
       deviceToken: String,
@@ -34,6 +35,15 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
 
     func deactivateDevice(deviceToken _: String) async throws {
       deactivateCalls += 1
+    }
+
+    func fetchEarningsPreferences() async throws -> EarningsNotificationPreferencesResponse {
+      earningsPreferences
+    }
+
+    func updateEarningsPreferences(enabled: Bool) async throws -> EarningsNotificationPreferencesResponse {
+      earningsPreferences = EarningsNotificationPreferencesResponse(enabled: enabled)
+      return earningsPreferences
     }
   }
 
@@ -235,5 +245,23 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     XCTAssertEqual(route?.scenario, "base")
     XCTAssertEqual(route?.targetID, "target-1")
     XCTAssertEqual(route?.deepLink, "financeplan://stocks/MSFT")
+  }
+
+  func testPayloadParser_ParsesEarningsReminderPayload() {
+    let route = PushNotificationPayloadParser.parse(
+      userInfo: [
+        "type": "earnings_reminder",
+        "symbol": "AAPL",
+        "earningsDate": "2026-05-12",
+        "leadDays": 7,
+        "deepLink": "financeplan://stocks/AAPL"
+      ]
+    )
+
+    XCTAssertEqual(route?.kind, .earningsReminder)
+    XCTAssertEqual(route?.symbol, "AAPL")
+    XCTAssertEqual(route?.earningsDate, "2026-05-12")
+    XCTAssertEqual(route?.leadDays, 7)
+    XCTAssertEqual(route?.deepLink, "financeplan://stocks/AAPL")
   }
 }

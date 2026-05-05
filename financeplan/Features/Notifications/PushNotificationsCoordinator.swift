@@ -8,6 +8,7 @@ import UserNotifications
 struct PushNotificationRoute: Equatable, Sendable {
   enum Kind: String, Equatable, Sendable {
     case targetHit = "target_hit"
+    case earningsReminder = "earnings_reminder"
     case openPortfolio = "open_portfolio"
   }
 
@@ -15,7 +16,27 @@ struct PushNotificationRoute: Equatable, Sendable {
   let symbol: String?
   let scenario: String?
   let targetID: String?
+  let earningsDate: String?
+  let leadDays: Int?
   let deepLink: String?
+
+  nonisolated init(
+    kind: Kind,
+    symbol: String?,
+    scenario: String? = nil,
+    targetID: String? = nil,
+    earningsDate: String? = nil,
+    leadDays: Int? = nil,
+    deepLink: String? = nil
+  ) {
+    self.kind = kind
+    self.symbol = symbol
+    self.scenario = scenario
+    self.targetID = targetID
+    self.earningsDate = earningsDate
+    self.leadDays = leadDays
+    self.deepLink = deepLink
+  }
 }
 
 enum PushNotificationPayloadParser {
@@ -27,12 +48,14 @@ enum PushNotificationPayloadParser {
     let kind = PushNotificationRoute.Kind(rawValue: rawType) ?? .targetHit
     let normalizedSymbol = normalize(stringValue(for: ["symbol"], in: payload) ?? stringValue(for: ["symbol"], in: root))
 
-    if kind == .targetHit, normalizedSymbol == nil {
+    if (kind == .targetHit || kind == .earningsReminder), normalizedSymbol == nil {
       return nil
     }
 
     let scenario = normalize(stringValue(for: ["scenario"], in: payload))
     let targetID = normalize(stringValue(for: ["targetId", "target_id"], in: payload))
+    let earningsDate = normalize(stringValue(for: ["earningsDate", "earnings_date"], in: payload))
+    let leadDays = intValue(for: ["leadDays", "lead_days"], in: payload)
     let deepLink = normalize(stringValue(for: ["deepLink", "deep_link"], in: payload))
 
     return PushNotificationRoute(
@@ -40,6 +63,8 @@ enum PushNotificationPayloadParser {
       symbol: normalizedSymbol,
       scenario: scenario,
       targetID: targetID,
+      earningsDate: earningsDate,
+      leadDays: leadDays,
       deepLink: deepLink
     )
   }
@@ -55,6 +80,18 @@ enum PushNotificationPayloadParser {
     for key in keys {
       if let string = dictionary[key] as? String {
         return string
+      }
+    }
+    return nil
+  }
+
+  nonisolated private static func intValue(for keys: [String], in dictionary: [String: Any]) -> Int? {
+    for key in keys {
+      if let int = dictionary[key] as? Int {
+        return int
+      }
+      if let string = dictionary[key] as? String, let int = Int(string) {
+        return int
       }
     }
     return nil
@@ -135,8 +172,11 @@ final class PushNotificationsCoordinator: ObservableObject {
 
   @Published private(set) var authorizationStatus: PushAuthorizationStatus = .notDetermined
   @Published private(set) var isOptedIn: Bool = false
+  @Published private(set) var earningsAlertsEnabled: Bool = false
+  @Published private(set) var isEarningsAlertsLoading: Bool = false
   @Published var showPostLoginExplainer = false
   @Published private(set) var lastErrorMessage: String?
+  @Published private(set) var earningsAlertsErrorMessage: String?
   @Published private(set) var pendingNotificationRoute: PushNotificationRoute?
 
   private let service: PushNotificationsServicing
@@ -175,6 +215,7 @@ final class PushNotificationsCoordinator: ObservableObject {
       isOptedIn = optedInUsers.contains(currentUserID)
 
       await refreshAuthorizationStatus()
+      await loadEarningsPreferencesIfPossible()
 
       if authorizationStatus == .notDetermined && !hasSeenExplainer(for: currentUserID) {
         showPostLoginExplainer = true
@@ -202,6 +243,8 @@ final class PushNotificationsCoordinator: ObservableObject {
     showPostLoginExplainer = false
     currentUserID = ""
     isOptedIn = false
+    earningsAlertsEnabled = false
+    earningsAlertsErrorMessage = nil
   }
 
   func refreshAuthorizationStatus() async {
@@ -245,6 +288,8 @@ final class PushNotificationsCoordinator: ObservableObject {
         symbol: parsedRoute.symbol,
         scenario: parsedRoute.scenario,
         targetID: parsedRoute.targetID,
+        earningsDate: parsedRoute.earningsDate,
+        leadDays: parsedRoute.leadDays,
         deepLink: parsedRoute.deepLink
       )
     }
@@ -305,6 +350,52 @@ final class PushNotificationsCoordinator: ObservableObject {
       await requestPermissionFlow()
     } else {
       await deactivateCurrentTokenBestEffort()
+      earningsAlertsEnabled = false
+    }
+  }
+
+  func loadEarningsPreferencesIfPossible() async {
+    let userID = normalized(await sessionStore.currentUserID)
+    guard !userID.isEmpty else {
+      return
+    }
+
+    isEarningsAlertsLoading = true
+    defer { isEarningsAlertsLoading = false }
+
+    do {
+      let preferences = try await service.fetchEarningsPreferences()
+      earningsAlertsEnabled = preferences.enabled
+      earningsAlertsErrorMessage = nil
+    } catch {
+      earningsAlertsErrorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load earnings reminders."
+    }
+  }
+
+  func setEarningsAlertsEnabled(_ enabled: Bool) async {
+    let userID = normalized(await sessionStore.currentUserID)
+    guard !userID.isEmpty else {
+      return
+    }
+
+    if enabled, !isOptedIn {
+      await setNotificationsEnabled(true)
+    }
+
+    guard isOptedIn else {
+      earningsAlertsEnabled = false
+      return
+    }
+
+    isEarningsAlertsLoading = true
+    defer { isEarningsAlertsLoading = false }
+
+    do {
+      let preferences = try await service.updateEarningsPreferences(enabled: enabled)
+      earningsAlertsEnabled = preferences.enabled
+      earningsAlertsErrorMessage = nil
+    } catch {
+      earningsAlertsErrorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to update earnings reminders."
     }
   }
 

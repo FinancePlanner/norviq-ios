@@ -296,13 +296,13 @@ public struct ContentView: View {
     }
 
     switch route.kind {
-    case .targetHit:
+    case .targetHit, .earningsReminder:
       guard let symbol = route.symbol, !symbol.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-        Self.pushLogger.warning("push.analytics routed_failure destination=home reason=missing_symbol kind=target_hit")
+        Self.pushLogger.warning("push.analytics routed_failure destination=home reason=missing_symbol kind=\(route.kind.rawValue, privacy: .public)")
         return
       }
 
-      Self.pushLogger.info("push.analytics routed_success destination=home kind=target_hit symbol=\(symbol, privacy: .public)")
+      Self.pushLogger.info("push.analytics routed_success destination=home kind=\(route.kind.rawValue, privacy: .public) symbol=\(symbol, privacy: .public)")
       NotificationCenter.default.post(
         name: .openStockFromPushNotification,
         object: nil,

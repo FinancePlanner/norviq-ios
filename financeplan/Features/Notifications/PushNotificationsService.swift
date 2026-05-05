@@ -9,6 +9,8 @@ protocol PushNotificationsServicing: Sendable {
     authorizationStatus: PushAuthorizationStatus
   ) async throws -> PushDeviceRegistrationResponse
   func deactivateDevice(deviceToken: String) async throws
+  func fetchEarningsPreferences() async throws -> EarningsNotificationPreferencesResponse
+  func updateEarningsPreferences(enabled: Bool) async throws -> EarningsNotificationPreferencesResponse
 }
 
 struct PushNotificationsService: PushNotificationsServicing, @unchecked Sendable {
@@ -51,6 +53,19 @@ struct PushNotificationsService: PushNotificationsServicing, @unchecked Sendable
     }
   }
 
+  func fetchEarningsPreferences() async throws -> EarningsNotificationPreferencesResponse {
+    try await performAuthenticated { client in
+      try await client.fetchEarningsPreferences()
+    }
+  }
+
+  func updateEarningsPreferences(enabled: Bool) async throws -> EarningsNotificationPreferencesResponse {
+    let payload = UpdateEarningsNotificationPreferencesRequest(enabled: enabled)
+    return try await performAuthenticated { client in
+      try await client.updateEarningsPreferences(payload)
+    }
+  }
+
   private func performAuthenticated<T: Sendable>(
     _ operation: (PushNotificationsHTTPClient) async throws -> T
   ) async throws -> T {
@@ -90,4 +105,3 @@ struct PushNotificationsService: PushNotificationsServicing, @unchecked Sendable
     return token
   }
 }
-

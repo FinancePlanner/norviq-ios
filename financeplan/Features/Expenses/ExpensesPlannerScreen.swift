@@ -811,8 +811,8 @@ private struct PillarAllocationTableCard: View {
                 SectorMark(
                     angle: .value("Amount", summary.actualAmount),
                     innerRadius: .ratio(0.65),
-                    angularInset: 2.0,
-                    cornerRadius: 4
+                    outerRadius: .ratio(1.0),
+                    angularInset: 2.0
                 )
                 .foregroundStyle(summary.pillar.color(for: colorScheme))
             }
@@ -2420,8 +2420,8 @@ private struct ExpensesByCategoryCard: View {
                   SectorMark(
                       angle: .value("Amount", summary.actualAmount),
                       innerRadius: .ratio(0.65),
-                      angularInset: 2.0,
-                      cornerRadius: 4
+                      outerRadius: .ratio(1.0),
+                      angularInset: 2.0
                   )
                   .foregroundStyle(summary.pillar.color(for: colorScheme))
               }

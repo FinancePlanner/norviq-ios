@@ -16,6 +16,7 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, UNUse
 
   private enum CategoryID {
     static let targetAlert = "TARGET_ALERT"
+    static let earningsReminder = "EARNINGS_REMINDER"
   }
 
   func application(
@@ -127,6 +128,12 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, UNUse
       intentIdentifiers: [],
       options: [.customDismissAction]
     )
-    UNUserNotificationCenter.current().setNotificationCategories([targetCategory])
+    let earningsCategory = UNNotificationCategory(
+      identifier: CategoryID.earningsReminder,
+      actions: [viewAction, portfolioAction],
+      intentIdentifiers: [],
+      options: [.customDismissAction]
+    )
+    UNUserNotificationCenter.current().setNotificationCategories([targetCategory, earningsCategory])
   }
 }

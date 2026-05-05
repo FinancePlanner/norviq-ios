@@ -5,11 +5,11 @@
 //  Created by Fernando Correia on 05.03.26.
 //
 
+import Factory
 import PostHog
 import StockPlanShared
 import StoreKit
 import SwiftUI
-import Factory
 
 private enum UserProfileDestination: Hashable {
     case securityCode
@@ -41,10 +41,13 @@ public struct UserProfileView: View {
     @State private var securityCodeEnabled = false
     @State private var faceIDErrorMessage: String?
     @State private var isNotificationsOn = false
+    @State private var isEarningsAlertsOn = false
 
     // Appearance State
-    @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system.rawValue
-    @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
+    @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system
+        .rawValue
+    @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english
+        .rawValue
 
     // Security State
     @AppStorage("useFaceID") private var useFaceID: Bool = true
@@ -70,40 +73,45 @@ public struct UserProfileView: View {
     public var body: some View {
         NavigationStack(path: $path) {
             rootContent
-            .id(appLanguage.rawValue)
-            .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-            .navigationTitle(LocalizedStringKey("Settings"))
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .font(.headline)
-                        .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+                .id(appLanguage.rawValue)
+                .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
+                .navigationTitle(LocalizedStringKey("Settings"))
+                .navigationBarTitleDisplayMode(.large)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") { dismiss() }
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+                    }
                 }
-            }
-            .task {
-                await initialLoad()
-            }
-            .alert("Face ID", isPresented: Binding(
-                get: { faceIDErrorMessage != nil },
-                set: { if !$0 { faceIDErrorMessage = nil } }
-            )) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(faceIDErrorMessage ?? "")
-            }
-            .sheet(isPresented: $isEditPresented) {
-                editProfileSheet
-            }
-            .sheet(isPresented: $isAIInfoPresented) {
-                AIModelIntegrationsInfoSheet()
-            }
-            .sheet(isPresented: $isPaywallPresented) {
-                PaywallView(billingManager: billingManager)
-            }
-            .navigationDestination(for: UserProfileDestination.self) { destination in
-                destinationView(for: destination)
-            }
+                .task {
+                    await initialLoad()
+                }
+                .onReceive(pushNotificationsCoordinator.$isOptedIn) { isNotificationsOn = $0 }
+                .onReceive(pushNotificationsCoordinator.$earningsAlertsEnabled) { isEarningsAlertsOn = $0 }
+                .alert(
+                    "Face ID",
+                    isPresented: Binding(
+                        get: { faceIDErrorMessage != nil },
+                        set: { if !$0 { faceIDErrorMessage = nil } }
+                    )
+                ) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text(faceIDErrorMessage ?? "")
+                }
+                .sheet(isPresented: $isEditPresented) {
+                    editProfileSheet
+                }
+                .sheet(isPresented: $isAIInfoPresented) {
+                    AIModelIntegrationsInfoSheet()
+                }
+                .sheet(isPresented: $isPaywallPresented) {
+                    PaywallView(billingManager: billingManager)
+                }
+                .navigationDestination(for: UserProfileDestination.self) { destination in
+                    destinationView(for: destination)
+                }
         }
     }
 
@@ -154,17 +162,23 @@ public struct UserProfileView: View {
                     Button {
                         billingManager.manageSubscription()
                     } label: {
-                        Label(LocalizedStringKey("Manage Subscription"), systemImage: "creditcard.fill")
+                        Label(
+                            LocalizedStringKey("Manage Subscription"),
+                            systemImage: "creditcard.fill")
                     }
                 } else {
                     Button {
                         // PostHog: Track upgrade to Pro button tap
-                        PostHogSDK.shared.capture("upgrade_to_pro_tapped", properties: [
-                            "source": "settings",
-                        ])
-                        PostHogSDK.shared.capture("paywall_viewed", properties: [
-                            "source": "settings_upgrade",
-                        ])
+                        PostHogSDK.shared.capture(
+                            "upgrade_to_pro_tapped",
+                            properties: [
+                                "source": "settings"
+                            ])
+                        PostHogSDK.shared.capture(
+                            "paywall_viewed",
+                            properties: [
+                                "source": "settings_upgrade"
+                            ])
                         isPaywallPresented = true
                     } label: {
                         Label(LocalizedStringKey("Upgrade to Pro"), systemImage: "sparkles")
@@ -175,7 +189,8 @@ public struct UserProfileView: View {
                     Task { await billingManager.restorePurchases() }
                 } label: {
                     HStack {
-                        Label(LocalizedStringKey("Restore Purchases"), systemImage: "arrow.clockwise")
+                        Label(
+                            LocalizedStringKey("Restore Purchases"), systemImage: "arrow.clockwise")
                         Spacer()
                         if billingManager.isRestoring {
                             ProgressView()
@@ -195,7 +210,9 @@ public struct UserProfileView: View {
                         Text(billingManager.isPro ? "Pro" : "Free")
                             .typography(.caption, weight: .semibold)
                             .foregroundStyle(.secondary)
-                            .accessibilityIdentifier(billingManager.isPro ? "settings.subscription.pro" : "settings.subscription.free")
+                            .accessibilityIdentifier(
+                                billingManager.isPro
+                                    ? "settings.subscription.pro" : "settings.subscription.free")
                     }
                 }
 
@@ -222,9 +239,12 @@ public struct UserProfileView: View {
                     HStack {
                         Label(LocalizedStringKey("Security Code"), systemImage: "lock.fill")
                         Spacer()
-                        Text(securityCodeEnabled ? LocalizedStringKey("On") : LocalizedStringKey("Off"))
-                            .typography(.caption)
-                            .foregroundStyle(.secondary)
+                        Text(
+                            securityCodeEnabled
+                                ? LocalizedStringKey("On") : LocalizedStringKey("Off")
+                        )
+                        .typography(.caption)
+                        .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -232,10 +252,18 @@ public struct UserProfileView: View {
 
             Section(LocalizedStringKey("Alerts")) {
                 Toggle(isOn: $isNotificationsOn) {
-                    Label(LocalizedStringKey("Price target alerts"), systemImage: "bell.badge")
+                    Label(LocalizedStringKey("Push notifications"), systemImage: "bell.badge")
                 }
                 .onChange(of: isNotificationsOn) { _, enabled in
                     Task { await pushNotificationsCoordinator.setNotificationsEnabled(enabled) }
+                }
+
+                Toggle(isOn: $isEarningsAlertsOn) {
+                    Label(LocalizedStringKey("Earnings reminders"), systemImage: "calendar.badge.clock")
+                }
+                .disabled(!pushNotificationsCoordinator.isOptedIn || pushNotificationsCoordinator.isEarningsAlertsLoading)
+                .onChange(of: isEarningsAlertsOn) { _, enabled in
+                    Task { await pushNotificationsCoordinator.setEarningsAlertsEnabled(enabled) }
                 }
 
                 HStack(spacing: 12) {
@@ -261,6 +289,12 @@ public struct UserProfileView: View {
                 }
 
                 if let error = pushNotificationsCoordinator.lastErrorMessage, !error.isEmpty {
+                    Text(error)
+                        .typography(.caption)
+                        .foregroundStyle(AppTheme.Colors.danger)
+                }
+
+                if let error = pushNotificationsCoordinator.earningsAlertsErrorMessage, !error.isEmpty {
                     Text(error)
                         .typography(.caption)
                         .foregroundStyle(AppTheme.Colors.danger)
@@ -366,7 +400,7 @@ public struct UserProfileView: View {
                     Label("Rate on App Store", systemImage: "star.fill")
                         .foregroundStyle(.primary)
                 }
-                if let appStoreURL = URL(string: "https://apps.apple.com/app/idYOUR_APP_ID") {
+                if let appStoreURL = URL(string: "https://apps.apple.com/app/6765849578") {
                     ShareLink(item: appStoreURL) {
                         Label("Share App", systemImage: "square.and.arrow.up")
                             .foregroundStyle(.primary)
@@ -434,10 +468,10 @@ public struct UserProfileView: View {
                     }
                     Text(versionString)
                 }
-                    .typography(.nano)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .listRowBackground(Color.clear)
+                .typography(.nano)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .listRowBackground(Color.clear)
             }
         }
         .scrollContentBackground(.hidden)
@@ -491,6 +525,7 @@ public struct UserProfileView: View {
         pushNotificationsCoordinator.handleAuthenticatedSessionBecameActive()
         securityCodeEnabled = securityCodeManager.isEnabled
         isNotificationsOn = pushNotificationsCoordinator.isOptedIn
+        isEarningsAlertsOn = pushNotificationsCoordinator.earningsAlertsEnabled
     }
 
     private func retryLoad() {
@@ -513,7 +548,9 @@ public struct UserProfileView: View {
 
     // MARK: - Components
 
-    private func iconView(_ systemName: String, backgroundColor: Color, foregroundColor: Color) -> some View {
+    private func iconView(_ systemName: String, backgroundColor: Color, foregroundColor: Color)
+        -> some View
+    {
         Image(systemName: systemName)
             .typography(.small, weight: .semibold)
             .foregroundStyle(foregroundColor)
@@ -540,7 +577,8 @@ public struct UserProfileView: View {
             faceIDErrorMessage = "Face ID was not enabled because authentication did not complete."
         case .unavailable:
             useFaceID = false
-            faceIDErrorMessage = "Face ID is not available. Set up Face ID or a device passcode in iOS Settings first."
+            faceIDErrorMessage =
+                "Face ID is not available. Set up Face ID or a device passcode in iOS Settings first."
         }
     }
 
@@ -604,9 +642,11 @@ private struct AIModelIntegrationsInfoSheet: View {
                         Label("Why connect an AI model?", systemImage: "sparkles")
                             .typography(.headline, weight: .semibold)
 
-                        Text("Connect your AI tools so they can work with your Norviq data directly.")
-                            .typography(.body)
-                            .foregroundStyle(.secondary)
+                        Text(
+                            "Connect your AI tools so they can work with your Norviq data directly."
+                        )
+                        .typography(.body)
+                        .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 4)
                 }
@@ -615,17 +655,20 @@ private struct AIModelIntegrationsInfoSheet: View {
                 Section {
                     valueRow(
                         title: "Less manual work",
-                        detail: "No exporting files, pasting raw data, or writing small scripts just to prepare a question.",
+                        detail:
+                            "No exporting files, pasting raw data, or writing small scripts just to prepare a question.",
                         systemImage: "wand.and.stars"
                     )
                     valueRow(
                         title: "More reliable answers",
-                        detail: "Your assistant can use current market and portfolio data instead of guessing from memory.",
+                        detail:
+                            "Your assistant can use current market and portfolio data instead of guessing from memory.",
                         systemImage: "checkmark.seal"
                     )
                     valueRow(
                         title: "Cleaner conversations",
-                        detail: "Ask focused questions without pasting long API notes or large data responses.",
+                        detail:
+                            "Ask focused questions without pasting long API notes or large data responses.",
                         systemImage: "text.bubble"
                     )
                 }
@@ -674,10 +717,18 @@ private struct ConnectView: View {
     var body: some View {
         List {
             Section {
-                socialButton(LocalizedStringKey("Follow on Instagram"), systemImage: "camera", url: "https://instagram.com/norviqa")
-                socialButton(LocalizedStringKey("Follow on X"), systemImage: "x.circle", url: "https://x.com/norviqa")
-                socialButton(LocalizedStringKey("Follow on TikTok"), systemImage: "music.note", url: "https://tiktok.com/@norviqa")
-                socialButton(LocalizedStringKey("Join Discord"), systemImage: "bubble.left.and.bubble.right", url: "https://discord.gg/norviqa")
+                socialButton(
+                    LocalizedStringKey("Follow on Instagram"), systemImage: "camera",
+                    url: "https://instagram.com/norviqa")
+                socialButton(
+                    LocalizedStringKey("Follow on X"), systemImage: "x.circle",
+                    url: "https://x.com/norviqa")
+                socialButton(
+                    LocalizedStringKey("Follow on TikTok"), systemImage: "music.note",
+                    url: "https://tiktok.com/@norviqa")
+                socialButton(
+                    LocalizedStringKey("Join Discord"), systemImage: "bubble.left.and.bubble.right",
+                    url: "https://discord.gg/norviqa")
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
         }
@@ -689,7 +740,9 @@ private struct ConnectView: View {
     }
 
     @ViewBuilder
-    private func socialButton(_ title: LocalizedStringKey, systemImage: String, url: String) -> some View {
+    private func socialButton(_ title: LocalizedStringKey, systemImage: String, url: String)
+        -> some View
+    {
         if let destination = URL(string: url) {
             Button {
                 openURL(destination)
@@ -710,9 +763,11 @@ private struct DataAvailabilityView: View {
                     Label("Market data coverage", systemImage: "chart.line.uptrend.xyaxis")
                         .typography(.label, weight: .semibold)
 
-                    Text("Some analysis, statements, consensus, and forecast data depends on the market data coverage currently connected to Norviq.")
-                        .typography(.caption)
-                        .foregroundStyle(.secondary)
+                    Text(
+                        "Some analysis, statements, consensus, and forecast data depends on the market data coverage currently connected to Norviq."
+                    )
+                    .typography(.caption)
+                    .foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 4)
             }
@@ -734,14 +789,18 @@ private struct DataAvailabilityView: View {
             } header: {
                 Text("Data Coverage")
             } footer: {
-                Text("Market data coverage is separate from your Norviq subscription. If a data source does not cover a symbol or date range, the app keeps the rest of the stock page usable.")
+                Text(
+                    "Market data coverage is separate from your Norviq subscription. If a data source does not cover a symbol or date range, the app keeps the rest of the stock page usable."
+                )
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
             Section("App Subscription Limits") {
-                Text("Norviq subscription limits control app features such as portfolio capacity, imports, alerts, reports, and advanced research access.")
-                    .typography(.caption)
-                    .foregroundStyle(.secondary)
+                Text(
+                    "Norviq subscription limits control app features such as portfolio capacity, imports, alerts, reports, and advanced research access."
+                )
+                .typography(.caption)
+                .foregroundStyle(.secondary)
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
@@ -793,13 +852,16 @@ private struct SecurityCodeView: View {
         List {
             Section {
                 VStack(alignment: .leading, spacing: 8) {
-                    let title: LocalizedStringKey = isEnabled ? "Security Code is enabled" : "Security Code is off"
+                    let title: LocalizedStringKey =
+                        isEnabled ? "Security Code is enabled" : "Security Code is off"
                     Label(title, systemImage: isEnabled ? "lock.shield.fill" : "lock.open.fill")
-                    .typography(.label, weight: .semibold)
+                        .typography(.label, weight: .semibold)
 
-                    Text("Use a 6-digit code to unlock Norviq when Face ID or device passcode is unavailable.")
-                        .typography(.caption)
-                        .foregroundStyle(.secondary)
+                    Text(
+                        "Use a 6-digit code to unlock Norviq when Face ID or device passcode is unavailable."
+                    )
+                    .typography(.caption)
+                    .foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 4)
             }
@@ -816,7 +878,8 @@ private struct SecurityCodeView: View {
                 Section {
                     Text(message)
                         .typography(.caption)
-                        .foregroundStyle(isErrorMessage ? AppTheme.Colors.danger : AppTheme.Colors.success)
+                        .foregroundStyle(
+                            isErrorMessage ? AppTheme.Colors.danger : AppTheme.Colors.success)
                 }
                 .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
             }
@@ -859,7 +922,9 @@ private struct SecurityCodeView: View {
             } label: {
                 Label("Change Security Code", systemImage: "arrow.triangle.2.circlepath")
             }
-            .disabled(currentCode.count != 6 || replacementCode.count != 6 || replacementConfirmation.count != 6)
+            .disabled(
+                currentCode.count != 6 || replacementCode.count != 6
+                    || replacementConfirmation.count != 6)
         } header: {
             Text("Change")
         }
