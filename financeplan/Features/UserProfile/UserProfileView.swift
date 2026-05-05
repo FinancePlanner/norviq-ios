@@ -26,7 +26,7 @@ private enum UserProfileDestination: Hashable {
 
 @MainActor
 public struct UserProfileView: View {
-    @StateObject private var viewModel: UserProfileViewModel
+    @State private var viewModel: UserProfileViewModel
     @StateObject private var pushNotificationsCoordinator: PushNotificationsCoordinator
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dismiss) private var dismiss
@@ -61,7 +61,7 @@ public struct UserProfileView: View {
     }
 
     public init(viewModel: UserProfileViewModel? = nil) {
-        _viewModel = StateObject(wrappedValue: viewModel ?? UserProfileViewModel())
+        _viewModel = State(initialValue: viewModel ?? UserProfileViewModel())
         _pushNotificationsCoordinator = StateObject(
             wrappedValue: Container.shared.pushNotificationsCoordinator()
         )
