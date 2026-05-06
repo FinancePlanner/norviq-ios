@@ -57,7 +57,8 @@ struct OnboardingSwipeStatementsScreen: View {
         SwipeCard(
           text: Self.statements[index],
           dragTranslation: isTop ? dragTranslation : .zero,
-          stackOffset: index - topIndex
+          stackOffset: index - topIndex,
+          isTop: isTop
         )
         .gesture(isTop ? dragGesture : nil)
         .zIndex(Double(Self.statements.count - index))
@@ -149,6 +150,7 @@ private struct SwipeCard: View {
   let text: String
   let dragTranslation: CGSize
   let stackOffset: Int
+  let isTop: Bool
 
   @Environment(\.colorScheme) private var colorScheme
 
@@ -160,11 +162,13 @@ private struct SwipeCard: View {
     GlassCard(cornerRadius: 28) {
       VStack(spacing: 20) {
         Spacer()
-        Text("\u{201C}\(text)\u{201D}")
-          .typography(.title, weight: .semibold)
-          .multilineTextAlignment(.center)
-          .padding(.horizontal, 20)
-          .fixedSize(horizontal: false, vertical: true)
+        if isTop {
+          Text("\u{201C}\(text)\u{201D}")
+            .typography(.title, weight: .semibold)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 20)
+            .fixedSize(horizontal: false, vertical: true)
+        }
         Spacer()
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -180,7 +184,7 @@ private struct SwipeCard: View {
         .padding(20)
     }
     .scaleEffect(stackOffset == 0 ? 1.0 : (1.0 - CGFloat(stackOffset) * 0.04))
-    .offset(y: CGFloat(stackOffset) * 10)
+    .offset(y: CGFloat(stackOffset) * 18)
     .offset(dragTranslation)
     .rotationEffect(.degrees(rotationDegrees))
   }

@@ -98,7 +98,8 @@ struct OnboardingDemoBuildScreen: View {
         TickerSwipeCard(
           ticker: deck[index],
           dragTranslation: isTop ? dragTranslation : .zero,
-          stackOffset: index - topIndex
+          stackOffset: index - topIndex,
+          isTop: isTop
         )
         .gesture(isTop ? dragGesture : nil)
         .zIndex(Double(deck.count - index))
@@ -200,6 +201,7 @@ private struct TickerSwipeCard: View {
   let ticker: OnboardingDemoTicker
   let dragTranslation: CGSize
   let stackOffset: Int
+  let isTop: Bool
   @Environment(\.colorScheme) private var colorScheme
 
   private var rotationDegrees: Double { Double(dragTranslation.width) / 18.0 }
@@ -208,49 +210,51 @@ private struct TickerSwipeCard: View {
   var body: some View {
     GlassCard(cornerRadius: 28) {
       VStack(alignment: .leading, spacing: 18) {
-        HStack(spacing: 12) {
-          ZStack {
-            Circle()
-              .fill(AppTheme.Colors.tintSoft(for: colorScheme))
-              .frame(width: 44, height: 44)
-            Image(systemName: ticker.glyphSystemName)
-              .font(.title3.weight(.bold))
-              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+        if isTop {
+          HStack(spacing: 12) {
+            ZStack {
+              Circle()
+                .fill(AppTheme.Colors.tintSoft(for: colorScheme))
+                .frame(width: 44, height: 44)
+              Image(systemName: ticker.glyphSystemName)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+              Text(ticker.symbol)
+                .typography(.label, weight: .bold)
+              Text(ticker.name)
+                .typography(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            }
+            Spacer()
           }
 
-          VStack(alignment: .leading, spacing: 2) {
-            Text(ticker.symbol)
-              .typography(.label, weight: .bold)
-            Text(ticker.name)
-              .typography(.caption)
-              .foregroundStyle(.secondary)
-              .lineLimit(1)
+          Text(ticker.blurb)
+            .typography(.label, weight: .medium)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+
+          SparklinePath(values: ticker.sparkline)
+            .stroke(
+              AppTheme.Colors.tint(for: colorScheme),
+              style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
+            )
+            .frame(height: 56)
+
+          HStack(spacing: 8) {
+            ForEach(ticker.tags, id: \.self) { tag in
+              Text(tag)
+                .typography(.nano, weight: .semibold)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Capsule().fill(AppTheme.Colors.tintSoft(for: colorScheme)))
+                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+            }
+            Spacer()
           }
-          Spacer()
-        }
-
-        Text(ticker.blurb)
-          .typography(.label, weight: .medium)
-          .multilineTextAlignment(.leading)
-          .fixedSize(horizontal: false, vertical: true)
-
-        SparklinePath(values: ticker.sparkline)
-          .stroke(
-            AppTheme.Colors.tint(for: colorScheme),
-            style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
-          )
-          .frame(height: 56)
-
-        HStack(spacing: 8) {
-          ForEach(ticker.tags, id: \.self) { tag in
-            Text(tag)
-              .typography(.nano, weight: .semibold)
-              .padding(.horizontal, 10)
-              .padding(.vertical, 5)
-              .background(Capsule().fill(AppTheme.Colors.tintSoft(for: colorScheme)))
-              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-          }
-          Spacer()
         }
       }
       .padding(.vertical, 8)
@@ -266,7 +270,7 @@ private struct TickerSwipeCard: View {
         .padding(20)
     }
     .scaleEffect(stackOffset == 0 ? 1.0 : (1.0 - CGFloat(stackOffset) * 0.04))
-    .offset(y: CGFloat(stackOffset) * 10)
+    .offset(y: CGFloat(stackOffset) * 18)
     .offset(dragTranslation)
     .rotationEffect(.degrees(rotationDegrees))
   }
