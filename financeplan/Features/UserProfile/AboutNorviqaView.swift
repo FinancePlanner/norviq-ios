@@ -88,16 +88,16 @@ struct AboutNorviqView: View {
 
             // Connect
             Section("Connect") {
-                socialButton("Follow on Instagram", systemImage: "camera", url: "https://instagram.com/norviqa")
+                socialButton("Follow on Instagram", systemImage: "camera", url: "https://instagram.com/norviqplan")
 
-                if let xURL = URL(string: "https://x.com/norviqa") {
+                if let xURL = URL(string: "https://x.com/NorviqPlanner") {
                     Link(destination: xURL) {
                         Label("Follow on X", systemImage: "x.circle")
                     }
                     .foregroundStyle(.primary)
                 }
 
-                if let discordURL = URL(string: "https://discord.gg/norviqa") {
+                if let discordURL = URL(string: "https://discord.gg/3QVkas3rH") {
                     Link(destination: discordURL) {
                         Label("Join Discord", systemImage: "bubble.left.and.bubble.right")
                     }
