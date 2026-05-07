@@ -2,1224 +2,6 @@ import Charts
 import StockPlanShared
 import SwiftUI
 
-struct StockDetailHeroCard: View {
-    let details: StockDetails?
-    let companyProfile: CompanyProfileResponse?
-    let comparisonProfile: StockComparisonProfile?
-    let marketSnapshot: StockMarketSnapshot?
-
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var displayPrice: Double? {
-        marketSnapshot?.currentPrice ?? comparisonProfile?.currentPrice
-    }
-
-    private var positionMarketValue: Double? {
-        guard let details, let displayPrice else { return nil }
-        return details.shares * displayPrice
-    }
-
-    private var costBasis: Double? {
-        guard let details else { return nil }
-        return details.shares * details.buyPrice
-    }
-
-    private var symbolText: String {
-        companyProfile?.displayTicker ?? comparisonProfile?.symbol ?? details?.symbol ?? "Stock"
-    }
-
-    private var companyNameText: String {
-        companyProfile?.displayName ?? comparisonProfile?.companyName ?? "Waiting for company profile"
-    }
-
-    private var summaryText: String? {
-        var values: [String] = []
-
-        if let exchange = companyProfile?.exchange?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !exchange.isEmpty {
-            values.append(exchange)
-        }
-
-        if let industry = companyProfile?.finnhubIndustry?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !industry.isEmpty {
-            values.append(industry)
-        }
-
-        if let country = companyProfile?.localizedCountryName?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !country.isEmpty {
-            values.append(country)
-        }
-
-        return values.isEmpty ? nil : values.joined(separator: " • ")
-    }
-
-    var body: some View {
-        GlassCard(cornerRadius: 28) {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top, spacing: 16) {
-                    StockCompanyAvatarView(
-                        companyProfile: companyProfile,
-                        fallbackText: symbolText,
-                        colorScheme: colorScheme
-                    )
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(symbolText)
-                            .typography(.hero, weight: .bold)
-
-                        Text(companyNameText)
-                            .typography(.small)
-                            .foregroundStyle(.secondary)
-
-                        if let summaryText {
-                            Text(summaryText)
-                                .typography(.nano)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        if let details {
-                            Text("Purchased \(details.buyDate) • \(details.shares.formatted(.number.precision(.fractionLength(0...2)))) shares")
-                                .typography(.nano)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Spacer()
-                }
-
-                HStack(alignment: .top, spacing: 10) {
-                    HeroMetricPill(
-                        title: "Current price",
-                        value: displayPrice?.currency ?? "Pending",
-                        tint: AppTheme.Colors.tint(for: colorScheme)
-                    )
-                    HeroMetricPill(
-                        title: "Position",
-                        value: positionMarketValue?.currency ?? "Pending",
-                        tint: AppTheme.Colors.success
-                    )
-                    HeroMetricPill(
-                        title: "Cost basis",
-                        value: costBasis?.currency ?? "Pending",
-                        tint: AppTheme.Colors.warning
-                    )
-                }
-
-                if let companyProfile {
-                    Divider()
-
-                    Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 12) {
-                        GridRow {
-                            DetailItem(title: "Exchange", value: companyProfile.exchange ?? "—")
-                            DetailItem(title: "Industry", value: companyProfile.finnhubIndustry ?? "—")
-                        }
-
-                        GridRow {
-                            DetailItem(title: "Country", value: companyProfile.localizedCountryName ?? "—")
-                            DetailItem(title: "IPO", value: companyProfile.ipo ?? "—")
-                        }
-
-                        GridRow {
-                            DetailItem(title: "Currency", value: companyProfile.currency ?? "—")
-                            DetailItem(title: "Estimate currency", value: companyProfile.estimateCurrency ?? "—")
-                        }
-
-                        GridRow {
-                            DetailItem(
-                                title: "Market cap",
-                                value: companyProfile.marketCapitalizationAmount.map { StockMetricFormatter.compactCurrency($0) } ?? "—"
-                                )
-                                DetailItem(
-                                title: "Shares outstanding",
-                                value: companyProfile.sharesOutstandingAmount.map { StockMetricFormatter.compactNumber($0) } ?? "—"
-                                )                        }
-
-                        GridRow {
-                            DetailItem(title: "Phone", value: companyProfile.phone ?? "—")
-                            CompanyProfileWebsiteItem(companyProfile: companyProfile)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-struct StockOverviewTab: View {
-    let details: StockDetails?
-    let valuation: StockValuationRequest?
-    let marketSnapshot: StockMarketSnapshot?
-    let analystConsensus: StockAnalystConsensus?
-    let analystConsensusMessage: String?
-    let basicFinancials: StockBasicFinancials?
-    let errorMessage: String?
-    let onEditValuation: () -> Void
-    let onEditPosition: () -> Void
-    let onSellPosition: () -> Void
-
-    var body: some View {
-        LazyVStack(spacing: 16) {
-            if let details {
-                StockPositionOverviewCard(
-                    details: details,
-                    onEditPosition: onEditPosition,
-                    onSellPosition: onSellPosition
-                )
-            }
-
-            if let marketSnapshot {
-                StockMarketSnapshotCard(snapshot: marketSnapshot)
-            } else {
-                GlassCard {
-                    Text("No live quote data is available for this stock right now.")
-                        .typography(.small)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-
-            if let analystConsensus {
-                StockConsensusCard(consensus: analystConsensus)
-            } else {
-                StockConsensusPlaceholderCard(
-                    message: analystConsensusMessage,
-                    isWarning: analystConsensusMessage != nil
-                )
-            }
-
-            if let basicFinancials {
-                StockBasicFinancialsCard(financials: basicFinancials)
-            } else {
-                StockBasicFinancialsPlaceholderCard()
-            }
-
-            StockValuationSummaryCard(
-                symbol: details?.symbol,
-                currentPrice: marketSnapshot?.currentPrice,
-                valuation: valuation,
-                onEditValuation: onEditValuation
-            )
-
-            if let errorMessage {
-                GlassCard {
-                    Text(errorMessage)
-                        .typography(.small)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-        }
-    }
-}
-
-struct StockFinancialStatementsTab: View {
-    let statements: StockFinancialStatements?
-    let errorMessage: String?
-    @Binding var selectedPeriod: StockFinancialStatementPeriod
-
-    var body: some View {
-        LazyVStack(spacing: 16) {
-            if let statements {
-                FinancialStatementsIntroCard(symbol: statements.symbol)
-                FinancialStatementPeriodPicker(selectedPeriod: $selectedPeriod)
-                FinancialStatementTableCard(
-                    title: "Balance sheet",
-                    subtitle: "Review assets, liabilities, and equity across the selected filing period.",
-                    statements: statements.balanceSheets(for: selectedPeriod),
-                    emptyText: "No balance sheet filings are available for \(selectedPeriod.title)."
-                )
-                FinancialStatementTableCard(
-                    title: "Cash flow",
-                    subtitle: "Review operating, investing, and financing cash movements across the selected filing period.",
-                    statements: statements.cashFlows(for: selectedPeriod),
-                    emptyText: "No cash flow filings are available for \(selectedPeriod.title)."
-                )
-                FinancialMetricTableCard(
-                    title: "Ratios",
-                    subtitle: "Review valuation, capital efficiency, returns, and working-capital metrics across the selected filing period.",
-                    snapshots: statements.ratios(for: selectedPeriod),
-                    emptyText: "No ratio snapshots are available for \(selectedPeriod.title)."
-                )
-                FinancialMetricTableCard(
-                    title: "Financial growth",
-                    subtitle: "Review revenue, EPS, cash flow, share count, and long-term per-share growth across the selected filing period.",
-                    snapshots: statements.growth(for: selectedPeriod),
-                    emptyText: "No growth snapshots are available for \(selectedPeriod.title)."
-                )
-                FinancialMetricTableCard(
-                    title: "Financial estimates",
-                    subtitle: "Review forward revenue, EBITDA, EBIT, net income, SG&A, EPS, and analyst-count ranges.",
-                    snapshots: statements.estimates,
-                    emptyText: "No financial estimates are available right now."
-                )
-            } else if let errorMessage {
-                ResearchPlaceholderCard(
-                    title: "Financial statements",
-                    bodyText: errorMessage
-                )
-            } else {
-                ResearchPlaceholderCard(
-                    title: "Financial statements",
-                    bodyText: "Financial statement data is currently unavailable for this symbol."
-                )
-            }
-        }
-    }
-}
-
-struct StockPriceChartTab: View {
-    let series: PriceChartSeries?
-    let selectedRange: PriceChartRange
-    let isLoading: Bool
-    let errorMessage: String?
-    let onSelectRange: (PriceChartRange) -> Void
-
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        LazyVStack(spacing: 16) {
-            GlassCard {
-                VStack(alignment: .leading, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Share price chart")
-                            .typography(.small, weight: .semibold)
-
-                        Text("Track price movement across intraday and long-range windows.")
-                            .typography(.nano)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(PriceChartRange.allCases, id: \.rawValue) { range in
-                                Button {
-                                    onSelectRange(range)
-                                } label: {
-                                    Text(range.title)
-                                        .typography(.caption, weight: .semibold)
-                                        .foregroundStyle(range == selectedRange ? .white : .primary)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .background(
-                                            range == selectedRange
-                                                ? AppTheme.Colors.tint(for: colorScheme)
-                                                : Color.secondary.opacity(0.10),
-                                            in: Capsule()
-                                        )
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-
-                    if isLoading && series == nil {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 48)
-                    } else if let errorMessage {
-                        Text(errorMessage)
-                            .typography(.small)
-                            .foregroundStyle(AppTheme.Colors.danger)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    } else if let series, !series.points.isEmpty {
-                        StockPriceChart(series: series)
-                    } else {
-                        Text("No price chart data is available for this symbol yet.")
-                            .typography(.small)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 32)
-                    }
-                }
-            }
-        }
-    }
-}
-
-private struct StockPriceChart: View {
-    let series: PriceChartSeries
-
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var latestPoint: PriceChartPoint? {
-        series.points.last
-    }
-
-    private var firstPoint: PriceChartPoint? {
-        series.points.first
-    }
-
-    private var change: Double? {
-        guard let first = firstPoint?.close, let latest = latestPoint?.close, first > 0 else { return nil }
-        return (latest - first) / first
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(latestPoint?.close.currency ?? "Pending")
-                            .typography(.title, weight: .bold)
-                            .monospacedDigit()
-
-                        Text("\(series.symbol.uppercased()) · \(series.range)")
-                            .typography(.nano, weight: .semibold)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-
-                    Text(change.map { StockMetricFormatter.signedPercentText($0) } ?? "—")
-                        .typography(.caption, weight: .bold)
-                        .foregroundStyle((change ?? 0) >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.secondary.opacity(0.10), in: Capsule())
-                }
-
-            Chart(Array(series.points.enumerated()), id: \.offset) { _, point in
-                LineMark(
-                    x: .value("Date", point.date),
-                    y: .value("Close", point.close)
-                )
-                .interpolationMethod(.catmullRom)
-                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-                .lineStyle(.init(lineWidth: 3))
-
-                AreaMark(
-                    x: .value("Date", point.date),
-                    y: .value("Close", point.close)
-                )
-                .interpolationMethod(.catmullRom)
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [
-                            AppTheme.Colors.tint(for: colorScheme).opacity(0.22),
-                            .clear
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-            }
-            .frame(height: 260)
-            .chartYAxis {
-                AxisMarks(position: .leading)
-            }
-            .chartXAxis {
-                AxisMarks(values: .automatic(desiredCount: 4))
-            }
-        }
-    }
-}
-struct StockAnalysisTab: View {
-    let details: StockResponse?
-    let profile: StockComparisonProfile?
-    let analysisMetrics: StockAnalysisMetrics?
-    let analysisMetricsMessage: String?
-    let valuation: StockValuationRequest?
-    let onEditAnalysis: () -> Void
-    let onEditDCF: () -> Void
-    let onApplyDCFToValuation: (_ bearPrice: Double, _ basePrice: Double, _ bullPrice: Double) -> Void
-
-    private var resolvedProfile: StockComparisonProfile? {
-        if let profile {
-            return profile
-        }
-
-        guard let analysisMetrics else { return nil }
-        return StockComparisonProfile(
-            symbol: analysisMetrics.symbol.uppercased(),
-            companyName: analysisMetrics.symbol.uppercased(),
-            currentPrice: analysisMetrics.currentPrice ?? 0,
-            marketCap: analysisMetrics.marketCap ?? 0,
-            sharesOutstanding: analysisMetrics.sharesOutstanding ?? 0,
-            metrics: analysisMetrics.comparisonMetrics,
-            projectionScenarios: [:],
-            dcfBasePrice: analysisMetrics.dcfBasePrice,
-            dcfBearPrice: analysisMetrics.dcfBearPrice,
-            dcfBullPrice: analysisMetrics.dcfBullPrice
-        )
-    }
-
-    var body: some View {
-        LazyVStack(spacing: 16) {
-            if let resolvedProfile, analysisMetrics != nil {
-                if let intrinsicValue = resolvedProfile.dcfBasePrice ?? resolvedProfile.metrics[.dcfFairValue] {
-                    SharePriceIntrinsicValueCard(
-                        currentPrice: resolvedProfile.currentPrice,
-                        intrinsicValue: intrinsicValue,
-                        bearValue: resolvedProfile.dcfBearPrice,
-                        bullValue: resolvedProfile.dcfBullPrice,
-                        onEdit: onEditDCF,
-                        onApplyToValuation: dcfApplyAction(
-                            bearPrice: resolvedProfile.dcfBearPrice,
-                            basePrice: intrinsicValue,
-                            bullPrice: resolvedProfile.dcfBullPrice
-                        )
-                    )
-                }
-
-                StockCurrentMetricsCard(profile: resolvedProfile)
-                StockFundamentalsCard(profile: resolvedProfile)
-            } else {
-                StockAnalysisPlaceholderCard(
-                    message: analysisMetricsMessage,
-                    isWarning: analysisMetricsMessage != nil
-                )
-            }
-
-            StockThesisCard(
-                symbol: details?.symbol,
-                details: details,
-                analysis: details?.notes,
-                valuationRationale: valuation?.rationale,
-                canEdit: details != nil,
-                onEdit: onEditAnalysis
-            )
-        }
-    }
-
-    private func dcfApplyAction(
-        bearPrice: Double?,
-        basePrice: Double?,
-        bullPrice: Double?
-    ) -> (() -> Void)? {
-        guard let bearPrice, let basePrice, let bullPrice else { return nil }
-        return {
-            onApplyDCFToValuation(bearPrice, basePrice, bullPrice)
-        }
-    }
-}
-
-struct StockForecastTab: View {
-    let profile: StockComparisonProfile?
-    @Binding var selectedScenario: StockProjectionScenarioKind
-    let onEditDCF: () -> Void
-    let onApplyDCFToValuation: (_ bearPrice: Double, _ basePrice: Double, _ bullPrice: Double) -> Void
-
-    private var scenario: StockProjectionScenario? {
-        profile?.projectionScenarios[selectedScenario]
-    }
-
-    var body: some View {
-        if let profile, let scenario {
-            LazyVStack(spacing: 16) {
-                ProjectionScenarioHeaderCard(
-                    profile: profile,
-                    scenario: scenario,
-                    selectedScenario: $selectedScenario
-                )
-
-                ForecastGrowthChartCard(scenario: scenario)
-
-                ProjectionHighlightsCard(
-                    profile: profile,
-                    scenario: scenario,
-                    scenarioKind: selectedScenario
-                )
-
-                if let dcfBase = profile.dcfBasePrice,
-                   let dcfBear = profile.dcfBearPrice,
-                   let dcfBull = profile.dcfBullPrice {
-                    DCFValuationCard(
-                        basePrice: dcfBase,
-                        bearPrice: dcfBear,
-                        bullPrice: dcfBull,
-                        currentPrice: profile.currentPrice,
-                        onEdit: onEditDCF,
-                        onApplyToValuation: {
-                            onApplyDCFToValuation(dcfBear, dcfBase, dcfBull)
-                        }
-                    )
-                }
-
-                ProjectionTableCard(scenario: scenario)
-
-                ProjectionRangeChartCard(scenario: scenario)
-            }
-        } else {
-            GlassCard {
-                Text("Projection data is unavailable for this symbol right now.")
-                    .typography(.small)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-    }
-}
-
-struct StockCompareTab: View {
-    @ObservedObject var viewModel: StockDetailsViewModel
-
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var primaryProfile: StockComparisonProfile? {
-        viewModel.primaryComparisonProfile
-    }
-
-    private var peerOptions: [StockComparisonProfile] {
-        viewModel.availablePeerProfiles
-    }
-
-    private var comparisonProfiles: [StockComparisonProfile] {
-        viewModel.comparisonProfiles
-    }
-
-    var body: some View {
-        if let primaryProfile {
-            LazyVStack(spacing: 16) {
-                GlassCard {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Peer comparison")
-                            .typography(.small, weight: .semibold)
-
-                        Text("Compare valuation, growth, and profitability side by side against two peers.")
-                            .typography(.nano)
-                            .foregroundStyle(.secondary)
-
-                        HStack(spacing: 12) {
-                            ComparisonPeerPicker(
-                                title: "Peer 1",
-                                selectedSymbol: viewModel.selectedPeerSymbol(at: 0),
-                                options: peerOptions
-                            ) { symbol in
-                                viewModel.updatePeerSymbol(symbol, slot: 0)
-                            }
-
-                            ComparisonPeerPicker(
-                                title: "Peer 2",
-                                selectedSymbol: viewModel.selectedPeerSymbol(at: 1),
-                                options: peerOptions
-                            ) { symbol in
-                                viewModel.updatePeerSymbol(symbol, slot: 1)
-                            }
-                        }
-
-                        HStack(spacing: 10) {
-                            HeroMetricPill(
-                                title: primaryProfile.symbol,
-                                value: primaryProfile.currentPrice.currency,
-                                tint: AppTheme.Colors.tint(for: colorScheme)
-                            )
-
-                            ForEach(viewModel.selectedPeerProfiles) { peer in
-                                HeroMetricPill(
-                                    title: peer.symbol,
-                                    value: peer.currentPrice.currency,
-                                    tint: AppTheme.Colors.secondaryTint(for: colorScheme)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                PriceComparisonChartCard(
-                    response: viewModel.comparisonChartResponse,
-                    primarySymbol: primaryProfile.symbol,
-                    selectedRange: viewModel.selectedComparisonChartRange,
-                    isLoading: viewModel.isComparisonChartLoading,
-                    errorMessage: viewModel.comparisonChartErrorMessage,
-                    onSelectRange: viewModel.switchComparisonChartRange
-                )
-
-                ForEach(StockComparisonMetricGroup.allCases) { group in
-                    ComparisonMetricTableCard(
-                        group: group,
-                        profiles: comparisonProfiles
-                    )
-                }
-            }
-        } else {
-            GlassCard {
-                Text("Comparison data will appear after the stock loads.")
-                    .typography(.small)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-    }
-}
-
-struct PriceComparisonChartCard: View {
-    let response: PriceChartComparisonResponse?
-    let primarySymbol: String
-    let selectedRange: PriceChartRange
-    let isLoading: Bool
-    let errorMessage: String?
-    let onSelectRange: (PriceChartRange) -> Void
-
-    @Environment(\.colorScheme) private var colorScheme
-
-    private struct NormalizedChartPoint: Identifiable {
-        let id = UUID()
-        let symbol: String
-        let date: String
-        let percentChange: Double
-    }
-
-    private var normalizedData: [NormalizedChartPoint] {
-        guard let response else { return [] }
-        var result: [NormalizedChartPoint] = []
-        for series in response.series {
-            let symbol = series.symbol.uppercased()
-            guard let firstPrice = series.points.first?.close, firstPrice > 0 else { continue }
-            for point in series.points {
-                let change = (point.close - firstPrice) / firstPrice
-                result.append(NormalizedChartPoint(
-                    symbol: symbol,
-                    date: point.date,
-                    percentChange: change
-                ))
-            }
-        }
-        return result
-    }
-
-    private var chartStyleScale: KeyValuePairs<String, Color> {
-        let dict: KeyValuePairs<String, Color> = [
-            primarySymbol.uppercased(): AppTheme.Colors.tint(for: colorScheme)
-        ]
-        
-        // KeyValuePairs is a bit tedious to build dynamically in Swift.
-        // Let's just use dictionary mapping in the chart instead.
-        return dict
-    }
-
-    private func symbolColor(for symbol: String) -> Color {
-        let normalized = symbol.uppercased()
-        if normalized == primarySymbol.uppercased() {
-            return AppTheme.Colors.tint(for: colorScheme)
-        }
-        
-        let otherSymbols = Set((response?.series ?? []).map { $0.symbol.uppercased() })
-            .filter { $0 != primarySymbol.uppercased() }
-            .sorted()
-            
-        guard let index = otherSymbols.firstIndex(of: normalized) else {
-            return .gray
-        }
-        
-        let colors = [
-            AppTheme.Colors.secondaryTint(for: colorScheme),
-            AppTheme.Colors.warning,
-            AppTheme.Colors.danger,
-            AppTheme.Colors.success
-        ]
-        return colors[index % colors.count]
-    }
-
-    var body: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Performance comparison")
-                        .typography(.small, weight: .semibold)
-
-                    Text("Compare relative price movement across the selected timeframe.")
-                        .typography(.nano)
-                        .foregroundStyle(.secondary)
-                }
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(PriceChartRange.allCases, id: \.rawValue) { range in
-                            Button {
-                                onSelectRange(range)
-                            } label: {
-                                Text(range.title)
-                                    .typography(.caption, weight: .semibold)
-                                    .foregroundStyle(range == selectedRange ? .white : .primary)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(
-                                        range == selectedRange
-                                            ? AppTheme.Colors.tint(for: colorScheme)
-                                            : Color.secondary.opacity(0.10),
-                                        in: Capsule()
-                                    )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-
-                if isLoading && response == nil {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 48)
-                } else if let errorMessage {
-                    Text(errorMessage)
-                        .typography(.small)
-                        .foregroundStyle(AppTheme.Colors.danger)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                } else if !normalizedData.isEmpty {
-                    Chart(normalizedData) { point in
-                        LineMark(
-                            x: .value("Date", point.date),
-                            y: .value("Change", point.percentChange)
-                        )
-                        .foregroundStyle(symbolColor(for: point.symbol))
-                        .lineStyle(.init(lineWidth: point.symbol == primarySymbol.uppercased() ? 3 : 2))
-                        .interpolationMethod(.catmullRom)
-                    }
-                    .frame(height: 260)
-                    .chartYAxis {
-                        AxisMarks(position: .leading) { value in
-                            AxisGridLine()
-                            AxisTick()
-                            AxisValueLabel {
-                                if let doubleValue = value.as(Double.self) {
-                                    Text(doubleValue, format: .percent.precision(.fractionLength(0)))
-                                }
-                            }
-                        }
-                    }
-                    .chartXAxis {
-                        AxisMarks(values: .automatic(desiredCount: 4))
-                    }
-                } else {
-                    Text("No comparison chart data is available.")
-                        .typography(.small)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 32)
-                }
-            }
-        }
-    }
-}
-
-struct StockNewsTab: View {
-    let news: [StockNews]
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        VStack(spacing: 24) {
-            if news.isEmpty {
-                ResearchPlaceholderCard(
-                    title: "No recent news",
-                    bodyText: "Stay tuned for updates and market shifts."
-                )
-            } else {
-                // 1. Featured Story (Text-only prominent card)
-                if let first = news.first {
-                    FeaturedNewsHero(news: first)
-                }
-
-                // 2. The Feed
-                VStack(spacing: 16) {
-                    ForEach(news.dropFirst(), id: \.url) { item in
-                        NewsFeedRow(news: item)
-                    }
-                }
-            }
-        }
-    }
-}
-
-private struct FeaturedNewsHero: View {
-    let news: StockNews
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        Link(destination: URL(string: news.url) ?? URL(string: "https://google.com")!) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text(news.source?.uppercased() ?? "LATEST NEWS")
-                        .typography(.nano, weight: .bold)
-                        .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme))
-
-                    Spacer()
-
-                    Image(systemName: "newspaper.fill")
-                        .font(.caption)
-                        .foregroundStyle(.secondary.opacity(0.5))
-                        .accessibilityLabel("News icon")
-                }
-
-                Text(news.title)
-                    .typography(.label, weight: .bold)
-                    .foregroundStyle(.primary)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
-
-                if let summary = news.summary, !summary.isEmpty {
-                    Text(summary)
-                        .typography(.nano)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(4)
-                        .multilineTextAlignment(.leading)
-                }
-
-                HStack {
-                    Text(formatRelativeDate(news.date))
-                        .typography(.nano)
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-
-                    HStack(spacing: 4) {
-                        Text("Read full article")
-                            .typography(.nano, weight: .semibold)
-                        Image(systemName: "arrow.up.right")
-                            .typography(.nano, weight: .bold)
-                            .accessibilityLabel("Open external link")
-                    }
-                    .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-                }
-                .padding(.top, 4)
-            }
-            .padding(20)
-            .appGlassEffect(.rect(cornerRadius: 24))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func formatRelativeDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = formatter.date(from: dateString) else { return dateString }
-
-        let now = Date()
-        let diff = now.timeIntervalSince(date)
-
-        if diff < 60 {
-            return "Just now"
-        } else if diff < 3600 {
-            return "\(Int(diff / 60))m ago"
-        } else if diff < 86400 {
-            return "\(Int(diff / 3600))h ago"
-        } else {
-            let days = Int(diff / 86400)
-            return "\(days)d ago"
-        }
-    }
-}
-
-private struct NewsFeedRow: View {
-    let news: StockNews
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        Link(destination: URL(string: news.url) ?? URL(string: "https://google.com")!) {
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
-                        Text(news.source ?? "Source")
-                            .typography(.nano, weight: .bold)
-                            .foregroundStyle(.secondary)
-
-                        Circle()
-                            .fill(.secondary.opacity(0.5))
-                            .frame(width: 3, height: 3)
-
-                        Text(formatRelativeDate(news.date))
-                            .typography(.nano)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Text(news.title)
-                        .typography(.small, weight: .semibold)
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-
-                    if let summary = news.summary, !summary.isEmpty {
-                        Text(summary)
-                            .typography(.nano)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                    }
-                }
-
-                Spacer()
-
-                // Thumbnail
-                AsyncImage(url: URL(string: news.imageURL ?? "")) { image in
-                    image.resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(AppTheme.Colors.tertiaryFill(for: colorScheme))
-                        .overlay(Image(systemName: "photo").font(.caption).foregroundStyle(.secondary))
-                }
-                .frame(width: 60, height: 60)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            }
-            .padding(12)
-            .appGlassEffect(.rect(cornerRadius: 20))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func formatRelativeDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = formatter.date(from: dateString) else { return dateString }
-
-        let now = Date()
-        let diff = now.timeIntervalSince(date)
-
-        if diff < 60 {
-            return "Just now"
-        } else if diff < 3600 {
-            return "\(Int(diff / 60))m ago"
-        } else if diff < 86400 {
-            return "\(Int(diff / 3600))h ago"
-        } else {
-            let days = Int(diff / 86400)
-            return "\(days)d ago"
-        }
-    }
-}
-
-struct StockEarningsTab: View {
-    let symbol: String
-    let earnings: [EarningsEvent]
-    let isLoading: Bool
-    let errorMessage: String?
-
-    var body: some View {
-        VStack(spacing: 24) {
-            if isLoading && earnings.isEmpty {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 40)
-            } else if let errorMessage {
-                ResearchPlaceholderCard(title: "Earnings error", bodyText: errorMessage)
-            } else if earnings.isEmpty {
-                ResearchPlaceholderCard(title: "No earnings data", bodyText: "No data found for \(symbol).")
-            } else {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Earnings History")
-                        .typography(.label, weight: .bold)
-                        .padding(.horizontal, 4)
-
-                    VStack(spacing: 0) {
-                        EarningsTableHeader()
-
-                        ForEach(Array(earnings.enumerated()), id: \.element.id) { index, event in
-                            EarningsTableRow(
-                                event: event,
-                                isLast: index == earnings.count - 1
-                            )
-                        }
-                    }
-                    .appGlassEffect(.rect(cornerRadius: 24))
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Components
-
-private struct EarningsTableHeader: View {
-    var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Text("Date")
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Text("EPS")
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Text("Revenue")
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Text("Surprise")
-                .frame(maxWidth: .infinity, alignment: .trailing)
-        }
-        .typography(.nano, weight: .semibold)
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 20)
-        .padding(.top, 18)
-        .padding(.bottom, 10)
-    }
-}
-
-private struct EarningsTableRow: View {
-    let event: EarningsEvent
-    let isLast: Bool
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(formatDisplayDate(event.date))
-                        .typography(.caption, weight: .bold)
-                    if event.hasTranscript == true {
-                        Label("Transcript", systemImage: "text.page")
-                            .typography(.nano, weight: .semibold)
-                            .foregroundStyle(.secondary)
-                            .labelStyle(.titleAndIcon)
-                            .accessibilityLabel("Transcript available")
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                EarningsMetricCell(
-                    primary: formattedEPS(event.epsActual),
-                    secondary: "Est \(formattedEPS(event.epsEstimated))"
-                )
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                EarningsMetricCell(
-                    primary: formattedRevenue(event.revenueActual),
-                    secondary: "Est \(formattedRevenue(event.revenueEstimated))"
-                )
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text(formattedSurprisePercent)
-                        .typography(.caption, weight: .bold)
-                        .foregroundStyle(statusColor)
-                    Text(surpriseText)
-                        .typography(.nano)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .accessibilityElement(children: .combine)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-
-            if !isLast {
-                Divider()
-                    .padding(.horizontal, 20)
-            }
-        }
-    }
-
-    private var statusColor: Color {
-        guard let surprisePercent = resolvedSurprisePercent else { return .secondary }
-        return surprisePercent >= 0 ? .green : .red
-    }
-
-    private var surpriseText: String {
-        guard let surprisePercent = resolvedSurprisePercent else { return "Reported" }
-        return surprisePercent >= 0 ? "Beat" : "Miss"
-    }
-
-    private var formattedSurprisePercent: String {
-        guard let surprisePercent = resolvedSurprisePercent else { return "—" }
-        let formatted = abs(surprisePercent).formatted(.number.precision(.fractionLength(1)))
-        return surprisePercent >= 0 ? "+\(formatted)%" : "-\(formatted)%"
-    }
-
-    private var resolvedSurprisePercent: Double? {
-        if let surprisePercent = event.surprisePercent {
-            return surprisePercent
-        }
-        guard let act = event.epsActual, let est = event.epsEstimated, est != 0 else { return nil }
-        return ((act - est) / abs(est)) * 100
-    }
-
-    private func formatDisplayDate(_ rawDate: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        guard let date = formatter.date(from: String(rawDate.prefix(10))) else { return rawDate }
-        formatter.dateFormat = "MMM d, yyyy"
-        return formatter.string(from: date)
-    }
-
-    private func formattedEPS(_ value: Double?) -> String {
-        guard let value else { return "—" }
-        return value.formatted(.number.precision(.fractionLength(2)))
-    }
-
-    private func formattedRevenue(_ value: Double?) -> String {
-        guard let value else { return "—" }
-        return value.formatted(.number.notation(.compactName))
-    }
-}
-
-private struct EarningsMetricCell: View {
-    let primary: String
-    let secondary: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(primary)
-                .typography(.caption, weight: .semibold)
-            Text(secondary)
-                .typography(.nano)
-                .foregroundStyle(.secondary)
-        }
-    }
-}
-
-private struct FinancialStatementsIntroCard: View {
-    let symbol: String
-
-    var body: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "building.columns")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Financial statements")
-                            .typography(.small, weight: .semibold)
-
-                        Text("Review balance sheet strength and cash generation for \(symbol) when statement data is available.")
-                            .typography(.small)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-            }
-        }
-    }
-}
-
-private struct FinancialStatementPeriodPicker: View {
-    @Binding var selectedPeriod: StockFinancialStatementPeriod
-    @Environment(\.colorScheme) private var colorScheme
-    @Namespace private var selectionNamespace
-
-    var body: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Statement period")
-                    .typography(.small, weight: .semibold)
-
-                Text("Switch between single filings or grouped annual and quarterly views.")
-                    .typography(.nano)
-                    .foregroundStyle(.secondary)
-
-                GlassEffectContainer(spacing: 8) {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(StockFinancialStatementPeriod.allCases) { period in
-                                Button {
-                                    withAnimation(.snappy(duration: 0.22)) {
-                                        selectedPeriod = period
-                                    }
-                                } label: {
-                                    Text(period.title)
-                                        .typography(.caption, weight: .semibold)
-                                        .foregroundStyle(selectedPeriod == period ? .primary : .secondary)
-                                        .padding(.horizontal, 14)
-                                        .padding(.vertical, 10)
-                                        .glassEffect(
-                                            selectedPeriod == period
-                                                ? .regular.tint(AppTheme.Colors.tint(for: colorScheme)).interactive()
-                                                : .regular.interactive(),
-                                            in: .capsule
-                                        )
-                                        .glassEffectID(period.id, in: selectionNamespace)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 struct StockDetailTabBar: View {
     @Binding var selectedTab: StockDetailTab
     var isPro: Bool = false
@@ -1268,7 +50,7 @@ struct StockDetailTabBar: View {
     }
 }
 
-private struct FinancialStatementTableCard: View {
+struct FinancialStatementTableCard: View {
     let title: String
     let subtitle: String
     let statements: [StockFinancialStatement]
@@ -1324,7 +106,7 @@ private struct FinancialStatementTableCard: View {
     }
 }
 
-private struct StatementMetaPill: View {
+struct StatementMetaPill: View {
     let text: String
 
     var body: some View {
@@ -1337,7 +119,7 @@ private struct StatementMetaPill: View {
     }
 }
 
-private struct FinancialStatementHeaderRow: View {
+struct FinancialStatementHeaderRow: View {
     let statements: [StockFinancialStatement]
 
     var body: some View {
@@ -1368,7 +150,7 @@ private struct FinancialStatementHeaderRow: View {
     }
 }
 
-private struct FinancialStatementMetricRow: View {
+struct FinancialStatementMetricRow: View {
     let entry: StockFinancialStatementEntry
     let statements: [StockFinancialStatement]
 
@@ -1403,7 +185,7 @@ private struct FinancialStatementMetricRow: View {
     }
 }
 
-private struct FinancialMetricTableCard: View {
+struct FinancialMetricTableCard: View {
     let title: String
     let subtitle: String
     let snapshots: [StockFinancialMetricSnapshot]
@@ -1465,7 +247,7 @@ private struct FinancialMetricTableCard: View {
     }
 }
 
-private struct FinancialMetricHeaderRow: View {
+struct FinancialMetricHeaderRow: View {
     let snapshots: [StockFinancialMetricSnapshot]
 
     var body: some View {
@@ -1492,7 +274,7 @@ private struct FinancialMetricHeaderRow: View {
     }
 }
 
-private struct FinancialMetricRow: View {
+struct FinancialMetricRow: View {
     let entry: StockFinancialMetricEntry
     let snapshots: [StockFinancialMetricSnapshot]
 
@@ -1527,7 +309,7 @@ private struct FinancialMetricRow: View {
     }
 }
 
-private struct HeroMetricPill: View {
+struct HeroMetricPill: View {
     let title: String
     let value: String
     let tint: Color
@@ -1552,7 +334,7 @@ private struct HeroMetricPill: View {
     }
 }
 
-private struct ProjectionSummaryBlock: View {
+struct ProjectionSummaryBlock: View {
     let title: String
     let value: String
     let detail: String
@@ -1574,7 +356,7 @@ private struct ProjectionSummaryBlock: View {
     }
 }
 
-private struct ProjectionScenarioHeaderCard: View {
+struct ProjectionScenarioHeaderCard: View {
     let profile: StockComparisonProfile
     let scenario: StockProjectionScenario
     @Binding var selectedScenario: StockProjectionScenarioKind
@@ -1634,7 +416,7 @@ private struct ProjectionScenarioHeaderCard: View {
     }
 }
 
-private struct StockMarketSnapshotCard: View {
+struct StockMarketSnapshotCard: View {
     let snapshot: StockMarketSnapshot
 
     private var sessionChange: Double {
@@ -1705,7 +487,7 @@ private struct StockMarketSnapshotCard: View {
     }
 }
 
-private struct StockSessionRangeBar: View {
+struct StockSessionRangeBar: View {
     let snapshot: StockMarketSnapshot
     let tint: Color
 
@@ -1770,7 +552,7 @@ private struct StockSessionRangeBar: View {
     }
 }
 
-private struct StockBasicFinancialsCard: View {
+struct StockBasicFinancialsCard: View {
     let financials: StockBasicFinancials
 
     private let columns = [
@@ -1839,7 +621,7 @@ private struct StockBasicFinancialsCard: View {
     }
 }
 
-private struct StockConsensusCard: View {
+struct StockConsensusCard: View {
     let consensus: StockAnalystConsensus
 
     @Environment(\.colorScheme) private var colorScheme
@@ -1897,7 +679,7 @@ private struct StockConsensusCard: View {
     }
 }
 
-private struct StockConsensusPlaceholderCard: View {
+struct StockConsensusPlaceholderCard: View {
     let message: String?
     let isWarning: Bool
 
@@ -1933,7 +715,7 @@ private struct StockConsensusPlaceholderCard: View {
     }
 }
 
-private struct ConsensusDistributionRow: View {
+struct ConsensusDistributionRow: View {
     let title: String
     let count: Int
     let total: Int
@@ -1984,7 +766,7 @@ private struct ConsensusDistributionRow: View {
     }
 }
 
-private struct StockBasicFinancialsPlaceholderCard: View {
+struct StockBasicFinancialsPlaceholderCard: View {
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 10) {
@@ -2000,7 +782,7 @@ private struct StockBasicFinancialsPlaceholderCard: View {
     }
 }
 
-private struct BasicFinancialMetricTile: View {
+struct BasicFinancialMetricTile: View {
     let title: String
     let value: String
     let detail: String?
@@ -2031,7 +813,7 @@ private struct BasicFinancialMetricTile: View {
     }
 }
 
-private struct StockCurrentMetricsCard: View {
+struct StockCurrentMetricsCard: View {
     let profile: StockComparisonProfile
 
     private var keyMetrics: [StockComparisonMetric] {
@@ -2079,7 +861,7 @@ private struct StockCurrentMetricsCard: View {
     }
 }
 
-private struct StockAnalysisPlaceholderCard: View {
+struct StockAnalysisPlaceholderCard: View {
     let message: String?
     let isWarning: Bool
 
@@ -2115,7 +897,7 @@ private struct StockAnalysisPlaceholderCard: View {
     }
 }
 
-private struct StockFundamentalsCard: View {
+struct StockFundamentalsCard: View {
     let profile: StockComparisonProfile
 
     private var sharePayload: StockSharePayload {
@@ -2185,7 +967,7 @@ private struct StockFundamentalsCard: View {
     }
 }
 
-private struct StockThesisCard: View {
+struct StockThesisCard: View {
     let symbol: String?
     let details: StockDetails?
     let analysis: String?
@@ -2294,7 +1076,7 @@ private extension String {
     }
 }
 
-private struct CurrentMetricRow: View {
+struct CurrentMetricRow: View {
     let title: String
     let value: String
     let detail: String
@@ -2322,7 +1104,7 @@ private struct CurrentMetricRow: View {
     }
 }
 
-private struct ProjectionHighlightsCard: View {
+struct ProjectionHighlightsCard: View {
     let profile: StockComparisonProfile
     let scenario: StockProjectionScenario
     let scenarioKind: StockProjectionScenarioKind
@@ -2400,7 +1182,7 @@ private struct ProjectionHighlightsCard: View {
     }
 }
 
-private struct ProjectionHighlightTile: View {
+struct ProjectionHighlightTile: View {
     let title: String
     let value: String
     let detail: String
@@ -2428,7 +1210,7 @@ private struct ProjectionHighlightTile: View {
     }
 }
 
-private struct ForecastGrowthChartCard: View {
+struct ForecastGrowthChartCard: View {
     let scenario: StockProjectionScenario
 
     @Environment(\.colorScheme) private var colorScheme
@@ -2548,7 +1330,7 @@ private struct ForecastGrowthChartCard: View {
     }
 }
 
-private struct ForecastMetricSummaryTile: View {
+struct ForecastMetricSummaryTile: View {
     let title: String
     let value: String
     let color: Color
@@ -2574,7 +1356,7 @@ private struct ForecastMetricSummaryTile: View {
     }
 }
 
-private struct ForecastLegendChip: View {
+struct ForecastLegendChip: View {
     let title: String
     let color: Color
 
@@ -2593,7 +1375,7 @@ private struct ForecastLegendChip: View {
     }
 }
 
-private enum ForecastGrowthSeries: String, CaseIterable, Identifiable {
+enum ForecastGrowthSeries: String, CaseIterable, Identifiable {
     case revenue
     case earnings
     case cashFlow
@@ -2623,7 +1405,7 @@ private enum ForecastGrowthSeries: String, CaseIterable, Identifiable {
     }
 }
 
-private struct ForecastGrowthPoint: Identifiable {
+struct ForecastGrowthPoint: Identifiable {
     let series: ForecastGrowthSeries
     let year: Int
     let indexedValue: Double
@@ -2633,7 +1415,7 @@ private struct ForecastGrowthPoint: Identifiable {
     }
 }
 
-private struct ProjectionRangeChartCard: View {
+struct ProjectionRangeChartCard: View {
     let scenario: StockProjectionScenario
 
     @Environment(\.colorScheme) private var colorScheme
@@ -2688,7 +1470,7 @@ private struct ProjectionRangeChartCard: View {
     }
 }
 
-private struct StockValuationSummaryCard: View {
+struct StockValuationSummaryCard: View {
     let symbol: String?
     let currentPrice: Double?
     let valuation: StockValuationRequest?
@@ -2767,7 +1549,7 @@ private func shareStyle(for destination: StockShareDestination) -> StockShareTex
     }
 }
 
-private struct ValuationCaseTile: View {
+struct ValuationCaseTile: View {
     let title: String
     let range: PriceRange?
 
@@ -2789,7 +1571,7 @@ private struct ValuationCaseTile: View {
     }
 }
 
-private struct StockPositionOverviewCard: View {
+struct StockPositionOverviewCard: View {
     let details: StockDetails
     let onEditPosition: () -> Void
     let onSellPosition: () -> Void
@@ -2848,7 +1630,7 @@ private struct StockPositionOverviewCard: View {
     }
 }
 
-private struct DetailItem: View {
+struct DetailItem: View {
     let title: String
     let value: String
 
@@ -2866,7 +1648,7 @@ private struct DetailItem: View {
     }
 }
 
-private struct StockCompanyAvatarView: View {
+struct StockCompanyAvatarView: View {
     let companyProfile: CompanyProfileResponse?
     let fallbackText: String
     let colorScheme: ColorScheme
@@ -2921,7 +1703,7 @@ private struct StockCompanyAvatarView: View {
     }
 }
 
-private struct CompanyProfileWebsiteItem: View {
+struct CompanyProfileWebsiteItem: View {
     let companyProfile: CompanyProfileResponse
 
     var body: some View {
@@ -2948,7 +1730,7 @@ private struct CompanyProfileWebsiteItem: View {
     }
 }
 
-private struct StockHistoryCard: View {
+struct StockHistoryCard: View {
     let history: [StockHistory]
 
     @Environment(\.colorScheme) private var colorScheme
@@ -2995,7 +1777,7 @@ private struct StockHistoryCard: View {
     }
 }
 
-private struct StockNewsCard: View {
+struct StockNewsCard: View {
     let news: [StockNews]
 
     var body: some View {
@@ -3024,7 +1806,7 @@ private struct StockNewsCard: View {
     }
 }
 
-private struct NewsRow: View {
+struct NewsRow: View {
     let item: StockNews
 
     var body: some View {
@@ -3041,7 +1823,7 @@ private struct NewsRow: View {
     }
 }
 
-private struct SharePriceIntrinsicValueCard: View {
+struct SharePriceIntrinsicValueCard: View {
     let currentPrice: Double
     let intrinsicValue: Double
     let bearValue: Double?
@@ -3096,9 +1878,9 @@ private struct SharePriceIntrinsicValueCard: View {
                                 .foregroundStyle(valuationColor)
                         }
                     }
-                    
+
                     Spacer()
-                    
+
                     HStack(spacing: 8) {
                         if let onApplyToValuation {
                             Button(action: onApplyToValuation) {
@@ -3155,7 +1937,7 @@ private struct SharePriceIntrinsicValueCard: View {
     }
 }
 
-private struct IntrinsicValueRangeBar: View {
+struct IntrinsicValueRangeBar: View {
     let currentPrice: Double
     let intrinsicValue: Double
     let bearValue: Double?
@@ -3214,7 +1996,7 @@ private struct IntrinsicValueRangeBar: View {
     }
 }
 
-private struct IntrinsicValueTile: View {
+struct IntrinsicValueTile: View {
     let title: String
     let value: String
     let color: Color
@@ -3235,7 +2017,7 @@ private struct IntrinsicValueTile: View {
     }
 }
 
-private struct ProjectionTableCard: View {
+struct ProjectionTableCard: View {
     let scenario: StockProjectionScenario
 
     var body: some View {
@@ -3315,7 +2097,7 @@ private struct ProjectionTableCard: View {
     }
 }
 
-private struct ProjectionTableHeader: View {
+struct ProjectionTableHeader: View {
     let years: [StockProjectionYear]
 
     var body: some View {
@@ -3336,7 +2118,7 @@ private struct ProjectionTableHeader: View {
     }
 }
 
-private struct ProjectionTableGroupHeader: View {
+struct ProjectionTableGroupHeader: View {
     let title: String
 
     var body: some View {
@@ -3348,7 +2130,7 @@ private struct ProjectionTableGroupHeader: View {
     }
 }
 
-private struct ProjectionTableRowView: View {
+struct ProjectionTableRowView: View {
     let row: ProjectionTableRow
 
     @Environment(\.colorScheme) private var colorScheme
@@ -3378,7 +2160,7 @@ private struct ProjectionTableRowView: View {
     }
 }
 
-private struct ProjectionValueCellBackground: View {
+struct ProjectionValueCellBackground: View {
     let isActualYear: Bool
     let isEmphasized: Bool
     let colorScheme: ColorScheme
@@ -3396,20 +2178,20 @@ private struct ProjectionValueCellBackground: View {
     }
 }
 
-private struct ProjectionTableGroup: Identifiable {
+struct ProjectionTableGroup: Identifiable {
     let id = UUID()
     let title: String
     let rows: [ProjectionTableRow]
 }
 
-private struct ProjectionTableRow: Identifiable {
+struct ProjectionTableRow: Identifiable {
     let id = UUID()
     let title: String
     let values: [String]
     var isEmphasized: Bool = false
 }
 
-private struct ComparisonPeerPicker: View {
+struct ComparisonPeerPicker: View {
     let title: String
     let selectedSymbol: String
     let options: [StockComparisonProfile]
@@ -3447,7 +2229,7 @@ private struct ComparisonPeerPicker: View {
     }
 }
 
-private struct ComparisonMetricTableCard: View {
+struct ComparisonMetricTableCard: View {
     let group: StockComparisonMetricGroup
     let profiles: [StockComparisonProfile]
 
@@ -3480,7 +2262,7 @@ private struct ComparisonMetricTableCard: View {
     }
 }
 
-private struct ComparisonHeaderRow: View {
+struct ComparisonHeaderRow: View {
     let profiles: [StockComparisonProfile]
 
     var body: some View {
@@ -3506,7 +2288,7 @@ private struct ComparisonHeaderRow: View {
     }
 }
 
-private struct ComparisonMetricRow: View {
+struct ComparisonMetricRow: View {
     let metric: StockComparisonMetric
     let profiles: [StockComparisonProfile]
 
@@ -3549,87 +2331,6 @@ private func formattedMetricValue(_ metric: StockComparisonMetric, value: Double
 private func projectionRangeText(for year: StockProjectionYear?) -> String {
     guard let year else { return "Pending" }
     return "\(year.sharePriceLow.currency) - \(year.sharePriceHigh.currency)"
-}
-
-struct DCFValuationCard: View {
-    let basePrice: Double
-    let bearPrice: Double
-    let bullPrice: Double
-    let currentPrice: Double
-    var onEdit: (() -> Void)? = nil
-    var onApplyToValuation: (() -> Void)? = nil
-
-    var body: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Intrinsic valuation (DCF)")
-                            .typography(.small, weight: .semibold)
-
-                        Text("Discounted cash flow (DCF) fair value estimates based on the projected explicit cash flows and the Gordon Growth terminal value.")
-                            .typography(.nano)
-                            .foregroundStyle(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 8) {
-                        if let onApplyToValuation {
-                            Button(action: onApplyToValuation) {
-                                Text("Apply")
-                                    .typography(.caption, weight: .semibold)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.secondary.opacity(0.12), in: Capsule())
-                            }
-                            .accessibilityLabel("Apply DCF values to valuation")
-                        }
-
-                        if let onEdit {
-                            Button(action: onEdit) {
-                                Text("Edit")
-                                    .typography(.caption, weight: .semibold)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.secondary.opacity(0.12), in: Capsule())
-                            }
-                        }
-                    }
-                }
-
-                HStack(spacing: 12) {
-                    dcfBlock(title: "Bear case", value: bearPrice)
-                    dcfBlock(title: "Base case", value: basePrice)
-                    dcfBlock(title: "Bull case", value: bullPrice)
-                }
-            }
-        }
-    }
-
-    private func dcfBlock(title: String, value: Double) -> some View {
-        let isUpside = value > currentPrice
-        let color: Color = isUpside ? .green : .red
-
-        return VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .typography(.caption, weight: .semibold)
-                .foregroundStyle(.secondary)
-
-            Text(value.currency)
-                .typography(.label, weight: .bold)
-
-            HStack(spacing: 2) {
-                Image(systemName: isUpside ? "arrow.up.right" : "arrow.down.right")
-                Text(StockMetricFormatter.percentText((value - currentPrice) / currentPrice))
-            }
-            .typography(.caption, weight: .semibold)
-            .foregroundStyle(color)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-    }
 }
 
 private func cagrRangeText(for year: StockProjectionYear?) -> String {
@@ -3729,99 +2430,4 @@ private func formattedFinancialMetricValue(
 
 private func financialStatementTableMinWidth(statementCount: Int) -> CGFloat {
     CGFloat(190 + max(1, statementCount) * 146)
-}
-
-struct EditDCFSheet: View {
-    let onSave: () -> Void
-
-    @Environment(\.dismiss) private var dismiss
-    
-    @AppStorage("userWACC") private var userWACC: Double = 0.09
-    @AppStorage("userTerminalGrowthRate") private var userTerminalGrowthRate: Double = 0.025
-    @AppStorage("userTerminalMargin") private var userTerminalMargin: Double = 0.22
-    @AppStorage("userFCFMarginAssumption") private var userFCFMarginAssumption: Double = 1.10
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section(header: Text("Discount Rate")) {
-                    VStack(alignment: .leading) {
-                        Text("WACC (Weighted Average Cost of Capital)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        HStack {
-                            Slider(value: $userWACC, in: 0.05...0.20, step: 0.005)
-                            Text(userWACC, format: .percent.precision(.fractionLength(1)))
-                                .frame(width: 60, alignment: .trailing)
-                        }
-                    }
-                }
-                
-                Section(header: Text("Terminal Value Assumptions")) {
-                    VStack(alignment: .leading) {
-                        Text("Terminal Growth Rate")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        HStack {
-                            Slider(value: $userTerminalGrowthRate, in: 0.01...0.05, step: 0.005)
-                            Text(userTerminalGrowthRate, format: .percent.precision(.fractionLength(1)))
-                                .frame(width: 60, alignment: .trailing)
-                        }
-                    }
-                    
-                    VStack(alignment: .leading) {
-                        Text("Terminal Margin")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        HStack {
-                            Slider(value: $userTerminalMargin, in: 0.05...0.50, step: 0.01)
-                            Text(userTerminalMargin, format: .percent.precision(.fractionLength(0)))
-                                .frame(width: 60, alignment: .trailing)
-                        }
-                    }
-                }
-                
-                Section(header: Text("Cash Flow Assumptions")) {
-                    VStack(alignment: .leading) {
-                        Text("FCF to Net Income Ratio")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        HStack {
-                            Slider(value: $userFCFMarginAssumption, in: 0.5...2.0, step: 0.05)
-                            Text(userFCFMarginAssumption, format: .number.precision(.fractionLength(2)))
-                                .frame(width: 60, alignment: .trailing)
-                        }
-                    }
-                }
-                
-                Section {
-                    Button(action: {
-                        userWACC = 0.09
-                        userTerminalGrowthRate = 0.025
-                        userTerminalMargin = 0.22
-                        userFCFMarginAssumption = 1.10
-                    }) {
-                        Text("Reset to Defaults")
-                            .foregroundStyle(.red)
-                    }
-                }
-            }
-            .navigationTitle("Edit DCF Parameters")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        onSave()
-                        dismiss()
-                    }
-                    .bold()
-                }
-            }
-        }
-    }
 }
