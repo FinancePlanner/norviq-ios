@@ -206,7 +206,12 @@ struct ExpensesPlannerScreen: View {
         )
         .padding(.horizontal, 16)
 
-        missingBudgetAlert
+        MissingBudgetAlert(
+          netSalary: viewModel.selectedMonthSnapshot?.netSalary ?? 0,
+          hasSnapshot: viewModel.selectedMonthSnapshot != nil,
+          monthTitle: viewModel.selectedMonthDisplayTitle,
+          isSalaryEditorPresented: $isSalaryEditorPresented
+        )
 
         MonthlyPlanItemsCard(
           monthTitle: viewModel.selectedMonthDisplayTitle,
@@ -495,9 +500,14 @@ struct ExpensesPlannerScreen: View {
     itemDraft = draft
   }
 
-  @ViewBuilder
-  private var missingBudgetAlert: some View {
-    if (viewModel.selectedMonthSnapshot?.netSalary ?? 0) <= 0 {
+  private struct MissingBudgetAlert: View {
+  let netSalary: Double
+  let hasSnapshot: Bool
+  let monthTitle: String
+  @Binding var isSalaryEditorPresented: Bool
+
+  var body: some View {
+    if netSalary <= 0 {
       GlassCard(cornerRadius: 18) {
         HStack(alignment: .top, spacing: 12) {
           Image(systemName: "exclamationmark.triangle.fill")
@@ -506,16 +516,16 @@ struct ExpensesPlannerScreen: View {
           VStack(alignment: .leading, spacing: 6) {
             Text("Set your monthly budget")
               .typography(.small, weight: .semibold)
-            Text(viewModel.selectedMonthSnapshot == nil
-              ? "No budget plan for \(viewModel.selectedMonthDisplayTitle). Create one or select a different month from the title menu."
-              : "Your monthly budget is currently 0. Add salary and side income so spending insights can calculate correctly.")
+            Text(hasSnapshot
+              ? "Your monthly budget is currently 0. Add salary and side income so spending insights can calculate correctly."
+              : "No budget plan for \(monthTitle). Create one or select a different month from the title menu.")
               .typography(.nano)
               .foregroundStyle(.secondary)
           }
 
           Spacer()
 
-          Button(viewModel.selectedMonthSnapshot == nil ? "Create" : "Set") {
+          Button(hasSnapshot ? "Set" : "Create") {
             isSalaryEditorPresented = true
           }
           .buttonStyle(.borderedProminent)
@@ -524,6 +534,7 @@ struct ExpensesPlannerScreen: View {
       }
       .padding(.horizontal, 16)
     }
+  }
   }
 
   private var selectedYearBinding: Binding<Int> {
@@ -2181,4 +2192,3 @@ struct MetricItem: View {
     .frame(maxWidth: .infinity)
   }
 }
-
