@@ -194,23 +194,23 @@ private struct BudgetCategoryCard: View {
   }
 }
 
-private struct MetricItem: View {
-  let title: String
-  let value: String
-  let color: Color
-
-  var body: some View {
-    VStack(spacing: 4) {
-      Text(title)
-        .font(.caption)
-        .foregroundStyle(.secondary)
-      Text(value)
-        .font(.subheadline.weight(.semibold))
-        .foregroundStyle(color)
-    }
-    .frame(maxWidth: .infinity)
-  }
-}
+//private struct MetricItem: View {
+//  let title: String
+//  let value: String
+//  let color: Color
+//
+//  var body: some View {
+//    VStack(spacing: 4) {
+//      Text(title)
+//        .font(.caption)
+//        .foregroundStyle(.secondary)
+//      Text(value)
+//        .font(.subheadline.weight(.semibold))
+//        .foregroundStyle(color)
+//    }
+//    .frame(maxWidth: .infinity)
+//  }
+//}
 
 private struct RecordedSpendCard: View {
   let activities: [BudgetActivity]

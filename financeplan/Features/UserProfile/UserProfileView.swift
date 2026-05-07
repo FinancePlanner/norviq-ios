@@ -388,7 +388,7 @@ public struct UserProfileView: View {
 
             // Support
             Section(LocalizedStringKey("Support")) {
-                if let mailURL = URL(string: "mailto:support@norviqa.com") {
+                if let mailURL = URL(string: "mailto:fernandocorreia316@gmail.com") {
                     Link(destination: mailURL) {
                         Label("Contact Developer", systemImage: "envelope.fill")
                             .foregroundStyle(.primary)
@@ -719,16 +719,16 @@ private struct ConnectView: View {
             Section {
                 socialButton(
                     LocalizedStringKey("Follow on Instagram"), systemImage: "camera",
-                    url: "https://instagram.com/norviqa")
+                    url: "https://instagram.com/norviqplan")
                 socialButton(
                     LocalizedStringKey("Follow on X"), systemImage: "x.circle",
-                    url: "https://x.com/norviqa")
+                    url: "https://x.com/NorviqPlanner")
                 socialButton(
                     LocalizedStringKey("Follow on TikTok"), systemImage: "music.note",
-                    url: "https://tiktok.com/@norviqa")
+                    url: "https://tiktok.com/@norviqplan")
                 socialButton(
                     LocalizedStringKey("Join Discord"), systemImage: "bubble.left.and.bubble.right",
-                    url: "https://discord.gg/norviqa")
+                    url: "https://discord.gg/3QVkas3rH")
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
         }
