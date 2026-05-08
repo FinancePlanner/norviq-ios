@@ -186,7 +186,7 @@ public struct UserProfileView: View {
                 }
 
                 Button {
-                    Task { await billingManager.restorePurchases() }
+                    restorePurchases()
                 } label: {
                     HStack {
                         Label(
@@ -232,7 +232,7 @@ public struct UserProfileView: View {
                     }
                 }
                 .onChange(of: useFaceID) { _, enabled in
-                    Task { await setFaceIDEnabled(enabled) }
+                    updateFaceID(enabled)
                 }
 
                 NavigationLink(value: UserProfileDestination.securityCode) {
@@ -255,7 +255,7 @@ public struct UserProfileView: View {
                     Label(LocalizedStringKey("Push notifications"), systemImage: "bell.badge")
                 }
                 .onChange(of: isNotificationsOn) { _, enabled in
-                    Task { await pushNotificationsCoordinator.setNotificationsEnabled(enabled) }
+                    updateNotifications(enabled)
                 }
 
                 Toggle(isOn: $isEarningsAlertsOn) {
@@ -263,7 +263,7 @@ public struct UserProfileView: View {
                 }
                 .disabled(!pushNotificationsCoordinator.isOptedIn || pushNotificationsCoordinator.isEarningsAlertsLoading)
                 .onChange(of: isEarningsAlertsOn) { _, enabled in
-                    Task { await pushNotificationsCoordinator.setEarningsAlertsEnabled(enabled) }
+                    updateEarningsAlerts(enabled)
                 }
 
                 HStack(spacing: 12) {
@@ -276,13 +276,13 @@ public struct UserProfileView: View {
 
                 if pushNotificationsCoordinator.authorizationStatus == .denied {
                     Button {
-                        Task { await pushNotificationsCoordinator.setNotificationsEnabled(true) }
+                        enableNotifications()
                     } label: {
                         Label(LocalizedStringKey("Open Notification Settings"), systemImage: "gear")
                     }
                 } else if pushNotificationsCoordinator.authorizationStatus == .notDetermined {
                     Button {
-                        Task { await pushNotificationsCoordinator.setNotificationsEnabled(true) }
+                        enableNotifications()
                     } label: {
                         Label(LocalizedStringKey("Enable Notification Alerts"), systemImage: "bell")
                     }
@@ -436,15 +436,7 @@ public struct UserProfileView: View {
             // Log Out
             Section {
                 Button(role: .destructive) {
-                    Task {
-                        guard !isLoggingOut else { return }
-                        isLoggingOut = true
-                        // PostHog: Track logout before resetting the session
-                        PostHogSDK.shared.capture("user_logged_out")
-                        PostHogSDK.shared.reset()
-                        await Container.shared.authSessionManager().logout()
-                        isLoggingOut = false
-                    }
+                    logOut()
                 } label: {
                     HStack(spacing: 8) {
                         if isLoggingOut {
@@ -628,387 +620,38 @@ public struct UserProfileView: View {
             ?? "?"
         return String(seed.prefix(1)).uppercased()
     }
-}
 
-private struct AIModelIntegrationsInfoSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var scheme
+    // MARK: - Private async actions
 
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Label("Why connect an AI model?", systemImage: "sparkles")
-                            .typography(.headline, weight: .semibold)
-
-                        Text(
-                            "Connect your AI tools so they can work with your Norviq data directly."
-                        )
-                        .typography(.body)
-                        .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 4)
-                }
-                .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-
-                Section {
-                    valueRow(
-                        title: "Less manual work",
-                        detail:
-                            "No exporting files, pasting raw data, or writing small scripts just to prepare a question.",
-                        systemImage: "wand.and.stars"
-                    )
-                    valueRow(
-                        title: "More reliable answers",
-                        detail:
-                            "Your assistant can use current market and portfolio data instead of guessing from memory.",
-                        systemImage: "checkmark.seal"
-                    )
-                    valueRow(
-                        title: "Cleaner conversations",
-                        detail:
-                            "Ask focused questions without pasting long API notes or large data responses.",
-                        systemImage: "text.bubble"
-                    )
-                }
-                .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-            }
-            .scrollContentBackground(.hidden)
-            .listStyle(.insetGrouped)
-            .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-            .navigationTitle("AI Model Integrations")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .font(.headline)
-                        .foregroundStyle(AppTheme.Colors.tint(for: scheme))
-                }
-            }
-        }
+    private func restorePurchases() {
+        Task { await billingManager.restorePurchases() }
     }
 
-    private func valueRow(title: String, detail: String, systemImage: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: systemImage)
-                .typography(.label, weight: .semibold)
-                .foregroundStyle(AppTheme.Colors.tint(for: scheme))
-                .frame(width: 28, height: 28)
-                .background(AppTheme.Colors.tint(for: scheme).opacity(0.12))
-                .clipShape(.rect(cornerRadius: 6))
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .typography(.label, weight: .semibold)
-                Text(detail)
-                    .typography(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-private struct ConnectView: View {
-    @Environment(\.colorScheme) private var scheme
-    @Environment(\.openURL) private var openURL
-
-    var body: some View {
-        List {
-            Section {
-                socialButton(
-                    LocalizedStringKey("Follow on Instagram"), systemImage: "camera",
-                    url: "https://instagram.com/norviqplan")
-                socialButton(
-                    LocalizedStringKey("Follow on X"), systemImage: "x.circle",
-                    url: "https://x.com/NorviqPlanner")
-                socialButton(
-                    LocalizedStringKey("Follow on TikTok"), systemImage: "music.note",
-                    url: "https://tiktok.com/@norviqplan")
-                socialButton(
-                    LocalizedStringKey("Join Discord"), systemImage: "bubble.left.and.bubble.right",
-                    url: "https://discord.gg/3QVkas3rH")
-            }
-            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-        }
-        .scrollContentBackground(.hidden)
-        .listStyle(.insetGrouped)
-        .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-        .navigationTitle(LocalizedStringKey("Connect"))
-        .navigationBarTitleDisplayMode(.inline)
+    private func updateFaceID(_ enabled: Bool) {
+        Task { await setFaceIDEnabled(enabled) }
     }
 
-    @ViewBuilder
-    private func socialButton(_ title: LocalizedStringKey, systemImage: String, url: String)
-        -> some View
-    {
-        if let destination = URL(string: url) {
-            Button {
-                openURL(destination)
-            } label: {
-                Label(title, systemImage: systemImage)
-            }
-        }
-    }
-}
-
-private struct DataAvailabilityView: View {
-    @Environment(\.colorScheme) private var scheme
-
-    var body: some View {
-        List {
-            Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("Market data coverage", systemImage: "chart.line.uptrend.xyaxis")
-                        .typography(.label, weight: .semibold)
-
-                    Text(
-                        "Some analysis, statements, consensus, and forecast data depends on the market data coverage currently connected to Norviq."
-                    )
-                    .typography(.caption)
-                    .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 4)
-            }
-            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-
-            Section {
-                coverageRow(
-                    title: "Free data coverage",
-                    detail: "Available for the supported symbol list below."
-                )
-                coverageRow(
-                    title: "Starter data coverage",
-                    detail: "Available for US exchanges."
-                )
-                coverageRow(
-                    title: "Premium data coverage",
-                    detail: "Available for US, UK, and Canada exchanges."
-                )
-            } header: {
-                Text("Data Coverage")
-            } footer: {
-                Text(
-                    "Market data coverage is separate from your Norviq subscription. If a data source does not cover a symbol or date range, the app keeps the rest of the stock page usable."
-                )
-            }
-            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-
-            Section("App Subscription Limits") {
-                Text(
-                    "Norviq subscription limits control app features such as portfolio capacity, imports, alerts, reports, and advanced research access."
-                )
-                .typography(.caption)
-                .foregroundStyle(.secondary)
-            }
-            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-
-            Section {
-                DisclosureGroup("Supported symbols on current free data coverage") {
-                    Text(FMPFreeTierCoverage.supportedSymbolsDisplay)
-                        .typography(.caption)
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                        .padding(.vertical, 6)
-                }
-            }
-            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-        }
-        .scrollContentBackground(.hidden)
-        .listStyle(.insetGrouped)
-        .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-        .navigationTitle("Data Availability")
-        .navigationBarTitleDisplayMode(.inline)
+    private func updateNotifications(_ enabled: Bool) {
+        Task { await pushNotificationsCoordinator.setNotificationsEnabled(enabled) }
     }
 
-    private func coverageRow(title: String, detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .typography(.label, weight: .semibold)
-            Text(detail)
-                .typography(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-private struct SecurityCodeView: View {
-    let manager: SecurityCodeManaging
-    @Binding var isEnabled: Bool
-    @Environment(\.colorScheme) private var scheme
-
-    @State private var setupCode = ""
-    @State private var setupConfirmation = ""
-    @State private var currentCode = ""
-    @State private var replacementCode = ""
-    @State private var replacementConfirmation = ""
-    @State private var removalCode = ""
-    @State private var message: String?
-    @State private var isErrorMessage = false
-
-    var body: some View {
-        List {
-            Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    let title: LocalizedStringKey =
-                        isEnabled ? "Security Code is enabled" : "Security Code is off"
-                    Label(title, systemImage: isEnabled ? "lock.shield.fill" : "lock.open.fill")
-                        .typography(.label, weight: .semibold)
-
-                    Text(
-                        "Use a 6-digit code to unlock Norviq when Face ID or device passcode is unavailable."
-                    )
-                    .typography(.caption)
-                    .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 4)
-            }
-            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-
-            if isEnabled {
-                changeSection
-                removeSection
-            } else {
-                setupSection
-            }
-
-            if let message {
-                Section {
-                    Text(message)
-                        .typography(.caption)
-                        .foregroundStyle(
-                            isErrorMessage ? AppTheme.Colors.danger : AppTheme.Colors.success)
-                }
-                .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-            }
-        }
-        .scrollContentBackground(.hidden)
-        .listStyle(.insetGrouped)
-        .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-        .navigationTitle("Security Code")
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            isEnabled = manager.isEnabled
-        }
+    private func updateEarningsAlerts(_ enabled: Bool) {
+        Task { await pushNotificationsCoordinator.setEarningsAlertsEnabled(enabled) }
     }
 
-    private var setupSection: some View {
-        Section {
-            codeField("New 6-digit code", text: $setupCode)
-            codeField("Confirm code", text: $setupConfirmation)
-
-            Button {
-                setCode()
-            } label: {
-                Label("Turn On Security Code", systemImage: "lock.fill")
-            }
-            .disabled(setupCode.count != 6 || setupConfirmation.count != 6)
-        } header: {
-            Text("Set Up")
-        }
-        .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+    private func enableNotifications() {
+        Task { await pushNotificationsCoordinator.setNotificationsEnabled(true) }
     }
 
-    private var changeSection: some View {
-        Section {
-            codeField("Current code", text: $currentCode)
-            codeField("New 6-digit code", text: $replacementCode)
-            codeField("Confirm new code", text: $replacementConfirmation)
-
-            Button {
-                changeCode()
-            } label: {
-                Label("Change Security Code", systemImage: "arrow.triangle.2.circlepath")
-            }
-            .disabled(
-                currentCode.count != 6 || replacementCode.count != 6
-                    || replacementConfirmation.count != 6)
-        } header: {
-            Text("Change")
+    private func logOut() {
+        Task {
+            guard !isLoggingOut else { return }
+            isLoggingOut = true
+            // PostHog: Track logout before resetting the session
+            PostHogSDK.shared.capture("user_logged_out")
+            PostHogSDK.shared.reset()
+            await Container.shared.authSessionManager().logout()
+            isLoggingOut = false
         }
-        .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-    }
-
-    private var removeSection: some View {
-        Section {
-            codeField("Current code", text: $removalCode)
-
-            Button(role: .destructive) {
-                removeCode()
-            } label: {
-                Label("Turn Off Security Code", systemImage: "lock.slash")
-            }
-            .disabled(removalCode.count != 6)
-        } header: {
-            Text("Remove")
-        }
-        .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-    }
-
-    private func codeField(_ title: String, text: Binding<String>) -> some View {
-        SecureField(title, text: text)
-            .keyboardType(.numberPad)
-            .textContentType(.oneTimeCode)
-            .font(.body.monospacedDigit())
-            .onChange(of: text.wrappedValue) { _, newValue in
-                text.wrappedValue = String(newValue.filter(\.isNumber).prefix(6))
-            }
-    }
-
-    private func setCode() {
-        guard setupCode == setupConfirmation else {
-            show("Security Code confirmation does not match.", isError: true)
-            return
-        }
-
-        do {
-            try manager.setCode(setupCode)
-            setupCode = ""
-            setupConfirmation = ""
-            isEnabled = true
-            show("Security Code is enabled.", isError: false)
-        } catch {
-            show(errorMessage(for: error), isError: true)
-        }
-    }
-
-    private func changeCode() {
-        guard replacementCode == replacementConfirmation else {
-            show("New Security Code confirmation does not match.", isError: true)
-            return
-        }
-
-        do {
-            try manager.changeCode(currentCode: currentCode, newCode: replacementCode)
-            currentCode = ""
-            replacementCode = ""
-            replacementConfirmation = ""
-            isEnabled = true
-            show("Security Code was changed.", isError: false)
-        } catch {
-            show(errorMessage(for: error), isError: true)
-        }
-    }
-
-    private func removeCode() {
-        do {
-            try manager.removeCode(currentCode: removalCode)
-            removalCode = ""
-            isEnabled = false
-            show("Security Code is off.", isError: false)
-        } catch {
-            show(errorMessage(for: error), isError: true)
-        }
-    }
-
-    private func show(_ value: String, isError: Bool) {
-        message = value
-        isErrorMessage = isError
-    }
-
-    private func errorMessage(for error: any Error) -> String {
-        (error as? LocalizedError)?.errorDescription ?? "Unable to update Security Code."
     }
 }
