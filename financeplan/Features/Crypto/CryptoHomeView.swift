@@ -10,6 +10,7 @@ struct CryptoHomeView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var isAddCryptoPresented = false
     @State private var editingHolding: CryptoPortfolioItemResponse?
+    @InjectedObservable(\Container.billingManager) private var billingManager
 
     private enum CryptoSegment: String, CaseIterable, Identifiable {
         case overview, portfolio, market, news
@@ -34,31 +35,16 @@ struct CryptoHomeView: View {
                 MeshGradientBackground()
                     .ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: 24) {
-                        segmentPicker
-
-                        if isShowingLoadingState {
-                            CryptoOverviewSkeleton()
-                                .transition(.opacity)
-                        } else {
-                            segmentContent
-                                .transition(.opacity)
-                        }
-                    }
-                    .padding(.vertical)
+                if billingManager.isPro {
+                    proContent
+                } else {
+                    lockedContent
                 }
             }
             .navigationTitle("Crypto")
-            .refreshable {
-                await reloadCrypto(force: true)
-            }
-            .task {
-                await initialLoad()
-            }
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    if selectedSegment == .portfolio {
+                    if billingManager.isPro, selectedSegment == .portfolio {
                         Button(action: presentAddHoldingSheet) {
                             Image(systemName: "plus")
                                 .font(.system(size: 16, weight: .semibold))
@@ -86,6 +72,41 @@ struct CryptoHomeView: View {
                 EditCryptoHoldingSheet(viewModel: viewModel, holding: holding)
             }
             .animation(.smooth(duration: 0.3), value: selectedSegment)
+        }
+    }
+
+    private var proContent: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                segmentPicker
+
+                if isShowingLoadingState {
+                    CryptoOverviewSkeleton()
+                        .transition(.opacity)
+                } else {
+                    segmentContent
+                        .transition(.opacity)
+                }
+            }
+            .padding(.vertical)
+        }
+        .refreshable {
+            await reloadCrypto(force: true)
+        }
+        .task {
+            await initialLoad()
+        }
+    }
+
+    private var lockedContent: some View {
+        ProGateView(billingManager: billingManager) {
+            ScrollView {
+                VStack(spacing: 24) {
+                    segmentPicker
+                    CryptoOverviewSkeleton()
+                }
+                .padding(.vertical)
+            }
         }
     }
 
