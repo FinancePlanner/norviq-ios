@@ -11,6 +11,8 @@ enum Constants {
 
     static let webAppBaseUrl = URL(string: "https://www.norviqaapp.com")!
 
+    static let shareBaseUrl = URL(string: "https://www.norviqaapp.com")!
+
     static let swiftyCropConfiguration = SwiftyCropConfiguration(
       maxMagnificationScale: 4.0,
       maskRadius: 1_000,

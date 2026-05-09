@@ -96,20 +96,30 @@ struct StockDetailScreen: View {
     private var shareMenu: some View {
         Group {
             if let shareSnapshot = viewModel.shareSnapshot {
+                let symbol = viewModel.details?.symbol ?? initialSymbol
+                let shareURL = ShareURLBuilder.stock(symbol: symbol)
                 Menu {
                     ShareLink(
-                        item: shareSnapshot.body,
+                        item: shareURL,
                         subject: Text(shareSnapshot.title),
-                        message: Text("Shared from financeplan")
+                        message: Text(shareSnapshot.body),
+                        preview: SharePreview(
+                            shareSnapshot.title,
+                            image: Image(systemName: "doc.text")
+                        )
                     ) {
                         Label("Snapshot", systemImage: "doc.text")
                     }
 
                     if let thesisPayload {
                         ShareLink(
-                            item: thesisPayload.body,
+                            item: shareURL,
                             subject: Text(thesisPayload.title),
-                            message: Text("Shared from financeplan")
+                            message: Text(thesisPayload.body),
+                            preview: SharePreview(
+                                thesisPayload.title,
+                                image: Image(systemName: "quote.bubble")
+                            )
                         ) {
                             Label("Thesis", systemImage: "quote.bubble")
                         }
@@ -117,9 +127,13 @@ struct StockDetailScreen: View {
 
                     if let fundamentalsPayload {
                         ShareLink(
-                            item: fundamentalsPayload.body,
+                            item: shareURL,
                             subject: Text(fundamentalsPayload.title),
-                            message: Text("Shared from financeplan")
+                            message: Text(fundamentalsPayload.body),
+                            preview: SharePreview(
+                                fundamentalsPayload.title,
+                                image: Image(systemName: "chart.line.uptrend.xyaxis")
+                            )
                         ) {
                             Label("Fundamentals", systemImage: "chart.line.uptrend.xyaxis")
                         }
@@ -127,9 +141,13 @@ struct StockDetailScreen: View {
 
                     if let priceTargetsPayload {
                         ShareLink(
-                            item: priceTargetsPayload.body,
+                            item: shareURL,
                             subject: Text(priceTargetsPayload.title),
-                            message: Text("Shared from financeplan")
+                            message: Text(priceTargetsPayload.body),
+                            preview: SharePreview(
+                                priceTargetsPayload.title,
+                                image: Image(systemName: "scope")
+                            )
                         ) {
                             Label("Price targets", systemImage: "scope")
                         }

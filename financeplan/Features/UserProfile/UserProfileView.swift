@@ -400,11 +400,17 @@ public struct UserProfileView: View {
                     Label("Rate on App Store", systemImage: "star.fill")
                         .foregroundStyle(.primary)
                 }
-                if let appStoreURL = URL(string: "https://apps.apple.com/app/6765849578") {
-                    ShareLink(item: appStoreURL) {
-                        Label("Share App", systemImage: "square.and.arrow.up")
-                            .foregroundStyle(.primary)
-                    }
+                ShareLink(
+                    item: ShareURLBuilder.app(),
+                    subject: Text("Norviqa"),
+                    message: Text("Plan, track, and understand your investments with Norviqa."),
+                    preview: SharePreview(
+                        "Norviqa — your portfolio companion",
+                        image: Image(systemName: "chart.line.uptrend.xyaxis")
+                    )
+                ) {
+                    Label("Share App", systemImage: "square.and.arrow.up")
+                        .foregroundStyle(.primary)
                 }
                 NavigationLink(value: UserProfileDestination.dataAvailability) {
                     Label("Data Availability", systemImage: "chart.line.uptrend.xyaxis")

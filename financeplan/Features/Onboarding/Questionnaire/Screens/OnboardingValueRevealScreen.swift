@@ -226,7 +226,15 @@ struct OnboardingValueRevealScreen: View {
 
   private var shareLink: some View {
     let summary = shareSummary
-    return ShareLink(item: summary) {
+    return ShareLink(
+      item: ShareURLBuilder.app(),
+      subject: Text("My Norviqa starter plan"),
+      message: Text(summary),
+      preview: SharePreview(
+        "My Norviqa starter plan",
+        image: Image(systemName: "chart.line.uptrend.xyaxis")
+      )
+    ) {
       HStack(spacing: 8) {
         Image(systemName: "square.and.arrow.up")
         Text("Share this plan")
