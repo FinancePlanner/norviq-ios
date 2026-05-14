@@ -169,7 +169,16 @@ final class AuthService: AuthServicing, @unchecked Sendable {
     if provider == .google {
       return "\(callbackScheme):/oauth2redirect"
     }
+    if provider == .x, let bridge = httpsBridgeURL(for: provider) {
+      return bridge
+    }
     return "\(callbackScheme)://oauth/callback"
+  }
+
+  private func httpsBridgeURL(for provider: OAuthProviderKind) -> String? {
+    let host = environmentManager.current.apiBaseUrl.absoluteString
+      .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    return "\(host)/v1/auth/oauth/\(provider.rawValue)/callback"
   }
 
   private func googleReversedClientID() -> String? {
