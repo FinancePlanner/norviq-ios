@@ -148,6 +148,10 @@ struct MarketDataHTTPClient: Sendable {
     try await client.call(GetStockEarningsEndpoint(symbol: symbol, limit: limit), errorType: Error.self)
   }
 
+  func fetchStockEarningsTranscript(symbol: String, date: String) async throws -> EarningsTranscript {
+    try await client.call(GetStockEarningsTranscriptEndpoint(symbol: symbol, date: date), errorType: Error.self)
+  }
+
   func fetchEarningsCalendar(from: String, to: String) async throws -> [EarningsEvent] {
     try await client.call(GetEarningsCalendarEndpoint(from: from, to: to), errorType: Error.self)
   }

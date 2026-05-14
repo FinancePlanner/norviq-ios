@@ -67,6 +67,8 @@ struct PaywallCTAFooter: View {
       .padding(.horizontal, 24)
       .padding(.bottom, isSticky ? 32 : 16)
       .padding(.top, 8)
+      .maxContentWidth(regularSizeClass: ContentWidth.marketing)
+      .frame(maxWidth: .infinity)
       .background(isSticky ? AppTheme.Colors.pageBackground(for: colorScheme) : .clear)
     }
   }

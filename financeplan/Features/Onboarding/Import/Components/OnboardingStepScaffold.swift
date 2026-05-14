@@ -133,16 +133,3 @@ struct OnboardingStepScaffold<TopAccessory: View, Content: View, Footer: View>: 
   }
 }
 
-struct MaxContentWidthModifier: ViewModifier {
-  let maxWidth: CGFloat?
-
-  func body(content: Content) -> some View {
-    if let maxWidth {
-      content
-        .frame(maxWidth: maxWidth)
-        .frame(maxWidth: .infinity)
-    } else {
-      content
-    }
-  }
-}

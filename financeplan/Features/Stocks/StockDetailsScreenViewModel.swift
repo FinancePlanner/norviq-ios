@@ -57,6 +57,9 @@ final class StockDetailsViewModel: ObservableObject {
     @Published private(set) var stockEarnings: [EarningsEvent] = []
     @Published private(set) var stockEarningsMessage: String?
     @Published private(set) var isEarningsLoading = false
+    @Published private(set) var selectedEarningsTranscript: EarningsTranscript?
+    @Published private(set) var earningsTranscriptMessage: String?
+    @Published private(set) var isEarningsTranscriptLoading = false
     @Published private(set) var analysisMetrics: StockAnalysisMetrics?
     @Published private(set) var analysisMetricsMessage: String?
     @Published private(set) var financialStatements: StockFinancialStatements?
@@ -323,6 +326,9 @@ final class StockDetailsViewModel: ObservableObject {
             self.stockEarnings = []
             self.stockEarningsMessage = nil
             self.isEarningsLoading = false
+            self.selectedEarningsTranscript = nil
+            self.earningsTranscriptMessage = nil
+            self.isEarningsTranscriptLoading = false
 
             // Heavy sections are loaded lazily when their tabs are selected.
             self.analysisMetrics = nil
@@ -346,6 +352,9 @@ final class StockDetailsViewModel: ObservableObject {
             stockEarnings = []
             stockEarningsMessage = nil
             isEarningsLoading = false
+            selectedEarningsTranscript = nil
+            earningsTranscriptMessage = nil
+            isEarningsTranscriptLoading = false
             analysisMetrics = nil
             analysisMetricsMessage = nil
             financialStatements = nil
@@ -411,6 +420,32 @@ final class StockDetailsViewModel: ObservableObject {
 
     func projectionScenario(_ kind: StockProjectionScenarioKind) -> StockProjectionScenario? {
         primaryComparisonProfile?.projectionScenarios[kind]
+    }
+
+    func loadEarningsTranscript(for event: EarningsEvent) async {
+        guard event.hasTranscript == true else { return }
+        let symbol = details?.symbol ?? event.symbol
+        guard !isEarningsTranscriptLoading else { return }
+
+        isEarningsTranscriptLoading = true
+        selectedEarningsTranscript = nil
+        earningsTranscriptMessage = nil
+        defer { isEarningsTranscriptLoading = false }
+
+        do {
+            selectedEarningsTranscript = try await marketDataService.fetchStockEarningsTranscript(
+                symbol: symbol,
+                date: event.date
+            )
+        } catch {
+            earningsTranscriptMessage = error.localizedDescription
+        }
+    }
+
+    func clearEarningsTranscript() {
+        selectedEarningsTranscript = nil
+        earningsTranscriptMessage = nil
+        isEarningsTranscriptLoading = false
     }
 
     func comparisonProfile(for symbol: String) -> StockComparisonProfile? {
@@ -539,6 +574,9 @@ final class StockDetailsViewModel: ObservableObject {
         stockEarnings = []
         stockEarningsMessage = nil
         isEarningsLoading = false
+        selectedEarningsTranscript = nil
+        earningsTranscriptMessage = nil
+        isEarningsTranscriptLoading = false
         analysisMetrics = nil
         analysisMetricsMessage = nil
         financialStatements = nil

@@ -229,9 +229,6 @@ struct InitialStockImportScreen: View {
         Text("Import Your Portfolio")
           .typography(.heading, weight: .bold)
           .multilineTextAlignment(.center)
-          .modifier(
-            MatchedGeometryIfAvailable(
-              id: "onboarding.header.title", namespace: headerNamespace))
           .opacity(headerVisible ? 1 : 0)
           .offset(y: headerVisible ? 0 : 12)
 

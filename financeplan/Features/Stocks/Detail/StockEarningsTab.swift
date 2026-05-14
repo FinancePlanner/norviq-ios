@@ -6,6 +6,13 @@ struct StockEarningsTab: View {
     let earnings: [EarningsEvent]
     let isLoading: Bool
     let errorMessage: String?
+    let selectedTranscript: EarningsTranscript?
+    let isTranscriptLoading: Bool
+    let transcriptErrorMessage: String?
+    let onSelectTranscript: (EarningsEvent) -> Void
+    let onDismissTranscript: () -> Void
+
+    @State private var transcriptEvent: EarningsEvent?
 
     var body: some View {
         VStack(spacing: 24) {
@@ -14,7 +21,10 @@ struct StockEarningsTab: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 40)
             } else if let errorMessage {
-                ResearchPlaceholderCard(title: "Earnings error", bodyText: errorMessage)
+                ResearchPlaceholderCard(
+                    title: String(localized: "earnings.error.title", defaultValue: "Earnings error"),
+                    bodyText: errorMessage
+                )
             } else if earnings.isEmpty {
                 ResearchPlaceholderCard(title: "No earnings data", bodyText: "No data found for \(symbol).")
             } else {
@@ -27,15 +37,38 @@ struct StockEarningsTab: View {
                         EarningsTableHeader()
 
                         ForEach(Array(earnings.enumerated()), id: \.element.id) { index, event in
-                            EarningsTableRow(
-                                event: event,
-                                isLast: index == earnings.count - 1
-                            )
+                            if event.hasTranscript == true {
+                                Button {
+                                    transcriptEvent = event
+                                    onSelectTranscript(event)
+                                } label: {
+                                    EarningsTableRow(
+                                        event: event,
+                                        isLast: index == earnings.count - 1,
+                                        isTranscriptLoading: isTranscriptLoading && transcriptEvent?.id == event.id
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            } else {
+                                EarningsTableRow(
+                                    event: event,
+                                    isLast: index == earnings.count - 1,
+                                    isTranscriptLoading: false
+                                )
+                            }
                         }
                     }
                     .appGlassEffect(.rect(cornerRadius: 24))
                 }
             }
+        }
+        .sheet(item: $transcriptEvent, onDismiss: onDismissTranscript) { event in
+            EarningsTranscriptSheet(
+                event: event,
+                transcript: selectedTranscript,
+                isLoading: isTranscriptLoading,
+                errorMessage: transcriptErrorMessage
+            )
         }
     }
 }
@@ -65,6 +98,7 @@ struct EarningsTableHeader: View {
 struct EarningsTableRow: View {
     let event: EarningsEvent
     let isLast: Bool
+    let isTranscriptLoading: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -73,11 +107,17 @@ struct EarningsTableRow: View {
                     Text(formatDisplayDate(event.date))
                         .typography(.caption, weight: .bold)
                     if event.hasTranscript == true {
-                        Label("Transcript", systemImage: "text.page")
-                            .typography(.nano, weight: .semibold)
-                            .foregroundStyle(.secondary)
-                            .labelStyle(.titleAndIcon)
-                            .accessibilityLabel("Transcript available")
+                        HStack(spacing: 6) {
+                            Label("Transcript", systemImage: "text.page")
+                                .labelStyle(.titleAndIcon)
+                            if isTranscriptLoading {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                            }
+                        }
+                        .typography(.nano, weight: .semibold)
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("Transcript available")
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -155,6 +195,69 @@ struct EarningsTableRow: View {
     private func formattedRevenue(_ value: Double?) -> String {
         guard let value else { return "—" }
         return value.formatted(.number.notation(.compactName))
+    }
+}
+
+struct EarningsTranscriptSheet: View {
+    let event: EarningsEvent
+    let transcript: EarningsTranscript?
+    let isLoading: Bool
+    let errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if isLoading && transcript == nil && errorMessage == nil {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let errorMessage {
+                    ResearchPlaceholderCard(
+                        title: String(localized: "earnings.transcript.error.title", defaultValue: "Transcript error"),
+                        bodyText: errorMessage
+                    )
+                    .padding()
+                } else if let transcript {
+                    ScrollView {
+                        Text(transcript.content)
+                            .typography(.small)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                            .padding()
+                    }
+                } else {
+                    ResearchPlaceholderCard(
+                        title: String(localized: "earnings.transcript.unavailable.title", defaultValue: "Transcript unavailable"),
+                        bodyText: String(
+                            format: String(
+                                localized: "earnings.transcript.unavailable.body",
+                                defaultValue: "No transcript found for %1$@ on %2$@."
+                            ),
+                            event.symbol,
+                            formatDisplayDate(event.date)
+                        )
+                    )
+                    .padding()
+                }
+            }
+            .navigationTitle(
+                String(
+                    format: String(
+                        localized: "earnings.transcript.navtitle",
+                        defaultValue: "%@ Transcript"
+                    ),
+                    event.symbol
+                )
+            )
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private func formatDisplayDate(_ rawDate: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let date = formatter.date(from: String(rawDate.prefix(10))) else { return rawDate }
+        formatter.dateFormat = "MMM d, yyyy"
+        return formatter.string(from: date)
     }
 }
 

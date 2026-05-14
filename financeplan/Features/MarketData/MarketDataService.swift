@@ -21,6 +21,7 @@ protocol MarketDataServicing: Sendable {
   func fetchFinancialGrowth(symbol: String, limit: Int?, period: String?) async throws -> [FinancialGrowthResponse]
   func fetchAnalystEstimates(symbol: String, limit: Int?, period: String?) async throws -> [AnalystEstimatesResponse]
   func fetchStockEarnings(symbol: String, limit: Int) async throws -> [EarningsEvent]
+  func fetchStockEarningsTranscript(symbol: String, date: String) async throws -> EarningsTranscript
   func fetchEarningsCalendar(from: String, to: String) async throws -> [EarningsEvent]
   func fetchMarketNews(limit: Int?) async throws -> [StockNews]
   func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements
@@ -140,6 +141,12 @@ final class MarketDataHTTPService: MarketDataServicing {
   func fetchStockEarnings(symbol: String, limit: Int) async throws -> [EarningsEvent] {
     try await performAuthenticated { client in
       try await client.fetchStockEarnings(symbol: symbol, limit: limit)
+    }
+  }
+
+  func fetchStockEarningsTranscript(symbol: String, date: String) async throws -> EarningsTranscript {
+    try await performAuthenticated { client in
+      try await client.fetchStockEarningsTranscript(symbol: symbol, date: date)
     }
   }
 
@@ -283,6 +290,10 @@ struct MarketDataServiceStub: MarketDataServicing {
   }
 
   func fetchStockEarnings(symbol _: String, limit _: Int) async throws -> [EarningsEvent] {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchStockEarningsTranscript(symbol _: String, date _: String) async throws -> EarningsTranscript {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 
