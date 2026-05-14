@@ -26,6 +26,11 @@ The StockPlan iOS application follows a **Modern Layered MVVM** architecture. It
 - **Domain-Specific Clients:** Instead of a single generic client, the app uses specialized structs like `MarketDataHTTPClient` and `StockHTTPClient`.
 - **Endpoint Pattern:** Uses a protocol-based approach (via `AnyAPI`) where each API call is defined as an `Endpoint` struct containing the path, method, and decoding logic.
 
+### Earnings Transcripts
+- **Endpoint:** `GetStockEarningsTranscriptEndpoint` calls `GET /v1/market/earnings/{symbol}/transcript?date=YYYY-MM-DD`.
+- **Service Flow:** `MarketDataServicing.fetchStockEarningsTranscript(symbol:date:)` keeps transcript loading behind the existing authenticated market data service boundary.
+- **UI Flow:** `StockDetailsScreenViewModel` owns transcript loading state. `StockEarningsTab` only enables transcript selection for events marked with transcript availability and presents the result in a sheet.
+
 ## 2. Authentication & Retry Strategy
 
 The application implements a robust **Automatic Recovery Flow** for expired sessions within the Service Layer:

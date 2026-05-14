@@ -36,3 +36,34 @@ public struct EarningsEvent: Identifiable, Equatable, Sendable {
 }
 
 nonisolated extension EarningsEvent: Codable {}
+
+public struct EarningsTranscript: Identifiable, Equatable, Sendable {
+    public var id: String { "\(symbol)-\(date)-\(year)-\(quarter)" }
+    public let symbol: String
+    public let date: String
+    public let year: Int
+    public let quarter: Int
+    public let period: String?
+    public let content: String
+    public let provider: String
+
+    public init(
+        symbol: String,
+        date: String,
+        year: Int,
+        quarter: Int,
+        period: String? = nil,
+        content: String,
+        provider: String
+    ) {
+        self.symbol = symbol
+        self.date = date
+        self.year = year
+        self.quarter = quarter
+        self.period = period
+        self.content = content
+        self.provider = provider
+    }
+}
+
+nonisolated extension EarningsTranscript: Codable {}

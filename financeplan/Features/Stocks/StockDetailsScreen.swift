@@ -224,7 +224,16 @@ struct StockDetailScreen: View {
                             symbol: viewModel.details?.symbol ?? initialSymbol,
                             earnings: viewModel.stockEarnings,
                             isLoading: viewModel.isEarningsLoading,
-                            errorMessage: viewModel.stockEarningsMessage
+                            errorMessage: viewModel.stockEarningsMessage,
+                            selectedTranscript: viewModel.selectedEarningsTranscript,
+                            isTranscriptLoading: viewModel.isEarningsTranscriptLoading,
+                            transcriptErrorMessage: viewModel.earningsTranscriptMessage,
+                            onSelectTranscript: { event in
+                                Task { await viewModel.loadEarningsTranscript(for: event) }
+                            },
+                            onDismissTranscript: {
+                                viewModel.clearEarningsTranscript()
+                            }
                         )
                     }
                 }

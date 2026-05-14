@@ -530,6 +530,49 @@ final class MarketDataServiceTests: XCTestCase {
     XCTAssertEqual(response[0].hasTranscript, true)
   }
 
+  func testFetchStockEarningsTranscript_UsesBearerTokenAndReturnsTranscript() async throws {
+    let session = SessionMock()
+    let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+    let service = MarketDataHTTPService(
+      environmentManager: AppEnvironmentManager(),
+      session: session,
+      authSessionManager: authSessionManager
+    )
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.path, "/v1/market/earnings/UBER/transcript")
+      XCTAssertEqual(request.url?.query, "date=2026-05-06")
+      XCTAssertEqual(request.httpMethod, "GET")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+
+      let payload = """
+      {
+        "symbol": "UBER",
+        "date": "2026-05-06",
+        "year": 2026,
+        "quarter": 2,
+        "period": "Q2",
+        "content": "Prepared remarks for Uber earnings.",
+        "provider": "fmp"
+      }
+      """.data(using: .utf8) ?? Data()
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (payload, response)
+    }
+
+    let response = try await service.fetchStockEarningsTranscript(symbol: "UBER", date: "2026-05-06")
+
+    XCTAssertEqual(response.symbol, "UBER")
+    XCTAssertEqual(response.date, "2026-05-06")
+    XCTAssertEqual(response.year, 2026)
+    XCTAssertEqual(response.quarter, 2)
+    XCTAssertEqual(response.content, "Prepared remarks for Uber earnings.")
+    XCTAssertEqual(response.provider, "fmp")
+  }
+
   func testFetchEarningsCalendar_UsesBearerTokenAndReturnsEvents() async throws {
     let session = SessionMock()
     let authSessionManager = AuthSessionManagerMock()

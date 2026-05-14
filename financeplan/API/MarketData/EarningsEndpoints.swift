@@ -16,6 +16,20 @@ struct GetStockEarningsEndpoint: Endpoint {
   }
 }
 
+struct GetStockEarningsTranscriptEndpoint: Endpoint {
+  typealias Response = EarningsTranscript
+  let symbol: String
+  let date: String
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/earnings/\(symbol)/transcript" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    ["date": date]
+  }
+}
+
 struct GetEarningsCalendarEndpoint: Endpoint {
   typealias Response = [EarningsEvent]
   let from: String
