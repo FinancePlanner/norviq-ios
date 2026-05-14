@@ -240,6 +240,7 @@ struct StockDetailScreen: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 20)
+            .maxContentWidth(regularSizeClass: ContentWidth.dense)
             .accessibilityIdentifier("stockDetailsScreen")
         }
         .background(MeshGradientBackground().ignoresSafeArea())

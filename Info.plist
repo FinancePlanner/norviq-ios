@@ -26,6 +26,16 @@
 				<string>norviqa</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.543855343463-8mhma1ss69aboaum7qetf1li2ko8mg5g</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
@@ -35,6 +45,8 @@
 	<string>Norviq uses Face ID to unlock your app session.</string>
 	<key>NorviqAPIEnvironment</key>
 	<string>$(NORVIQ_API_ENVIRONMENT)</string>
+	<key>GoogleOAuthClientID</key>
+	<string>543855343463-8mhma1ss69aboaum7qetf1li2ko8mg5g.apps.googleusercontent.com</string>
 	<key>OAuthCallbackScheme</key>
 	<string>norviqa</string>
 	<key>PexelsAPIKey</key>

@@ -111,8 +111,8 @@ final class AuthService: AuthServicing, @unchecked Sendable {
 
   @MainActor
   func oauthSignIn(provider: OAuthProviderKind) async throws -> AuthLoginOutcomePayload {
-    let callbackScheme = oauthCallbackScheme()
-    let redirectURI = oauthRedirectURI(for: callbackScheme)
+    let callbackScheme = oauthCallbackScheme(for: provider)
+    let redirectURI = oauthRedirectURI(for: provider, callbackScheme: callbackScheme)
 
     let startResponse = try await client().oauthStart(
       provider: provider,
@@ -153,7 +153,10 @@ final class AuthService: AuthServicing, @unchecked Sendable {
     AuthHTTPClient(baseURL: environmentManager.current.apiBaseUrl, session: session)
   }
 
-  private func oauthCallbackScheme() -> String {
+  private func oauthCallbackScheme(for provider: OAuthProviderKind) -> String {
+    if provider == .google, let reversed = googleReversedClientID() {
+      return reversed
+    }
     let configured = (Bundle.main.object(forInfoDictionaryKey: "OAuthCallbackScheme") as? String)?
       .trimmingCharacters(in: .whitespacesAndNewlines)
     if let configured, !configured.isEmpty {
@@ -162,8 +165,27 @@ final class AuthService: AuthServicing, @unchecked Sendable {
     return "norviqa"
   }
 
-  private func oauthRedirectURI(for callbackScheme: String) -> String {
-    "\(callbackScheme)://oauth/callback"
+  private func oauthRedirectURI(for provider: OAuthProviderKind, callbackScheme: String) -> String {
+    if provider == .google {
+      return "\(callbackScheme):/oauth2redirect"
+    }
+    return "\(callbackScheme)://oauth/callback"
+  }
+
+  private func googleReversedClientID() -> String? {
+    guard let raw = Bundle.main.object(forInfoDictionaryKey: "GoogleOAuthClientID") as? String else {
+      return nil
+    }
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return nil }
+    let suffix = ".apps.googleusercontent.com"
+    let prefix: String
+    if trimmed.hasSuffix(suffix) {
+      prefix = String(trimmed.dropLast(suffix.count))
+    } else {
+      prefix = trimmed
+    }
+    return "com.googleusercontent.apps.\(prefix)"
   }
 }
 

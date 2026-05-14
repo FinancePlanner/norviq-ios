@@ -35,6 +35,7 @@ struct PaywallView: View {
               .padding(.horizontal, 20)
               .padding(.bottom, 120) // space for sticky CTA
           }
+          .maxContentWidth(regularSizeClass: ContentWidth.marketing)
         }
         .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
 
