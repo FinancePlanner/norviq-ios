@@ -63,7 +63,7 @@ struct SplashScreen: View {
             .scaleEffect(isAnimating ? 1.0 : 0.8)
             .opacity(isAnimating ? 1.0 : 0.0)
         }
-        .padding(.bottom, 40)
+        .padding(.bottom, 80)
 
         // App name
         Text("Norviq")

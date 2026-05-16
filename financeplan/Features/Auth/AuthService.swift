@@ -169,7 +169,7 @@ final class AuthService: AuthServicing, @unchecked Sendable {
     if provider == .google {
       return "\(callbackScheme):/oauth2redirect"
     }
-    if provider == .x, let bridge = httpsBridgeURL(for: provider) {
+    if (provider == .x || provider == .apple), let bridge = httpsBridgeURL(for: provider) {
       return bridge
     }
     return "\(callbackScheme)://oauth/callback"
