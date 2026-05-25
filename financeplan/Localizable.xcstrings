@@ -5373,6 +5373,7 @@
       }
     },
     "Integrations" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -12465,6 +12466,7 @@
       }
     },
     "Why connect AI models?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
