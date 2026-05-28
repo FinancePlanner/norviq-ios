@@ -12,7 +12,6 @@ struct PressEffectStyle: ButtonStyle {
 enum StockImportMethod: String, CaseIterable, Identifiable {
   case csv
   case manual
-  case api
 
   var id: String { rawValue }
 
@@ -22,8 +21,6 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
       return "Import CSV"
     case .manual:
       return "Enter Manually"
-    case .api:
-      return "Connect API"
     }
   }
 
@@ -33,8 +30,6 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
       return "Upload a broker export or CSV file with your positions."
     case .manual:
       return "Type in your holdings one position at a time."
-    case .api:
-      return "Sync holdings automatically from a broker integration."
     }
   }
 
@@ -44,8 +39,6 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
       return "doc.text.fill"
     case .manual:
       return "square.and.pencil"
-    case .api:
-      return "link.circle.fill"
     }
   }
 
@@ -55,22 +48,6 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
       return { scheme in AppTheme.Colors.secondaryTint(for: scheme) }
     case .manual:
       return { scheme in AppTheme.Colors.tint(for: scheme) }
-    case .api:
-      return { _ in .indigo }
-    }
-  }
-
-  var isDisabled: Bool {
-    switch self {
-    case .csv, .manual: return false
-    case .api: return true
-    }
-  }
-
-  var badge: String? {
-    switch self {
-    case .csv, .manual: return nil
-    case .api: return "Soon"
     }
   }
 }
@@ -264,7 +241,6 @@ struct InitialStockImportScreen: View {
 
   private func methodSelectionButton(for method: StockImportMethod, index: Int) -> some View {
     Button {
-      guard !method.isDisabled else { return }
       withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
         selectedMethod = method
         message = nil
@@ -286,7 +262,6 @@ struct InitialStockImportScreen: View {
     .offset(y: animatedIndices.contains(index) ? 0 : 24)
     .scaleEffect(tappedMethod == method ? 1.02 : 1.0)
     .animation(.spring(response: 0.25, dampingFraction: 0.8), value: tappedMethod)
-    .disabled(method.isDisabled)
   }
 
   private var buttonTitle: String {
@@ -335,29 +310,18 @@ private struct ImportMethodCard: View {
       // Icon
       ZStack {
         RoundedRectangle(cornerRadius: 12, style: .continuous)
-          .fill(method.iconColor(colorScheme).opacity(method.isDisabled ? 0.06 : (isSelected ? 0.18 : 0.10)))
+          .fill(method.iconColor(colorScheme).opacity(isSelected ? 0.18 : 0.10))
           .frame(width: 44, height: 44)
 
         Image(systemName: method.icon)
           .font(.headline)
-          .foregroundStyle(method.isDisabled ? AnyShapeStyle(.tertiary) : AnyShapeStyle(method.iconColor(colorScheme)))
+          .foregroundStyle(method.iconColor(colorScheme))
       }
 
       VStack(alignment: .leading, spacing: 3) {
-        HStack(spacing: 8) {
-          Text(method.title)
-            .typography(.label, weight: .semibold)
-            .foregroundStyle(method.isDisabled ? .tertiary : .primary)
-
-          if let badge = method.badge {
-            Text(badge)
-              .typography(.nano, weight: .bold)
-              .foregroundStyle(.secondary)
-              .padding(.horizontal, 7)
-              .padding(.vertical, 3)
-              .background(AppTheme.Colors.tertiaryFill(for: colorScheme), in: Capsule())
-          }
-        }
+        Text(method.title)
+          .typography(.label, weight: .semibold)
+          .foregroundStyle(.primary)
 
         Text(method.subtitle)
           .typography(.nano)

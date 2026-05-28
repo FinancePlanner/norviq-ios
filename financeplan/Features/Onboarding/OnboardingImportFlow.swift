@@ -46,12 +46,6 @@ struct OnboardingImportFlow: View {
           onBack: { viewModel.backToChooseStock() },
           onDone: { _ in viewModel.finish(completedFlow: .stocks) }
         )
-      case .api:
-        APIKeyImportScreen(
-          headerNamespace: headerNS,
-          onBack: { viewModel.backToChooseStock() },
-          onDone: { viewModel.finish(completedFlow: .stocks) }
-        )
       case .expenseBudgetSetup:
         ExpenseBudgetSetupScreen(
           headerNamespace: headerNS,

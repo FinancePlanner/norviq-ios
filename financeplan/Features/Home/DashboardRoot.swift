@@ -711,52 +711,6 @@ private struct AssetSearchCard: View {
   }
 }
 
-private struct DashboardActionButton: View {
-  let title: String
-  let symbol: String
-  let tint: Color
-  var isDisabled: Bool = false
-  let action: () -> Void
-
-  var body: some View {
-    Group {
-      Button(action: action) {
-        actionContent
-          .padding(.vertical, 12)
-      }
-      .buttonStyle(.bordered)
-      .tint(tint)
-      .opacity(isDisabled ? 0.6 : 1.0)
-      .disabled(isDisabled)
-    }
-  }
-
-  private var actionContent: some View {
-    VStack(spacing: 8) {
-      Image(systemName: symbol)
-        .accessibilityHidden(true)
-        .font(.headline.weight(.semibold))
-        .foregroundStyle(isDisabled ? .secondary.opacity(0.8) : tint)
-
-      HStack(spacing: 4) {
-        Text(title)
-          .typography(.nano, weight: .semibold)
-          .foregroundStyle(isDisabled ? .secondary : tint)
-
-        if isDisabled {
-          Text("Soon")
-            .font(.system(size: 8, weight: .bold, design: .rounded))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 4)
-            .padding(.vertical, 1)
-            .background(Color.red, in: Capsule())
-        }
-      }
-    }
-    .frame(maxWidth: .infinity)
-  }
-}
-
 private struct FocusInputSurfaceModifier: ViewModifier {
   func body(content: Content) -> some View {
     content

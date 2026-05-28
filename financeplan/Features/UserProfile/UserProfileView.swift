@@ -340,32 +340,6 @@ public struct UserProfileView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
-            // Integrations (Coming Soon)
-            // Section(LocalizedStringKey("Integrations")) {
-            //     HStack {
-            //         Label(LocalizedStringKey("AI Model Integrations"), systemImage: "cpu")
-            //             .opacity(0.6)
-            //         Spacer()
-            //         Text(LocalizedStringKey("Soon"))
-            //             .typography(.nano, weight: .bold).fontDesign(.rounded)
-            //             .foregroundStyle(.white)
-            //             .padding(.horizontal, 6)
-            //             .padding(.vertical, 2)
-            //             .background(Color.red, in: Capsule())
-            //         Button {
-            //             isAIInfoPresented = true
-            //         } label: {
-            //             Image(systemName: "info.circle")
-            //                 .imageScale(.large)
-            //                 .frame(width: 44, height: 44)
-            //         }
-            //         .buttonStyle(.plain)
-            //         .foregroundStyle(AppTheme.Colors.tint(for: scheme))
-            //         .accessibilityLabel("Why connect AI models?")
-            //     }
-            // }
-            // .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-
             // Subscription
             Section(LocalizedStringKey("Subscription")) {
                 NavigationLink(value: UserProfileDestination.subscription) {

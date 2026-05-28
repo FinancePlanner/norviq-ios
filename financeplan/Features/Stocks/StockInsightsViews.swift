@@ -705,7 +705,7 @@ struct StockConsensusPlaceholderCard: View {
                     Text("Consensus")
                         .typography(.small, weight: .semibold)
 
-                    Text("This section is ready for analyst recommendation trends once the wrapped endpoint is available.")
+                    Text("Analyst recommendation trends aren't available for this stock right now.")
                         .typography(.small)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -773,7 +773,7 @@ struct StockBasicFinancialsPlaceholderCard: View {
                 Text("Basic financials")
                     .typography(.small, weight: .semibold)
 
-                Text("This section is ready for P/E, margins, current ratio, beta, 52-week range, and annual series once the wrapped endpoint is available.")
+                Text("Detailed financials aren't available for this stock right now.")
                     .typography(.small)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)

@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/amplitude/Amplitude-Swift.git",
       "state" : {
-        "revision" : "b6dd7d079d20fed9e392b9dfda7a04c9d386d0a6",
-        "version" : "1.18.1"
+        "revision" : "1c2bf3a45697ae33c4f13c7845cc3a3272fe3368",
+        "version" : "1.18.3"
       }
     },
     {
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/amplitude/AmplitudeSessionReplay-iOS.git",
       "state" : {
-        "revision" : "850d44e3e3973a6f04ef09fc24c048249a185c67",
-        "version" : "0.10.0"
+        "revision" : "339d1af2c50eedce29158ab70befb163fad4e260",
+        "version" : "0.10.1"
       }
     },
     {
@@ -114,8 +114,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/amplitude/experiment-ios-client.git",
       "state" : {
-        "revision" : "8b0146bb4a3207a8bcf4b51bee137843ea860c20",
-        "version" : "1.20.0"
+        "revision" : "96e9879fade782bf51e7b3acb7d0836aa50e0637",
+        "version" : "1.20.2"
       }
     },
     {
@@ -186,8 +186,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/PostHog/posthog-ios",
       "state" : {
-        "revision" : "a9b16bcb268f874b45391c331319acdb0a34bbbc",
-        "version" : "3.57.4"
+        "revision" : "cf6155963a6532c7b88e0cfa2b1d07595d6b6db6",
+        "version" : "3.58.3"
       }
     },
     {
@@ -195,8 +195,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/RevenueCat/purchases-ios-spm.git",
       "state" : {
-        "revision" : "8f5f5e1b95506f89524cdbb70bcaf096a6f6fcc2",
-        "version" : "5.70.0"
+        "revision" : "98435c3d7b0f6210b2303fc7f2ec09510d4790b6",
+        "version" : "5.74.0"
       }
     },
     {
@@ -204,8 +204,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/getsentry/sentry-cocoa.git",
       "state" : {
-        "revision" : "0baded16c4bd1f2471949e89bf36289ca2b93080",
-        "version" : "9.12.0"
+        "revision" : "193d313fbfd9affaf2be1692a0284a3b6574c515",
+        "version" : "9.14.0"
       }
     },
     {
@@ -222,8 +222,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swiftlang/swift-cmark",
       "state" : {
-        "revision" : "5d9bdaa4228b381639fff09403e39a04926e2dbe",
-        "version" : "0.7.1"
+        "revision" : "924936d0427cb25a61169739a7660230bffa6ea6",
+        "version" : "0.8.0"
       }
     },
     {
@@ -240,8 +240,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/TelemetryDeck/SwiftSDK",
       "state" : {
-        "revision" : "d41d6e86265dc182ba4474f9ef53ecddbbe052b8",
-        "version" : "2.12.0"
+        "revision" : "976172aa79a157157e754441c5ca4869c455b657",
+        "version" : "2.14.0"
       }
     },
     {

@@ -28,7 +28,6 @@ final class OnboardingImportViewModel: ObservableObject {
     case chooseStockMethod
     case csv
     case manual
-    case api
     case expenseBudgetSetup
     case success
     case done
@@ -52,8 +51,6 @@ final class OnboardingImportViewModel: ObservableObject {
       step = .csv
     case .manual:
       step = .manual
-    case .api:
-      step = .api
     }
   }
 

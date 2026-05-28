@@ -87,7 +87,6 @@ struct EarningsCalendarScreen: View {
       upcomingSection
       calendarSection
       selectedDateSection
-      transcriptsSection
     }
   }
 
@@ -143,32 +142,6 @@ struct EarningsCalendarScreen: View {
         }
       }
     }
-  }
-
-  private var transcriptsSection: some View {
-    Section {
-      VStack(alignment: .leading, spacing: 16) {
-        Text("Earnings Transcripts")
-          .typography(.title, weight: .bold)
-
-        HStack(alignment: .top, spacing: 12) {
-          Image(systemName: "info.circle.fill")
-            .foregroundStyle(Color.blue)
-          VStack(alignment: .leading, spacing: 4) {
-            Text("Coming in Future Updates")
-              .typography(.small, weight: .semibold)
-            Text("Earnings Transcripts and the ability to select the specific timestamp of the earnings (pre-market vs. after-hours) are currently limited and will be fully supported in future versions.")
-              .typography(.nano)
-              .foregroundStyle(.secondary)
-              .fixedSize(horizontal: false, vertical: true)
-          }
-        }
-        .padding()
-        .appGlassEffect(.rect(cornerRadius: 16), tint: Color.blue.opacity(0.05))
-      }
-    }
-    .listRowBackground(Color.clear)
-    .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 24, trailing: 16))
   }
 
   private func refreshCalendar() async {

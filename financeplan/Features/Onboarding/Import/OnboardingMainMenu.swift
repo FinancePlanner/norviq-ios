@@ -47,16 +47,6 @@ struct OnboardingMainMenu: View {
           accessibilityIdentifier: "onboarding.importExpensesButton",
           action: onSelectExpenses
         )
-
-        OnboardingMenuButton(
-          title: "Crypto Assets",
-          subtitle: "Sync wallets and exchange data",
-          icon: "bitcoinsign.circle.fill",
-          color: .red,
-          isDisabled: true,
-          showSoonBadge: true,
-          action: { /* Soon */ }
-        )
       }
       .padding(.horizontal, 24)
 
@@ -98,7 +88,6 @@ struct OnboardingMenuButton: View {
   let color: Color
   var accessibilityIdentifier: String?
   var isDisabled: Bool = false
-  var showSoonBadge: Bool = false
   let action: () -> Void
   @Environment(\.colorScheme) private var colorScheme
 
@@ -116,20 +105,9 @@ struct OnboardingMenuButton: View {
         }
 
         VStack(alignment: .leading, spacing: 2) {
-          HStack(spacing: 6) {
-            Text(title)
-              .typography(.label, weight: .bold)
-              .foregroundStyle(isDisabled ? .secondary : .primary)
-
-            if showSoonBadge {
-              Text("Soon")
-                .typography(.nano, weight: .bold).fontDesign(.rounded)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Color.red, in: Capsule())
-            }
-          }
+          Text(title)
+            .typography(.label, weight: .bold)
+            .foregroundStyle(isDisabled ? .secondary : .primary)
 
           Text(subtitle)
             .typography(.nano)
