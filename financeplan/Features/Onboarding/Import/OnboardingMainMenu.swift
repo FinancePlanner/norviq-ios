@@ -11,6 +11,7 @@ struct OnboardingMainMenu: View {
   @Environment(\.colorScheme) private var colorScheme
 
   let onSelectStocks: () -> Void
+  let onSelectCrypto: () -> Void
   let onSelectExpenses: () -> Void
   let onSignOut: () -> Void
   let onSkip: () -> Void
@@ -37,6 +38,15 @@ struct OnboardingMainMenu: View {
           color: .blue,
           accessibilityIdentifier: "onboarding.importStocksButton",
           action: onSelectStocks
+        )
+
+        OnboardingMenuButton(
+          title: "Add Crypto",
+          subtitle: "Track coins on your watchlist",
+          icon: "bitcoinsign.circle.fill",
+          color: .yellow,
+          accessibilityIdentifier: "onboarding.addCryptoButton",
+          action: onSelectCrypto
         )
 
         OnboardingMenuButton(

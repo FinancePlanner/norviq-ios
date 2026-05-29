@@ -9,15 +9,18 @@ struct CryptoHomeView: View {
     @State private var selectedSegment: CryptoSegment = .overview
     @Environment(\.colorScheme) private var colorScheme
     @State private var isAddCryptoPresented = false
+    @State private var isAddWatchlistPresented = false
+    @State private var isBubblesPresented = false
     @State private var editingHolding: CryptoPortfolioItemResponse?
 
     private enum CryptoSegment: String, CaseIterable, Identifiable {
-        case overview, portfolio, market, news
+        case overview, portfolio, watchlist, market, news
         var id: String { rawValue }
         var title: String {
             switch self {
             case .overview: return "Overview"
             case .portfolio: return "Portfolio"
+            case .watchlist: return "Watchlist"
             case .market: return "Market"
             case .news: return "News"
             }
@@ -50,6 +53,9 @@ struct CryptoHomeView: View {
                 }
             }
             .navigationTitle("Crypto")
+            .navigationDestination(for: CryptoDetailRoute.self) { route in
+                CryptoDetailScreen(route: route)
+            }
             .refreshable {
                 await reloadCrypto(force: true)
             }
@@ -69,6 +75,26 @@ struct CryptoHomeView: View {
                         .accessibilityLabel("Add crypto holding")
                     }
 
+                    if selectedSegment == .watchlist {
+                        Button(action: presentAddWatchlistSheet) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                                .padding(6)
+                                .appGlassEffect(.capsule)
+                        }
+                        .accessibilityLabel("Add crypto to watchlist")
+                    }
+
+                    Button(action: presentBubbles) {
+                        Image(systemName: "circle.hexagongrid.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                            .padding(6)
+                            .appGlassEffect(.capsule)
+                    }
+                    .accessibilityLabel("Open crypto bubbles")
+
                     Button(action: openSettings) {
                         Image(systemName: "gearshape")
                             .font(.system(size: 16, weight: .semibold))
@@ -81,6 +107,12 @@ struct CryptoHomeView: View {
             }
             .sheet(isPresented: $isAddCryptoPresented) {
                 AddCryptoHoldingSheet(viewModel: viewModel)
+            }
+            .sheet(isPresented: $isAddWatchlistPresented) {
+                AddCryptoWatchlistSheet(viewModel: viewModel)
+            }
+            .fullScreenCover(isPresented: $isBubblesPresented) {
+                CryptoBubblesView()
             }
             .sheet(item: $editingHolding) { holding in
                 EditCryptoHoldingSheet(viewModel: viewModel, holding: holding)
@@ -106,6 +138,8 @@ struct CryptoHomeView: View {
             CryptoOverviewSection(viewModel: viewModel)
         case .portfolio:
             CryptoPortfolioSection(viewModel: viewModel, editingHolding: $editingHolding)
+        case .watchlist:
+            CryptoWatchlistSection(viewModel: viewModel, onAdd: presentAddWatchlistSheet)
         case .market:
             CryptoMarketSection(viewModel: viewModel)
         case .news:
@@ -123,6 +157,14 @@ struct CryptoHomeView: View {
 
     private func presentAddHoldingSheet() {
         isAddCryptoPresented = true
+    }
+
+    private func presentAddWatchlistSheet() {
+        isAddWatchlistPresented = true
+    }
+
+    private func presentBubbles() {
+        isBubblesPresented = true
     }
 
     private func openSettings() {

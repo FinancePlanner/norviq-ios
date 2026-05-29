@@ -83,6 +83,18 @@ struct CryptoHTTPClient: Sendable {
         try await client.call(GetGeneralCryptoNewsEndpoint(), errorType: Error.self)
     }
 
+    func fetchHistory(
+        symbol: String,
+        resolution: CryptoChartResolution,
+        from: String?,
+        to: String?
+    ) async throws -> [CryptoHistoricalPoint] {
+        try await client.call(
+            GetCryptoHistoryEndpoint(symbol: symbol, resolution: resolution, from: from, to: to),
+            errorType: Error.self
+        )
+    }
+
     // MARK: - Portfolio
 
     func listPortfolio() async throws -> [CryptoPortfolioItemResponse] {
@@ -99,5 +111,23 @@ struct CryptoHTTPClient: Sendable {
 
     func removeFromPortfolio(itemId: String) async throws {
         try await client.callWithoutResponse(RemoveFromCryptoPortfolioEndpoint(itemId: itemId), errorType: Error.self)
+    }
+
+    // MARK: - Watchlist
+
+    func listWatchlist() async throws -> [CryptoWatchlistItemResponse] {
+        try await client.call(ListCryptoWatchlistEndpoint(), errorType: Error.self)
+    }
+
+    func addToWatchlist(payload: CryptoWatchlistItemRequest) async throws -> CryptoWatchlistItemResponse {
+        try await client.call(AddToCryptoWatchlistEndpoint(payload: payload), errorType: Error.self)
+    }
+
+    func updateWatchlistItem(itemId: String, payload: CryptoWatchlistItemRequest) async throws -> CryptoWatchlistItemResponse {
+        try await client.call(UpdateCryptoWatchlistItemEndpoint(itemId: itemId, payload: payload), errorType: Error.self)
+    }
+
+    func removeFromWatchlist(itemId: String) async throws {
+        try await client.callWithoutResponse(RemoveFromCryptoWatchlistEndpoint(itemId: itemId), errorType: Error.self)
     }
 }

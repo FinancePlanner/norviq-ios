@@ -7,6 +7,7 @@ final class OnboardingImportViewModel: ObservableObject {
   enum CompletedFlow {
     case stocks
     case expenses
+    case crypto
   }
 
   enum OptionalNextAction {
@@ -28,6 +29,7 @@ final class OnboardingImportViewModel: ObservableObject {
     case chooseStockMethod
     case csv
     case manual
+    case crypto
     case expenseBudgetSetup
     case success
     case done
@@ -36,9 +38,14 @@ final class OnboardingImportViewModel: ObservableObject {
   @Published var step: Step = .mainMenu
   private var hasCompletedStocksSetup = false
   private var hasCompletedExpensesSetup = false
+  private var hasCompletedCryptoSetup = false
 
   func startStockImport() {
     step = .chooseStockMethod
+  }
+
+  func startCryptoImport() {
+    step = .crypto
   }
 
   func startExpenseImport() {
@@ -62,6 +69,8 @@ final class OnboardingImportViewModel: ObservableObject {
       hasCompletedStocksSetup = true
     case .expenses:
       hasCompletedExpensesSetup = true
+    case .crypto:
+      hasCompletedCryptoSetup = true
     }
     step = .success
   }
@@ -92,6 +101,7 @@ final class OnboardingImportViewModel: ObservableObject {
     PostHogSDK.shared.capture("onboarding_completed", properties: [
       "completed_stocks": hasCompletedStocksSetup,
       "completed_expenses": hasCompletedExpensesSetup,
+      "completed_crypto": hasCompletedCryptoSetup,
     ])
     step = .done
   }

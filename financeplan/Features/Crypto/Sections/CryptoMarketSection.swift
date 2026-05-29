@@ -7,8 +7,12 @@ struct CryptoMarketSection: View {
     var body: some View {
         VStack(spacing: 0) {
             ForEach(viewModel.topAssets) { asset in
-                CryptoListRow(asset: asset)
-                    .padding(.horizontal)
+                NavigationLink(value: CryptoDetailRoute(symbol: asset.symbol, name: asset.name)) {
+                    CryptoListRow(asset: asset)
+                        .padding(.horizontal)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
                 Divider()
                     .padding(.leading, 70)
                     .opacity(0.3)

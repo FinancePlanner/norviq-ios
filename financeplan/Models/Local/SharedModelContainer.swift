@@ -6,6 +6,7 @@ let sharedModelContainer: ModelContainer = {
     let schema = Schema([
         SDPortfolioStock.self,
         SDWatchlistItem.self,
+        SDCryptoWatchlistItem.self,
         LocalExpense.self,
         LocalBudgetSnapshot.self,
         LocalBudgetPlanItem.self,

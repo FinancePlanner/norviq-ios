@@ -40,6 +40,11 @@ struct HomeScreen: View {
         )
       }
 
+      Tab(HomeTab.crypto.title, systemImage: "bitcoinsign.circle", value: .crypto) {
+        CryptoHomeView(isSettingsPresented: $isSettingsPresented)
+          .accessibilityIdentifier("tab.crypto")
+      }
+
       Tab(HomeTab.expenses.title, systemImage: "creditcard", value: .expenses) {
         ExpensesPlannerScreen(isSettingsPresented: $isSettingsPresented, viewModel: budgetPlannerViewModel)
           .accessibilityIdentifier("tab.expenses")
@@ -62,7 +67,7 @@ struct HomeScreen: View {
       PaywallView(billingManager: billingManager)
     }
     .onChange(of: selectedTab) { _, newValue in
-      guard newValue == .reports, !billingManager.isPro else { return }
+      guard newValue == .reports || newValue == .crypto, !billingManager.isPro else { return }
       selectedTab = .dashboard
       isPaywallPresented = true
     }
