@@ -52,6 +52,7 @@ final class PortfolioViewModel: ObservableObject {
   @Published var isSaving = false
   @Published var isDeletingStock = false
   @Published private(set) var cashBalance: Double = 0
+  @Published private(set) var sectorExposure: PortfolioSectorExposureResponse?
   @Published private(set) var portfolioLists: [PortfolioListDTOResponse] = []
   @Published var selectedPortfolioListId: String?
   @Published private(set) var isShowingAllLists: Bool = false
@@ -98,12 +99,19 @@ final class PortfolioViewModel: ObservableObject {
 
       async let stocksTask = service.fetchPortfolio(portfolioListId: selectedPortfolioListId, limit: 50)
       async let summaryTask = service.fetchPortfolioSummary(portfolioListId: selectedPortfolioListId)
+      async let sectorExposureTask = service.fetchPortfolioSectorExposure(portfolioListId: selectedPortfolioListId)
       async let targetsTask = service.fetchTargets(symbol: nil)
-      let (stocksResult, summary, targets) = try await (stocksTask, summaryTask, targetsTask)
+      let (stocksResult, summary, sectorExposure, targets) = try await (
+        stocksTask,
+        summaryTask,
+        sectorExposureTask,
+        targetsTask
+      )
       let (remoteStocks, fetchedNextCursor) = stocksResult
       await syncWithSwiftData(remoteStocks, listId: selectedPortfolioListId)
       nextCursor = fetchedNextCursor
       cashBalance = extractCashBalance(from: summary)
+      self.sectorExposure = sectorExposure
       targetAlertsBySymbol = Self.makeTargetAlertsBySymbol(targets)
       hasLoadedOnce = true
     } catch {
@@ -296,8 +304,11 @@ final class PortfolioViewModel: ObservableObject {
 
   private func refreshPortfolioSummary() async {
     do {
-      let summary = try await service.fetchPortfolioSummary(portfolioListId: selectedPortfolioListId)
+      async let summaryTask = service.fetchPortfolioSummary(portfolioListId: selectedPortfolioListId)
+      async let sectorExposureTask = service.fetchPortfolioSectorExposure(portfolioListId: selectedPortfolioListId)
+      let (summary, sectorExposure) = try await (summaryTask, sectorExposureTask)
       cashBalance = extractCashBalance(from: summary)
+      self.sectorExposure = sectorExposure
     } catch {
       portfolioViewModelLogger.error("Failed to refresh portfolio summary: \(error.localizedDescription, privacy: .public)")
     }

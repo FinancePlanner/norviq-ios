@@ -5,11 +5,49 @@ import SwiftUI
 import UniformTypeIdentifiers
 import SwiftData
 
+private enum PortfolioAllocationMode: String, CaseIterable, Identifiable {
+    case positions
+    case sectors
+    case benchmark
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .positions: return "Positions"
+        case .sectors: return "Sectors"
+        case .benchmark: return "S&P 500"
+        }
+    }
+
+    var eyebrow: String {
+        switch self {
+        case .positions: return "By cost basis"
+        case .sectors: return "Sector exposure"
+        case .benchmark: return "Benchmark exposure"
+        }
+    }
+
+    func summary(positionCount: Int, sectorCount: Int, benchmarkAsOf: String?) -> String {
+        switch self {
+        case .positions:
+            return "\(positionCount) positions by total portfolio value."
+        case .sectors:
+            return "\(sectorCount) sectors by invested portfolio value."
+        case .benchmark:
+            return "Compared with S&P 500 sector weights\(benchmarkAsOf.map { " as of \($0)" } ?? "")."
+        }
+    }
+}
+
+typealias PortfolioAllocationShareFormatter = PortfolioAllocationScreen.PortfolioAllocationShareFormatter
+
 @MainActor
 struct PortfolioAllocationScreen: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var viewModel: PortfolioViewModel
+    @State private var selectedMode: PortfolioAllocationMode = .positions
 
     @Query private var stocks: [SDPortfolioStock]
 
@@ -62,6 +100,27 @@ struct PortfolioAllocationScreen: View {
             )
         }
         return slices.sorted { $0.value > $1.value }
+    }
+
+    private var sectorSlices: [PortfolioAllocationSlice] {
+        guard let exposure = viewModel.sectorExposure else { return [] }
+        return exposure.sectors.map {
+            PortfolioAllocationSlice(
+                id: $0.sector,
+                symbol: $0.sector,
+                value: $0.value,
+                percentage: $0.weightPercent
+            )
+        }
+    }
+
+    private var displayedTotalValue: Double {
+        switch selectedMode {
+        case .positions, .benchmark:
+            return totalValue
+        case .sectors:
+            return viewModel.sectorExposure?.investedValue ?? holdingsValue
+        }
     }
 
     var body: some View {
@@ -123,59 +182,43 @@ struct PortfolioAllocationScreen: View {
             } else {
                 ScrollView {
                     VStack(spacing: 20) {
+                        Picker("Allocation view", selection: $selectedMode) {
+                            ForEach(PortfolioAllocationMode.allCases) { mode in
+                                Text(mode.title).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
                         GlassCard(backgroundColor: .blue.opacity(0.12)) {
                             VStack(alignment: .leading, spacing: 12) {
-                                Text("By cost basis")
+                                Text(selectedMode.eyebrow)
                                     .typography(.small, weight: .semibold)
                                     .foregroundStyle(.secondary)
 
-                                Text(totalValue.currency)
+                                Text(displayedTotalValue.currency)
                                     .typography(.hero, weight: .bold)
                                     .contentTransition(.numericText())
 
-                                Text(
-                                    "\(allocationSlices.count) positions · percentages sum to how much each holding contributes to total value."
-                                )
+                                Text(selectedMode.summary(
+                                    positionCount: allocationSlices.count,
+                                    sectorCount: viewModel.sectorExposure?.sectors.count ?? 0,
+                                    benchmarkAsOf: viewModel.sectorExposure?.benchmarkAsOf
+                                ))
                                 .typography(.nano)
                                 .foregroundStyle(.secondary)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
 
-                        GlassCard {
-                            VStack(spacing: 20) {
-                                AllocationDonutChart(
-                                    slices: allocationSlices,
-                                    colorScheme: colorScheme
-                                )
-                                .frame(minHeight: 280)
-
-                                VStack(alignment: .leading, spacing: 12) {
-                                    ForEach(Array(allocationSlices.enumerated()), id: \.element.id) {
-                                        index, slice in
-                                        HStack(spacing: 12) {
-                                            Circle()
-                                                .fill(AllocationPalette.color(at: index, colorScheme: colorScheme))
-                                                .frame(width: 10, height: 10)
-
-                                            Text(slice.symbol)
-                                                .typography(.label, weight: .semibold)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-
-                                            Text(slice.percentage.formatted(.number.precision(.fractionLength(1))) + "%")
-                                                .typography(.label, weight: .semibold)
-                                                .foregroundStyle(.secondary)
-                                                .monospacedDigit()
-                                                .contentTransition(.numericText())
-
-                                            Text(slice.value.currency)
-                                                .typography(.small)
-                                                .foregroundStyle(.secondary)
-                                                .contentTransition(.numericText())
-                                        }
-                                    }
-                                }
+                        switch selectedMode {
+                        case .positions:
+                            GlassCard {
+                                allocationChartCard(slices: allocationSlices)
                             }
+                        case .sectors:
+                            sectorExposureCard
+                        case .benchmark:
+                            benchmarkComparisonCard
                         }
 
                         let sharePayload = PortfolioAllocationShareFormatter.payload(
@@ -196,6 +239,243 @@ struct PortfolioAllocationScreen: View {
                     .padding(.vertical, 12)
                 }
             }
+        }
+
+    private func allocationChartCard(slices: [PortfolioAllocationSlice]) -> some View {
+        VStack(spacing: 20) {
+            AllocationDonutChart(
+                slices: slices,
+                colorScheme: colorScheme
+            )
+            .frame(minHeight: 280)
+
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(Array(slices.enumerated()), id: \.element.id) { index, slice in
+                    allocationLegendRow(index: index, slice: slice)
+                }
+            }
+        }
+    }
+
+    private func allocationLegendRow(index: Int, slice: PortfolioAllocationSlice) -> some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(AllocationPalette.color(at: index, colorScheme: colorScheme))
+                .frame(width: 10, height: 10)
+
+            Text(slice.symbol)
+                .typography(.label, weight: .semibold)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(slice.percentage.formatted(.number.precision(.fractionLength(1))) + "%")
+                .typography(.label, weight: .semibold)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+                .contentTransition(.numericText())
+
+            Text(slice.value.currency)
+                .typography(.small)
+                .foregroundStyle(.secondary)
+                .contentTransition(.numericText())
+        }
+    }
+
+    @ViewBuilder
+    private var sectorExposureCard: some View {
+        if let exposure = viewModel.sectorExposure, !exposure.sectors.isEmpty {
+            GlassCard {
+                VStack(spacing: 20) {
+                    AllocationDonutChart(
+                        slices: sectorSlices,
+                        colorScheme: colorScheme
+                    )
+                    .frame(minHeight: 280)
+
+                    VStack(alignment: .leading, spacing: 14) {
+                        ForEach(Array(exposure.sectors.enumerated()), id: \.element.sector) { index, sector in
+                            SectorExposureRow(
+                                item: sector,
+                                color: AllocationPalette.color(at: index, colorScheme: colorScheme)
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            ContentUnavailableView {
+                Label("No Sector Data Yet", systemImage: "square.grid.2x2")
+            } description: {
+                Text("Sector exposure appears after portfolio symbols have company profile data.")
+            }
+            .frame(maxWidth: .infinity, minHeight: 260)
+        }
+    }
+
+    @ViewBuilder
+    private var benchmarkComparisonCard: some View {
+        if let exposure = viewModel.sectorExposure, !exposure.sectors.isEmpty {
+            GlassCard {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text(exposure.benchmarkName)
+                            .typography(.label, weight: .semibold)
+                        Spacer()
+                        Text("As of \(exposure.benchmarkAsOf)")
+                            .typography(.nano)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    VStack(spacing: 14) {
+                        ForEach(exposure.sectors) { sector in
+                            BenchmarkSectorRow(item: sector)
+                        }
+                    }
+
+                    if exposure.cashBalance > 0 {
+                        Divider()
+                        HStack {
+                            Text("Cash")
+                                .typography(.small, weight: .semibold)
+                            Spacer()
+                            Text(exposure.cashBalance.currency)
+                                .typography(.small)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        } else {
+            ContentUnavailableView {
+                Label("No Benchmark Data Yet", systemImage: "chart.bar.xaxis")
+            } description: {
+                Text("Benchmark comparison appears after sector exposure is available.")
+            }
+            .frame(maxWidth: .infinity, minHeight: 260)
+        }
+    }
+
+    private struct SectorExposureRow: View {
+        let item: PortfolioSectorExposureItem
+        let color: Color
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(color)
+                        .frame(width: 10, height: 10)
+
+                    Text(item.sector)
+                        .typography(.label, weight: .semibold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Text(item.weightPercent.formatted(.number.precision(.fractionLength(1))) + "%")
+                        .typography(.label, weight: .semibold)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+
+                    Text(item.value.currency)
+                        .typography(.small)
+                        .foregroundStyle(.secondary)
+                }
+
+                VStack(spacing: 8) {
+                    ForEach(item.holdings) { holding in
+                        HStack(spacing: 10) {
+                            Text(holding.symbol)
+                                .typography(.small, weight: .semibold)
+                                .frame(width: 64, alignment: .leading)
+
+                            Text(holding.weightPercent.formatted(.number.precision(.fractionLength(1))) + "%")
+                                .typography(.nano)
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+
+                            Spacer()
+
+                            Text(holding.value.currency)
+                                .typography(.nano)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.leading, 22)
+                    }
+                }
+            }
+        }
+    }
+
+    private struct BenchmarkSectorRow: View {
+        let item: PortfolioSectorExposureItem
+
+        private var benchmarkWeight: Double {
+            item.benchmarkWeightPercent ?? 0
+        }
+
+        private var overweight: Double {
+            item.overweightPercent ?? 0
+        }
+
+        private var deltaColor: Color {
+            overweight >= 0 ? .orange : .green
+        }
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Text(item.sector)
+                        .typography(.small, weight: .semibold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+
+                    Spacer()
+
+                    Text(deltaText)
+                        .typography(.nano, weight: .semibold)
+                        .foregroundStyle(deltaColor)
+                        .monospacedDigit()
+                }
+
+                HStack(spacing: 10) {
+                    benchmarkBar(value: item.weightPercent, color: AppTheme.Colors.tint(for: .light))
+                    Text(item.weightPercent.formatted(.number.precision(.fractionLength(1))) + "%")
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .frame(width: 48, alignment: .trailing)
+                }
+
+                HStack(spacing: 10) {
+                    benchmarkBar(value: benchmarkWeight, color: .secondary.opacity(0.45))
+                    Text(benchmarkWeight.formatted(.number.precision(.fractionLength(1))) + "%")
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .frame(width: 48, alignment: .trailing)
+                }
+            }
+        }
+
+        private var deltaText: String {
+            guard item.benchmarkWeightPercent != nil else { return "No benchmark" }
+            let sign = overweight >= 0 ? "+" : ""
+            return "\(sign)\(overweight.formatted(.number.precision(.fractionLength(1)))) pts"
+        }
+
+        private func benchmarkBar(value: Double, color: Color) -> some View {
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(.secondary.opacity(0.12))
+                    Capsule()
+                        .fill(color)
+                        .frame(width: proxy.size.width * min(max(value, 0), 100) / 100)
+                }
+            }
+            .frame(height: 7)
         }
     }
 
@@ -340,3 +620,4 @@ struct PortfolioAllocationScreen: View {
             }
         }
     }
+}

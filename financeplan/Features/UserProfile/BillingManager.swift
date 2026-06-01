@@ -15,6 +15,9 @@ final class BillingManager {
     static let entitlementLevel = "billing.entitlement_level"
     static let isPro = "billing.is_pro"
     static let generatedAt = "billing.generated_at"
+    /// Set when a RevenueCat purchase succeeded but the backend entitlement sync did not. Drives
+    /// a later reconcile so the user is not left charged-but-not-pro after a transient failure.
+    static let pendingBackendSync = "billing.pending_backend_sync"
   }
 
   private enum Constants {
@@ -212,9 +215,22 @@ final class BillingManager {
       PostHogSDK.shared.capture("subscription_purchased", properties: [
         "product_id": selectedPackage.storeProduct.productIdentifier,
       ])
-      
+
+      // The charge has gone through. Optimistically unlock from the RevenueCat entitlement so the
+      // paywall dismisses immediately, even if the backend sync below is slow or fails.
+      if result.customerInfo.entitlements[Constants.entitlementID]?.isActive == true {
+        applyOptimisticPro()
+      }
+
       if !userID.isEmpty {
-        try await restoreBackendEntitlement()
+        do {
+          try await syncBackendEntitlement()
+          clearPendingBackendSync()
+        } catch {
+          // User already paid; do not surface this as a purchase error. Persist intent to
+          // reconcile on the next app foreground (see reconcilePendingBackendSyncIfNeeded).
+          markPendingBackendSync()
+        }
       }
       return true
     } catch {
@@ -237,7 +253,8 @@ final class BillingManager {
 
     do {
       _ = try await Purchases.shared.restorePurchases()
-      try await restoreBackendEntitlement()
+      try await syncBackendEntitlement()
+      clearPendingBackendSync()
       // PostHog: Track successful subscription restore
       PostHogSDK.shared.capture("subscription_restored")
     } catch {
@@ -296,11 +313,71 @@ final class BillingManager {
     UserDefaults.standard.removeObject(forKey: Keys.entitlementLevel)
     UserDefaults.standard.removeObject(forKey: Keys.isPro)
     UserDefaults.standard.removeObject(forKey: Keys.generatedAt)
+    UserDefaults.standard.removeObject(forKey: Keys.pendingBackendSync)
   }
 
   private func restoreBackendEntitlement() async throws {
     let context = try await billingClient(forceRefresh: false).restorePurchases()
     apply(context)
+  }
+
+  /// Syncs the backend entitlement with bounded retry. The backend write is idempotent (entitlement
+  /// upsert keyed on the user), so retries are safe. An expired token is refreshed once and retried
+  /// immediately, mirroring the pattern in `redeemCoupon`. Throws only after all attempts fail.
+  private func syncBackendEntitlement(maxAttempts: Int = 3) async throws {
+    var attempt = 0
+    while true {
+      do {
+        try await restoreBackendEntitlement()
+        return
+      } catch let error as BillingHTTPClient.Error where error.isUnauthorized {
+        let context = try await billingClient(forceRefresh: true).restorePurchases()
+        apply(context)
+        return
+      } catch {
+        attempt += 1
+        if attempt >= maxAttempts { throw error }
+        // 0.5s, 1s, 2s … bounded exponential backoff.
+        let seconds = 0.5 * pow(2.0, Double(attempt - 1))
+        try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+      }
+    }
+  }
+
+  /// Re-runs the backend sync if a prior purchase could not reach the backend. Safe to call on every
+  /// app foreground; no-ops unless the pending flag is set and a user is signed in.
+  func reconcilePendingBackendSyncIfNeeded() async {
+    guard uiTestBillingTier == nil else { return }
+    guard hasPendingBackendSync else { return }
+    let userID = await sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !userID.isEmpty else { return }
+    configureRevenueCat(userID: userID)
+    do {
+      try await syncBackendEntitlement()
+      clearPendingBackendSync()
+    } catch {
+      // Leave the flag set; retry on the next foreground.
+    }
+  }
+
+  private var hasPendingBackendSync: Bool {
+    UserDefaults.standard.bool(forKey: Keys.pendingBackendSync)
+  }
+
+  private func markPendingBackendSync() {
+    UserDefaults.standard.set(true, forKey: Keys.pendingBackendSync)
+  }
+
+  private func clearPendingBackendSync() {
+    UserDefaults.standard.removeObject(forKey: Keys.pendingBackendSync)
+  }
+
+  /// Writes a local pro entitlement without a server context, so gating unlocks immediately after a
+  /// confirmed RevenueCat purchase. The authoritative server context replaces this on the next fetch.
+  private func applyOptimisticPro() {
+    UserDefaults.standard.set(Constants.entitlementID, forKey: Keys.entitlementLevel)
+    UserDefaults.standard.set(true, forKey: Keys.isPro)
+    UserDefaults.standard.set(Date(), forKey: Keys.generatedAt)
   }
 
   private func performLoading(_ operation: () async throws -> Void) async {
