@@ -49,6 +49,11 @@ struct HomeScreen: View {
         ExpensesComparisonScreen()
           .accessibilityIdentifier("tab.reports")
       }
+
+      Tab(HomeTab.insights.title, systemImage: "sparkles", value: .insights) {
+        InsightsScreen()
+          .accessibilityIdentifier("tab.insights")
+      }
     }
     .id(appLanguage.rawValue)
     .tint(AppTheme.Colors.tint(for: colorScheme))
@@ -62,7 +67,7 @@ struct HomeScreen: View {
       PaywallView(billingManager: billingManager)
     }
     .onChange(of: selectedTab) { _, newValue in
-      guard newValue == .reports, !billingManager.isPro else { return }
+      guard newValue == .reports || newValue == .insights, !billingManager.isPro else { return }
       selectedTab = .dashboard
       isPaywallPresented = true
     }

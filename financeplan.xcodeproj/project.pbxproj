@@ -933,7 +933,7 @@
 			repositoryURL = "https://github.com/FinancePlanner/FinanceShared.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 0.1.7;
+				minimumVersion = 0.9.47;
 			};
 		};
 		70B002A53C5E11AA00F02001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
