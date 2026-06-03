@@ -303,6 +303,13 @@ private final class MockAuthSessionStore: AuthSessionStoring, @unchecked Sendabl
   func clearSession() async {}
   func hasCompletedInitialStockImport(for userID: String) async -> Bool { return false }
   func markInitialStockImportCompleted(for userID: String) async {}
+  func hasCompletedOnboardingQuestionnaire(for userID: String) async -> Bool { return false }
+  func markOnboardingQuestionnaireCompleted(for userID: String) async {}
+  func requiresOnboardingQuestionnaire(for userID: String) async -> Bool { return false }
+  func markOnboardingQuestionnaireRequired(for userID: String) async {}
+  func markPendingOnboardingAfterSignup(email: String) async {}
+  func hasPendingOnboardingAfterSignup(email: String) async -> Bool { return false }
+  func clearPendingOnboardingAfterSignup(email: String) async {}
 }
 
 private final class BillingSessionMock: PushNotificationsURLSessionProtocol, @unchecked Sendable {

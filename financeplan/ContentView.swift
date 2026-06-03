@@ -18,6 +18,7 @@ public struct ContentView: View {
   @State private var launchStarted = false
   @State private var isAuthenticated: Bool
   @State private var requiresInitialStockImport: Bool
+  @State private var requiresOnboardingQuestionnaire = false
   @State private var isUnlocking = false
   @State private var isAppLocked = false
   @State private var securityCodeInput = ""
@@ -25,9 +26,9 @@ public struct ContentView: View {
   @State private var showSessionRecoveryAlert = false
   @State private var sessionRecoveryMessage = ""
   @State private var startWithSignup = false
+  @State private var hasRequestedLoginThisSession = false
   @StateObject private var pushNotificationsCoordinator: PushNotificationsCoordinator
   @AppStorage("useFaceID") private var useFaceID: Bool = true
-  @AppStorage("hasCompletedOnboardingQuestionnaire") private var hasCompletedOnboardingQuestionnaire: Bool = false
   private let splashDelay: Duration
   private let authSessionManager: AuthSessionManaging
   private let sessionStore: AuthSessionStoring
@@ -60,7 +61,17 @@ public struct ContentView: View {
           ZStack {
             AppTheme.Colors.topBarBackground(for: colorScheme).ignoresSafeArea()
 
-            if requiresInitialStockImport {
+            if requiresOnboardingQuestionnaire {
+              OnboardingQuestionnairePaywallScreen(
+                onCompleted: { _ in
+                  Task {
+                    let userID = await sessionStore.currentUserID
+                    await sessionStore.markOnboardingQuestionnaireCompleted(for: userID)
+                    requiresOnboardingQuestionnaire = false
+                  }
+                }
+              )
+            } else if requiresInitialStockImport {
               OnboardingImportFlow(
                 onFinished: {
                   Task {
@@ -110,14 +121,17 @@ public struct ContentView: View {
           }
         } else {
           Group {
-            if !hasCompletedOnboardingQuestionnaire {
+            if !hasRequestedLoginThisSession {
               OnboardingQuestionnaireFlow(
                 onLogInRequested: {
-                  hasCompletedOnboardingQuestionnaire = true
+                  hasRequestedLoginThisSession = true
                 },
                 onCompleted: {
-                  hasCompletedOnboardingQuestionnaire = true
-                  applyAuthenticatedState()
+                  Task {
+                    let userID = await sessionStore.currentUserID
+                    await sessionStore.markOnboardingQuestionnaireCompleted(for: userID)
+                    applyAuthenticatedState()
+                  }
                 }
               )
             } else {
@@ -178,6 +192,9 @@ public struct ContentView: View {
       deliverPendingPushNotificationRouteIfPossible()
     }
     .onChange(of: requiresInitialStockImport) { _, _ in
+      deliverPendingPushNotificationRouteIfPossible()
+    }
+    .onChange(of: requiresOnboardingQuestionnaire) { _, _ in
       deliverPendingPushNotificationRouteIfPossible()
     }
     .onChange(of: launchCompleted) { _, _ in
@@ -261,6 +278,7 @@ public struct ContentView: View {
     isAuthenticated = true
     Task {
       let userID = await sessionStore.currentUserID
+      requiresOnboardingQuestionnaire = await sessionStore.requiresOnboardingQuestionnaire(for: userID)
       let hasImported = await sessionStore.hasCompletedInitialStockImport(for: userID)
       requiresInitialStockImport = userID.isEmpty || !hasImported
       
@@ -278,6 +296,8 @@ public struct ContentView: View {
   private func handleSessionInvalidation() {
     isAuthenticated = false
     requiresInitialStockImport = false
+    requiresOnboardingQuestionnaire = false
+    hasRequestedLoginThisSession = false
     isAppLocked = false
     securityCodeInput = ""
     securityCodeError = nil
@@ -288,7 +308,10 @@ public struct ContentView: View {
   }
 
   private func deliverPendingPushNotificationRouteIfPossible() {
-    guard launchCompleted, isAuthenticated, !requiresInitialStockImport else {
+    guard launchCompleted,
+          isAuthenticated,
+          !requiresInitialStockImport,
+          !requiresOnboardingQuestionnaire else {
       return
     }
 

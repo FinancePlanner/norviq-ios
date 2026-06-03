@@ -92,6 +92,13 @@ final class AuthSessionManagerTests: XCTestCase {
 
     func hasCompletedInitialStockImport(for userID: String) -> Bool { false }
     func markInitialStockImportCompleted(for userID: String) {}
+    func hasCompletedOnboardingQuestionnaire(for userID: String) -> Bool { false }
+    func markOnboardingQuestionnaireCompleted(for userID: String) {}
+    func requiresOnboardingQuestionnaire(for userID: String) -> Bool { false }
+    func markOnboardingQuestionnaireRequired(for userID: String) {}
+    func markPendingOnboardingAfterSignup(email: String) {}
+    func hasPendingOnboardingAfterSignup(email: String) -> Bool { false }
+    func clearPendingOnboardingAfterSignup(email: String) {}
   }
 
   private enum MockError: Error {
