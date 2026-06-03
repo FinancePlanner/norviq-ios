@@ -104,6 +104,13 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     func clearSession() async {}
     func hasCompletedInitialStockImport(for _: String) async -> Bool { false }
     func markInitialStockImportCompleted(for _: String) async {}
+    func hasCompletedOnboardingQuestionnaire(for _: String) async -> Bool { false }
+    func markOnboardingQuestionnaireCompleted(for _: String) async {}
+    func requiresOnboardingQuestionnaire(for _: String) async -> Bool { false }
+    func markOnboardingQuestionnaireRequired(for _: String) async {}
+    func markPendingOnboardingAfterSignup(email _: String) async {}
+    func hasPendingOnboardingAfterSignup(email _: String) async -> Bool { false }
+    func clearPendingOnboardingAfterSignup(email _: String) async {}
   }
 
   private func makeDefaults() -> UserDefaults {

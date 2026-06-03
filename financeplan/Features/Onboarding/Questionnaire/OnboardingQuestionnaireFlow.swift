@@ -5,8 +5,7 @@ import SwiftUI
 ///
 /// Outcomes:
 /// - `onLogInRequested`: user tapped "Log in" on the welcome screen — caller should route
-///   to the existing `LoginScreen`. Caller should also mark the questionnaire complete so
-///   returning users don't see it again.
+///   to the existing `LoginScreen` for this session. This is not questionnaire completion.
 /// - `onCompleted`: user reached the end of the flow (signed up via Screen 12 + chose a
 ///   paywall outcome on Screen 13). At this point the user IS authenticated; the caller
 ///   should apply authenticated state.
