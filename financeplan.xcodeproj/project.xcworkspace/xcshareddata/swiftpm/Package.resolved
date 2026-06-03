@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/amplitude/Amplitude-Swift.git",
       "state" : {
-        "revision" : "1c2bf3a45697ae33c4f13c7845cc3a3272fe3368",
-        "version" : "1.18.3"
+        "revision" : "57b93024b5ffc0479ca0309587261cd16b699b11",
+        "version" : "1.18.4"
       }
     },
     {
@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/amplitude/AmplitudeCore-Swift.git",
       "state" : {
-        "revision" : "d9d24b79d4fcb4f1d1dcbc50ae20430afd22ebd0",
-        "version" : "1.4.5"
+        "revision" : "9b951efa8f1f83a5a3c3a981537d3ff752d9d1fb",
+        "version" : "1.4.6"
       }
     },
     {
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/amplitude/AmplitudeSessionReplay-iOS.git",
       "state" : {
-        "revision" : "339d1af2c50eedce29158ab70befb163fad4e260",
-        "version" : "0.10.1"
+        "revision" : "5e1842b94f72f594dee558c6db1122bf2a365252",
+        "version" : "0.11.0"
       }
     },
     {
@@ -132,8 +132,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FinancePlanner/FinanceShared.git",
       "state" : {
-        "revision" : "1e5e5247815222cd656337c3fc79e6be85339291",
-        "version" : "0.9.45"
+        "revision" : "425877169e927b45a84ca417c96ad60927534d0b",
+        "version" : "0.9.47"
       }
     },
     {
@@ -186,8 +186,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/PostHog/posthog-ios",
       "state" : {
-        "revision" : "cf6155963a6532c7b88e0cfa2b1d07595d6b6db6",
-        "version" : "3.58.3"
+        "revision" : "15c15c48cfe55613255badb2ff23a0359a743293",
+        "version" : "3.59.2"
       }
     },
     {
@@ -195,8 +195,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/RevenueCat/purchases-ios-spm.git",
       "state" : {
-        "revision" : "98435c3d7b0f6210b2303fc7f2ec09510d4790b6",
-        "version" : "5.74.0"
+        "revision" : "3bbaa4a88d74c863ee5bc4295b2fc628323eff0d",
+        "version" : "5.75.0"
       }
     },
     {
@@ -204,8 +204,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/getsentry/sentry-cocoa.git",
       "state" : {
-        "revision" : "193d313fbfd9affaf2be1692a0284a3b6574c515",
-        "version" : "9.14.0"
+        "revision" : "cef29e94feb00b1b712514443d6d70b09ef20355",
+        "version" : "9.15.0"
       }
     },
     {
@@ -231,8 +231,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/SimplyDanny/SwiftLintPlugins",
       "state" : {
-        "revision" : "8a4640d14777685ba8f14e832373160498fbab92",
-        "version" : "0.63.2"
+        "revision" : "18d8d2d18e1668006d1d209e0b5f5e06c1da7cb5",
+        "version" : "0.63.3"
       }
     },
     {
