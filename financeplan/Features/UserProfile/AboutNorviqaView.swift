@@ -77,12 +77,15 @@ struct AboutNorviqView: View {
 
             // Legal
             Section("Legal") {
-                if let privacyURL = URL(string: "https://your-privacy-policy-url.com") {
-                    Link(destination: privacyURL) {
-                        Label("Privacy Policy", systemImage: "hand.raised.fill")
-                    }
-                    .foregroundStyle(.primary)
+                Link(destination: Constants.Norviq.privacyPolicyUrl) {
+                    Label("Privacy Policy", systemImage: "hand.raised.fill")
                 }
+                .foregroundStyle(.primary)
+
+                Link(destination: Constants.Norviq.termsOfUseUrl) {
+                    Label("Terms of Use", systemImage: "doc.text.fill")
+                }
+                .foregroundStyle(.primary)
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 

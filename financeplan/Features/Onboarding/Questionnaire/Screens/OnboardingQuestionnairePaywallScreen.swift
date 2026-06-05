@@ -203,6 +203,14 @@ struct OnboardingQuestionnairePaywallScreen: View {
           .font(.caption.weight(.medium))
           .foregroundStyle(.secondary.opacity(0.8))
       }
+
+      HStack(spacing: 16) {
+        Link("Privacy Policy", destination: Constants.Norviq.privacyPolicyUrl)
+        Text("•").foregroundStyle(.tertiary)
+        Link("Terms of Use", destination: Constants.Norviq.termsOfUseUrl)
+      }
+      .font(.caption)
+      .foregroundStyle(.secondary)
     }
   }
 

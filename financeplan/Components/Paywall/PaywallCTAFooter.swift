@@ -15,8 +15,8 @@ struct PaywallCTAFooter: View {
   var isRestoring: Bool = false
 
   var errorMessage: String?
-  var privacyURL: URL? = URL(string: "https://your-privacy-policy-url.com") // TODO: Replace with real URL
-  var termsURL: URL?
+  var privacyURL: URL? = Constants.Norviq.privacyPolicyUrl
+  var termsURL: URL? = Constants.Norviq.termsOfUseUrl
 
   /// When true, adds a fade gradient above the bar and a solid background.
   /// Use for sticky-positioned footers. Set false for inline footers in scroll content.
@@ -56,7 +56,7 @@ struct PaywallCTAFooter: View {
 
           if let termsURL {
             Text("•").foregroundStyle(.tertiary)
-            Button("Terms of Service") {
+            Button("Terms of Use") {
               openURL(termsURL)
             }
           }

@@ -41,6 +41,10 @@ extension Container {
     self { @MainActor in AppLockManager() }.singleton
   }
 
+  var earningsAudioPlayer: Factory<EarningsAudioPlayer> {
+    self { @MainActor in EarningsAudioPlayer() }.singleton
+  }
+
   var securityCodeManager: Factory<SecurityCodeManaging> {
     self { @MainActor in
       SecurityCodeManager(
