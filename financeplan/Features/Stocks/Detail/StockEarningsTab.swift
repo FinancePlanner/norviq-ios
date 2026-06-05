@@ -1,3 +1,4 @@
+import Factory
 import StockPlanShared
 import SwiftUI
 
@@ -204,6 +205,8 @@ struct EarningsTranscriptSheet: View {
     let isLoading: Bool
     let errorMessage: String?
 
+    @InjectedObservable(\Container.earningsAudioPlayer) private var audioPlayer
+
     var body: some View {
         NavigationStack {
             Group {
@@ -249,6 +252,25 @@ struct EarningsTranscriptSheet: View {
                 )
             )
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if let transcript {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            audioPlayer.toggle(transcript)
+                        } label: {
+                            Label(
+                                audioPlayer.isPlaying(transcript)
+                                    ? String(localized: "earnings.transcript.pause", defaultValue: "Pause")
+                                    : String(localized: "earnings.transcript.listen", defaultValue: "Listen"),
+                                systemImage: audioPlayer.isPlaying(transcript)
+                                    ? "pause.circle.fill"
+                                    : "play.circle.fill"
+                            )
+                            .labelStyle(.titleAndIcon)
+                        }
+                    }
+                }
+            }
         }
     }
 

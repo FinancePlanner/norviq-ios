@@ -99,4 +99,19 @@ public final class UserProfileViewModel {
             return false
         }
     }
+
+    @discardableResult
+    public func deleteAccount() async -> Bool {
+        guard !isLoading else { return false }
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        do {
+            try await service.deleteAccount()
+            return true
+        } catch {
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to delete account."
+            return false
+        }
+    }
 }

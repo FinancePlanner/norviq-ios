@@ -38,6 +38,9 @@ public struct UserProfileView: View {
     @State private var isAIInfoPresented = false
     @State private var isPaywallPresented = false
     @State private var isLoggingOut = false
+    @State private var isDeletingAccount = false
+    @State private var isDeleteAccountConfirmPresented = false
+    @State private var deleteAccountErrorMessage: String?
     @State private var securityCodeEnabled = false
     @State private var faceIDErrorMessage: String?
     @State private var isNotificationsOn = false
@@ -426,6 +429,31 @@ public struct UserProfileView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
+            // Delete Account
+            Section {
+                Button(role: .destructive) {
+                    isDeleteAccountConfirmPresented = true
+                } label: {
+                    HStack(spacing: 8) {
+                        if isDeletingAccount {
+                            ProgressView()
+                        }
+                        Text(LocalizedStringKey("Delete account"))
+                            .typography(.button, weight: .semibold)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .foregroundStyle(AppTheme.Colors.danger)
+                }
+                .disabled(isDeletingAccount || isLoggingOut)
+            } footer: {
+                Text(LocalizedStringKey(
+                    "Permanently deletes your account and all associated data. This can't be undone."
+                ))
+                .typography(.nano)
+                .foregroundStyle(.secondary)
+            }
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
             // Footer
             Section {
                 VStack(spacing: 4) {
@@ -445,6 +473,35 @@ public struct UserProfileView: View {
         .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
         .refreshable {
             await viewModel.load(force: true)
+        }
+        .confirmationDialog(
+            LocalizedStringKey("Delete account?"),
+            isPresented: $isDeleteAccountConfirmPresented,
+            titleVisibility: .visible
+        ) {
+            Button(role: .destructive) {
+                deleteAccount()
+            } label: {
+                Text(LocalizedStringKey("Delete account"))
+            }
+            Button(role: .cancel) {} label: {
+                Text(LocalizedStringKey("Cancel"))
+            }
+        } message: {
+            Text(LocalizedStringKey(
+                "This permanently deletes your account and all associated data. This can't be undone."
+            ))
+        }
+        .alert(
+            LocalizedStringKey("Couldn't delete account"),
+            isPresented: Binding(
+                get: { deleteAccountErrorMessage != nil },
+                set: { if !$0 { deleteAccountErrorMessage = nil } }
+            )
+        ) {
+            Button(role: .cancel) {} label: { Text(LocalizedStringKey("OK")) }
+        } message: {
+            Text(deleteAccountErrorMessage ?? "")
         }
     }
 
@@ -626,6 +683,27 @@ public struct UserProfileView: View {
             PostHogSDK.shared.reset()
             await Container.shared.authSessionManager().logout()
             isLoggingOut = false
+        }
+    }
+
+    private func deleteAccount() {
+        Task {
+            guard !isDeletingAccount else { return }
+            isDeletingAccount = true
+            defer { isDeletingAccount = false }
+
+            let success = await viewModel.deleteAccount()
+            guard success else {
+                deleteAccountErrorMessage = viewModel.errorMessage
+                    ?? String(localized: "Failed to delete account.")
+                return
+            }
+
+            // Account removed server-side: tear down the local session so the
+            // app returns to the signed-out state.
+            PostHogSDK.shared.capture("user_account_deleted")
+            PostHogSDK.shared.reset()
+            await Container.shared.authSessionManager().logout()
         }
     }
 }

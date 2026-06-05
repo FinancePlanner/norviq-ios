@@ -14,6 +14,7 @@ public protocol UserProfileServiceProtocol: Sendable {
     func updateUsername(_ username: String) async throws -> UserProfile
     func updateEmail(_ email: String) async throws -> UserProfile
     func updatePassword(current: String, new: String) async throws
+    func deleteAccount() async throws
 }
 
 final class UserProfileHTTPService: UserProfileServiceProtocol, @unchecked Sendable {
@@ -62,6 +63,12 @@ final class UserProfileHTTPService: UserProfileServiceProtocol, @unchecked Senda
     func updatePassword(current: String, new: String) async throws {
         _ = try await performAuthenticated { client in
             try await client.updatePassword(UpdatePasswordRequest(currentPassword: current, newPassword: new))
+        }
+    }
+
+    func deleteAccount() async throws {
+        _ = try await performAuthenticated { client in
+            try await client.deleteProfile(DeleteUserProfileRequest(id: nil))
         }
     }
 
@@ -136,6 +143,10 @@ public final class UserProfileServiceStub: UserProfileServiceProtocol, @unchecke
     }
 
     public func updatePassword(current: String, new: String) async throws {
+        try await Task.sleep(nanoseconds: 200_000_000)
+    }
+
+    public func deleteAccount() async throws {
         try await Task.sleep(nanoseconds: 200_000_000)
     }
 }
