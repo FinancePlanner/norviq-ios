@@ -29,7 +29,6 @@ struct PreLoginPaywallScreen: View {
           PaywallCTAFooter(
             ctaTitle: "Start Free Trial",
             isLoading: billingManager.isPurchasing,
-            isDisabled: billingManager.selectedPackage == nil,
             onPurchase: {
               Task {
                 let success = await billingManager.purchaseSelectedPackage()

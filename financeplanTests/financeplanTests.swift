@@ -132,6 +132,60 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertFalse(sut.isFeatureAvailable("advanced_research"))
   }
 
+  func testSelectingMonthlyWithoutPackagesUpdatesSelectedProductID() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+
+    sut.select(productID: "pro_monthly")
+
+    XCTAssertEqual(sut.selectedProductID, "pro_monthly")
+    XCTAssertNil(sut.selectedPackage)
+  }
+
+  func testSelectingWeeklyWithoutPackagesUpdatesSelectedProductID() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+
+    sut.select(productID: "pro_weekly")
+
+    XCTAssertEqual(sut.selectedProductID, "pro_weekly")
+    XCTAssertNil(sut.selectedPackage)
+  }
+
+  func testPurchasingUnavailableSelectedPlanReturnsFalseAndSetsPlanSpecificError() async {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+    sut.select(productID: "pro_monthly")
+
+    let didPurchase = await sut.purchaseSelectedPackage()
+
+    XCTAssertFalse(didPurchase)
+    XCTAssertEqual(sut.errorMessage, "Monthly plan is currently unavailable. Please try again later.")
+  }
+
+  func testClearCacheResetsSelectionToAnnual() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+    sut.select(productID: "pro_weekly")
+
+    sut.clearCache()
+
+    XCTAssertEqual(sut.selectedProductID, "pro_annual")
+    XCTAssertNil(sut.selectedPackage)
+  }
+
   func testRedeemCouponAppliesReturnedProContext() async {
     authSessionManager.validAccessTokenResult = .success("token-123")
     let proContext = makeBillingContext(entitlementLevel: "pro", isPremium: true)

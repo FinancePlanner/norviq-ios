@@ -42,7 +42,6 @@ struct PaywallView: View {
         PaywallCTAFooter(
           ctaTitle: "Start Free Trial",
           isLoading: billingManager.isPurchasing,
-          isDisabled: billingManager.selectedPackage == nil,
           onPurchase: {
             Task { await billingManager.purchaseSelectedPackage() }
           },

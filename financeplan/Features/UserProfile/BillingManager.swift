@@ -26,7 +26,10 @@ final class BillingManager {
 
   var context: BillingContextResponse?
   var packages: [Package] = []
-  var selectedPackage: Package?
+  var selectedProductID = Constants.annualProductID
+  var selectedPackage: Package? {
+    packages.first { $0.storeProduct.productIdentifier == selectedProductID }
+  }
   var isLoading = false
   var isPurchasing = false
   var isRestoring = false
@@ -40,6 +43,7 @@ final class BillingManager {
   private let billingClientFactory: BillingClientFactory
   private var configuredUserID: String?
   private var didConfigureRevenueCat = false
+  private var hasUserSelectedProduct = false
   private let uiTestBillingTier: String?
 
   init(
@@ -96,10 +100,6 @@ final class BillingManager {
 
   var weeklyPackage: Package? {
     packages.first { $0.storeProduct.productIdentifier == Constants.weeklyProductID }
-  }
-
-  var selectedProductID: String {
-    selectedPackage?.storeProduct.productIdentifier ?? Constants.annualProductID
   }
 
   func configureAnonymousIfNeeded() {
@@ -175,20 +175,25 @@ final class BillingManager {
       let offerings = try await Purchases.shared.offerings()
       let availablePackages = offerings.current?.availablePackages ?? []
       packages = availablePackages
-      selectedPackage = availablePackages.first { $0.storeProduct.productIdentifier == Constants.annualProductID }
-        ?? availablePackages.first
+      if !hasUserSelectedProduct {
+        selectedProductID = availablePackages.first { $0.storeProduct.productIdentifier == Constants.annualProductID }
+          .map { $0.storeProduct.productIdentifier }
+          ?? availablePackages.first?.storeProduct.productIdentifier
+          ?? Constants.annualProductID
+      }
     } catch {
       errorMessage = error.localizedDescription
     }
   }
 
   func select(productID: String) {
-    selectedPackage = packages.first { $0.storeProduct.productIdentifier == productID }
+    selectedProductID = productID
+    hasUserSelectedProduct = true
   }
 
   func purchaseSelectedPackage() async -> Bool {
     guard let selectedPackage else {
-      errorMessage = "No Pro plan is available. Please try again later."
+      errorMessage = "\(selectedPlanDisplayName) plan is currently unavailable. Please try again later."
       return false
     }
 
@@ -291,7 +296,8 @@ final class BillingManager {
   func clearCache() {
     context = nil
     packages = []
-    selectedPackage = nil
+    selectedProductID = Constants.annualProductID
+    hasUserSelectedProduct = false
     configuredUserID = nil
     UserDefaults.standard.removeObject(forKey: Keys.entitlementLevel)
     UserDefaults.standard.removeObject(forKey: Keys.isPro)
@@ -337,6 +343,19 @@ final class BillingManager {
       forKey: Keys.isPro
     )
     UserDefaults.standard.set(context.generatedAt, forKey: Keys.generatedAt)
+  }
+
+  private var selectedPlanDisplayName: String {
+    switch selectedProductID {
+    case Constants.annualProductID:
+      return "Annual"
+    case Constants.monthlyProductID:
+      return "Monthly"
+    case Constants.weeklyProductID:
+      return "Weekly"
+    default:
+      return "Selected"
+    }
   }
 
   private func loadCachedEntitlement() {
