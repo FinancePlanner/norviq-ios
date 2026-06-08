@@ -65,6 +65,7 @@ struct PaywallPlanCard: View {
             .stroke(AppTheme.Colors.tint(for: colorScheme), lineWidth: 2)
         }
       }
+      .contentShape(Rectangle())
     }
     .buttonStyle(PressEffectStyle())
     .scaleEffect(isSelected ? 1.02 : 1.0)
