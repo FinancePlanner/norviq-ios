@@ -11,6 +11,7 @@ struct StockFinancialStatementsTab: View {
             if let statements {
                 FinancialStatementsIntroCard(symbol: statements.symbol)
                 FinancialStatementPeriodPicker(selectedPeriod: $selectedPeriod)
+                FinancialTrendCharts(statements: statements, selectedPeriod: selectedPeriod)
                 FinancialStatementTableCard(
                     title: "Balance sheet",
                     subtitle: "Review assets, liabilities, and equity across the selected filing period.",

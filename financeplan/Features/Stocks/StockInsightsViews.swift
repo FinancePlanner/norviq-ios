@@ -664,6 +664,8 @@ struct StockConsensusCard: View {
                     )
                 }
 
+                ConsensusDonutChart(consensus: consensus)
+
                 VStack(spacing: 12) {
                     ForEach(consensus.buckets) { bucket in
                         ConsensusDistributionRow(
