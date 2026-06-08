@@ -30,6 +30,8 @@ struct StockEarningsTab: View {
                 ResearchPlaceholderCard(title: "No earnings data", bodyText: "No data found for \(symbol).")
             } else {
                 VStack(alignment: .leading, spacing: 16) {
+                    EarningsTrendCharts(earnings: earnings)
+
                     Text("Earnings History")
                         .typography(.label, weight: .bold)
                         .padding(.horizontal, 4)
