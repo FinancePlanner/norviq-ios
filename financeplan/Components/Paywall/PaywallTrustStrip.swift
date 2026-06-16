@@ -8,11 +8,19 @@ struct PaywallTrustStrip: View {
     let text: String
   }
 
-  var items: [Item] = [
-    Item(icon: "lock.shield.fill", text: "Bank-level encryption"),
-    Item(icon: "clock.fill", text: "Cancel anytime"),
-    Item(icon: "creditcard.fill", text: "Charged after trial"),
-  ]
+  /// When true, the third item references billing after a free trial (annual plan only).
+  var showsTrialChargeMessage: Bool = false
+
+  private var items: [Item] {
+    [
+      Item(icon: "lock.shield.fill", text: "Bank-level encryption"),
+      Item(icon: "clock.fill", text: "Cancel anytime"),
+      Item(
+        icon: "creditcard.fill",
+        text: showsTrialChargeMessage ? "Charged after trial" : "Secure billing"
+      ),
+    ]
+  }
 
   var body: some View {
     HStack(spacing: 14) {

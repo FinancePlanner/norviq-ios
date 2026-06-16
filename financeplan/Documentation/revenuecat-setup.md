@@ -3,84 +3,70 @@
 ## What's already implemented
 
 - RevenueCat SDK installed via SPM
-- `BillingManager` handles configure, login, purchase, restore
-- `PaywallView` shows annual/monthly plans with purchase and restore buttons
-- `Info.plist` has a `RevenueCatAPIKey` entry read at runtime
+- `BillingManager` handles configure, login, purchase, restore, optimistic Pro unlock, and backend sync with retries
+- Paywall screens show weekly / monthly / annual plans with plan-aware CTA and subscription disclosure
+- `Info.plist` has production `RevenueCatAPIKey` (`appl_...`) read at runtime
 - After purchase/restore, the app calls `POST /billing/restore` to sync entitlements with the backend
+- Local StoreKit testing via `Products.storekit` (all three SKUs; 7-day trial on annual only)
+
+See also: [`Documentation/revenuecat-apple-review-plan.md`](../../../../Documentation/revenuecat-apple-review-plan.md) and backend [`StockPlanBackend/docs/revenuecat-setup.md`](../../../../StockPlanBackend/docs/revenuecat-setup.md).
 
 ---
 
-## What's missing
+## Product identifiers
 
-### 1. Verify the RevenueCat API key
+`BillingManager` expects these exact App Store product IDs:
 
-`Info.plist` currently has:
+| Product ID | Plan |
+|------------|------|
+| `pro_weekly` | Weekly |
+| `pro_monthly` | Monthly |
+| `pro_annual` | Annual (7-day free trial intro offer) |
 
-```xml
-<key>RevenueCatAPIKey</key>
-<string>test_rMSfBBsOXDbWTOdVGdvMGLWvaiv</string>
-```
-
-This is a placeholder. Replace it with the real key from:
-
-> RevenueCat Dashboard → Project → Apps → your iOS app → API Keys
-
-The key must start with `appl_`. Without the correct key, `Purchases.configure` will fail silently and `loadOfferings()` will return empty packages.
+RevenueCat entitlement ID: **`pro`**
 
 ---
 
-### 2. Create products in App Store Connect
+## App Store Connect checklist
 
-`BillingManager` looks for these exact product identifiers:
-
-```swift
-static let annualProductID = "pro_annual"
-static let monthlyProductID = "pro_monthly"
-```
-
-Go to [App Store Connect](https://appstoreconnect.apple.com) → your app → In-App Purchases and create:
-
-| Product ID | Type | Price |
-|------------|------|-------|
-| `pro_annual` | Auto-Renewable Subscription | e.g. $59.99/yr |
-| `pro_monthly` | Auto-Renewable Subscription | e.g. $5.99/mo |
-
-Both must be in the same subscription group.
+- [ ] Create all three auto-renewable subscriptions in **one subscription group**
+- [ ] Set 7-day free trial introductory offer on **`pro_annual` only**
+- [ ] Add localizations and subscription review screenshot
+- [ ] Paid Apps Agreement, banking, and tax complete
+- [ ] Privacy Policy URL and Support URL on the app record
 
 ---
 
-### 3. Add a StoreKit Configuration File for simulator testing
+## RevenueCat dashboard checklist
 
-Without this, the simulator cannot load offerings and the paywall shows hardcoded fallback prices.
-
-**Steps:**
-
-1. In Xcode: **File → New → File → StoreKit Configuration File** → name it `StoreKit.storekit`
-2. Add two Auto-Renewable Subscription products:
-   - Product ID: `pro_annual`, price: $59.99
-   - Product ID: `pro_monthly`, price: $5.99
-3. Attach it to your scheme: **Edit Scheme → Run → Options → StoreKit Configuration → select `StoreKit.storekit`**
-4. In RevenueCat dashboard, enable **StoreKit Testing** for your iOS app (Project Settings → Apps → your app)
+- [ ] Entitlement `pro` with all three products attached
+- [ ] Default offering includes weekly, monthly, and annual packages
+- [ ] App Store Connect API / shared secret linked
+- [ ] Webhook → `POST https://<prod-api>/webhooks/revenuecat` with Authorization = `REVENUECAT_WEBHOOK_SECRET`
 
 ---
 
-### 4. Verify the `pro` entitlement in RevenueCat
+## Local / simulator testing
 
-Go to RevenueCat Dashboard → Entitlements and confirm:
-
-- An entitlement named exactly `pro` exists
-- Both `pro_annual` and `pro_monthly` products are attached to it
-
-`BillingManager` checks for `entitlementID = "pro"` — if the entitlement has a different name, purchases will appear to succeed but `isPro` will stay `false`.
+1. Xcode → **Edit Scheme → Run → Options → StoreKit Configuration** → `Products.storekit`
+2. Run on simulator; paywall should show live prices from StoreKit (not fallback placeholders)
+3. Optional: enable StoreKit Testing in RevenueCat project settings
 
 ---
 
-## Checklist
+## Production backend (required for Pro on server)
 
-- [ ] `RevenueCatAPIKey` in `Info.plist` replaced with real `appl_...` key
-- [ ] `pro_annual` product created in App Store Connect
-- [ ] `pro_monthly` product created in App Store Connect
-- [ ] `StoreKit.storekit` config file added to project
-- [ ] Scheme configured to use `StoreKit.storekit` for Run
-- [ ] RevenueCat StoreKit Testing enabled for the iOS app
-- [ ] `pro` entitlement exists in RevenueCat and has both products attached
+- `REVENUECAT_API_KEY` — secret `sk_...` key (not the iOS `appl_` key)
+- `REVENUECAT_WEBHOOK_SECRET` — same value as webhook Authorization header
+
+Without these, purchases may succeed in the App Store but `GET /billing/context` stays on the free tier.
+
+---
+
+## iOS checklist
+
+- [ ] `RevenueCatAPIKey` in `Info.plist` is the production `appl_...` key
+- [ ] `pro_weekly`, `pro_monthly`, `pro_annual` exist in App Store Connect
+- [ ] `Products.storekit` attached to Run scheme for local QA
+- [ ] `pro` entitlement in RevenueCat with all three products
+- [ ] Production webhook + API key deployed and verified

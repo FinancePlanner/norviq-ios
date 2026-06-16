@@ -17,6 +17,7 @@ struct PaywallCTAFooter: View {
   var errorMessage: String?
   var privacyURL: URL? = Constants.Norviq.privacyPolicyUrl
   var termsURL: URL? = Constants.Norviq.termsOfUseUrl
+  var disclosureText: String?
 
   /// When true, adds a fade gradient above the bar and a solid background.
   /// Use for sticky-positioned footers. Set false for inline footers in scroll content.
@@ -41,6 +42,7 @@ struct PaywallCTAFooter: View {
 
       VStack(spacing: 12) {
         purchaseButton
+        disclosureLabel
         skipButton
         errorLabel
 
@@ -99,6 +101,17 @@ struct PaywallCTAFooter: View {
     .buttonStyle(PressEffectStyle())
     .disabled(isLoading || isDisabled)
     .opacity(isDisabled ? 0.5 : 1.0)
+  }
+
+  @ViewBuilder
+  private var disclosureLabel: some View {
+    if let disclosureText, !disclosureText.isEmpty {
+      Text(disclosureText)
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+    }
   }
 
   @ViewBuilder
