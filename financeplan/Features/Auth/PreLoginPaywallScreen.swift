@@ -27,7 +27,7 @@ struct PreLoginPaywallScreen: View {
           planCards
 
           PaywallCTAFooter(
-            ctaTitle: "Start Free Trial",
+            ctaTitle: billingManager.purchaseCTATitle,
             isLoading: billingManager.isPurchasing,
             onPurchase: {
               Task {
@@ -42,16 +42,11 @@ struct PreLoginPaywallScreen: View {
             },
             isRestoring: billingManager.isRestoring,
             errorMessage: billingManager.errorMessage,
+            disclosureText: billingManager.subscriptionDisclosureText,
             isSticky: false
           )
 
-          PaywallTrustStrip()
-
-          Text("We'll remind you 3 days before billing.")
-            .font(.caption)
-            .foregroundStyle(.secondary.opacity(0.7))
-            .multilineTextAlignment(.center)
-            .padding(.top, 4)
+          PaywallTrustStrip(showsTrialChargeMessage: billingManager.selectedPlanHasFreeTrial)
 
           AuthFooter()
         }

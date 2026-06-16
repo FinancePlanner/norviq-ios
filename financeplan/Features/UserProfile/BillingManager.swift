@@ -15,6 +15,7 @@ final class BillingManager {
     static let entitlementLevel = "billing.entitlement_level"
     static let isPro = "billing.is_pro"
     static let generatedAt = "billing.generated_at"
+    static let pendingBackendSync = "billing.pending_backend_sync"
   }
 
   private enum Constants {
@@ -102,6 +103,37 @@ final class BillingManager {
     packages.first { $0.storeProduct.productIdentifier == Constants.weeklyProductID }
   }
 
+  /// True when the selected StoreKit product includes a free-trial introductory offer.
+  var selectedPlanHasFreeTrial: Bool {
+    guard let intro = selectedPackage?.storeProduct.introductoryDiscount else { return false }
+    return intro.paymentMode == .freeTrial
+  }
+
+  /// Primary paywall button title — trial wording only when StoreKit confirms a free trial.
+  var purchaseCTATitle: String {
+    guard selectedPlanHasFreeTrial, let trialDays = selectedPlanFreeTrialDays else {
+      return "Subscribe"
+    }
+    return trialDays == 1 ? "Start Free Trial" : "Start \(trialDays)-Day Free Trial"
+  }
+
+  /// Auto-renew disclosure required near the subscribe button (Guideline 3.1.2).
+  var subscriptionDisclosureText: String {
+    guard let product = selectedPackage?.storeProduct else {
+      return Self.defaultSubscriptionDisclosure
+    }
+
+    let price = product.localizedPriceString
+    let periodLabel = Self.subscriptionPeriodLabel(for: product)
+
+    if selectedPlanHasFreeTrial, let trialDays = selectedPlanFreeTrialDays {
+      return
+        "After your \(trialDays)-day free trial, you will be charged \(price)\(periodLabel) unless you cancel. \(Self.defaultSubscriptionDisclosure)"
+    }
+
+    return "\(price)\(periodLabel) will be charged to your Apple ID account at confirmation of purchase. \(Self.defaultSubscriptionDisclosure)"
+  }
+
   func configureAnonymousIfNeeded() {
     guard uiTestBillingTier == nil else { return }
     guard !didConfigureRevenueCat else { return }
@@ -137,17 +169,30 @@ final class BillingManager {
     }
 
     if didConfigureRevenueCat {
-      Purchases.shared.logIn(userID) { _, _, error in
-        if let error {
-          Task { @MainActor in
-            self.errorMessage = error.localizedDescription
-          }
-        }
+      Task {
+        await performRevenueCatLogin(userID: userID)
       }
     } else {
       Purchases.configure(withAPIKey: apiKey, appUserID: userID)
       didConfigureRevenueCat = true
     }
+  }
+
+  /// Links RevenueCat identity after sign-in and syncs entitlements with the backend.
+  /// Call after authentication and when reconciling anonymous pre-login purchases.
+  func linkCurrentUserAndSyncEntitlements() async {
+    guard uiTestBillingTier == nil else { return }
+
+    let userID = await sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !userID.isEmpty else { return }
+
+    if configuredUserID != userID {
+      configureRevenueCat(userID: userID)
+    } else if didConfigureRevenueCat, Purchases.shared.isAnonymous {
+      await performRevenueCatLogin(userID: userID)
+    }
+
+    await reconcilePendingBackendSyncIfNeeded()
   }
 
   func refreshBillingContext() async {
@@ -213,14 +258,15 @@ final class BillingManager {
     do {
       let result = try await Purchases.shared.purchase(package: selectedPackage)
       guard !result.userCancelled else { return false }
-      // PostHog: Track successful subscription purchase
       PostHogSDK.shared.capture("subscription_purchased", properties: [
         "product_id": selectedPackage.storeProduct.productIdentifier,
       ])
-      
-      if !userID.isEmpty {
-        try await restoreBackendEntitlement()
+
+      if result.customerInfo.entitlements[Constants.entitlementID]?.isActive == true {
+        applyOptimisticPro(from: result.customerInfo)
       }
+
+      await syncBackendEntitlement()
       return true
     } catch {
       errorMessage = error.localizedDescription
@@ -241,9 +287,11 @@ final class BillingManager {
     defer { isRestoring = false }
 
     do {
-      _ = try await Purchases.shared.restorePurchases()
-      try await restoreBackendEntitlement()
-      // PostHog: Track successful subscription restore
+      let customerInfo = try await Purchases.shared.restorePurchases()
+      if customerInfo.entitlements[Constants.entitlementID]?.isActive == true {
+        applyOptimisticPro(from: customerInfo)
+      }
+      await syncBackendEntitlement()
       PostHogSDK.shared.capture("subscription_restored")
     } catch {
       errorMessage = error.localizedDescription
@@ -302,11 +350,139 @@ final class BillingManager {
     UserDefaults.standard.removeObject(forKey: Keys.entitlementLevel)
     UserDefaults.standard.removeObject(forKey: Keys.isPro)
     UserDefaults.standard.removeObject(forKey: Keys.generatedAt)
+    UserDefaults.standard.removeObject(forKey: Keys.pendingBackendSync)
   }
 
-  private func restoreBackendEntitlement() async throws {
-    let context = try await billingClient(forceRefresh: false).restorePurchases()
+  func reconcilePendingBackendSyncIfNeeded() async {
+    guard uiTestBillingTier == nil else { return }
+    guard UserDefaults.standard.bool(forKey: Keys.pendingBackendSync) else { return }
+    await syncBackendEntitlement()
+  }
+
+  private func restoreBackendEntitlement(forceRefresh: Bool = false) async throws {
+    let context = try await billingClient(forceRefresh: forceRefresh).restorePurchases()
     apply(context)
+  }
+
+  private func syncBackendEntitlement(maxAttempts: Int = 3) async {
+    let userID = await sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !userID.isEmpty else { return }
+
+    var delayNanoseconds: UInt64 = 500_000_000
+
+    for attempt in 1...maxAttempts {
+      do {
+        try await restoreBackendEntitlement()
+        clearPendingBackendSync()
+        return
+      } catch let error as BillingHTTPClient.Error where error.isUnauthorized {
+        do {
+          try await restoreBackendEntitlement(forceRefresh: true)
+          clearPendingBackendSync()
+          return
+        } catch {
+          if attempt == maxAttempts {
+            markPendingBackendSync()
+            return
+          }
+        }
+      } catch {
+        if attempt == maxAttempts {
+          markPendingBackendSync()
+          return
+        }
+      }
+
+      try? await Task.sleep(nanoseconds: delayNanoseconds)
+      delayNanoseconds *= 2
+    }
+  }
+
+  private func performRevenueCatLogin(userID: String) async {
+    do {
+      let (customerInfo, _) = try await Purchases.shared.logIn(userID)
+      if customerInfo.entitlements[Constants.entitlementID]?.isActive == true {
+        applyOptimisticPro(from: customerInfo)
+      }
+      await syncBackendEntitlement()
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  private func applyOptimisticPro(from customerInfo: CustomerInfo) {
+    guard customerInfo.entitlements[Constants.entitlementID]?.isActive == true else { return }
+
+    let productID = customerInfo.entitlements[Constants.entitlementID]?.productIdentifier
+      ?? selectedProductID
+    let entitlementLevel = productID.hasPrefix("pro_") ? productID : "pro"
+
+    apply(
+      BillingContextResponse(
+        plan: entitlementLevel,
+        entitlementLevel: entitlementLevel,
+        isPremium: true,
+        subscription: nil,
+        features: context?.features ?? [],
+        usage: context?.usage ?? [],
+        trialDaysRemaining: context?.trialDaysRemaining,
+        isTrialActive: context?.isTrialActive ?? false,
+        generatedAt: Date()
+      )
+    )
+  }
+
+  private func markPendingBackendSync() {
+    UserDefaults.standard.set(true, forKey: Keys.pendingBackendSync)
+  }
+
+  private func clearPendingBackendSync() {
+    UserDefaults.standard.removeObject(forKey: Keys.pendingBackendSync)
+  }
+
+  private static let defaultSubscriptionDisclosure =
+    "Payment will be charged to your Apple ID account. Subscription automatically renews unless it is canceled at least 24 hours before the end of the current period. Your account will be charged for renewal within 24 hours prior to the end of the current period. You can manage and cancel your subscriptions in your App Store account settings."
+
+  private var selectedPlanFreeTrialDays: Int? {
+    guard let intro = selectedPackage?.storeProduct.introductoryDiscount,
+          intro.paymentMode == .freeTrial else {
+      return nil
+    }
+    return Self.trialDays(from: intro.subscriptionPeriod)
+  }
+
+  private static func trialDays(from period: SubscriptionPeriod) -> Int {
+    switch period.unit {
+    case .day:
+      return period.value
+    case .week:
+      return period.value * 7
+    case .month:
+      return period.value * 30
+    case .year:
+      return period.value * 365
+    @unknown default:
+      return period.value
+    }
+  }
+
+  private static func subscriptionPeriodLabel(for product: StoreProduct) -> String {
+    guard let period = product.subscriptionPeriod else { return "" }
+
+    switch period.unit {
+    case .day where period.value == 7:
+      return "/wk"
+    case .day:
+      return "/\(period.value)d"
+    case .week:
+      return period.value == 1 ? "/wk" : "/\(period.value)wks"
+    case .month:
+      return period.value == 1 ? "/mo" : "/\(period.value)mo"
+    case .year:
+      return period.value == 1 ? "/yr" : "/\(period.value)yr"
+    @unknown default:
+      return ""
+    }
   }
 
   private func performLoading(_ operation: () async throws -> Void) async {

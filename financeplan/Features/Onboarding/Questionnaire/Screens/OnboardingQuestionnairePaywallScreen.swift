@@ -24,7 +24,7 @@ struct OnboardingQuestionnairePaywallScreen: View {
         planCards
 
         OnboardingPrimaryButton(
-          title: "Start my 7-day free trial",
+          title: billingManager.purchaseCTATitle,
           isLoading: billingManager.isPurchasing,
           action: {
             Task {
@@ -34,15 +34,15 @@ struct OnboardingQuestionnairePaywallScreen: View {
           }
         )
 
+        Text(billingManager.subscriptionDisclosureText)
+          .font(.caption2)
+          .foregroundStyle(.secondary)
+          .multilineTextAlignment(.center)
+          .fixedSize(horizontal: false, vertical: true)
+
         secondaryLinks
 
-        PaywallTrustStrip()
-
-        Text("We'll remind you 3 days before billing.")
-          .font(.caption)
-          .foregroundStyle(.secondary.opacity(0.7))
-          .multilineTextAlignment(.center)
-          .padding(.top, 4)
+        PaywallTrustStrip(showsTrialChargeMessage: billingManager.selectedPlanHasFreeTrial)
       }
       .padding(.horizontal, 20)
       .padding(.top, 8)
@@ -78,7 +78,7 @@ struct OnboardingQuestionnairePaywallScreen: View {
         .font(.title.bold())
         .multilineTextAlignment(.center)
 
-      Text("7 days free. Cancel anytime.")
+      Text(billingManager.selectedPlanHasFreeTrial ? "7 days free. Cancel anytime." : "Cancel anytime.")
         .font(.subheadline)
         .foregroundStyle(.secondary)
     }

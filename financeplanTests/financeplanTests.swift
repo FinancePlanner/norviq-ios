@@ -172,6 +172,31 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertEqual(sut.errorMessage, "Monthly plan is currently unavailable. Please try again later.")
   }
 
+  func testPurchaseCTATitleDefaultsToSubscribeWithoutIntroOffer() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+
+    sut.select(productID: "pro_monthly")
+    XCTAssertEqual(sut.purchaseCTATitle, "Subscribe")
+
+    sut.select(productID: "pro_weekly")
+    XCTAssertEqual(sut.purchaseCTATitle, "Subscribe")
+  }
+
+  func testSelectedPlanHasFreeTrialIsFalseWithoutPackages() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+
+    sut.select(productID: "pro_annual")
+    XCTAssertFalse(sut.selectedPlanHasFreeTrial)
+  }
+
   func testClearCacheResetsSelectionToAnnual() {
     let sut = BillingManager(
       environmentManager: environmentManager,

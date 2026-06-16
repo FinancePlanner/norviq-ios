@@ -38,12 +38,24 @@ struct NorviqApp: App {
     TelemetryDeck.initialize(config: .init(appID: "C2B05381-D641-4BE4-B418-5AE02A8DB85F"))
     
     // Initialize Sentry
-    if let dsn = Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String {
+    if let dsn = Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String, !dsn.isEmpty {
+      #if DEBUG
+      let defaultEnvironment = "development"
+      #else
+      let defaultEnvironment = "production"
+      #endif
+      let environment = Bundle.main.object(forInfoDictionaryKey: "SENTRY_ENVIRONMENT") as? String
+        ?? defaultEnvironment
       SentrySDK.start { options in
         options.dsn = dsn
+        options.environment = environment
         options.tracesSampleRate = 0.2
         options.enableAppHangTracking = true
         options.enableCaptureFailedRequests = true
+        options.beforeSend = { event in
+          event.tags?["platform"] = "cocoa"
+          return event
+        }
       }
     }
 

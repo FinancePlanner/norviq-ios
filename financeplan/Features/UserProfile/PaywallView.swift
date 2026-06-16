@@ -31,7 +31,7 @@ struct PaywallView: View {
               .padding(.horizontal, 20)
               .padding(.bottom, 16)
 
-            PaywallTrustStrip()
+            PaywallTrustStrip(showsTrialChargeMessage: billingManager.selectedPlanHasFreeTrial)
               .padding(.horizontal, 20)
               .padding(.bottom, 120) // space for sticky CTA
           }
@@ -40,7 +40,7 @@ struct PaywallView: View {
         .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
 
         PaywallCTAFooter(
-          ctaTitle: "Start Free Trial",
+          ctaTitle: billingManager.purchaseCTATitle,
           isLoading: billingManager.isPurchasing,
           onPurchase: {
             Task { await billingManager.purchaseSelectedPackage() }
@@ -50,7 +50,8 @@ struct PaywallView: View {
             Task { await billingManager.restorePurchases() }
           },
           isRestoring: billingManager.isRestoring,
-          errorMessage: billingManager.errorMessage
+          errorMessage: billingManager.errorMessage,
+          disclosureText: billingManager.subscriptionDisclosureText
         )
       }
       .navigationBarTitleDisplayMode(.inline)
