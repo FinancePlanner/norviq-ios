@@ -59,7 +59,9 @@ RevenueCat entitlement ID: **`pro`**
 - `REVENUECAT_API_KEY` — secret `sk_...` key (not the iOS `appl_` key)
 - `REVENUECAT_WEBHOOK_SECRET` — same value as webhook Authorization header
 
-Without these, purchases may succeed in the App Store but `GET /billing/context` stays on the free tier.
+Without these, purchases may succeed in the App Store but `GET /billing/me` stays on the free tier and Pro features (earnings transcripts + audio, advanced research, etc.) remain locked.
+
+Earnings calendar list is available as a teaser to free users; transcripts and "Listen" (TTS) audio require the Pro entitlement (earningsText).
 
 ---
 

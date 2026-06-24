@@ -32,6 +32,7 @@ struct PortfolioScreen: View {
   @State private var pushFallbackMessageToken: UUID?
   @State private var targetAlertStock: TargetAlertDraftStock?
   @State private var isPaywallPresented = false
+  @State private var isEarningsCalendarPresented = false
 
   enum TimeRange: String, CaseIterable, Identifiable {
       case day = "1D"
@@ -193,6 +194,9 @@ struct PortfolioScreen: View {
     .sheet(isPresented: $isPaywallPresented) {
       PaywallView(billingManager: billingManager)
     }
+    .sheet(isPresented: $isEarningsCalendarPresented) {
+      EarningsCalendarScreen()
+    }
     .navigationDestination(item: $pushNavigationRoute) { route in
       StockDetailScreen(stockId: route.stockID, initialSymbol: route.symbol)
     }
@@ -284,6 +288,30 @@ struct PortfolioScreen: View {
           selectedAssetFilter: selectedAssetFilter,
           onSelectFilter: selectAssetFilter
         )
+
+        // Revived from PortfolioSegment.earnings — teaser entry (list free, transcripts Pro)
+        Button {
+          isEarningsCalendarPresented = true
+        } label: {
+          HStack {
+            Image(systemName: "calendar")
+              .font(.title3)
+            VStack(alignment: .leading, spacing: 2) {
+              Text("Earnings Calendar")
+                .typography(.headline, weight: .semibold)
+              Text("Upcoming reports & transcripts")
+                .typography(.nano)
+                .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+              .foregroundStyle(.secondary)
+          }
+          .padding()
+          .appGlassEffect(.rect(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("portfolio.earningsCalendarLink")
 
         PortfolioPositionsSection(
           stocks: filteredStocks,
