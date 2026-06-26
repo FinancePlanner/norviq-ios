@@ -13,6 +13,8 @@ struct WatchlistTab: View {
   @State private var convertingItem: SDWatchlistItem?
   @State private var removePromptItem: SDWatchlistItem?
   @State private var destructiveFeedbackTrigger = 0
+  @State private var selectedTradingSymbol: String?
+  private let quoteRefreshTimer = Timer.publish(every: 20, on: .main, in: .common).autoconnect()
 
   private var ownedItems: [SDWatchlistItem] {
     let currentUserId = LocalCacheScope.currentOwnerUserId
@@ -44,9 +46,12 @@ struct WatchlistTab: View {
       }
 
       ForEach(scopedItems) { item in
+        let live = viewModel.liveQuotes[item.symbol.uppercased()]
         WatchlistRow(
           item: item,
-          onAddToPortfolio: { convertingItem = item }
+          liveQuote: live,
+          onAddToPortfolio: { convertingItem = item },
+          onQuickTrade: { selectedTradingSymbol = item.symbol }
         )
         .swipeActions {
           Button(role: .destructive) {
@@ -64,6 +69,10 @@ struct WatchlistTab: View {
     .scrollContentBackground(.hidden)
     .onAppear {
       viewModel.setModelContext(modelContext)
+      Task { await viewModel.load(force: true) }
+    }
+    .onReceive(quoteRefreshTimer) { _ in
+      Task { await viewModel.refreshLiveQuotes() }
     }
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
@@ -84,6 +93,9 @@ struct WatchlistTab: View {
           await viewModel.saveWatchlist(draft)
         }
       )
+    }
+    .sheet(item: $selectedTradingSymbol) { symbol in
+      TradingStockSheet(symbol: symbol)
     }
     .sheet(item: $convertingItem) { item in
       AddPositionSheet(
@@ -168,7 +180,9 @@ struct WatchlistTab: View {
 
 private struct WatchlistRow: View {
   let item: SDWatchlistItem
+  let liveQuote: QuoteResponse?
   let onAddToPortfolio: () -> Void
+  let onQuickTrade: (() -> Void)?
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -178,11 +192,28 @@ private struct WatchlistRow: View {
 
         Spacer()
 
+        if let q = liveQuote {
+          Text(q.currentPrice.currency)
+            .typography(.label, weight: .bold)
+            .monospacedDigit()
+            .foregroundStyle(.primary)
+            .animation(.easeInOut(duration: 0.25), value: q.currentPrice)
+        }
+
         Text(item.status.capitalized)
           .typography(.nano, weight: .semibold)
           .padding(.horizontal, 8)
           .padding(.vertical, 4)
           .appGlassEffect(.capsule)
+      }
+
+      if let q = liveQuote, let pct = q.percentChange {
+        let chg = q.change ?? 0
+        Text(StockMetricFormatter.signedCurrencyText(chg) + " (" + StockMetricFormatter.signedPercentText(pct) + ")")
+          .typography(.caption)
+          .foregroundStyle(chg >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger)
+          .animation(.easeInOut(duration: 0.3), value: chg)
+          .animation(.easeInOut(duration: 0.3), value: pct)
       }
 
       if let note = item.note, !note.isEmpty {
@@ -203,8 +234,18 @@ private struct WatchlistRow: View {
         Button("Add to portfolio", action: onAddToPortfolio)
           .buttonStyle(.borderedProminent)
           .controlSize(.small)
+
+        if let onQuickTrade {
+          Button("Trade", action: onQuickTrade)
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
       }
     }
     .padding(.vertical, 6)
+    .contentShape(Rectangle())
+    .onTapGesture {
+      onQuickTrade?()
+    }
   }
 }

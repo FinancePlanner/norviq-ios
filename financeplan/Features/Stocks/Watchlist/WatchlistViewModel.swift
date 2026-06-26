@@ -21,21 +21,28 @@ final class WatchlistViewModel: ObservableObject {
   @Published var addWatchlistDraft = AddWatchlistDraft()
   @Published private(set) var watchlistLists: [WatchlistListDTOResponse] = []
   @Published var selectedWatchlistListId: String?
+  @Published private(set) var liveQuotes: [String: QuoteResponse] = [:]
 
   private let service: StockServicing
+  private let marketDataService: MarketDataServicing
   private var localStore: (any WatchlistLocalPersisting)?
   private var hasLoadedOnce = false
 
   init(
     service: StockServicing,
+    marketDataService: MarketDataServicing,
     localStore: (any WatchlistLocalPersisting)? = nil
   ) {
     self.service = service
+    self.marketDataService = marketDataService
     self.localStore = localStore
   }
 
   convenience init() {
-    self.init(service: Container.shared.stockService())
+    self.init(
+      service: Container.shared.stockService(),
+      marketDataService: Container.shared.marketDataService()
+    )
   }
 
   func setModelContext(_ context: ModelContext) {
@@ -58,6 +65,19 @@ final class WatchlistViewModel: ObservableObject {
 
       let remoteItems = try await service.fetchWatchlist(watchlistListId: selectedWatchlistListId)
       await syncWithSwiftData(remoteItems, listId: selectedWatchlistListId)
+
+      // Enrich with live quotes for prices/changes (like Portfolio)
+      let symbols = remoteItems.map { $0.symbol }
+      if !symbols.isEmpty {
+        do {
+          let batch = try await marketDataService.fetchQuoteBatch(symbols: symbols)
+          liveQuotes = Dictionary(uniqueKeysWithValues: batch.quotes.map { ($0.symbol.uppercased(), $0) })
+        } catch {
+          watchlistViewModelLogger.warning("Watchlist quote batch failed: \(error.localizedDescription)")
+          liveQuotes = [:]
+        }
+      }
+
       hasLoadedOnce = true
     } catch {
       errorMessage = error.localizedDescription
@@ -70,6 +90,20 @@ final class WatchlistViewModel: ObservableObject {
       try localStore.reconcile(with: remoteItems, in: listId)
     } catch {
       watchlistViewModelLogger.error("SwiftData watchlist sync failed: \(error.localizedDescription, privacy: .public)")
+    }
+  }
+
+  /// Refresh only live market quotes for watchlist symbols.
+  func refreshLiveQuotes() async {
+    let symbols = Array(liveQuotes.keys)
+    guard !symbols.isEmpty else { return }
+    do {
+      let batch = try await marketDataService.fetchQuoteBatch(symbols: symbols)
+      for q in batch.quotes {
+        liveQuotes[q.symbol.uppercased()] = q
+      }
+    } catch {
+      watchlistViewModelLogger.warning("refreshLiveQuotes watchlist failed: \(error.localizedDescription)")
     }
   }
 

@@ -57,8 +57,10 @@ final class PortfolioViewModel: ObservableObject {
   @Published private(set) var isShowingAllLists: Bool = false
   @Published private(set) var targetAlertsBySymbol: [String: TargetResponse] = [:]
   @Published private(set) var isSavingTargetAlert = false
+  @Published private(set) var liveQuotes: [String: QuoteResponse] = [:]
 
   private let service: StockServicing
+  private let marketDataService: MarketDataServicing
   private var localStore: (any PortfolioLocalPersisting)?
   private var hasLoadedOnce = false
   @Published private(set) var nextCursor: String? = nil
@@ -66,14 +68,19 @@ final class PortfolioViewModel: ObservableObject {
 
   init(
     service: StockServicing,
+    marketDataService: MarketDataServicing,
     localStore: (any PortfolioLocalPersisting)? = nil
   ) {
     self.service = service
+    self.marketDataService = marketDataService
     self.localStore = localStore
   }
 
   convenience init() {
-    self.init(service: Container.shared.stockService())
+    self.init(
+      service: Container.shared.stockService(),
+      marketDataService: Container.shared.marketDataService()
+    )
   }
 
   func setModelContext(_ context: ModelContext) {
@@ -105,9 +112,37 @@ final class PortfolioViewModel: ObservableObject {
       nextCursor = fetchedNextCursor
       cashBalance = extractCashBalance(from: summary)
       targetAlertsBySymbol = Self.makeTargetAlertsBySymbol(targets)
+
+      // Enrich with live market quotes (price + change) using existing batch endpoint
+      let symbols = remoteStocks.map { $0.symbol }
+      if !symbols.isEmpty {
+        do {
+          let batch = try await marketDataService.fetchQuoteBatch(symbols: symbols)
+          liveQuotes = Dictionary(uniqueKeysWithValues: batch.quotes.map { ($0.symbol.uppercased(), $0) })
+        } catch {
+          portfolioViewModelLogger.warning("Live quote batch failed: \(error.localizedDescription)")
+          liveQuotes = [:]
+        }
+      }
+
       hasLoadedOnce = true
     } catch {
       errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load portfolio."
+    }
+  }
+
+  /// Refresh only the live market quotes for currently known symbols (cheap poll for "live" feel).
+  func refreshLiveQuotes() async {
+    let symbols = liveQuotes.keys.isEmpty ? [] : Array(liveQuotes.keys)
+    // If no prior quotes, we can't easily know symbols without full load; caller should load first.
+    guard !symbols.isEmpty else { return }
+    do {
+      let batch = try await marketDataService.fetchQuoteBatch(symbols: Array(symbols))
+      for q in batch.quotes {
+        liveQuotes[q.symbol.uppercased()] = q
+      }
+    } catch {
+      portfolioViewModelLogger.warning("refreshLiveQuotes failed: \(error.localizedDescription)")
     }
   }
 
