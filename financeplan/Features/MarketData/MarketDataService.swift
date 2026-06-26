@@ -4,6 +4,7 @@ import StockPlanShared
 protocol MarketDataServicing: Sendable {
   func fetchCompanyProfile(symbol: String) async throws -> CompanyProfileResponse
   func fetchQuote(symbol: String) async throws -> QuoteResponse
+  func fetchQuoteBatch(symbols: [String]) async throws -> QuoteBatchResponse
   func fetchAnalystConsensus(symbol: String) async throws -> StockAnalystConsensus
   func fetchBasicFinancials(symbol: String) async throws -> StockBasicFinancials
   func fetchAnalysisMetrics(
@@ -63,6 +64,12 @@ final class MarketDataHTTPService: MarketDataServicing {
   func fetchQuote(symbol: String) async throws -> QuoteResponse {
     try await performAuthenticated { client in
       try await client.fetchQuote(symbol: symbol)
+    }
+  }
+
+  func fetchQuoteBatch(symbols: [String]) async throws -> QuoteBatchResponse {
+    try await performAuthenticated { client in
+      try await client.fetchQuoteBatch(symbols: symbols)
     }
   }
 
@@ -240,6 +247,10 @@ struct MarketDataServiceStub: MarketDataServicing {
   }
 
   func fetchQuote(symbol _: String) async throws -> QuoteResponse {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchQuoteBatch(symbols _: [String]) async throws -> QuoteBatchResponse {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 

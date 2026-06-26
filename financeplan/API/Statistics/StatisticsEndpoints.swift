@@ -22,6 +22,16 @@ struct GetSectorAllocationEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
+struct GetSectorGainsEndpoint: Endpoint {
+  typealias Response = SectorGainsResponse
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/statistics/stocks/sector-gains" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
 struct GetStockAllocationEndpoint: Endpoint {
   typealias Response = [StockAllocationDTO]
 

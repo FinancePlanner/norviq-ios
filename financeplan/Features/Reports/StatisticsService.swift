@@ -4,6 +4,7 @@ import StockPlanShared
 protocol StatisticsServicing {
   func fetchStatisticsOverview() async throws -> StatisticsDTO
   func fetchSectorAllocation() async throws -> [SectorAllocationDTO]
+  func fetchSectorGains() async throws -> SectorGainsResponse
   func fetchStockAllocation() async throws -> [StockAllocationDTO]
 }
 
@@ -28,6 +29,12 @@ final class StatisticsHTTPService: StatisticsServicing {
   func fetchSectorAllocation() async throws -> [SectorAllocationDTO] {
     try await performAuthenticated { client in
       try await client.call(GetSectorAllocationEndpoint())
+    }
+  }
+
+  func fetchSectorGains() async throws -> SectorGainsResponse {
+    try await performAuthenticated { client in
+      try await client.call(GetSectorGainsEndpoint())
     }
   }
 
@@ -124,6 +131,34 @@ extension StatisticsDTO {
             watchlist: .init(totalSymbols: 10, symbolsWithNotes: 5, sectorAllocations: [], topWatched: []),
             looklist: .init(totalIdeas: 3, activeIdeas: 2, ideasWithTarget: 2, ideasByConviction: []),
             market: .init(benchmarkSymbol: "SPY", heatmap: [])
+        )
+    }
+#endif
+}
+
+extension SectorGainsResponse {
+    static var empty: SectorGainsResponse {
+        SectorGainsResponse(
+            baseCurrency: "USD",
+            totalMarketValue: 0,
+            totalCostBasis: 0,
+            totalUnrealizedPnl: 0,
+            sectors: []
+        )
+    }
+
+#if DEBUG
+    static var mock: SectorGainsResponse {
+        SectorGainsResponse(
+            baseCurrency: "USD",
+            totalMarketValue: 124830.42,
+            totalCostBasis: 115000,
+            totalUnrealizedPnl: 9830.42,
+            sectors: [
+                .init(sector: "Technology", marketValue: 80000, costBasis: 70000, unrealizedPnl: 10000, unrealizedPnlPercent: 14.29, weightPercent: 64.08),
+                .init(sector: "Consumer", marketValue: 24830.42, costBasis: 27000, unrealizedPnl: -2169.58, unrealizedPnlPercent: -8.04, weightPercent: 19.89),
+                .init(sector: "Communication Services", marketValue: 20000, costBasis: 18000, unrealizedPnl: 2000, unrealizedPnlPercent: 11.11, weightPercent: 16.02)
+            ]
         )
     }
 #endif

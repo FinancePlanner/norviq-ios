@@ -5,6 +5,7 @@ import SwiftUI
 
 struct PortfolioPositionsSection: View {
   let stocks: [SDPortfolioStock]
+  let liveQuotes: [String: QuoteResponse]
   let targetAlertProvider: (String) -> TargetResponse?
   let onAddPosition: () -> Void
   let onEditStock: (StockResponse) -> Void
@@ -29,6 +30,7 @@ struct PortfolioPositionsSection: View {
         PortfolioStockLinkRow(
           stock: stock,
           targetAlert: targetAlertProvider(stock.symbol),
+          liveQuote: liveQuotes[stock.symbol.uppercased()],
           onEdit: onEditStock,
           onDelete: onDeleteStock,
           onPresentTargetAlert: onPresentTargetAlert
@@ -48,6 +50,7 @@ struct PortfolioPositionsSection: View {
 struct PortfolioStockLinkRow: View {
   let stock: SDPortfolioStock
   let targetAlert: TargetResponse?
+  let liveQuote: QuoteResponse?
   let onEdit: (StockResponse) -> Void
   let onDelete: (String) -> Void
   let onPresentTargetAlert: (SDPortfolioStock) -> Void
@@ -69,7 +72,7 @@ struct PortfolioStockLinkRow: View {
     NavigationLink {
       StockDetailScreen(stockId: stock.id, initialSymbol: stock.symbol)
     } label: {
-      PortfolioRow(stock: stock, targetAlert: targetAlert)
+      PortfolioRow(stock: stock, targetAlert: targetAlert, liveQuote: liveQuote)
         .accessibilityIdentifier("portfolio.stockRow.\(stock.symbol)")
     }
     .buttonStyle(CardButtonStyle())
@@ -97,6 +100,29 @@ struct PortfolioStockLinkRow: View {
 struct PortfolioRow: View {
   let stock: SDPortfolioStock
   let targetAlert: TargetResponse?
+  let liveQuote: QuoteResponse?
+
+  private var displayPrice: Double {
+    liveQuote?.currentPrice ?? stock.buyPrice
+  }
+
+  private var marketValue: Double {
+    stock.shares * displayPrice
+  }
+
+  private var trendText: String {
+    guard let q = liveQuote else { return "No trend" }
+    let ch = q.change ?? 0
+    let pct = q.percentChange ?? 0
+    let sign = ch >= 0 ? "+" : ""
+    let pctSign = pct >= 0 ? "+" : ""
+    return "\(sign)\(ch.currency) (\(pctSign)\(String(format: "%.2f", pct))%)"
+  }
+
+  private var trendColor: Color {
+    guard let q = liveQuote else { return .secondary }
+    return (q.change ?? 0) >= 0 ? .green : .red
+  }
 
   var body: some View {
     GlassCard(cornerRadius: 22) {
@@ -141,13 +167,13 @@ struct PortfolioRow: View {
         Spacer()
 
         VStack(alignment: .trailing, spacing: 4) {
-          Text((stock.shares * stock.buyPrice).currency)
+          Text(marketValue.currency)
             .font(.headline)
             .foregroundStyle(.primary)
 
-          Text("No trend")
+          Text(trendText)
             .font(.subheadline.weight(.medium))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(trendColor)
         }
       }
       .padding(.vertical, 4)

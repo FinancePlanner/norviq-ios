@@ -33,6 +33,10 @@ struct PortfolioScreen: View {
   @State private var targetAlertStock: TargetAlertDraftStock?
   @State private var isPaywallPresented = false
   @State private var isEarningsCalendarPresented = false
+  @State private var isSectorGainsPresented = false
+  @State private var selectedTradingSymbol: String?
+
+  private let quoteRefreshTimer = Timer.publish(every: 15, on: .main, in: .common).autoconnect()
 
   enum TimeRange: String, CaseIterable, Identifiable {
       case day = "1D"
@@ -80,7 +84,10 @@ struct PortfolioScreen: View {
   }
 
   private var holdingsValue: Double {
-    scopedStocks.reduce(0) { $0 + ($1.shares * $1.buyPrice) }
+    scopedStocks.reduce(0) { total, stock in
+      let price = viewModel.liveQuotes[stock.symbol.uppercased()]?.currentPrice ?? stock.buyPrice
+      return total + (stock.shares * price)
+    }
   }
 
   private var cashBalance: Double {
@@ -197,6 +204,14 @@ struct PortfolioScreen: View {
     .sheet(isPresented: $isEarningsCalendarPresented) {
       EarningsCalendarScreen()
     }
+    .sheet(isPresented: $isSectorGainsPresented) {
+      NavigationStack {
+        SectorGainsScreen()
+      }
+    }
+    .sheet(item: $selectedTradingSymbol) { symbol in
+      TradingStockSheet(symbol: symbol)
+    }
     .navigationDestination(item: $pushNavigationRoute) { route in
       StockDetailScreen(stockId: route.stockID, initialSymbol: route.symbol)
     }
@@ -234,7 +249,7 @@ struct PortfolioScreen: View {
     return NavigationLink {
       StockDetailScreen(stockId: stock.id, initialSymbol: stock.symbol)
     } label: {
-      PortfolioRow(stock: stock, targetAlert: targetAlert)
+      PortfolioRow(stock: stock, targetAlert: targetAlert, liveQuote: nil)
         .accessibilityIdentifier("portfolio.stockRow.\(stock.symbol)")
     }
     .buttonStyle(CardButtonStyle())
@@ -313,8 +328,39 @@ struct PortfolioScreen: View {
         .buttonStyle(.plain)
         .accessibilityIdentifier("portfolio.earningsCalendarLink")
 
+        Button {
+          if billingManager.isPro {
+            isSectorGainsPresented = true
+          } else {
+            PostHogSDK.shared.capture("paywall_viewed", properties: [
+              "source": "portfolio_sector_gains",
+            ])
+            isPaywallPresented = true
+          }
+        } label: {
+          HStack {
+            Image(systemName: "chart.bar.fill")
+              .font(.title3)
+            VStack(alignment: .leading, spacing: 2) {
+              Text("Sector Gains")
+                .typography(.headline, weight: .semibold)
+              Text("Unrealized P/L by sector")
+                .typography(.nano)
+                .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+              .foregroundStyle(.secondary)
+          }
+          .padding()
+          .appGlassEffect(.rect(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("portfolio.sectorGainsLink")
+
         PortfolioPositionsSection(
           stocks: filteredStocks,
+          liveQuotes: viewModel.liveQuotes,
           targetAlertProvider: viewModel.targetAlert(for:),
           onAddPosition: presentAddPositionSheet,
           onEditStock: beginEditing,
@@ -325,6 +371,9 @@ struct PortfolioScreen: View {
       }
       .padding(.horizontal, 16)
       .padding(.vertical, 12)
+      .onReceive(quoteRefreshTimer) { _ in
+        Task { await viewModel.refreshLiveQuotes() }
+      }
     }
   }
 
@@ -374,6 +423,12 @@ struct PortfolioScreen: View {
         presentCSVImportSheet()
       } label: {
         Label("Import CSV", systemImage: "square.and.arrow.down.on.square")
+      }
+
+      Button {
+        selectedTradingSymbol = "AAPL" // Demo: opens polished trading sheet with candle chart
+      } label: {
+        Label("Quick Trade (Sheet)", systemImage: "chart.candlestick")
       }
     } label: {
       Image(systemName: "plus")

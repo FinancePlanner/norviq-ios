@@ -26,6 +26,20 @@ struct GetQuoteEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
+struct GetQuoteBatchEndpoint: Endpoint {
+  typealias Response = QuoteBatchResponse
+
+  let symbols: [String]
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/quote/batch" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    ["symbols": symbols.joined(separator: ",")]
+  }
+}
+
 struct GetGradesConsensusEndpoint: Endpoint {
   typealias Response = [StockAnalystConsensus]
 

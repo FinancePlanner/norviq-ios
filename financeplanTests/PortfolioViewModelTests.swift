@@ -14,7 +14,7 @@ final class PortfolioViewModelTests: XCTestCase {
       makeStock(id: "msft", symbol: "MSFT", shares: 5, buyPrice: 200)
     ])
 
-    let viewModel = PortfolioViewModel(service: service)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
     await viewModel.load()
 
     XCTAssertEqual(service.fetchPortfolioCalls, 1)
@@ -29,7 +29,7 @@ final class PortfolioViewModelTests: XCTestCase {
       makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150)
     ])
 
-    let viewModel = PortfolioViewModel(service: service)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
     await viewModel.load()
     await viewModel.load()
 
@@ -42,7 +42,7 @@ final class PortfolioViewModelTests: XCTestCase {
       makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150)
     ])
 
-    let viewModel = PortfolioViewModel(service: service)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
     await viewModel.load()
     await viewModel.load(force: true)
 
@@ -63,7 +63,7 @@ final class PortfolioViewModelTests: XCTestCase {
       )
     )
 
-    let viewModel = PortfolioViewModel(service: service)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
     await viewModel.load()
 
     XCTAssertEqual(viewModel.cashBalance, 275.4, accuracy: 0.001)
@@ -79,7 +79,7 @@ final class PortfolioViewModelTests: XCTestCase {
       ])
     )
 
-    let viewModel = PortfolioViewModel(service: service)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
     await viewModel.load()
 
     XCTAssertEqual(viewModel.cashBalance, 0, accuracy: 0.001)
@@ -89,7 +89,7 @@ final class PortfolioViewModelTests: XCTestCase {
     let service = MockStockService()
     service.deleteResult = .failure(MockError("Delete failed."))
 
-    let viewModel = PortfolioViewModel(service: service)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
     let ok = await viewModel.delete(id: "aapl")
 
     XCTAssertFalse(ok)
@@ -102,7 +102,7 @@ final class PortfolioViewModelTests: XCTestCase {
     let created = makeStock(id: "nvda", symbol: "NVDA", shares: 3, buyPrice: 120)
     service.createResult = .success(created)
 
-    let viewModel = PortfolioViewModel(service: service)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
     let message = await viewModel.saveNewPosition(
       AddPositionDraft(
         symbol: " nvda ",
@@ -126,7 +126,7 @@ final class PortfolioViewModelTests: XCTestCase {
 
   func testSaveNewPositionRejectsInvalidDraft() async {
     let service = MockStockService()
-    let viewModel = PortfolioViewModel(service: service)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
 
     let message = await viewModel.saveNewPosition(
       AddPositionDraft(
@@ -151,7 +151,7 @@ final class PortfolioViewModelTests: XCTestCase {
       makeStock(id: "msft", symbol: "MSFT", shares: 5, buyPrice: 200)
     ])
     let localStore = MockPortfolioLocalStore()
-    let viewModel = PortfolioViewModel(service: service, localStore: localStore)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub(), localStore: localStore)
 
     await viewModel.load()
 
@@ -164,7 +164,7 @@ final class PortfolioViewModelTests: XCTestCase {
     service.createResult = .success(makeStock(id: "nvda", symbol: "NVDA", shares: 3, buyPrice: 120))
     let localStore = MockPortfolioLocalStore()
     localStore.upsertError = MockError("SwiftData save failed.")
-    let viewModel = PortfolioViewModel(service: service, localStore: localStore)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub(), localStore: localStore)
 
     let message = await viewModel.saveNewPosition(
       AddPositionDraft(

@@ -79,6 +79,10 @@ struct MarketDataHTTPClient: Sendable {
     try await client.call(GetQuoteEndpoint(symbol: symbol), errorType: Error.self)
   }
 
+  func fetchQuoteBatch(symbols: [String]) async throws -> QuoteBatchResponse {
+    try await client.call(GetQuoteBatchEndpoint(symbols: symbols), errorType: Error.self)
+  }
+
   func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable & Sendable {
     try await client.call(endpoint, errorType: Error.self)
   }
