@@ -16,13 +16,13 @@ enum AppEnvironments {
   )
   static let dev = AppEnvironment(
     title: "dev",
-    apiBaseUrl: URL(string: "https://www.dev-norviq.online")!,
-    wsBaseUrl: URL(string: "wss://www.dev-norviq.online/ws")!
+    apiBaseUrl: URL(string: "https://dev.norviq.org")!,
+    wsBaseUrl: URL(string: "wss://dev.norviq.org/ws")!
   )
   static let production = AppEnvironment(
     title: "production",
-    apiBaseUrl: URL(string: "https://www.prod-norviq.online")!,
-    wsBaseUrl: URL(string: "wss://www.prod-norviq.online/ws")!
+    apiBaseUrl: URL(string: "https://api.norviq.org")!,
+    wsBaseUrl: URL(string: "wss://api.norviq.org/ws")!
   )
 
   static func from(key: String) -> AppEnvironment? {
