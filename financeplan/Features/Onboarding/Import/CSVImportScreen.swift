@@ -51,6 +51,9 @@ struct CSVImportScreen: View {
           .padding(.horizontal, 20)
           .padding(.top, 20)
 
+          CSVImportFormatHint()
+            .padding(.horizontal, 20)
+
           // Upload area
           Button {
             isImporterPresented = true

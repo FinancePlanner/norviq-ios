@@ -82,6 +82,8 @@ protocol StockServicing: Sendable {
   func createWatchlistList(name: String) async throws -> WatchlistListDTOResponse
   func updateWatchlistList(id: String, name: String) async throws -> WatchlistListDTOResponse
   func deleteWatchlistList(id: String) async throws
+  func previewWatchlistCsvImport(watchlistListId: String?, csvData: Data) async throws -> WatchlistCsvImportPreviewResponse
+  func commitWatchlistCsvImport(watchlistListId: String?, csvData: Data) async throws -> WatchlistCsvImportCommitResponse
 }
 
 extension StockServicing {
@@ -168,6 +170,20 @@ extension StockServicing {
 
   func deleteWatchlistList(id _: String) async throws {
     throw StockHTTPClient.Error.api("Watchlist lists endpoint is unavailable.")
+  }
+
+  func previewWatchlistCsvImport(
+    watchlistListId _: String?,
+    csvData _: Data
+  ) async throws -> WatchlistCsvImportPreviewResponse {
+    throw StockHTTPClient.Error.api("Watchlist CSV import endpoint is unavailable.")
+  }
+
+  func commitWatchlistCsvImport(
+    watchlistListId _: String?,
+    csvData _: Data
+  ) async throws -> WatchlistCsvImportCommitResponse {
+    throw StockHTTPClient.Error.api("Watchlist CSV import endpoint is unavailable.")
   }
 }
 
@@ -401,6 +417,24 @@ final class StockService: StockServicing {
   func deleteWatchlistList(id: String) async throws {
     try await performAuthenticated { client in
       try await client.callWithoutResponse(DeleteWatchlistListEndpoint(listId: id))
+    }
+  }
+
+  func previewWatchlistCsvImport(
+    watchlistListId: String?,
+    csvData: Data
+  ) async throws -> WatchlistCsvImportPreviewResponse {
+    try await performAuthenticated { client in
+      try await client.call(WatchlistCSVImportPreviewEndpoint(watchlistListId: watchlistListId, csvData: csvData))
+    }
+  }
+
+  func commitWatchlistCsvImport(
+    watchlistListId: String?,
+    csvData: Data
+  ) async throws -> WatchlistCsvImportCommitResponse {
+    try await performAuthenticated { client in
+      try await client.call(WatchlistCSVImportCommitEndpoint(watchlistListId: watchlistListId, csvData: csvData))
     }
   }
 

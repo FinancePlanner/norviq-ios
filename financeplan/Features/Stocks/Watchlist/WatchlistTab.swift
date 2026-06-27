@@ -15,6 +15,11 @@ struct WatchlistTab: View {
   @State private var removePromptItem: SDWatchlistItem?
   @State private var destructiveFeedbackTrigger = 0
   @State private var selectedTradingSymbol: String?
+  @State private var isCSVImportPresented = false
+  @State private var isCreateListPresented = false
+  @State private var isRenameListPresented = false
+  @State private var isDeleteListPresented = false
+  @State private var listNameDraft = ""
   private let quoteRefreshTimer = Timer.publish(every: 20, on: .main, in: .common).autoconnect()
 
   private var ownedItems: [SDWatchlistItem] {
@@ -41,6 +46,8 @@ struct WatchlistTab: View {
             .foregroundStyle(AppTheme.Colors.danger)
         }
       }
+
+      watchlistListSection
 
       if scopedItems.isEmpty {
         emptyWatchlistSection
@@ -77,13 +84,7 @@ struct WatchlistTab: View {
     }
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
-        Button {
-          viewModel.isAddWatchlistPresented = true
-        } label: {
-          Image(systemName: "plus")
-        }
-        .buttonStyle(.bordered)
-        .accessibilityLabel("Add watchlist item")
+        watchlistActionsMenu
       }
     }
     .sheet(isPresented: $viewModel.isAddWatchlistPresented) {
@@ -94,6 +95,50 @@ struct WatchlistTab: View {
           await viewModel.saveWatchlist(draft)
         }
       )
+    }
+    .sheet(isPresented: $isCSVImportPresented) {
+      WatchlistCSVImportSheet(
+        watchlistListId: viewModel.selectedWatchlistListId,
+        listName: selectedList?.name
+      ) {
+        await viewModel.load(force: true)
+      }
+    }
+    .alert("New watchlist", isPresented: $isCreateListPresented) {
+      TextField("Name", text: $listNameDraft)
+      Button("Cancel", role: .cancel) {
+        listNameDraft = ""
+      }
+      Button("Create") {
+        Task {
+          _ = await viewModel.createWatchlistList(name: listNameDraft)
+          listNameDraft = ""
+        }
+      }
+    }
+    .alert("Rename watchlist", isPresented: $isRenameListPresented) {
+      TextField("Name", text: $listNameDraft)
+      Button("Cancel", role: .cancel) {
+        listNameDraft = ""
+      }
+      Button("Save") {
+        guard let selectedList else { return }
+        Task {
+          _ = await viewModel.renameWatchlistList(id: selectedList.id, name: listNameDraft)
+          listNameDraft = ""
+        }
+      }
+    }
+    .confirmationDialog("Delete watchlist?", isPresented: $isDeleteListPresented) {
+      Button("Delete", role: .destructive) {
+        guard let selectedList else { return }
+        Task {
+          _ = await viewModel.deleteWatchlistList(id: selectedList.id)
+        }
+      }
+      Button("Cancel", role: .cancel) {}
+    } message: {
+      Text("Symbols move to your default watchlist.")
     }
     .sheet(
       isPresented: Binding(
@@ -158,6 +203,77 @@ struct WatchlistTab: View {
     .task { await viewModel.load() }
     .refreshable { await viewModel.load(force: true) }
     .appSensoryFeedback(destructive: destructiveFeedbackTrigger)
+  }
+
+  private var selectedList: WatchlistListDTOResponse? {
+    viewModel.watchlistLists.first { $0.id == viewModel.selectedWatchlistListId }
+  }
+
+  private var watchlistListSection: some View {
+    Section("Watchlist") {
+      if viewModel.watchlistLists.isEmpty {
+        Text("No lists yet.")
+          .foregroundStyle(.secondary)
+      } else {
+        Picker("List", selection: selectedListBinding) {
+          ForEach(viewModel.watchlistLists) { list in
+            Text(list.name).tag(list.id)
+          }
+        }
+      }
+    }
+  }
+
+  private var selectedListBinding: Binding<String> {
+    Binding(
+      get: { viewModel.selectedWatchlistListId ?? viewModel.watchlistLists.first?.id ?? "" },
+      set: { listId in
+        Task { await viewModel.selectWatchlistList(listId) }
+      }
+    )
+  }
+
+  private var watchlistActionsMenu: some View {
+    Menu {
+      Button {
+        viewModel.isAddWatchlistPresented = true
+      } label: {
+        Label("Add symbol", systemImage: "plus")
+      }
+
+      Button {
+        isCSVImportPresented = true
+      } label: {
+        Label("Import CSV", systemImage: "square.and.arrow.down.on.square")
+      }
+      .disabled(viewModel.selectedWatchlistListId == nil)
+
+      Button {
+        listNameDraft = ""
+        isCreateListPresented = true
+      } label: {
+        Label("New watchlist", systemImage: "folder.badge.plus")
+      }
+
+      Button {
+        listNameDraft = selectedList?.name ?? ""
+        isRenameListPresented = true
+      } label: {
+        Label("Rename watchlist", systemImage: "pencil")
+      }
+      .disabled(selectedList == nil)
+
+      Button(role: .destructive) {
+        isDeleteListPresented = true
+      } label: {
+        Label("Delete watchlist", systemImage: "trash")
+      }
+      .disabled(selectedList?.isDefault ?? true)
+    } label: {
+      Image(systemName: "plus")
+    }
+    .buttonStyle(.bordered)
+    .accessibilityLabel("Watchlist actions")
   }
 
   private func watchlistResponse(from item: SDWatchlistItem) -> WatchlistItemResponse {

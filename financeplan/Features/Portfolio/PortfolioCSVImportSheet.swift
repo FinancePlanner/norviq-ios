@@ -27,6 +27,10 @@ struct PortfolioCSVImportSheet: View {
 
         csvProviderSection
 
+        Section {
+          CSVImportFormatHint()
+        }
+
         Section("CSV File") {
           Button {
             isImporterPresented = true

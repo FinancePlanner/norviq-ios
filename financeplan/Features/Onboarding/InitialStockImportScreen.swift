@@ -27,7 +27,7 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
   var subtitle: String {
     switch self {
     case .csv:
-      return "Upload a broker export or CSV file with your positions."
+      return "CSV with symbol, shares, buy_price, buy_date (+ optional notes)."
     case .manual:
       return "Type in your holdings one position at a time."
     }
