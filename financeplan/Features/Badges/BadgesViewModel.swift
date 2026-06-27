@@ -7,11 +7,15 @@ import Factory
 final class BadgesViewModel: ObservableObject {
     @Published var badges: [BadgeProgressResponse] = []
     @Published var totalEarnedTiers: Int = 0
-    @Published var totalAvailableTiers: Int = 21
+    @Published var totalAvailableTiers: Int = 0
     @Published var isLoading = false
     @Published var errorMessage: String?
 
-    @Injected(\.badgesService) private var service
+    private let service: any BadgesServicing
+
+    init(service: any BadgesServicing = Container.shared.badgesService()) {
+        self.service = service
+    }
 
     func load() async {
         isLoading = true

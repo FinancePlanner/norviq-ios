@@ -11,7 +11,7 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     var lastRegisterDeviceToken: String?
     var lastRegisterEnvironment: PushAPNSEnvironment?
     var lastRegisterAuthorizationStatus: PushAuthorizationStatus?
-    var earningsPreferences = EarningsNotificationPreferencesResponse(enabled: true)
+    var earningsPreferences = financeplan.EarningsNotificationPreferencesResponse(enabled: true)
 
     func registerDevice(
       deviceToken: String,
@@ -37,12 +37,12 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
       deactivateCalls += 1
     }
 
-    func fetchEarningsPreferences() async throws -> EarningsNotificationPreferencesResponse {
+    func fetchEarningsPreferences() async throws -> financeplan.EarningsNotificationPreferencesResponse {
       earningsPreferences
     }
 
-    func updateEarningsPreferences(enabled: Bool) async throws -> EarningsNotificationPreferencesResponse {
-      earningsPreferences = EarningsNotificationPreferencesResponse(enabled: enabled)
+    func updateEarningsPreferences(enabled: Bool) async throws -> financeplan.EarningsNotificationPreferencesResponse {
+      earningsPreferences = financeplan.EarningsNotificationPreferencesResponse(enabled: enabled)
       return earningsPreferences
     }
   }

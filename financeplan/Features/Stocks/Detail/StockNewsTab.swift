@@ -1,9 +1,22 @@
+import Factory
 import StockPlanShared
 import SwiftUI
 
 struct StockNewsTab: View {
     let news: [StockNews]
+    let defaultSymbol: String?
+    let trackingMetadataByURL: [String: NewsArticleTrackingMetadata]
     @Environment(\.colorScheme) private var colorScheme
+
+    init(
+        news: [StockNews],
+        defaultSymbol: String? = nil,
+        trackingMetadataByURL: [String: NewsArticleTrackingMetadata] = [:]
+    ) {
+        self.news = news
+        self.defaultSymbol = defaultSymbol
+        self.trackingMetadataByURL = trackingMetadataByURL
+    }
 
     var body: some View {
         VStack(spacing: 24) {
@@ -15,26 +28,39 @@ struct StockNewsTab: View {
             } else {
                 // 1. Featured Story (Text-only prominent card)
                 if let first = news.first {
-                    FeaturedNewsHero(news: first)
+                    FeaturedNewsHero(news: first, metadata: metadata(for: first))
                 }
 
                 // 2. The Feed
                 VStack(spacing: 16) {
                     ForEach(news.dropFirst(), id: \.url) { item in
-                        NewsFeedRow(news: item)
+                        NewsFeedRow(news: item, metadata: metadata(for: item))
                     }
                 }
             }
         }
     }
+
+    private func metadata(for news: StockNews) -> NewsArticleTrackingMetadata {
+        trackingMetadataByURL[news.url] ?? NewsArticleTrackingMetadata(newsId: nil, symbol: defaultSymbol)
+    }
+}
+
+struct NewsArticleTrackingMetadata: Equatable {
+    let newsId: String?
+    let symbol: String?
 }
 
 private struct FeaturedNewsHero: View {
     let news: StockNews
+    let metadata: NewsArticleTrackingMetadata
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
-        Link(destination: URL(string: news.url) ?? URL(string: "https://google.com")!) {
+        Button {
+            openTrackedNews(news, metadata: metadata, openURL: openURL)
+        } label: {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text(news.source?.uppercased() ?? "LATEST NEWS")
@@ -110,10 +136,14 @@ private struct FeaturedNewsHero: View {
 
 private struct NewsFeedRow: View {
     let news: StockNews
+    let metadata: NewsArticleTrackingMetadata
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
-        Link(destination: URL(string: news.url) ?? URL(string: "https://google.com")!) {
+        Button {
+            openTrackedNews(news, metadata: metadata, openURL: openURL)
+        } label: {
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
@@ -184,4 +214,20 @@ private struct NewsFeedRow: View {
             return "\(days)d ago"
         }
     }
+}
+
+@MainActor
+private func openTrackedNews(_ news: StockNews, metadata: NewsArticleTrackingMetadata, openURL: OpenURLAction) {
+    guard let url = URL(string: news.url) else { return }
+    let payload = NewsViewPayload(
+        newsId: metadata.newsId.flatMap(UUID.init(uuidString:)),
+        symbol: metadata.symbol,
+        headline: news.title,
+        url: news.url
+    )
+    let service = Container.shared.newsService()
+    Task {
+        try? await service.recordNewsView(payload: payload)
+    }
+    openURL(url)
 }
