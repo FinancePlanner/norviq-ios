@@ -10,7 +10,7 @@ final class WatchlistViewModelTests: XCTestCase {
   func testLoadWithoutForceUsesCachedResultAfterInitialSuccess() async {
     let service = MockStockService()
     service.fetchWatchlistResult = .success([makeWatchlistItem(symbol: "AAPL")])
-    let viewModel = WatchlistViewModel(service: service)
+    let viewModel = WatchlistViewModel(service: service, marketDataService: MarketDataServiceStub())
 
     await viewModel.load()
     await viewModel.load()
@@ -22,7 +22,7 @@ final class WatchlistViewModelTests: XCTestCase {
   func testLoadWithForceRefetchesAfterInitialSuccess() async {
     let service = MockStockService()
     service.fetchWatchlistResult = .success([makeWatchlistItem(symbol: "AAPL")])
-    let viewModel = WatchlistViewModel(service: service)
+    let viewModel = WatchlistViewModel(service: service, marketDataService: MarketDataServiceStub())
 
     await viewModel.load()
     await viewModel.load(force: true)
@@ -37,7 +37,7 @@ final class WatchlistViewModelTests: XCTestCase {
       makeWatchlistItem(symbol: "MSFT")
     ])
     let localStore = MockWatchlistLocalStore()
-    let viewModel = WatchlistViewModel(service: service, localStore: localStore)
+    let viewModel = WatchlistViewModel(service: service, marketDataService: MarketDataServiceStub(), localStore: localStore)
 
     await viewModel.load()
 
@@ -96,7 +96,7 @@ final class WatchlistViewModelTests: XCTestCase {
     )
     let localStore = MockWatchlistLocalStore()
     localStore.upsertError = MockStockError.notConfigured
-    let viewModel = WatchlistViewModel(service: service, localStore: localStore)
+    let viewModel = WatchlistViewModel(service: service, marketDataService: MarketDataServiceStub(), localStore: localStore)
 
     let error = await viewModel.saveWatchlist(AddWatchlistDraft(symbol: "AAPL", note: "", status: .active))
 

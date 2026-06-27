@@ -7,6 +7,7 @@ protocol NewsServicing: Sendable {
     func createNews(payload: NewsItemRequest) async throws -> NewsItemResponse
     func updateNews(newsId: String, payload: NewsItemRequest) async throws -> NewsItemResponse
     func deleteNews(newsId: String) async throws
+    func recordNewsView(payload: NewsViewPayload) async throws
 }
 
 extension NewsServicing {
@@ -41,6 +42,8 @@ struct NewsHTTPService: NewsServicing {
     func deleteNews(newsId: String) async throws {
         try await client.deleteNews(newsId: newsId)
     }
+
+    func recordNewsView(payload: NewsViewPayload) async throws {
+        try await client.recordNewsView(payload: payload)
+    }
 }
-
-

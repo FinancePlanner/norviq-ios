@@ -278,6 +278,10 @@ final class StockDetailsViewModelTests: XCTestCase {
       try fetchCompanyProfileResult.get()
     }
 
+    func fetchQuoteBatch(symbols _: [String]) async throws -> QuoteBatchResponse {
+      throw MockError.notConfigured
+    }
+
     func fetchQuote(symbol _: String) async throws -> QuoteResponse {
       try fetchQuoteResult.get()
     }

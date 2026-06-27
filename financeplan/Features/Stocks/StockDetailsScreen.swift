@@ -217,7 +217,7 @@ struct StockDetailScreen: View {
                         StockCompareTab(viewModel: viewModel)
                     }
                 case .news:
-                    StockNewsTab(news: viewModel.news)
+                    StockNewsTab(news: viewModel.news, defaultSymbol: viewModel.details?.symbol ?? initialSymbol)
                 case .earnings:
                     ProGateView(billingManager: billingManager) {
                         StockEarningsTab(
