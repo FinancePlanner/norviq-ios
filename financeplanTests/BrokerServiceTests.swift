@@ -143,7 +143,7 @@ final class BrokerServiceTests: XCTestCase {
 
     let expected = CsvImportCommitResponse(
       provider: "ibkr",
-      inserted: [.init(id: "stock-1", symbol: "AAPL", shares: 10, buyPrice: 120, buyDate: "2026-01-10", notes: nil)],
+      inserted: [.init(id: "stock-1", symbol: "AAPL", shares: 10, buyPrice: 120, buyDate: "2026-01-10", notes: nil, createdAt: "2026-01-10T00:00:00Z")],
       updated: [],
       errors: []
     )

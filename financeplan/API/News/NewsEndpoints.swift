@@ -2,6 +2,13 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
+struct NewsViewPayload: Codable, Sendable, Equatable {
+    let newsId: UUID?
+    let symbol: String?
+    let headline: String
+    let url: String?
+}
+
 struct GetNewsEndpoint: Endpoint {
     typealias Response = [NewsItemResponse]
     let symbol: String?
@@ -71,4 +78,18 @@ struct DeleteNewsEndpoint: Endpoint {
     var decoder: JSONDecoder { .stockPlanShared }
 
     func asParameters() throws -> Parameters { [:] }
+}
+
+struct RecordNewsViewEndpoint: Endpoint {
+    typealias Response = EmptyAPIResponse
+    let payload: NewsViewPayload
+
+    var method: HTTPMethod { .post }
+    var path: String { "/v1/news/view" }
+    var decoder: JSONDecoder { .stockPlanShared }
+
+    func asParameters() throws -> Parameters {
+        let data = try JSONEncoder.stockPlanShared.encode(payload)
+        return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+    }
 }

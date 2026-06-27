@@ -283,7 +283,8 @@ final class PortfolioViewModelTests: XCTestCase {
       shares: shares,
       buyPrice: buyPrice,
       buyDate: "2026-03-26",
-      notes: nil
+      notes: nil,
+      createdAt: "2026-03-26T00:00:00Z"
     )
   }
 
@@ -405,7 +406,7 @@ private final class MockStockService: StockServicing {
 
   func fetchTargets(symbol _: String?) async throws -> [TargetResponse] {
     fetchTargetsCalls += 1
-    try fetchTargetsResult.get()
+    return try fetchTargetsResult.get()
   }
 
   func fetchPortfolioPerformance(portfolioListId _: String?) async throws -> PortfolioPerformanceResponse {
