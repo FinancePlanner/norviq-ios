@@ -56,16 +56,7 @@ struct PortfolioStockLinkRow: View {
   let onPresentTargetAlert: (SDPortfolioStock) -> Void
 
   private var editableStock: StockResponse {
-    let category = AssetCategory(rawValue: stock.category ?? AssetCategory.stock.rawValue) ?? .stock
-    return StockResponse(
-      id: stock.id,
-      symbol: stock.symbol,
-      shares: stock.shares,
-      buyPrice: stock.buyPrice,
-      buyDate: stock.buyDate,
-      notes: stock.notes,
-      category: category
-    )
+    StockResponse.editableDraft(from: stock)
   }
 
   var body: some View {

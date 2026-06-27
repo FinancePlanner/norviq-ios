@@ -86,7 +86,6 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
           async let itemsTask = expensesService.getAllPlanItems()
           async let expensesResultTask = expensesService.getExpenses(from: nil, to: nil)
           async let categoriesTask = expensesService.getCategories()
-          async let recurringTemplatesTask = expensesService.getRecurringTemplates()
           async let monthlyReportsTask = expensesService.getMonthlyExpenseReports(from: nil, to: nil)
           async let yearlyReportsTask = expensesService.getYearlyExpenseReports(from: nil, to: nil)
 
@@ -95,7 +94,6 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
             fetchedItems,
             expensesResult,
             fetchedCategories,
-            fetchedRecurringTemplates,
             fetchedMonthlyReports,
             fetchedYearlyReports
           ) = try await (
@@ -103,7 +101,6 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
             itemsTask,
             expensesResultTask,
             categoriesTask,
-            recurringTemplatesTask,
             monthlyReportsTask,
             yearlyReportsTask
           )
@@ -111,7 +108,12 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
           let (fetchedExpenses, _) = expensesResult
 
           self.categories = fetchedCategories
-          self.recurringTemplates = fetchedRecurringTemplates
+          do {
+            self.recurringTemplates = try await expensesService.getRecurringTemplates()
+          } catch {
+            logger.warning("Recurring templates failed: \(error.localizedDescription)")
+            self.recurringTemplates = []
+          }
           self.monthlySnapshots = mapSnapshots(
             snapshots: fetchedSnapshots,
             items: fetchedItems,

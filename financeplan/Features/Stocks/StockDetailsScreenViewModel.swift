@@ -519,14 +519,7 @@ final class StockDetailsViewModel: ObservableObject {
 
         do {
             let saved = try await service.updateStock(
-                StockResponse(
-                    id: details.id,
-                    symbol: details.symbol,
-                    shares: details.shares,
-                    buyPrice: details.buyPrice,
-                    buyDate: details.buyDate,
-                    notes: analysis
-                )
+                details.replacing(notes: analysis)
             )
             self.details = saved
             return nil

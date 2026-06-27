@@ -209,8 +209,19 @@ struct PortfolioScreen: View {
         SectorGainsScreen()
       }
     }
-    .sheet(item: $selectedTradingSymbol) { symbol in
-      TradingStockSheet(symbol: symbol)
+    .sheet(
+      isPresented: Binding(
+        get: { selectedTradingSymbol != nil },
+        set: { isPresented in
+          if !isPresented {
+            selectedTradingSymbol = nil
+          }
+        }
+      )
+    ) {
+      if let selectedTradingSymbol {
+        TradingStockSheet(symbol: selectedTradingSymbol)
+      }
     }
     .navigationDestination(item: $pushNavigationRoute) { route in
       StockDetailScreen(stockId: route.stockID, initialSymbol: route.symbol)
@@ -231,16 +242,7 @@ struct PortfolioScreen: View {
   }
 
   private func makeEditableStock(from stock: SDPortfolioStock) -> StockResponse {
-    let category = AssetCategory(rawValue: stock.category ?? AssetCategory.stock.rawValue) ?? .stock
-    return StockResponse(
-      id: stock.id,
-      symbol: stock.symbol,
-      shares: stock.shares,
-      buyPrice: stock.buyPrice,
-      buyDate: stock.buyDate,
-      notes: stock.notes,
-      category: category
-    )
+    StockResponse.editableDraft(from: stock)
   }
 
   private func portfolioStockRow(_ stock: SDPortfolioStock) -> some View {

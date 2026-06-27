@@ -72,8 +72,4 @@ struct BillingHTTPClient: Sendable {
   func restorePurchases() async throws -> BillingContextResponse {
     try await client.call(RestoreBillingEndpoint(), errorType: Error.self)
   }
-
-  func redeemCoupon(code: String) async throws -> BillingCouponRedemptionResponse {
-    try await client.call(RedeemBillingCouponEndpoint(code: code), errorType: Error.self)
-  }
 }

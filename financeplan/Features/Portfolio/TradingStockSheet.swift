@@ -1,5 +1,6 @@
-import SwiftUI
+import Factory
 import StockPlanShared
+import SwiftUI
 
 /// Polished bottom sheet for mobile trading dashboard experience.
 /// Shows live price, candlestick chart (when data available), timeframes, volume, and Buy/Short actions.
@@ -7,7 +8,8 @@ struct TradingStockSheet: View {
     let symbol: String
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
-    @InjectedObservable(\Container.billingManager) private var billingManager
+    @Injected(\.appEnvironment) private var environmentManager
+    @Injected(\.authSessionManager) private var authSessionManager
 
     @State private var selectedRange: PriceChartRange = .oneDay
     @State private var chartSeries: PriceChartSeries?
@@ -178,13 +180,10 @@ struct TradingStockSheet: View {
     private func loadQuote() async {
         isLoadingQuote = true
         defer { isLoadingQuote = false }
-        // Use the shared market data service pattern from the rest of the app for auth
         do {
-            // In full context this would resolve via Container or @Environment
-            let env = AppEnvironmentManager.shared.current
             let service = MarketDataHTTPService(
-                environmentManager: AppEnvironmentManager.shared,
-                authSessionManager: AuthSessionManager.shared
+                environmentManager: environmentManager,
+                authSessionManager: authSessionManager
             )
             marketSnapshot = try await service.fetchQuote(symbol: symbol)
         } catch {
@@ -199,8 +198,8 @@ struct TradingStockSheet: View {
 
         do {
             let service = MarketDataHTTPService(
-                environmentManager: AppEnvironmentManager.shared,
-                authSessionManager: AuthSessionManager.shared
+                environmentManager: environmentManager,
+                authSessionManager: authSessionManager
             )
             chartSeries = try await service.fetchPriceChart(symbol: symbol, range: selectedRange.rawValue)
         } catch {

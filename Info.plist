@@ -59,10 +59,6 @@
 	<string>appl_WhkrrqIARwWCJUrxETkxkzdZzni</string>
 	<key>SENTRY_DSN</key>
 	<string>https://a8b2cb36518b8be68b0b8f41d7095b05@o4510766840872960.ingest.de.sentry.io/4511577338282064</string>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>audio</string>
-	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

@@ -105,13 +105,19 @@ final class PortfolioViewModel: ObservableObject {
 
       async let stocksTask = service.fetchPortfolio(portfolioListId: selectedPortfolioListId, limit: 50)
       async let summaryTask = service.fetchPortfolioSummary(portfolioListId: selectedPortfolioListId)
-      async let targetsTask = service.fetchTargets(symbol: nil)
-      let (stocksResult, summary, targets) = try await (stocksTask, summaryTask, targetsTask)
+      let (stocksResult, summary) = try await (stocksTask, summaryTask)
       let (remoteStocks, fetchedNextCursor) = stocksResult
       await syncWithSwiftData(remoteStocks, listId: selectedPortfolioListId)
       nextCursor = fetchedNextCursor
       cashBalance = extractCashBalance(from: summary)
-      targetAlertsBySymbol = Self.makeTargetAlertsBySymbol(targets)
+
+      do {
+        let targets = try await service.fetchTargets(symbol: nil)
+        targetAlertsBySymbol = Self.makeTargetAlertsBySymbol(targets)
+      } catch {
+        portfolioViewModelLogger.warning("Target alerts failed: \(error.localizedDescription)")
+        targetAlertsBySymbol = [:]
+      }
 
       // Enrich with live market quotes (price + change) using existing batch endpoint
       let symbols = remoteStocks.map { $0.symbol }

@@ -23,6 +23,24 @@ final class PortfolioViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.errorMessage)
   }
 
+  func testLoadSucceedsWhenTargetAlertsFail() async {
+    let service = MockStockService()
+    service.fetchPortfolioResult = .success([
+      makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150)
+    ])
+    service.fetchTargetsResult = .failure(MockError("Upgrade required."))
+
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
+    await viewModel.load()
+
+    XCTAssertEqual(service.fetchPortfolioCalls, 1)
+    XCTAssertEqual(service.fetchPortfolioSummaryCalls, 1)
+    XCTAssertEqual(service.fetchTargetsCalls, 1)
+    XCTAssertFalse(viewModel.isLoading)
+    XCTAssertNil(viewModel.errorMessage)
+    XCTAssertTrue(viewModel.targetAlertsBySymbol.isEmpty)
+  }
+
   func testLoadWithoutForceUsesCachedResultAfterFirstSuccess() async {
     let service = MockStockService()
     service.fetchPortfolioResult = .success([
@@ -333,6 +351,7 @@ private final class MockPortfolioLocalStore: PortfolioLocalPersisting {
 private final class MockStockService: StockServicing {
   var fetchPortfolioCalls = 0
   var fetchPortfolioSummaryCalls = 0
+  var fetchTargetsCalls = 0
   var createCalls = 0
   var lastCreateRequest: StockRequest?
   var lastCreatePortfolioListId: String?
@@ -385,6 +404,7 @@ private final class MockStockService: StockServicing {
   }
 
   func fetchTargets(symbol _: String?) async throws -> [TargetResponse] {
+    fetchTargetsCalls += 1
     try fetchTargetsResult.get()
   }
 

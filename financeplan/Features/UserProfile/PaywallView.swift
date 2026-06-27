@@ -42,6 +42,7 @@ struct PaywallView: View {
         PaywallCTAFooter(
           ctaTitle: billingManager.purchaseCTATitle,
           isLoading: billingManager.isPurchasing,
+          isDisabled: !billingManager.canPurchaseSelectedPackage,
           onPurchase: {
             Task { await billingManager.purchaseSelectedPackage() }
           },
@@ -111,40 +112,40 @@ struct PaywallView: View {
 
   private var planCards: some View {
     VStack(spacing: 12) {
-      PaywallPlanCard(
-        title: "Annual",
-        subtitle: "7-day free trial",
-        price: price(for: billingManager.annualPackage, fallback: "$49.99"),
-        priceUnit: "/yr",
-        badge: "Save 2 months",
-        isSelected: billingManager.selectedProductID == "pro_annual",
-        onSelect: { billingManager.select(productID: "pro_annual") }
-      )
+      if let package = billingManager.annualPackage {
+        PaywallPlanCard(
+          title: "Annual",
+          subtitle: "7-day free trial",
+          price: package.storeProduct.localizedPriceString,
+          priceUnit: "/yr",
+          badge: "Save 2 months",
+          isSelected: billingManager.selectedProductID == "pro_annual",
+          onSelect: { billingManager.select(productID: "pro_annual") }
+        )
+      }
 
-      PaywallPlanCard(
-        title: "Monthly",
-        subtitle: "Cancel anytime",
-        price: price(for: billingManager.monthlyPackage, fallback: "$4.99"),
-        priceUnit: "/mo",
-        isSelected: billingManager.selectedProductID == "pro_monthly",
-        onSelect: { billingManager.select(productID: "pro_monthly") }
-      )
+      if let package = billingManager.monthlyPackage {
+        PaywallPlanCard(
+          title: "Monthly",
+          subtitle: "Cancel anytime",
+          price: package.storeProduct.localizedPriceString,
+          priceUnit: "/mo",
+          isSelected: billingManager.selectedProductID == "pro_monthly",
+          onSelect: { billingManager.select(productID: "pro_monthly") }
+        )
+      }
 
-      PaywallPlanCard(
-        title: "Weekly",
-        subtitle: "Short term",
-        price: price(for: billingManager.weeklyPackage, fallback: "$0.99"),
-        priceUnit: "/wk",
-        isSelected: billingManager.selectedProductID == "pro_weekly",
-        onSelect: { billingManager.select(productID: "pro_weekly") }
-      )
+      if let package = billingManager.weeklyPackage {
+        PaywallPlanCard(
+          title: "Weekly",
+          subtitle: "Short term",
+          price: package.storeProduct.localizedPriceString,
+          priceUnit: "/wk",
+          isSelected: billingManager.selectedProductID == "pro_weekly",
+          onSelect: { billingManager.select(productID: "pro_weekly") }
+        )
+      }
     }
-  }
-
-  // MARK: - Helpers
-
-  private func price(for package: Package?, fallback: String) -> String {
-    package?.storeProduct.localizedPriceString ?? fallback
   }
 
   // MARK: - Feature Data

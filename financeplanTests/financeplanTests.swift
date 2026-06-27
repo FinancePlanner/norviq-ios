@@ -172,7 +172,7 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertEqual(sut.errorMessage, "Monthly plan is currently unavailable. Please try again later.")
   }
 
-  func testPurchaseCTATitleDefaultsToSubscribeWithoutIntroOffer() {
+  func testPurchaseCTATitleShowsUnavailableWithoutLoadedPackage() {
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -180,10 +180,13 @@ final class BillingManagerTests: XCTestCase {
     )
 
     sut.select(productID: "pro_monthly")
-    XCTAssertEqual(sut.purchaseCTATitle, "Subscribe")
+    XCTAssertFalse(sut.canPurchaseSelectedPackage)
+    XCTAssertEqual(sut.purchaseCTATitle, "Subscriptions Unavailable")
+    XCTAssertEqual(sut.subscriptionDisclosureText, "Subscriptions are currently unavailable. Please try again later.")
 
     sut.select(productID: "pro_weekly")
-    XCTAssertEqual(sut.purchaseCTATitle, "Subscribe")
+    XCTAssertFalse(sut.canPurchaseSelectedPackage)
+    XCTAssertEqual(sut.purchaseCTATitle, "Subscriptions Unavailable")
   }
 
   func testSelectedPlanHasFreeTrialIsFalseWithoutPackages() {
@@ -209,54 +212,6 @@ final class BillingManagerTests: XCTestCase {
 
     XCTAssertEqual(sut.selectedProductID, "pro_annual")
     XCTAssertNil(sut.selectedPackage)
-  }
-
-  func testRedeemCouponAppliesReturnedProContext() async {
-    authSessionManager.validAccessTokenResult = .success("token-123")
-    let proContext = makeBillingContext(entitlementLevel: "pro", isPremium: true)
-    let sut = BillingManager(
-      environmentManager: environmentManager,
-      authSessionManager: authSessionManager,
-      sessionStore: sessionStore,
-      billingClientFactory: { _, _ in
-        BillingHTTPClient(
-          baseURL: URL(string: "https://example.test")!,
-          session: BillingSessionMock(response: .success(.couponRedemption(context: proContext))),
-          authTokenProvider: { "token-123" }
-        )
-      }
-    )
-
-    await sut.redeemCoupon(code: " forever ")
-
-    XCTAssertEqual(sut.context?.entitlementLevel, "pro")
-    XCTAssertTrue(sut.isPro)
-    XCTAssertEqual(sut.couponRedemptionMessage, "Coupon redeemed. Pro is active.")
-    XCTAssertNil(sut.errorMessage)
-  }
-
-  func testRedeemCouponErrorLeavesCurrentEntitlementUnchanged() async {
-    authSessionManager.validAccessTokenResult = .success("token-123")
-    let existingContext = makeBillingContext(entitlementLevel: "free", isPremium: false)
-    let sut = BillingManager(
-      environmentManager: environmentManager,
-      authSessionManager: authSessionManager,
-      sessionStore: sessionStore,
-      billingClientFactory: { _, _ in
-        BillingHTTPClient(
-          baseURL: URL(string: "https://example.test")!,
-          session: BillingSessionMock(response: .failure(statusCode: 400, message: "Invalid coupon code.")),
-          authTokenProvider: { "token-123" }
-        )
-      }
-    )
-    sut.context = existingContext
-
-    await sut.redeemCoupon(code: "bad")
-
-    XCTAssertEqual(sut.context, existingContext)
-    XCTAssertEqual(sut.errorMessage, "Invalid coupon code.")
-    XCTAssertNil(sut.couponRedemptionMessage)
   }
 
   func testIsProFallsBackToUserDefaultsWhenContextIsNil() {
@@ -293,41 +248,6 @@ final class BillingManagerTests: XCTestCase {
       trialDaysRemaining: trialDaysRemaining,
       isTrialActive: isTrialActive,
       generatedAt: Date()
-    )
-  }
-}
-
-@MainActor
-final class BillingHTTPClientTests: XCTestCase {
-  func testRedeemCouponEncodesCodeAndAuthHeader() async throws {
-    let session = BillingSessionMock(response: .success(.couponRedemption(context: makeContext())))
-    let client = BillingHTTPClient(
-      baseURL: URL(string: "https://api.example.test")!,
-      session: session,
-      authTokenProvider: { "access-token" }
-    )
-
-    _ = try await client.redeemCoupon(code: "Life123")
-
-    let request = try XCTUnwrap(session.requests.first)
-    XCTAssertEqual(request.url?.path, "/v1/billing/coupons/redeem")
-    XCTAssertEqual(request.httpMethod, "POST")
-    XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer access-token")
-
-    let body = try XCTUnwrap(request.httpBody)
-    let payload = try JSONSerialization.jsonObject(with: body) as? [String: String]
-    XCTAssertEqual(payload?["code"], "Life123")
-  }
-
-  private func makeContext() -> BillingContextResponse {
-    BillingContextResponse(
-      plan: "pro",
-      entitlementLevel: "pro",
-      isPremium: true,
-      subscription: nil,
-      features: [],
-      usage: [],
-      generatedAt: Date(timeIntervalSinceReferenceDate: 0)
     )
   }
 }
@@ -389,63 +309,4 @@ private final class MockAuthSessionStore: AuthSessionStoring, @unchecked Sendabl
   func markPendingOnboardingAfterSignup(email: String) async {}
   func hasPendingOnboardingAfterSignup(email: String) async -> Bool { return false }
   func clearPendingOnboardingAfterSignup(email: String) async {}
-}
-
-private final class BillingSessionMock: PushNotificationsURLSessionProtocol, @unchecked Sendable {
-  enum Response {
-    case success(Payload)
-    case failure(statusCode: Int, message: String)
-  }
-
-  enum Payload {
-    case couponRedemption(context: BillingContextResponse)
-  }
-
-  private(set) var requests: [URLRequest] = []
-  private let response: Response
-
-  init(response: Response) {
-    self.response = response
-  }
-
-  func data(for request: URLRequest) async throws -> (Data, URLResponse) {
-    requests.append(request)
-    let statusCode: Int
-    let data: Data
-    switch response {
-    case let .success(payload):
-      statusCode = 200
-      data = try payloadData(payload)
-    case let .failure(code, message):
-      statusCode = code
-      data = try JSONSerialization.data(withJSONObject: ["error": message])
-    }
-
-    let response = HTTPURLResponse(
-      url: request.url!,
-      statusCode: statusCode,
-      httpVersion: nil,
-      headerFields: ["Content-Type": "application/json"]
-    )!
-    return (data, response)
-  }
-
-  private func payloadData(_ payload: Payload) throws -> Data {
-    switch payload {
-    case let .couponRedemption(context):
-      let encodedContext = try JSONEncoder.stockPlanShared.encode(context)
-      let contextObject = try JSONSerialization.jsonObject(with: encodedContext) as? [String: Any]
-      return try JSONSerialization.data(withJSONObject: [
-        "coupon": [
-          "code": "FOREVER",
-          "grantType": "lifetime_pro",
-          "trialDays": 0,
-          "discount": [:],
-        ],
-        "trialDaysRemaining": NSNull(),
-        "isTrialActive": false,
-        "billingContext": contextObject ?? [:],
-      ])
-    }
-  }
 }

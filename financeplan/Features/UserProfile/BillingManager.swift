@@ -34,9 +34,7 @@ final class BillingManager {
   var isLoading = false
   var isPurchasing = false
   var isRestoring = false
-  var isRedeemingCoupon = false
   var errorMessage: String?
-  var couponRedemptionMessage: String?
 
   private let environmentManager: AppEnvironmentManager
   private let authSessionManager: AuthSessionManaging
@@ -111,16 +109,23 @@ final class BillingManager {
 
   /// Primary paywall button title — trial wording only when StoreKit confirms a free trial.
   var purchaseCTATitle: String {
+    guard selectedPackage != nil else {
+      return "Subscriptions Unavailable"
+    }
     guard selectedPlanHasFreeTrial, let trialDays = selectedPlanFreeTrialDays else {
       return "Subscribe"
     }
     return trialDays == 1 ? "Start Free Trial" : "Start \(trialDays)-Day Free Trial"
   }
 
+  var canPurchaseSelectedPackage: Bool {
+    selectedPackage != nil
+  }
+
   /// Auto-renew disclosure required near the subscribe button (Guideline 3.1.2).
   var subscriptionDisclosureText: String {
     guard let product = selectedPackage?.storeProduct else {
-      return Self.defaultSubscriptionDisclosure
+      return "Subscriptions are currently unavailable. Please try again later."
     }
 
     let price = product.localizedPriceString
@@ -293,44 +298,6 @@ final class BillingManager {
       }
       await syncBackendEntitlement()
       PostHogSDK.shared.capture("subscription_restored")
-    } catch {
-      errorMessage = error.localizedDescription
-    }
-  }
-
-  func redeemCoupon(code: String) async {
-    let trimmedCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmedCode.isEmpty else {
-      errorMessage = "Enter a coupon code."
-      couponRedemptionMessage = nil
-      return
-    }
-
-    isRedeemingCoupon = true
-    errorMessage = nil
-    couponRedemptionMessage = nil
-    defer { isRedeemingCoupon = false }
-
-    do {
-      let response = try await billingClient(forceRefresh: false).redeemCoupon(code: trimmedCode)
-      if let context = response.billingContext {
-        apply(context)
-      }
-      couponRedemptionMessage = isPro
-        ? "Coupon redeemed. Pro is active."
-        : "Coupon redeemed."
-    } catch let error as BillingHTTPClient.Error where error.isUnauthorized {
-      do {
-        let response = try await billingClient(forceRefresh: true).redeemCoupon(code: trimmedCode)
-        if let context = response.billingContext {
-          apply(context)
-        }
-        couponRedemptionMessage = isPro
-          ? "Coupon redeemed. Pro is active."
-          : "Coupon redeemed."
-      } catch {
-        errorMessage = error.localizedDescription
-      }
     } catch {
       errorMessage = error.localizedDescription
     }

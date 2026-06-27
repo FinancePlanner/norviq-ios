@@ -1,3 +1,4 @@
+import Combine
 import StockPlanShared
 import SwiftUI
 import SwiftData
@@ -94,8 +95,19 @@ struct WatchlistTab: View {
         }
       )
     }
-    .sheet(item: $selectedTradingSymbol) { symbol in
-      TradingStockSheet(symbol: symbol)
+    .sheet(
+      isPresented: Binding(
+        get: { selectedTradingSymbol != nil },
+        set: { isPresented in
+          if !isPresented {
+            selectedTradingSymbol = nil
+          }
+        }
+      )
+    ) {
+      if let selectedTradingSymbol {
+        TradingStockSheet(symbol: selectedTradingSymbol)
+      }
     }
     .sheet(item: $convertingItem) { item in
       AddPositionSheet(

@@ -165,7 +165,9 @@ struct EditStockPositionSheet: View {
       buyPrice: buyPrice,
       buyDate: stock.buyDate,
       notes: notes.isEmpty ? nil : notes,
-      category: category
+      category: category,
+      portfolioListId: stock.portfolioListId,
+      createdAt: stock.createdAt
     )
   }
 }
