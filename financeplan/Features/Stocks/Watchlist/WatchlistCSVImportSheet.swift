@@ -27,7 +27,7 @@ struct WatchlistCSVImportSheet: View {
     NavigationStack {
       List {
         if let listName = viewModel.listName {
-          Section("Target List") {
+          Section("Target Theme") {
             Text(listName)
           }
         }

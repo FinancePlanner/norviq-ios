@@ -104,7 +104,7 @@ struct WatchlistTab: View {
         await viewModel.load(force: true)
       }
     }
-    .alert("New watchlist", isPresented: $isCreateListPresented) {
+    .alert("New theme", isPresented: $isCreateListPresented) {
       TextField("Name", text: $listNameDraft)
       Button("Cancel", role: .cancel) {
         listNameDraft = ""
@@ -116,7 +116,7 @@ struct WatchlistTab: View {
         }
       }
     }
-    .alert("Rename watchlist", isPresented: $isRenameListPresented) {
+    .alert("Rename theme", isPresented: $isRenameListPresented) {
       TextField("Name", text: $listNameDraft)
       Button("Cancel", role: .cancel) {
         listNameDraft = ""
@@ -129,7 +129,7 @@ struct WatchlistTab: View {
         }
       }
     }
-    .confirmationDialog("Delete watchlist?", isPresented: $isDeleteListPresented) {
+    .confirmationDialog("Delete theme?", isPresented: $isDeleteListPresented) {
       Button("Delete", role: .destructive) {
         guard let selectedList else { return }
         Task {
@@ -138,7 +138,7 @@ struct WatchlistTab: View {
       }
       Button("Cancel", role: .cancel) {}
     } message: {
-      Text("Symbols move to your default watchlist.")
+      Text("Symbols move to your default theme.")
     }
     .sheet(
       isPresented: Binding(
@@ -210,12 +210,12 @@ struct WatchlistTab: View {
   }
 
   private var watchlistListSection: some View {
-    Section("Watchlist") {
+    Section("Themes") {
       if viewModel.watchlistLists.isEmpty {
-        Text("No lists yet.")
+        Text("No themes yet.")
           .foregroundStyle(.secondary)
       } else {
-        Picker("List", selection: selectedListBinding) {
+        Picker("Theme", selection: selectedListBinding) {
           ForEach(viewModel.watchlistLists) { list in
             Text(list.name).tag(list.id)
           }
@@ -252,21 +252,21 @@ struct WatchlistTab: View {
         listNameDraft = ""
         isCreateListPresented = true
       } label: {
-        Label("New watchlist", systemImage: "folder.badge.plus")
+        Label("New theme", systemImage: "folder.badge.plus")
       }
 
       Button {
         listNameDraft = selectedList?.name ?? ""
         isRenameListPresented = true
       } label: {
-        Label("Rename watchlist", systemImage: "pencil")
+        Label("Rename theme", systemImage: "pencil")
       }
       .disabled(selectedList == nil)
 
       Button(role: .destructive) {
         isDeleteListPresented = true
       } label: {
-        Label("Delete watchlist", systemImage: "trash")
+        Label("Delete theme", systemImage: "trash")
       }
       .disabled(selectedList?.isDefault ?? true)
     } label: {

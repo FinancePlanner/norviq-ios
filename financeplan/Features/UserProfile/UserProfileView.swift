@@ -27,6 +27,7 @@ private enum UserProfileDestination: Hashable {
 @MainActor
 public struct UserProfileView: View {
     @State private var viewModel: UserProfileViewModel
+    @State private var accountLinkingViewModel: AccountLinkingViewModel
     @StateObject private var pushNotificationsCoordinator: PushNotificationsCoordinator
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dismiss) private var dismiss
@@ -68,6 +69,7 @@ public struct UserProfileView: View {
 
     public init(viewModel: UserProfileViewModel? = nil) {
         _viewModel = State(initialValue: viewModel ?? UserProfileViewModel())
+        _accountLinkingViewModel = State(initialValue: AccountLinkingViewModel())
         _pushNotificationsCoordinator = StateObject(
             wrappedValue: Container.shared.pushNotificationsCoordinator()
         )
@@ -249,6 +251,31 @@ public struct UserProfileView: View {
                         .typography(.caption)
                         .foregroundStyle(.secondary)
                     }
+                }
+
+                ForEach([OAuthProviderKind.apple, .google, .x], id: \.self) { provider in
+                    connectedAccountRow(provider)
+                }
+
+                if accountLinkingViewModel.isLoading {
+                    HStack {
+                        ProgressView()
+                        Text(LocalizedStringKey("Loading connected accounts..."))
+                            .typography(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let message = accountLinkingViewModel.successMessage, !message.isEmpty {
+                    Label(message, systemImage: "checkmark.circle.fill")
+                        .typography(.caption)
+                        .foregroundStyle(.green)
+                }
+
+                if let message = accountLinkingViewModel.errorMessage, !message.isEmpty {
+                    Label(message, systemImage: "exclamationmark.triangle.fill")
+                        .typography(.caption)
+                        .foregroundStyle(AppTheme.Colors.danger)
                 }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
@@ -473,6 +500,7 @@ public struct UserProfileView: View {
         .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
         .refreshable {
             await viewModel.load(force: true)
+            await accountLinkingViewModel.load()
         }
         .confirmationDialog(
             LocalizedStringKey("Delete account?"),
@@ -545,6 +573,7 @@ public struct UserProfileView: View {
         billingManager.configureForCurrentUser()
         await billingManager.refreshBillingContext()
         await viewModel.load()
+        await accountLinkingViewModel.load()
         pushNotificationsCoordinator.handleAuthenticatedSessionBecameActive()
         securityCodeEnabled = securityCodeManager.isEnabled
         isNotificationsOn = pushNotificationsCoordinator.isOptedIn
@@ -580,6 +609,65 @@ public struct UserProfileView: View {
             .frame(width: 28, height: 28)
             .background(backgroundColor)
             .clipShape(.rect(cornerRadius: 6))
+    }
+
+    private func connectedAccountRow(_ provider: OAuthProviderKind) -> some View {
+        let account = accountLinkingViewModel.account(for: provider)
+        let isActive = accountLinkingViewModel.activeProvider == provider
+
+        return HStack(spacing: 12) {
+            Label {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(accountLinkingViewModel.label(for: provider))
+                        .foregroundStyle(.primary)
+                    if account.connected, let email = account.email, !email.isEmpty {
+                        Text(email)
+                            .typography(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(LocalizedStringKey("Not connected"))
+                            .typography(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } icon: {
+                Image(systemName: signInProviderIcon(for: provider))
+            }
+
+            Spacer()
+
+            if account.connected {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .accessibilityLabel(LocalizedStringKey("Connected"))
+            } else {
+                Button {
+                    connectSignInProvider(provider)
+                } label: {
+                    if isActive {
+                        ProgressView()
+                    } else {
+                        Text(LocalizedStringKey("Connect"))
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(isActive || accountLinkingViewModel.activeProvider != nil)
+            }
+        }
+        .accessibilityIdentifier("settings.connectedAccount.\(provider.rawValue)")
+    }
+
+    private func signInProviderIcon(for provider: OAuthProviderKind) -> String {
+        switch provider {
+        case .apple:
+            return "apple.logo"
+        case .google:
+            return "g.circle"
+        case .x:
+            return "xmark"
+        @unknown default:
+            return "person.crop.circle.badge.checkmark"
+        }
     }
 
     private func setFaceIDEnabled(_ enabled: Bool) async {
@@ -672,6 +760,10 @@ public struct UserProfileView: View {
 
     private func enableNotifications() {
         Task { await pushNotificationsCoordinator.setNotificationsEnabled(true) }
+    }
+
+    private func connectSignInProvider(_ provider: OAuthProviderKind) {
+        Task { await accountLinkingViewModel.connect(provider) }
     }
 
     private func logOut() {

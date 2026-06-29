@@ -191,7 +191,7 @@ final class WatchlistViewModel: ObservableObject {
 
   func createWatchlistList(name: String) async -> String? {
     let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !normalized.isEmpty else { return "List name is required." }
+    guard !normalized.isEmpty else { return "Theme name is required." }
     do {
       let created = try await service.createWatchlistList(name: normalized)
       selectedWatchlistListId = created.id
@@ -205,7 +205,7 @@ final class WatchlistViewModel: ObservableObject {
 
   func renameWatchlistList(id: String, name: String) async -> String? {
     let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !normalized.isEmpty else { return "List name is required." }
+    guard !normalized.isEmpty else { return "Theme name is required." }
     do {
       _ = try await service.updateWatchlistList(id: id, name: normalized)
       hasLoadedOnce = false

@@ -98,6 +98,34 @@ final class WatchlistViewModelTests: XCTestCase {
     XCTAssertEqual(all.first(where: { $0.id == "aapl" })?.note, "updated")
   }
 
+  func testSwiftDataWatchlistItemMappingPreservesRemoteListId() {
+    let response = WatchlistItemResponse(
+      id: "aapl",
+      symbol: "AAPL",
+      note: "core",
+      status: .active,
+      nextReviewAt: nil,
+      watchlistListId: "tech-list"
+    )
+
+    let item = SDWatchlistItem(from: response)
+
+    XCTAssertEqual(item.watchlistListId, "tech-list")
+
+    item.update(
+      from: WatchlistItemResponse(
+        id: "aapl",
+        symbol: "AAPL",
+        note: "updated",
+        status: .waiting,
+        nextReviewAt: nil,
+        watchlistListId: "energy-list"
+      )
+    )
+
+    XCTAssertEqual(item.watchlistListId, "energy-list")
+  }
+
   func testSwiftDataStoreReconcileDoesNotDeleteOtherUsersRows() throws {
     let container = try makeInMemoryContainer()
     let context = container.mainContext
