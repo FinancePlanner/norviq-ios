@@ -90,7 +90,7 @@ final class BrokerServiceTests: XCTestCase {
     XCTAssertEqual(response, expected)
   }
 
-  func testPreviewCsvImport_UsesTextCsvRequestAndProviderQuery() async throws {
+  func testPreviewCsvImport_UsesMultipartRequestAndProviderQuery() async throws {
     let session = SessionMock()
     let client = BrokerHTTPClient(
       baseURL: URL(string: "https://api.example.com")!,
@@ -99,7 +99,7 @@ final class BrokerServiceTests: XCTestCase {
     )
 
     let expected = CsvImportPreviewResponse(
-      provider: "ibkr",
+      provider: "generic",
       items: [.init(line: 2, symbol: "AAPL", shares: 10, buyPrice: 120, buyDate: "2026-01-10", notes: nil)],
       errors: []
     )
@@ -108,10 +108,19 @@ final class BrokerServiceTests: XCTestCase {
       XCTAssertEqual(request.httpMethod, "POST")
       XCTAssertEqual(request.url?.path, "/v1/brokers/import/csv")
       XCTAssertEqual(URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)?
-        .queryItems?.first(where: { $0.name == "provider" })?.value, "ibkr")
-      XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "text/csv")
+        .queryItems?.first(where: { $0.name == "provider" })?.value, "generic")
+      XCTAssertEqual(URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)?
+        .queryItems?.first(where: { $0.name == "portfolioListId" })?.value, "portfolio-1")
+      let contentType = request.value(forHTTPHeaderField: "Content-Type")
+      XCTAssertNotNil(contentType)
+      XCTAssertTrue(contentType?.starts(with: "multipart/form-data; boundary=") == true)
       XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
-      XCTAssertEqual(String(data: request.httpBody ?? Data(), encoding: .utf8), "symbol,shares\nAAPL,10")
+      let bodyString = String(data: request.httpBody ?? Data(), encoding: .utf8) ?? ""
+      XCTAssertTrue(bodyString.contains("name=\"provider\""))
+      XCTAssertTrue(bodyString.contains("generic"))
+      XCTAssertTrue(bodyString.contains("name=\"file\"; filename=\"portfolio-import.csv\""))
+      XCTAssertTrue(bodyString.contains("Content-Type: text/csv"))
+      XCTAssertTrue(bodyString.contains("symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,core holding"))
 
       let response = try XCTUnwrap(
         HTTPURLResponse(
@@ -125,15 +134,15 @@ final class BrokerServiceTests: XCTestCase {
     }
 
     let response = try await client.previewCsvImport(
-      provider: "ibkr",
-      portfolioListId: nil,
-      csvData: Data("symbol,shares\nAAPL,10".utf8)
+      provider: "generic",
+      portfolioListId: "portfolio-1",
+      csvData: Data("symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,core holding".utf8)
     )
 
     XCTAssertEqual(response, expected)
   }
 
-  func testCommitCsvImport_UsesTextCsvRequestAndProviderQuery() async throws {
+  func testCommitCsvImport_UsesMultipartRequestAndProviderQuery() async throws {
     let session = SessionMock()
     let client = BrokerHTTPClient(
       baseURL: URL(string: "https://api.example.com")!,
@@ -142,7 +151,7 @@ final class BrokerServiceTests: XCTestCase {
     )
 
     let expected = CsvImportCommitResponse(
-      provider: "ibkr",
+      provider: "generic",
       inserted: [.init(id: "stock-1", symbol: "AAPL", shares: 10, buyPrice: 120, buyDate: "2026-01-10", notes: nil, createdAt: "2026-01-10T00:00:00Z")],
       updated: [],
       errors: []
@@ -152,9 +161,19 @@ final class BrokerServiceTests: XCTestCase {
       XCTAssertEqual(request.httpMethod, "POST")
       XCTAssertEqual(request.url?.path, "/v1/brokers/import/csv/commit")
       XCTAssertEqual(URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)?
-        .queryItems?.first(where: { $0.name == "provider" })?.value, "ibkr")
-      XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "text/csv")
+        .queryItems?.first(where: { $0.name == "provider" })?.value, "generic")
+      XCTAssertEqual(URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)?
+        .queryItems?.first(where: { $0.name == "portfolioListId" })?.value, "portfolio-1")
+      let contentType = request.value(forHTTPHeaderField: "Content-Type")
+      XCTAssertNotNil(contentType)
+      XCTAssertTrue(contentType?.starts(with: "multipart/form-data; boundary=") == true)
       XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+      let bodyString = String(data: request.httpBody ?? Data(), encoding: .utf8) ?? ""
+      XCTAssertTrue(bodyString.contains("name=\"provider\""))
+      XCTAssertTrue(bodyString.contains("generic"))
+      XCTAssertTrue(bodyString.contains("name=\"file\"; filename=\"portfolio-import.csv\""))
+      XCTAssertTrue(bodyString.contains("Content-Type: text/csv"))
+      XCTAssertTrue(bodyString.contains("symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,core holding"))
 
       let response = try XCTUnwrap(
         HTTPURLResponse(
@@ -168,9 +187,85 @@ final class BrokerServiceTests: XCTestCase {
     }
 
     let response = try await client.commitCsvImport(
-      provider: "ibkr",
+      provider: "generic",
+      portfolioListId: "portfolio-1",
+      csvData: Data("symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,core holding".utf8)
+    )
+
+    XCTAssertEqual(response, expected)
+  }
+
+  func testPreviewCsvImport_DecodesEnvelopedResponse() async throws {
+    let session = SessionMock()
+    let client = BrokerHTTPClient(
+      baseURL: URL(string: "https://api.example.com")!,
+      session: session,
+      authTokenProvider: { "token-123" }
+    )
+
+    let expected = CsvImportPreviewResponse(
+      provider: "generic",
+      items: [.init(line: 2, symbol: "AAPL", shares: 10, buyPrice: 120, buyDate: "2026-01-10", notes: "core holding")],
+      errors: []
+    )
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.path, "/v1/brokers/import/csv")
+      let response = try XCTUnwrap(
+        HTTPURLResponse(
+          url: try XCTUnwrap(request.url),
+          statusCode: 200,
+          httpVersion: nil,
+          headerFields: nil
+        )
+      )
+      let envelope = APIEnvelope(success: true, data: expected, message: nil)
+      return (try JSONEncoder().encode(envelope), response)
+    }
+
+    let response = try await client.previewCsvImport(
+      provider: "generic",
       portfolioListId: nil,
-      csvData: Data("symbol,shares\nAAPL,10".utf8)
+      csvData: Data("symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,core holding".utf8)
+    )
+
+    XCTAssertEqual(response, expected)
+  }
+
+  func testCommitCsvImport_DecodesEnvelopedResponse() async throws {
+    let session = SessionMock()
+    let client = BrokerHTTPClient(
+      baseURL: URL(string: "https://api.example.com")!,
+      session: session,
+      authTokenProvider: { "token-123" }
+    )
+
+    let expected = CsvImportCommitResponse(
+      provider: "generic",
+      inserted: [],
+      updated: [],
+      errors: [],
+      importedLotsCount: 1
+    )
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.path, "/v1/brokers/import/csv/commit")
+      let response = try XCTUnwrap(
+        HTTPURLResponse(
+          url: try XCTUnwrap(request.url),
+          statusCode: 200,
+          httpVersion: nil,
+          headerFields: nil
+        )
+      )
+      let envelope = APIEnvelope(success: true, data: expected, message: nil)
+      return (try JSONEncoder().encode(envelope), response)
+    }
+
+    let response = try await client.commitCsvImport(
+      provider: "generic",
+      portfolioListId: nil,
+      csvData: Data("symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,core holding".utf8)
     )
 
     XCTAssertEqual(response, expected)

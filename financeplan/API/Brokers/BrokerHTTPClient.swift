@@ -160,13 +160,45 @@ final class BrokerHTTPClient: Sendable {
 
     var request = URLRequest(url: url)
     request.httpMethod = HTTPMethod.post.rawValue
-    request.setValue("text/csv", forHTTPHeaderField: "Content-Type")
+    let boundary = "Boundary-\(UUID().uuidString)"
+    request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
     if let token = await client.authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
       request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     }
 
-    request.httpBody = csvData
+    request.httpBody = makeCSVUploadBody(
+      boundary: boundary,
+      provider: provider,
+      csvData: csvData,
+      filename: "portfolio-import.csv"
+    )
     return request
+  }
+
+  private func makeCSVUploadBody(
+    boundary: String,
+    provider: String,
+    csvData: Data,
+    filename: String
+  ) -> Data {
+    let newline = "\r\n"
+    var body = Data()
+
+    func append(_ text: String) {
+      body.append(Data(text.utf8))
+    }
+
+    append("--\(boundary)\(newline)")
+    append("Content-Disposition: form-data; name=\"provider\"\(newline)\(newline)")
+    append("\(provider)\(newline)")
+    append("--\(boundary)\(newline)")
+    append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\(newline)")
+    append("Content-Type: text/csv\(newline)\(newline)")
+    body.append(csvData)
+    append(newline)
+    append("--\(boundary)--\(newline)")
+
+    return body
   }
 }

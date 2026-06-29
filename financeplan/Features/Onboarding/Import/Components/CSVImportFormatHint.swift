@@ -31,7 +31,7 @@ struct WatchlistCSVImportFormatHint: View {
       Text("Watchlist CSV format")
         .typography(.small, weight: .semibold)
 
-      Text("Include a header row. Required: symbol or ticker. Notes is optional.")
+      Text("Include a header row. Required: symbol or ticker. note, notes, memo, or comment is optional.")
         .typography(.caption)
         .foregroundStyle(.secondary)
 
@@ -42,7 +42,7 @@ struct WatchlistCSVImportFormatHint: View {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .accessibilityElement(children: .combine)
-    .accessibilityLabel("Watchlist CSV format. Header row required with symbol or ticker. Notes optional.")
+    .accessibilityLabel("Watchlist CSV format. Header row required with symbol or ticker. note, notes, memo, or comment are optional.")
   }
 }
 
