@@ -9,7 +9,7 @@
 - After purchase/restore, the app calls `POST /billing/restore` to sync entitlements with the backend
 - Local StoreKit testing via `Products.storekit` (all three SKUs; 7-day trial on annual only)
 
-See also: [`Documentation/revenuecat-apple-review-plan.md`](../../../../Documentation/revenuecat-apple-review-plan.md) and backend [`StockPlanBackend/docs/revenuecat-setup.md`](../../../../StockPlanBackend/docs/revenuecat-setup.md).
+See also: [`Documentation/revenuecat-apple-review-plan.md`](../../../../Documentation/revenuecat-apple-review-plan.md), [`Documentation/subscriptions-unavailable-app-review-fix.md`](../../../../Documentation/subscriptions-unavailable-app-review-fix.md), and backend [`StockPlanBackend/docs/revenuecat-setup.md`](../../../../StockPlanBackend/docs/revenuecat-setup.md).
 
 ---
 
