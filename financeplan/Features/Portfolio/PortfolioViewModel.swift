@@ -63,6 +63,7 @@ final class PortfolioViewModel: ObservableObject {
   private let marketDataService: MarketDataServicing
   private var localStore: (any PortfolioLocalPersisting)?
   private var hasLoadedOnce = false
+  private var isRefreshingLiveQuotes = false
   @Published private(set) var nextCursor: String? = nil
   @Published private(set) var isLoadingMore = false
 
@@ -139,11 +140,15 @@ final class PortfolioViewModel: ObservableObject {
 
   /// Refresh only the live market quotes for currently known symbols (cheap poll for "live" feel).
   func refreshLiveQuotes() async {
+    guard !isRefreshingLiveQuotes else { return }
     let symbols = liveQuotes.keys.isEmpty ? [] : Array(liveQuotes.keys)
     // If no prior quotes, we can't easily know symbols without full load; caller should load first.
     guard !symbols.isEmpty else { return }
+    isRefreshingLiveQuotes = true
+    defer { isRefreshingLiveQuotes = false }
+
     do {
-      let batch = try await marketDataService.fetchQuoteBatch(symbols: Array(symbols))
+      let batch = try await marketDataService.fetchQuoteBatch(symbols: symbols)
       for q in batch.quotes {
         liveQuotes[q.symbol.uppercased()] = q
       }

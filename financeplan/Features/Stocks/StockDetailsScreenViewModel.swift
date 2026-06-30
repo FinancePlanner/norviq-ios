@@ -91,6 +91,7 @@ final class StockDetailsViewModel: ObservableObject {
     private var loadingTabs: Set<StockDetailTab> = []
     private var comparisonRefreshTask: Task<Void, Never>?
     private var loadedStockID: String?
+    private var isRefreshingQuote = false
 
     var shareSnapshot: StockShareSnapshot? {
         guard let details else { return nil }
@@ -371,6 +372,18 @@ final class StockDetailsViewModel: ObservableObject {
             Self.logger.error(
                 "Stock details load failed stock_id=\(stockId, privacy: .public) error=\(error.localizedDescription, privacy: .public)"
             )
+        }
+    }
+
+    func refreshQuote() async {
+        guard !isRefreshingQuote else { return }
+        guard let symbol = details?.symbol else { return }
+
+        isRefreshingQuote = true
+        defer { isRefreshingQuote = false }
+
+        if let quote = await loadQuote(symbol: symbol) {
+            marketSnapshot = quote
         }
     }
 

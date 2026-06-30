@@ -27,6 +27,7 @@ final class WatchlistViewModel: ObservableObject {
   private let marketDataService: MarketDataServicing
   private var localStore: (any WatchlistLocalPersisting)?
   private var hasLoadedOnce = false
+  private var isRefreshingLiveQuotes = false
 
   init(
     service: StockServicing,
@@ -95,8 +96,12 @@ final class WatchlistViewModel: ObservableObject {
 
   /// Refresh only live market quotes for watchlist symbols.
   func refreshLiveQuotes() async {
+    guard !isRefreshingLiveQuotes else { return }
     let symbols = Array(liveQuotes.keys)
     guard !symbols.isEmpty else { return }
+    isRefreshingLiveQuotes = true
+    defer { isRefreshingLiveQuotes = false }
+
     do {
       let batch = try await marketDataService.fetchQuoteBatch(symbols: symbols)
       for q in batch.quotes {

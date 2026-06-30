@@ -15,6 +15,7 @@ struct PortfolioScreen: View {
 
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.modelContext) private var modelContext
+  @Environment(\.scenePhase) private var scenePhase
   @EnvironmentObject private var viewModel: PortfolioViewModel
   @InjectedObservable(\Container.billingManager) private var billingManager
   @Binding var pendingOpenSymbol: String?
@@ -36,7 +37,7 @@ struct PortfolioScreen: View {
   @State private var isSectorGainsPresented = false
   @State private var selectedTradingSymbol: String?
 
-  private let quoteRefreshTimer = Timer.publish(every: 15, on: .main, in: .common).autoconnect()
+  private let quoteRefreshTimer = Timer.publish(every: 20, on: .main, in: .common).autoconnect()
 
   enum TimeRange: String, CaseIterable, Identifiable {
       case day = "1D"
@@ -158,6 +159,11 @@ struct PortfolioScreen: View {
     }
     .onChange(of: viewModel.selectedPortfolioListId) { _, _ in
       rebuildChartData()
+    }
+    .onChange(of: scenePhase) { _, newPhase in
+      if newPhase == .active {
+        refreshPortfolioQuotesIfActive()
+      }
     }
     .refreshable {
       await reloadPortfolio(force: true)
@@ -374,7 +380,7 @@ struct PortfolioScreen: View {
       .padding(.horizontal, 16)
       .padding(.vertical, 12)
       .onReceive(quoteRefreshTimer) { _ in
-        Task { await viewModel.refreshLiveQuotes() }
+        refreshPortfolioQuotesIfActive()
       }
     }
   }
@@ -452,6 +458,11 @@ struct PortfolioScreen: View {
 
   private func reloadPortfolio(force: Bool = false) async {
     await viewModel.load(force: force)
+  }
+
+  private func refreshPortfolioQuotesIfActive() {
+    guard scenePhase == .active else { return }
+    Task { await viewModel.refreshLiveQuotes() }
   }
 
   private func retryLoad() {

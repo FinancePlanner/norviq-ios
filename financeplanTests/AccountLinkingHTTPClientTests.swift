@@ -23,10 +23,10 @@ final class AccountLinkingHTTPClientTests: XCTestCase {
       session: session,
       authTokenProvider: { "token-123" }
     )
-    let expected = OAuthLinkedAccountsResponse(accounts: [
-      OAuthLinkedAccount(provider: .apple, connected: false),
-      OAuthLinkedAccount(provider: .google, connected: true, email: "user@example.com", emailVerified: true),
-      OAuthLinkedAccount(provider: .x, connected: false)
+    let expected = financeplan.OAuthLinkedAccountsResponse(accounts: [
+      financeplan.OAuthLinkedAccount(provider: .apple, connected: false),
+      financeplan.OAuthLinkedAccount(provider: .google, connected: true, email: "user@example.com", emailVerified: true),
+      financeplan.OAuthLinkedAccount(provider: .x, connected: false)
     ])
 
     session.handler = { request in
@@ -72,7 +72,7 @@ final class AccountLinkingHTTPClientTests: XCTestCase {
       XCTAssertEqual(request.httpMethod, "POST")
       return (
         try JSONEncoder.stockPlanShared.encode(
-          OAuthLinkResponse(provider: .google, connected: true, email: "user@example.com", message: "Connected.")
+          financeplan.OAuthLinkResponse(provider: .google, connected: true, email: "user@example.com", message: "Connected.")
         ),
         response
       )

@@ -6,6 +6,7 @@ import SwiftData
 struct WatchlistTab: View {
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.modelContext) private var modelContext
+  @Environment(\.scenePhase) private var scenePhase
   @EnvironmentObject private var portfolioViewModel: PortfolioViewModel
   @ObservedObject var viewModel: WatchlistViewModel
 
@@ -80,7 +81,12 @@ struct WatchlistTab: View {
       Task { await viewModel.load(force: true) }
     }
     .onReceive(quoteRefreshTimer) { _ in
-      Task { await viewModel.refreshLiveQuotes() }
+      refreshWatchlistQuotesIfActive()
+    }
+    .onChange(of: scenePhase) { _, newPhase in
+      if newPhase == .active {
+        refreshWatchlistQuotesIfActive()
+      }
     }
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
@@ -203,6 +209,11 @@ struct WatchlistTab: View {
     .task { await viewModel.load() }
     .refreshable { await viewModel.load(force: true) }
     .appSensoryFeedback(destructive: destructiveFeedbackTrigger)
+  }
+
+  private func refreshWatchlistQuotesIfActive() {
+    guard scenePhase == .active else { return }
+    Task { await viewModel.refreshLiveQuotes() }
   }
 
   private var selectedList: WatchlistListDTOResponse? {
