@@ -6,17 +6,17 @@ import XCTest
 @MainActor
 final class AccountLinkingViewModelTests: XCTestCase {
   private final class ServiceMock: AccountLinkingServiceProtocol, @unchecked Sendable {
-    var accountsResult: Result<[OAuthLinkedAccount], Error> = .success([])
-    var connectResult: Result<OAuthLinkResponse, Error> = .failure(MockError.notConfigured)
+    var accountsResult: Result<[financeplan.OAuthLinkedAccount], Error> = .success([])
+    var connectResult: Result<financeplan.OAuthLinkResponse, Error> = .failure(MockError.notConfigured)
     var connectedProviders: [OAuthProviderKind] = []
     var listCalls = 0
 
-    func linkedAccounts() async throws -> [OAuthLinkedAccount] {
+    func linkedAccounts() async throws -> [financeplan.OAuthLinkedAccount] {
       listCalls += 1
       return try accountsResult.get()
     }
 
-    func connect(provider: OAuthProviderKind) async throws -> OAuthLinkResponse {
+    func connect(provider: OAuthProviderKind) async throws -> financeplan.OAuthLinkResponse {
       connectedProviders.append(provider)
       return try connectResult.get()
     }
@@ -39,9 +39,9 @@ final class AccountLinkingViewModelTests: XCTestCase {
   func testLoadPublishesConnectedAccounts() async {
     let service = ServiceMock()
     service.accountsResult = .success([
-      OAuthLinkedAccount(provider: .apple, connected: false),
-      OAuthLinkedAccount(provider: .google, connected: true, email: "user@example.com", emailVerified: true),
-      OAuthLinkedAccount(provider: .x, connected: false)
+      financeplan.OAuthLinkedAccount(provider: .apple, connected: false),
+      financeplan.OAuthLinkedAccount(provider: .google, connected: true, email: "user@example.com", emailVerified: true),
+      financeplan.OAuthLinkedAccount(provider: .x, connected: false)
     ])
     let viewModel = AccountLinkingViewModel(service: service)
 
@@ -56,10 +56,10 @@ final class AccountLinkingViewModelTests: XCTestCase {
   func testConnectRefreshesStatusAndShowsSuccess() async {
     let service = ServiceMock()
     service.accountsResult = .success([
-      OAuthLinkedAccount(provider: .google, connected: true, email: "user@example.com", emailVerified: true)
+      financeplan.OAuthLinkedAccount(provider: .google, connected: true, email: "user@example.com", emailVerified: true)
     ])
     service.connectResult = .success(
-      OAuthLinkResponse(provider: .google, connected: true, email: "user@example.com", message: "Connected.")
+      financeplan.OAuthLinkResponse(provider: .google, connected: true, email: "user@example.com", message: "Connected.")
     )
     let viewModel = AccountLinkingViewModel(service: service)
 

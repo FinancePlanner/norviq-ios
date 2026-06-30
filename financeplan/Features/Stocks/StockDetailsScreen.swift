@@ -5,6 +5,7 @@
 //  Created by Fernando Correia on 10.03.26.
 //
 
+import Combine
 import Factory
 import PostHog
 import SwiftUI
@@ -15,6 +16,7 @@ struct StockDetailScreen: View {
     let initialSymbol: String
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @InjectedObservable(\Container.billingManager) private var billingManager
     @StateObject private var viewModel = StockDetailsViewModel()
     @State private var activeSheet: ActiveSheet?
@@ -24,6 +26,7 @@ struct StockDetailScreen: View {
     @State private var selectedStatementPeriod: StockFinancialStatementPeriod = .fy
     @State private var pendingDCFValuation: DCFValuationPreset?
     @State private var isConfirmingDCFValuationApply = false
+    private let quoteRefreshTimer = Timer.publish(every: 20, on: .main, in: .common).autoconnect()
 
     private enum ActiveSheet: String, Identifiable {
         case editValuation
@@ -78,6 +81,14 @@ struct StockDetailScreen: View {
         }
         .task(id: selectedTab) {
             await loadSupplementaryData(for: selectedTab)
+        }
+        .onReceive(quoteRefreshTimer) { _ in
+            refreshQuoteIfActive()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                refreshQuoteIfActive()
+            }
         }
     }
 
@@ -309,6 +320,11 @@ struct StockDetailScreen: View {
 
     private func retryLoad() {
         Task { await viewModel.load(stockId: stockId, force: true) }
+    }
+
+    private func refreshQuoteIfActive() {
+        guard scenePhase == .active else { return }
+        Task { await viewModel.refreshQuote() }
     }
 
     private func dismissActiveSheet() {

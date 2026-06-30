@@ -78,6 +78,63 @@ final class WatchlistViewModelTests: XCTestCase {
     XCTAssertEqual(service.fetchWatchlistCallsByListID, ["tech", "energy"])
   }
 
+  func testRefreshLiveQuotesUsesQuoteBatchWithoutReloadingWatchlistRows() async {
+    let service = WatchlistViewModelMockStockService()
+    service.fetchWatchlistResult = .success([
+      makeWatchlistItem(symbol: "AAPL"),
+      makeWatchlistItem(symbol: "MSFT")
+    ])
+    let marketDataService = WatchlistQuoteMarketDataServiceMock()
+    marketDataService.fetchQuoteBatchResult = .success(
+      QuoteBatchResponse(quotes: [
+        makeQuote(symbol: "AAPL", currentPrice: 171),
+        makeQuote(symbol: "MSFT", currentPrice: 311)
+      ])
+    )
+    let viewModel = WatchlistViewModel(service: service, marketDataService: marketDataService)
+
+    await viewModel.load()
+
+    let watchlistCallsAfterLoad = service.fetchWatchlistCalls
+    marketDataService.fetchQuoteBatchResult = .success(
+      QuoteBatchResponse(quotes: [
+        makeQuote(symbol: "AAPL", currentPrice: 172.5),
+        makeQuote(symbol: "MSFT", currentPrice: 314.2)
+      ])
+    )
+
+    await viewModel.refreshLiveQuotes()
+
+    XCTAssertEqual(marketDataService.fetchQuoteBatchCalls, 2)
+    XCTAssertEqual(Set(marketDataService.requestedSymbolBatches.last ?? []), Set(["AAPL", "MSFT"]))
+    XCTAssertEqual(service.fetchWatchlistCalls, watchlistCallsAfterLoad)
+    XCTAssertEqual(viewModel.liveQuotes["AAPL"]?.currentPrice, 172.5)
+    XCTAssertEqual(viewModel.liveQuotes["MSFT"]?.currentPrice, 314.2)
+  }
+
+  func testRefreshLiveQuotesFailurePreservesExistingWatchlistQuotesAndErrorState() async {
+    let service = WatchlistViewModelMockStockService()
+    service.fetchWatchlistResult = .success([
+      makeWatchlistItem(symbol: "AAPL")
+    ])
+    let marketDataService = WatchlistQuoteMarketDataServiceMock()
+    marketDataService.fetchQuoteBatchResult = .success(
+      QuoteBatchResponse(quotes: [
+        makeQuote(symbol: "AAPL", currentPrice: 171)
+      ])
+    )
+    let viewModel = WatchlistViewModel(service: service, marketDataService: marketDataService)
+
+    await viewModel.load()
+    marketDataService.fetchQuoteBatchResult = .failure(MockStockError.notConfigured)
+
+    await viewModel.refreshLiveQuotes()
+
+    XCTAssertEqual(marketDataService.fetchQuoteBatchCalls, 2)
+    XCTAssertEqual(viewModel.liveQuotes["AAPL"]?.currentPrice, 171)
+    XCTAssertNil(viewModel.errorMessage)
+  }
+
   func testSwiftDataStoreReconcileAppliesCreateUpdateDelete() throws {
     let container = try makeInMemoryContainer()
     let context = container.mainContext
@@ -180,6 +237,34 @@ final class WatchlistViewModelTests: XCTestCase {
       status: .active,
       nextReviewAt: nil
     )
+  }
+
+  private func makeQuote(symbol: String, currentPrice: Double) -> QuoteResponse {
+    QuoteResponse(
+      symbol: symbol,
+      currency: "USD",
+      currentPrice: currentPrice,
+      change: 1.25,
+      percentChange: 0.73,
+      high: currentPrice + 2,
+      low: currentPrice - 2,
+      open: currentPrice - 1,
+      previousClose: currentPrice - 1.25,
+      timestamp: 1_775_073_600
+    )
+  }
+}
+
+@MainActor
+private final class WatchlistQuoteMarketDataServiceMock: MarketDataServicing, @unchecked Sendable {
+  var fetchQuoteBatchCalls = 0
+  var requestedSymbolBatches: [[String]] = []
+  var fetchQuoteBatchResult: Result<QuoteBatchResponse, Error> = .failure(QuoteMarketDataMockError.notConfigured)
+
+  func fetchQuoteBatch(symbols: [String]) async throws -> QuoteBatchResponse {
+    fetchQuoteBatchCalls += 1
+    requestedSymbolBatches.append(symbols)
+    return try fetchQuoteBatchResult.get()
   }
 }
 
