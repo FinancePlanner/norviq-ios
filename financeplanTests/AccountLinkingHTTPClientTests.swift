@@ -62,7 +62,7 @@ final class AccountLinkingHTTPClientTests: XCTestCase {
       if request.url?.path == "/v1/auth/oauth/google/link/start" {
         XCTAssertEqual(request.httpMethod, "POST")
         return (
-          try JSONEncoder.stockPlanShared.encode(
+          try JSONEncoder().encode(
             OAuthStartResponse(flowId: flowId, authorizationURL: "https://oauth.example.test", expiresIn: 600)
           ),
           response
