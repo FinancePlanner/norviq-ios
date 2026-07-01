@@ -1,6 +1,7 @@
-import SwiftUI
 import Factory
 import OSLog
+import StockPlanShared
+import SwiftUI
 
 private let earningsCalendarLogger = Logger(
   subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
@@ -282,6 +283,8 @@ struct EarningsDetailView: View {
     @State private var transcript: EarningsTranscript?
     @State private var isTranscriptLoading = false
     @State private var transcriptMessage: String?
+    @State private var incomeStatements: [IncomeStatementResponse] = []
+    @State private var isIncomeStatementLoading = false
 
     private var marketDataService: any MarketDataServicing {
         Container.shared.marketDataService()
@@ -314,6 +317,13 @@ struct EarningsDetailView: View {
                     }
                     .padding(.horizontal)
 
+                    EarningsFlowVisualizer(
+                        symbol: event.symbol,
+                        statements: incomeStatements,
+                        isLoading: isIncomeStatementLoading
+                    )
+                    .padding(.horizontal)
+
                     // Transcript teaser / access (teaser model: list free, transcript Pro)
                     if event.hasTranscript == true {
                         transcriptSection
@@ -336,7 +346,10 @@ struct EarningsDetailView: View {
             }
             .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
+        .task {
+            await loadIncomeStatements()
+        }
     }
 
     @ViewBuilder
@@ -393,6 +406,18 @@ struct EarningsDetailView: View {
             transcript = try await marketDataService.fetchStockEarningsTranscript(symbol: event.symbol, date: event.date)
         } catch {
             transcriptMessage = error.localizedDescription
+        }
+    }
+
+    private func loadIncomeStatements() async {
+        guard incomeStatements.isEmpty else { return }
+        isIncomeStatementLoading = true
+        defer { isIncomeStatementLoading = false }
+
+        do {
+            incomeStatements = try await marketDataService.fetchIncomeStatement(symbol: event.symbol, limit: 4, period: "quarter")
+        } catch {
+            incomeStatements = []
         }
     }
 }

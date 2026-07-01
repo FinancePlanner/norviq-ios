@@ -132,6 +132,10 @@ struct MarketDataHTTPClient: Sendable {
     try await client.call(GetCashFlowStatementEndpoint(symbol: symbol, limit: limit, period: period), errorType: Error.self)
   }
 
+  func fetchIncomeStatement(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [IncomeStatementResponse] {
+    try await client.call(GetIncomeStatementEndpoint(symbol: symbol, limit: limit, period: period), errorType: Error.self)
+  }
+
   func fetchRatios(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [RatiosResponse] {
     try await client.call(GetRatiosEndpoint(symbol: symbol, limit: limit, period: period), errorType: Error.self)
   }

@@ -5,6 +5,7 @@ import SwiftUI
 struct StockEarningsTab: View {
     let symbol: String
     let earnings: [EarningsEvent]
+    let incomeStatements: [IncomeStatementResponse]
     let isLoading: Bool
     let errorMessage: String?
     let selectedTranscript: EarningsTranscript?
@@ -17,6 +18,12 @@ struct StockEarningsTab: View {
 
     var body: some View {
         VStack(spacing: 24) {
+            EarningsFlowVisualizer(
+                symbol: symbol,
+                statements: incomeStatements,
+                isLoading: isLoading
+            )
+
             if isLoading && earnings.isEmpty {
                 ProgressView()
                     .frame(maxWidth: .infinity)

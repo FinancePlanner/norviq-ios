@@ -17,6 +17,7 @@ protocol MarketDataServicing: Sendable {
   func fetchMarketCompare(symbols: [String]) async throws -> [StockAnalysisMetrics]
   func fetchBalanceSheetStatement(symbol: String, limit: Int?, period: String?) async throws -> [BalanceSheetStatementResponse]
   func fetchCashFlowStatement(symbol: String, limit: Int?, period: String?) async throws -> [CashFlowStatementResponse]
+  func fetchIncomeStatement(symbol: String, limit: Int?, period: String?) async throws -> [IncomeStatementResponse]
   func fetchRatios(symbol: String, limit: Int?, period: String?) async throws -> [RatiosResponse]
   func fetchRatiosTTM(symbol: String) async throws -> [RatiosTTMResponse]
   func fetchFinancialGrowth(symbol: String, limit: Int?, period: String?) async throws -> [FinancialGrowthResponse]
@@ -118,6 +119,12 @@ final class MarketDataHTTPService: MarketDataServicing {
   func fetchCashFlowStatement(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [CashFlowStatementResponse] {
     try await performAuthenticated { client in
       try await client.fetchCashFlowStatement(symbol: symbol, limit: limit, period: period)
+    }
+  }
+
+  func fetchIncomeStatement(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [IncomeStatementResponse] {
+    try await performAuthenticated { client in
+      try await client.fetchIncomeStatement(symbol: symbol, limit: limit, period: period)
     }
   }
 
@@ -282,6 +289,10 @@ struct MarketDataServiceStub: MarketDataServicing {
 
   func fetchCashFlowStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [CashFlowStatementResponse] {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchIncomeStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [IncomeStatementResponse] {
+    []
   }
 
   func fetchRatios(symbol _: String, limit _: Int?, period _: String?) async throws -> [RatiosResponse] {
