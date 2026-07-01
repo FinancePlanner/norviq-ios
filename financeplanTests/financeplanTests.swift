@@ -308,6 +308,40 @@ final class BillingManagerTests: XCTestCase {
     ])
   }
 
+  func testRestoreResultShowsNoActivePurchaseMessageWhenBackendStaysFree() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+
+    sut.recordRestoreResult(
+      foundActiveRevenueCatEntitlement: false,
+      syncedContext: makeBillingContext(entitlementLevel: "free", isPremium: false)
+    )
+
+    XCTAssertEqual(sut.restoreStatusMessage, "No active purchases found for this account.")
+    XCTAssertFalse(sut.restoreStatusIsSuccess)
+    XCTAssertFalse(sut.isPro)
+  }
+
+  func testRestoreResultShowsSuccessWhenBackendReturnsPremium() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+
+    sut.recordRestoreResult(
+      foundActiveRevenueCatEntitlement: false,
+      syncedContext: makeBillingContext(entitlementLevel: "pro_monthly", isPremium: true)
+    )
+
+    XCTAssertEqual(sut.restoreStatusMessage, "Purchases restored. Pro is active.")
+    XCTAssertTrue(sut.restoreStatusIsSuccess)
+    XCTAssertTrue(sut.isPro)
+  }
+
   private func makeBillingContext(
     entitlementLevel: String,
     isPremium: Bool,

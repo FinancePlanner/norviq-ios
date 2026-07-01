@@ -29,7 +29,7 @@ struct SignUpView: View {
 
         // Hero
         VStack(alignment: .center, spacing: 16) {
-          NorviqLogo(size: 78)
+          NorviqFullLogo(width: 220)
             .padding(.top, 24)
 
           Text("Create your\naccount")

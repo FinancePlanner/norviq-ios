@@ -52,6 +52,8 @@ struct PaywallView: View {
           },
           isRestoring: billingManager.isRestoring,
           errorMessage: billingManager.errorMessage,
+          restoreStatusMessage: billingManager.restoreStatusMessage,
+          restoreStatusIsSuccess: billingManager.restoreStatusIsSuccess,
           disclosureText: billingManager.subscriptionDisclosureText
         )
       }
