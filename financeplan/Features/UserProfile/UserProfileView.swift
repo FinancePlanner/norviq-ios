@@ -165,7 +165,7 @@ public struct UserProfileView: View {
             Section(LocalizedStringKey("Subscription")) {
                 if billingManager.isPro {
                     Button {
-                        billingManager.manageSubscription()
+                        Task { await billingManager.manageSubscription() }
                     } label: {
                         Label(
                             LocalizedStringKey("Manage Subscription"),

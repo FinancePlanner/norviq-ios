@@ -139,6 +139,25 @@ struct GetCashFlowStatementEndpoint: Endpoint {
   }
 }
 
+struct GetIncomeStatementEndpoint: Endpoint {
+  typealias Response = [IncomeStatementResponse]
+
+  let symbol: String
+  let limit: Int?
+  let period: String?
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/income-statement/\(symbol.uppercased())" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [:]
+    if let limit { params["limit"] = limit }
+    if let period { params["period"] = period }
+    return params
+  }
+}
+
 struct GetRatiosEndpoint: Endpoint {
   typealias Response = [RatiosResponse]
 

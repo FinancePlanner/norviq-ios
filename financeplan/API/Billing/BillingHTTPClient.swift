@@ -72,4 +72,8 @@ struct BillingHTTPClient: Sendable {
   func restorePurchases() async throws -> BillingContextResponse {
     try await client.call(RestoreBillingEndpoint(), errorType: Error.self)
   }
+
+  func createManagementURL() async throws -> BillingManagementURLResponse {
+    try await client.call(CreateBillingManagementURLEndpoint(), errorType: Error.self)
+  }
 }
