@@ -15,6 +15,8 @@ struct PaywallCTAFooter: View {
   var isRestoring: Bool = false
 
   var errorMessage: String?
+  var restoreStatusMessage: String?
+  var restoreStatusIsSuccess = false
   var privacyURL: URL? = Constants.Norviq.privacyPolicyUrl
   var termsURL: URL? = Constants.Norviq.termsOfUseUrl
   var disclosureText: String?
@@ -45,6 +47,7 @@ struct PaywallCTAFooter: View {
         disclosureLabel
         skipButton
         errorLabel
+        restoreStatusLabel
 
         HStack(spacing: 16) {
           restoreButton
@@ -131,6 +134,24 @@ struct PaywallCTAFooter: View {
         .font(.caption)
         .foregroundStyle(AppTheme.Colors.danger)
         .multilineTextAlignment(.center)
+    }
+  }
+
+  @ViewBuilder
+  private var restoreStatusLabel: some View {
+    if let restoreStatusMessage, !restoreStatusMessage.isEmpty {
+      Label(
+        restoreStatusMessage,
+        systemImage: restoreStatusIsSuccess ? "checkmark.circle.fill" : "info.circle"
+      )
+      .font(.caption)
+      .foregroundStyle(
+        restoreStatusIsSuccess
+          ? AppTheme.Colors.success
+          : AppTheme.Colors.tint(for: colorScheme)
+      )
+      .multilineTextAlignment(.center)
+      .fixedSize(horizontal: false, vertical: true)
     }
   }
 

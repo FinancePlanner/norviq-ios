@@ -24,23 +24,9 @@ struct AboutNorviqView: View {
             // Brand Header
             Section {
                 VStack(spacing: 16) {
-                    Image(systemName: "chart.line.uptrend.xyaxis.circle.fill")
-                        .font(.largeTitle.bold())
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [
-                                    AppTheme.Colors.tint(for: scheme),
-                                    AppTheme.Colors.tint(for: scheme).opacity(0.6)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                    NorviqFullLogo(width: 190)
 
                     VStack(spacing: 4) {
-                        Text("Norviq")
-                            .typography(.hero, weight: .bold)
-
                         Text("A focused investing workspace for portfolios, watchlists, targets, and market context.")
                             .typography(.caption)
                             .foregroundStyle(.secondary)
