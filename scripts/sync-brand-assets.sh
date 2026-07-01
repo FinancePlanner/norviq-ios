@@ -2,12 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-LOCAL_SRC="$ROOT/scripts/brand-source"
-LEGACY_SRC="$ROOT/../../StockPlanAssets"
-SRC="$LOCAL_SRC"
-if [[ ! -d "$SRC" && -d "$LEGACY_SRC" ]]; then
-  SRC="$LEGACY_SRC"
-fi
+SRC="$ROOT/../../StockPlanAssets"
 ASSETS="$ROOT/financeplan/Assets.xcassets"
 APPICON="$ASSETS/AppIcon.appiconset"
 ICON_SET="$ASSETS/NorviqIcon.imageset"
