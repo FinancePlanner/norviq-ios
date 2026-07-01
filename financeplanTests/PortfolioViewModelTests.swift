@@ -443,6 +443,10 @@ extension MarketDataServicing {
     throw QuoteMarketDataMockError.notConfigured
   }
 
+  func fetchIncomeStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [IncomeStatementResponse] {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
   func fetchRatios(symbol _: String, limit _: Int?, period _: String?) async throws -> [RatiosResponse] {
     throw QuoteMarketDataMockError.notConfigured
   }

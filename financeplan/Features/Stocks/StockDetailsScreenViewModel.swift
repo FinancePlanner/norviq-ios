@@ -55,6 +55,7 @@ final class StockDetailsViewModel: ObservableObject {
     @Published private(set) var analystConsensusMessage: String?
     @Published private(set) var basicFinancials: StockBasicFinancials?
     @Published private(set) var stockEarnings: [EarningsEvent] = []
+    @Published private(set) var earningsIncomeStatements: [IncomeStatementResponse] = []
     @Published private(set) var stockEarningsMessage: String?
     @Published private(set) var isEarningsLoading = false
     @Published private(set) var selectedEarningsTranscript: EarningsTranscript?
@@ -325,6 +326,7 @@ final class StockDetailsViewModel: ObservableObject {
             self.basicFinancials = await basicFinancialsTask
             self.portfolioSummary = await portfolioSummaryTask
             self.stockEarnings = []
+            self.earningsIncomeStatements = []
             self.stockEarningsMessage = nil
             self.isEarningsLoading = false
             self.selectedEarningsTranscript = nil
@@ -351,6 +353,7 @@ final class StockDetailsViewModel: ObservableObject {
             analystConsensusMessage = nil
             basicFinancials = nil
             stockEarnings = []
+            earningsIncomeStatements = []
             stockEarningsMessage = nil
             isEarningsLoading = false
             selectedEarningsTranscript = nil
@@ -412,7 +415,10 @@ final class StockDetailsViewModel: ObservableObject {
             guard !loadedTabs.contains(.earnings), !loadingTabs.contains(.earnings) else { return }
             loadingTabs.insert(.earnings)
             isEarningsLoading = true
-            let result = await loadStockEarnings(symbol: symbol)
+            async let earningsResult = loadStockEarnings(symbol: symbol)
+            async let incomeStatementsResult = loadIncomeStatements(symbol: symbol)
+            let result = await earningsResult
+            earningsIncomeStatements = await incomeStatementsResult
             stockEarnings = result.events
             stockEarningsMessage = result.message
             isEarningsLoading = false
@@ -578,6 +584,7 @@ final class StockDetailsViewModel: ObservableObject {
         analystConsensusMessage = nil
         basicFinancials = nil
         stockEarnings = []
+        earningsIncomeStatements = []
         stockEarningsMessage = nil
         isEarningsLoading = false
         selectedEarningsTranscript = nil
@@ -719,6 +726,14 @@ final class StockDetailsViewModel: ObservableObject {
             return (events, nil)
         } catch {
             return ([], error.localizedDescription)
+        }
+    }
+
+    private func loadIncomeStatements(symbol: String) async -> [IncomeStatementResponse] {
+        do {
+            return try await marketDataService.fetchIncomeStatement(symbol: symbol, limit: 4, period: "quarter")
+        } catch {
+            return []
         }
     }
 

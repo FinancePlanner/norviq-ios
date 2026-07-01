@@ -260,6 +260,7 @@ final class StockDetailsViewModelTests: XCTestCase {
     var fetchAnalysisMetricsResult: Result<StockAnalysisMetrics, Error> = .failure(MockError.notConfigured)
     var fetchBalanceSheetStatementResult: Result<[BalanceSheetStatementResponse], Error> = .success([])
     var fetchCashFlowStatementResult: Result<[CashFlowStatementResponse], Error> = .success([])
+    var fetchIncomeStatementResult: Result<[IncomeStatementResponse], Error> = .success([])
     var fetchRatiosResult: Result<[RatiosResponse], Error> = .success([])
     var fetchRatiosTTMResult: Result<[RatiosTTMResponse], Error> = .success([])
     var fetchFinancialGrowthResult: Result<[FinancialGrowthResponse], Error> = .success([])
@@ -323,6 +324,10 @@ final class StockDetailsViewModelTests: XCTestCase {
 
     func fetchCashFlowStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [CashFlowStatementResponse] {
       try fetchCashFlowStatementResult.get()
+    }
+
+    func fetchIncomeStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [IncomeStatementResponse] {
+      try fetchIncomeStatementResult.get()
     }
 
     func fetchRatios(symbol _: String, limit _: Int?, period _: String?) async throws -> [RatiosResponse] {

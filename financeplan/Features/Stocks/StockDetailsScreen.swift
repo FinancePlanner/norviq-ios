@@ -234,6 +234,7 @@ struct StockDetailScreen: View {
                         StockEarningsTab(
                             symbol: viewModel.details?.symbol ?? initialSymbol,
                             earnings: viewModel.stockEarnings,
+                            incomeStatements: viewModel.earningsIncomeStatements,
                             isLoading: viewModel.isEarningsLoading,
                             errorMessage: viewModel.stockEarningsMessage,
                             selectedTranscript: viewModel.selectedEarningsTranscript,
