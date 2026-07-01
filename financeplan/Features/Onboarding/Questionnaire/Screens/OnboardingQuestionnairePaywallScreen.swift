@@ -68,7 +68,7 @@ struct OnboardingQuestionnairePaywallScreen: View {
   // MARK: - Logo
 
   private var logoBlock: some View {
-    NorviqLogo(size: 56)
+    NorviqFullLogo(width: 190)
   }
 
   // MARK: - Headline

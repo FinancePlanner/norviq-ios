@@ -43,7 +43,7 @@ struct VaultForgotPasswordView: View {
 
         ScrollView {
           VStack(spacing: 32) {
-            NorviqLogo(size: 80)
+            NorviqFullLogo(width: 220)
               .padding(.top, 40)
 
             VStack(spacing: 12) {

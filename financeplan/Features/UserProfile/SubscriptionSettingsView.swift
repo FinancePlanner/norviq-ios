@@ -65,11 +65,19 @@ struct SubscriptionSettingsView: View {
                 Button {
                     Task { await billingManager.restorePurchases() }
                 } label: {
-                    Label("Restore Purchases", systemImage: "arrow.clockwise")
-                        .frame(maxWidth: .infinity)
+                    HStack(spacing: 8) {
+                        if billingManager.isRestoring {
+                            ProgressView()
+                        }
+                        Label("Restore Purchases", systemImage: "arrow.clockwise")
+                    }
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
                 .disabled(billingManager.isRestoring || billingManager.isPurchasing)
+
+                restoreStatusMessage
+                billingErrorMessage
             }
 
             Spacer()
@@ -89,6 +97,41 @@ struct SubscriptionSettingsView: View {
         .disabled(billingManager.isPurchasing || billingManager.isRestoring)
         .sheet(isPresented: $showPaywall) {
             PaywallView(billingManager: billingManager)
+        }
+    }
+
+    @ViewBuilder
+    private var restoreStatusMessage: some View {
+        if let message = billingManager.restoreStatusMessage, !message.isEmpty {
+            Label(
+                message,
+                systemImage: billingManager.restoreStatusIsSuccess ? "checkmark.circle.fill" : "info.circle")
+                .font(.caption)
+                .foregroundStyle(
+                    billingManager.restoreStatusIsSuccess
+                        ? AppTheme.Colors.success
+                        : AppTheme.Colors.tint(for: scheme))
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                .accessibilityIdentifier("subscription.restoreStatus")
+        }
+    }
+
+    @ViewBuilder
+    private var billingErrorMessage: some View {
+        if let message = billingManager.errorMessage, !message.isEmpty {
+            Label(message, systemImage: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundStyle(AppTheme.Colors.danger)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                .accessibilityIdentifier("subscription.error")
         }
     }
 

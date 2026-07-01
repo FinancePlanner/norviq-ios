@@ -36,6 +36,8 @@ final class BillingManager {
   var isPurchasing = false
   var isRestoring = false
   var errorMessage: String?
+  var restoreStatusMessage: String?
+  var restoreStatusIsSuccess = false
 
   private let environmentManager: AppEnvironmentManager
   private let authSessionManager: AuthSessionManaging
@@ -75,7 +77,7 @@ final class BillingManager {
     if ProcessInfo.processInfo.arguments.contains("-ui_test_pro_user") {
       return true
     }
-    return context.map { $0.isPremium || $0.entitlementLevel == "pro" || $0.entitlementLevel.hasPrefix("pro_") }
+    return context.map(Self.isPremiumContext)
       ?? UserDefaults.standard.bool(forKey: Keys.isPro)
   }
 
@@ -264,6 +266,7 @@ final class BillingManager {
 
     isPurchasing = true
     errorMessage = nil
+    clearRestoreStatus()
     defer { isPurchasing = false }
 
     do {
@@ -288,6 +291,7 @@ final class BillingManager {
   func restorePurchases() async {
     guard uiTestBillingTier == nil else {
       applyUITestBillingContextIfNeeded()
+      recordRestoreResult(foundActiveRevenueCatEntitlement: isPro, syncedContext: context)
       return
     }
     configureForCurrentUser()
@@ -295,17 +299,25 @@ final class BillingManager {
 
     isRestoring = true
     errorMessage = nil
+    clearRestoreStatus()
     defer { isRestoring = false }
 
     do {
       let customerInfo = try await Purchases.shared.restorePurchases()
-      if customerInfo.entitlements[Constants.entitlementID]?.isActive == true {
+      let foundActiveEntitlement = customerInfo.entitlements[Constants.entitlementID]?.isActive == true
+      if foundActiveEntitlement {
         applyOptimisticPro(from: customerInfo)
       }
-      await syncBackendEntitlement()
-      PostHogSDK.shared.capture("subscription_restored")
+      let syncedContext = await syncBackendEntitlement()
+      recordRestoreResult(foundActiveRevenueCatEntitlement: foundActiveEntitlement, syncedContext: syncedContext)
+      if restoreStatusIsSuccess {
+        PostHogSDK.shared.capture("subscription_restored")
+      } else {
+        PostHogSDK.shared.capture("subscription_restore_no_active_purchase")
+      }
     } catch {
       errorMessage = error.localizedDescription
+      clearRestoreStatus()
     }
   }
 
@@ -322,6 +334,7 @@ final class BillingManager {
     }
 
     errorMessage = nil
+    clearRestoreStatus()
     do {
       let response = try await billingClient(forceRefresh: false).createManagementURL()
       subscriptionURLOpener(response.managementURL)
@@ -343,6 +356,7 @@ final class BillingManager {
     selectedProductID = Constants.annualProductID
     hasUserSelectedProduct = false
     configuredUserID = nil
+    clearRestoreStatus()
     UserDefaults.standard.removeObject(forKey: Keys.entitlementLevel)
     UserDefaults.standard.removeObject(forKey: Keys.isPro)
     UserDefaults.standard.removeObject(forKey: Keys.generatedAt)
@@ -355,43 +369,47 @@ final class BillingManager {
     await syncBackendEntitlement()
   }
 
-  private func restoreBackendEntitlement(forceRefresh: Bool = false) async throws {
+  private func restoreBackendEntitlement(forceRefresh: Bool = false) async throws -> BillingContextResponse {
     let context = try await billingClient(forceRefresh: forceRefresh).restorePurchases()
     apply(context)
+    return context
   }
 
-  private func syncBackendEntitlement(maxAttempts: Int = 3) async {
+  @discardableResult
+  private func syncBackendEntitlement(maxAttempts: Int = 3) async -> BillingContextResponse? {
     let userID = await sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !userID.isEmpty else { return }
+    guard !userID.isEmpty else { return nil }
 
     var delayNanoseconds: UInt64 = 500_000_000
 
     for attempt in 1...maxAttempts {
       do {
-        try await restoreBackendEntitlement()
+        let context = try await restoreBackendEntitlement()
         clearPendingBackendSync()
-        return
+        return context
       } catch let error as BillingHTTPClient.Error where error.isUnauthorized {
         do {
-          try await restoreBackendEntitlement(forceRefresh: true)
+          let context = try await restoreBackendEntitlement(forceRefresh: true)
           clearPendingBackendSync()
-          return
+          return context
         } catch {
           if attempt == maxAttempts {
             markPendingBackendSync()
-            return
+            return nil
           }
         }
       } catch {
         if attempt == maxAttempts {
           markPendingBackendSync()
-          return
+          return nil
         }
       }
 
       try? await Task.sleep(nanoseconds: delayNanoseconds)
       delayNanoseconds *= 2
     }
+
+    return nil
   }
 
   private func performRevenueCatLogin(userID: String) async {
@@ -434,6 +452,26 @@ final class BillingManager {
 
   private func clearPendingBackendSync() {
     UserDefaults.standard.removeObject(forKey: Keys.pendingBackendSync)
+  }
+
+  func recordRestoreResult(
+    foundActiveRevenueCatEntitlement: Bool,
+    syncedContext: BillingContextResponse?
+  ) {
+    if let syncedContext {
+      apply(syncedContext)
+    }
+
+    let restoredPremium = foundActiveRevenueCatEntitlement || syncedContext.map(Self.isPremiumContext) == true
+    restoreStatusIsSuccess = restoredPremium
+    restoreStatusMessage = restoredPremium
+      ? "Purchases restored. Pro is active."
+      : "No active purchases found for this account."
+  }
+
+  private func clearRestoreStatus() {
+    restoreStatusMessage = nil
+    restoreStatusIsSuccess = false
   }
 
   private static let defaultSubscriptionDisclosure =
@@ -515,11 +553,12 @@ final class BillingManager {
   private func apply(_ context: BillingContextResponse) {
     self.context = context
     UserDefaults.standard.set(context.entitlementLevel, forKey: Keys.entitlementLevel)
-    UserDefaults.standard.set(
-      context.isPremium || context.entitlementLevel == "pro" || context.entitlementLevel.hasPrefix("pro_"),
-      forKey: Keys.isPro
-    )
+    UserDefaults.standard.set(Self.isPremiumContext(context), forKey: Keys.isPro)
     UserDefaults.standard.set(context.generatedAt, forKey: Keys.generatedAt)
+  }
+
+  private static func isPremiumContext(_ context: BillingContextResponse) -> Bool {
+    context.isPremium || context.entitlementLevel == "pro" || context.entitlementLevel.hasPrefix("pro_")
   }
 
   private var selectedPlanDisplayName: String {
