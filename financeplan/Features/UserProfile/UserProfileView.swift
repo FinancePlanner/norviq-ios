@@ -226,6 +226,18 @@ public struct UserProfileView: View {
                         .typography(.caption)
                         .foregroundStyle(AppTheme.Colors.danger)
                 }
+
+                if let message = billingManager.restoreStatusMessage, !message.isEmpty {
+                    Label(
+                        message,
+                        systemImage: billingManager.restoreStatusIsSuccess ? "checkmark.circle.fill" : "info.circle")
+                        .typography(.caption)
+                        .foregroundStyle(
+                            billingManager.restoreStatusIsSuccess
+                                ? AppTheme.Colors.success
+                                : AppTheme.Colors.tint(for: scheme))
+                        .accessibilityIdentifier("settings.subscription.restoreStatus")
+                }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 

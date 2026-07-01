@@ -18,6 +18,9 @@ struct OnboardingMainMenu: View {
   var body: some View {
     VStack(spacing: 32) {
       VStack(spacing: 12) {
+        NorviqFullLogo(width: 190)
+          .padding(.bottom, 4)
+
         Text("Welcome to Norviq")
           .typography(.hero, weight: .bold)
 

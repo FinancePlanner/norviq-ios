@@ -19,7 +19,7 @@ struct SplashScreen: View {
       VStack(spacing: 0) {
         Spacer()
 
-        // Owl mascot with glow effect
+        // Brand lockup with glow effect
         ZStack {
           // Outer glow ring
           Circle()
@@ -55,31 +55,11 @@ struct SplashScreen: View {
             .scaleEffect(pulseAnimation ? 0.95 : 1.05)
             .opacity(pulseAnimation ? 0.4 : 0.2)
 
-          // Owl image
-          Image("FoxMascotTransparent")
-            .resizable()
-            .scaledToFit()
-            .frame(width: 160, height: 160)
+          NorviqFullLogo(width: 250)
             .scaleEffect(isAnimating ? 1.0 : 0.8)
             .opacity(isAnimating ? 1.0 : 0.0)
         }
-        .padding(.bottom, 80)
-
-        // App name
-        Text("Norviq")
-          .font(.system(size: 48, weight: .bold, design: .rounded))
-          .foregroundStyle(
-            LinearGradient(
-              colors: [
-                AppTheme.Colors.tint(for: colorScheme),
-                AppTheme.Colors.secondaryTint(for: colorScheme)
-              ],
-              startPoint: .leading,
-              endPoint: .trailing
-            )
-          )
-          .opacity(isAnimating ? 1.0 : 0.0)
-          .offset(y: isAnimating ? 0 : 20)
+        .padding(.bottom, 48)
 
         // Tagline
         Text("Your wealth, wisely managed")
