@@ -10,6 +10,7 @@ import UIKit
 @Observable
 final class BillingManager {
   typealias BillingClientFactory = @MainActor @Sendable (URL, String?) -> BillingHTTPClient
+  typealias SubscriptionURLOpener = @MainActor @Sendable (URL) -> Void
 
   private enum Keys {
     static let entitlementLevel = "billing.entitlement_level"
@@ -40,6 +41,7 @@ final class BillingManager {
   private let authSessionManager: AuthSessionManaging
   private let sessionStore: AuthSessionStoring
   private let billingClientFactory: BillingClientFactory
+  private let subscriptionURLOpener: SubscriptionURLOpener
   private var configuredUserID: String?
   private var didConfigureRevenueCat = false
   private var hasUserSelectedProduct = false
@@ -54,12 +56,16 @@ final class BillingManager {
         baseURL: baseURL,
         authTokenProvider: { token }
       )
+    },
+    subscriptionURLOpener: @escaping SubscriptionURLOpener = { url in
+      UIApplication.shared.open(url)
     }
   ) {
     self.environmentManager = environmentManager
     self.authSessionManager = authSessionManager
     self.sessionStore = sessionStore
     self.billingClientFactory = billingClientFactory
+    self.subscriptionURLOpener = subscriptionURLOpener
     self.uiTestBillingTier = Self.normalizedUITestBillingTier()
     loadCachedEntitlement()
     applyUITestBillingContextIfNeeded()
@@ -303,9 +309,32 @@ final class BillingManager {
     }
   }
 
-  func manageSubscription() {
-    guard let url = URL(string: "https://apps.apple.com/account/subscriptions") else { return }
-    UIApplication.shared.open(url)
+  func manageSubscription() async {
+    guard uiTestBillingTier == nil else {
+      openAppleSubscriptionManagement()
+      return
+    }
+
+    let userID = await sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !userID.isEmpty else {
+      openAppleSubscriptionManagement()
+      return
+    }
+
+    errorMessage = nil
+    do {
+      let response = try await billingClient(forceRefresh: false).createManagementURL()
+      subscriptionURLOpener(response.managementURL)
+    } catch let error as BillingHTTPClient.Error where error.isUnauthorized {
+      do {
+        let response = try await billingClient(forceRefresh: true).createManagementURL()
+        subscriptionURLOpener(response.managementURL)
+      } catch {
+        errorMessage = "Could not open subscription management. Please try again."
+      }
+    } catch {
+      errorMessage = "Could not open subscription management. Please try again."
+    }
   }
 
   func clearCache() {
@@ -476,6 +505,11 @@ final class BillingManager {
       ? try await authSessionManager.refreshAccessToken()
       : try await authSessionManager.validAccessToken()
     return billingClientFactory(environmentManager.current.apiBaseUrl, token)
+  }
+
+  private func openAppleSubscriptionManagement() {
+    guard let url = URL(string: "https://apps.apple.com/account/subscriptions") else { return }
+    subscriptionURLOpener(url)
   }
 
   private func apply(_ context: BillingContextResponse) {

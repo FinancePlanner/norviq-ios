@@ -8,6 +8,7 @@
 import XCTest
 @testable import financeplan
 import StockPlanShared
+import Foundation
 
 final class FinanceplanTests: XCTestCase {
 
@@ -231,6 +232,82 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertFalse(sut.isPro)
   }
 
+  func testManageSubscriptionUsesBackendManagementURLForAuthenticatedUser() async throws {
+    let session = BillingSessionMock()
+    let recorder = SubscriptionURLRecorder()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+
+    session.handler = { request in
+      XCTAssertEqual(request.httpMethod, "POST")
+      XCTAssertEqual(request.url?.path, "/v1/billing/management-url")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+
+      let data = """
+      {
+        "managementUrl": "https://billing.revenuecat.com/session/abc?token=123",
+        "provider": "rc_billing",
+        "source": "revenuecat_customer_portal"
+      }
+      """.data(using: .utf8) ?? Data()
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (data, response)
+    }
+
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore,
+      billingClientFactory: { baseURL, token in
+        BillingHTTPClient(
+          baseURL: baseURL,
+          session: session,
+          authTokenProvider: { token }
+        )
+      },
+      subscriptionURLOpener: { recorder.open($0) }
+    )
+
+    await sut.manageSubscription()
+
+    XCTAssertEqual(recorder.openedURLs.map(\.absoluteString), [
+      "https://billing.revenuecat.com/session/abc?token=123",
+    ])
+    XCTAssertNil(sut.errorMessage)
+  }
+
+  func testManageSubscriptionFallsBackToAppleWhenNoBackendUser() async {
+    let session = BillingSessionMock()
+    let recorder = SubscriptionURLRecorder()
+    await sessionStore.setCurrentUserID("")
+
+    session.handler = { request in
+      XCTFail("Expected no backend call, got \(request.url?.absoluteString ?? "<nil>")")
+      return (Data(), URLResponse())
+    }
+
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore,
+      billingClientFactory: { baseURL, token in
+        BillingHTTPClient(
+          baseURL: baseURL,
+          session: session,
+          authTokenProvider: { token }
+        )
+      },
+      subscriptionURLOpener: { recorder.open($0) }
+    )
+
+    await sut.manageSubscription()
+
+    XCTAssertEqual(recorder.openedURLs.map(\.absoluteString), [
+      "https://apps.apple.com/account/subscriptions",
+    ])
+  }
+
   private func makeBillingContext(
     entitlementLevel: String,
     isPremium: Bool,
@@ -253,6 +330,26 @@ final class BillingManagerTests: XCTestCase {
 }
 
 // Minimal mocks for testing
+private final class BillingSessionMock: HTTPClientSession, @unchecked Sendable {
+  var handler: ((URLRequest) throws -> (Data, URLResponse))?
+
+  func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+    guard let handler else {
+      fatalError("BillingSessionMock.handler must be configured before use")
+    }
+    return try handler(request)
+  }
+}
+
+@MainActor
+private final class SubscriptionURLRecorder: @unchecked Sendable {
+  private(set) var openedURLs: [URL] = []
+
+  func open(_ url: URL) {
+    openedURLs.append(url)
+  }
+}
+
 private final class MockAuthSessionManager: AuthSessionManaging, @unchecked Sendable {
   var validAccessTokenResult: Result<String?, Error> = .success(nil)
   var refreshAccessTokenResult: Result<String?, Error> = .success(nil)

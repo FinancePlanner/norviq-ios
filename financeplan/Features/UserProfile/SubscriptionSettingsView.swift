@@ -1,10 +1,8 @@
 import Factory
 import SwiftUI
-import RevenueCat
 
 struct SubscriptionSettingsView: View {
     @Environment(\.colorScheme) private var scheme
-    @Environment(\.openURL) private var openURL
     @InjectedObservable(\Container.billingManager) private var billingManager
     @State private var showPaywall = false
 
@@ -47,7 +45,7 @@ struct SubscriptionSettingsView: View {
             VStack(spacing: 12) {
                 if billingManager.isPro {
                     Button {
-                        openManageSubscriptions()
+                        Task { await billingManager.manageSubscription() }
                     } label: {
                         Label("Manage Subscription", systemImage: "ellipsis.circle")
                             .frame(maxWidth: .infinity)
@@ -100,18 +98,6 @@ struct SubscriptionSettingsView: View {
         case Constants.monthlyProductID: "Monthly Plan"
         case Constants.weeklyProductID: "Weekly Plan"
         default: "Pro"
-        }
-    }
-
-    private func openManageSubscriptions() {
-        let urlString: String
-        if scheme == .dark {
-            urlString = "https://apps.apple.com/account/subscriptions"
-        } else {
-            urlString = "https://apps.apple.com/account/subscriptions"
-        }
-        if let url = URL(string: urlString) {
-            openURL(url)
         }
     }
 

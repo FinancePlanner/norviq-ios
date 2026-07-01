@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/amplitude/AmplitudeSessionReplay-iOS.git",
       "state" : {
-        "revision" : "99e5b086455103015301757daf68e89d9387741b",
-        "version" : "0.11.2"
+        "revision" : "bbb4f6db53214935aebcdecccdad165eaee2f5d6",
+        "version" : "0.12.0"
       }
     },
     {
@@ -133,7 +133,7 @@
       "location" : "https://github.com/FinancePlanner/FinanceShared.git",
       "state" : {
         "branch" : "main",
-        "revision" : "321d42798789e78c7c94b0240aac9b950e3a373c"
+        "revision" : "271a67a9b3961efe5cfe66ce89f33bc33934c94c"
       }
     },
     {
@@ -186,8 +186,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/PostHog/posthog-ios",
       "state" : {
-        "revision" : "aff7692fb8d1b04a4b7f72e150c6dce12dfe9f83",
-        "version" : "3.62.4"
+        "revision" : "db0e57ef7dca9bf5174bbfd0dbcb7f4395fbc100",
+        "version" : "3.62.5"
       }
     },
     {
