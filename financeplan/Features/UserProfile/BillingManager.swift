@@ -10,6 +10,7 @@ import UIKit
 @Observable
 final class BillingManager {
   typealias BillingClientFactory = @MainActor @Sendable (URL, String?) -> BillingHTTPClient
+  typealias RevenueCatAPIKeyProvider = @MainActor @Sendable () -> String?
   typealias SubscriptionURLOpener = @MainActor @Sendable (URL) -> Void
 
   private enum Keys {
@@ -43,6 +44,7 @@ final class BillingManager {
   private let authSessionManager: AuthSessionManaging
   private let sessionStore: AuthSessionStoring
   private let billingClientFactory: BillingClientFactory
+  private let revenueCatAPIKeyProvider: RevenueCatAPIKeyProvider
   private let subscriptionURLOpener: SubscriptionURLOpener
   private var configuredUserID: String?
   private var didConfigureRevenueCat = false
@@ -59,6 +61,9 @@ final class BillingManager {
         authTokenProvider: { token }
       )
     },
+    revenueCatAPIKeyProvider: @escaping RevenueCatAPIKeyProvider = {
+      Bundle.main.object(forInfoDictionaryKey: "RevenueCatAPIKey") as? String
+    },
     subscriptionURLOpener: @escaping SubscriptionURLOpener = { url in
       UIApplication.shared.open(url)
     }
@@ -67,6 +72,7 @@ final class BillingManager {
     self.authSessionManager = authSessionManager
     self.sessionStore = sessionStore
     self.billingClientFactory = billingClientFactory
+    self.revenueCatAPIKeyProvider = revenueCatAPIKeyProvider
     self.subscriptionURLOpener = subscriptionURLOpener
     self.uiTestBillingTier = Self.normalizedUITestBillingTier()
     loadCachedEntitlement()
@@ -150,8 +156,8 @@ final class BillingManager {
   func configureAnonymousIfNeeded() {
     guard uiTestBillingTier == nil else { return }
     guard !didConfigureRevenueCat else { return }
-    guard let apiKey = Bundle.main.object(forInfoDictionaryKey: "RevenueCatAPIKey") as? String,
-          !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+    guard let apiKey = revenueCatAPIKeyProvider()?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !apiKey.isEmpty,
           !apiKey.contains("$(") else {
       errorMessage = "RevenueCat API key is not configured."
       return
@@ -174,8 +180,8 @@ final class BillingManager {
     guard configuredUserID != userID else { return }
     configuredUserID = userID
 
-    guard let apiKey = Bundle.main.object(forInfoDictionaryKey: "RevenueCatAPIKey") as? String,
-          !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+    guard let apiKey = revenueCatAPIKeyProvider()?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !apiKey.isEmpty,
           !apiKey.contains("$(") else {
       errorMessage = "RevenueCat API key is not configured."
       return
@@ -294,8 +300,13 @@ final class BillingManager {
       recordRestoreResult(foundActiveRevenueCatEntitlement: isPro, syncedContext: context)
       return
     }
-    configureForCurrentUser()
-    guard didConfigureRevenueCat else { return }
+    await configureRevenueCatForCurrentSession()
+    guard didConfigureRevenueCat else {
+      if errorMessage == nil {
+        errorMessage = "Subscriptions are currently unavailable. Please try again later."
+      }
+      return
+    }
 
     isRestoring = true
     errorMessage = nil
@@ -318,6 +329,15 @@ final class BillingManager {
     } catch {
       errorMessage = error.localizedDescription
       clearRestoreStatus()
+    }
+  }
+
+  private func configureRevenueCatForCurrentSession() async {
+    let userID = await sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+    if userID.isEmpty {
+      configureAnonymousIfNeeded()
+    } else {
+      configureRevenueCat(userID: userID)
     }
   }
 

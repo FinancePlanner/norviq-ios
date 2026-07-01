@@ -308,6 +308,21 @@ final class BillingManagerTests: XCTestCase {
     ])
   }
 
+  func testRestorePurchasesConfiguresAnonymousWhenNoBackendUser() async {
+    await sessionStore.setCurrentUserID("")
+
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore,
+      revenueCatAPIKeyProvider: { nil }
+    )
+
+    await sut.restorePurchases()
+
+    XCTAssertEqual(sut.errorMessage, "RevenueCat API key is not configured.")
+  }
+
   func testRestoreResultShowsNoActivePurchaseMessageWhenBackendStaysFree() {
     let sut = BillingManager(
       environmentManager: environmentManager,
