@@ -129,7 +129,7 @@ Status snapshot for the current iOS app scope.
 
 - [ ] Set `REVENUECAT_IOS_API_KEY` in Xcode build settings
 - [ ] Set `REVENUECAT_API_KEY` + `REVENUECAT_WEBHOOK_SECRET` on backend production
-- [ ] Configure RevenueCat dashboard: link App Store app, create `pro` entitlement, link products
+- [ ] Configure RevenueCat dashboard: link App Store app, create `pro_access` entitlement, link products
 - [ ] APNS configured on backend (`APNS_TEAM_ID`, `APNS_KEY_ID`, `APNS_PRIVATE_KEY_P8`, `APNS_TOPIC`)
 - [x] MFA working end-to-end (Resend configured with verified domain)
 - [ ] Production server stable with passing health checks

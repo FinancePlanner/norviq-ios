@@ -23,11 +23,13 @@ final class BillingManager {
   }
 
   private enum Constants {
-    static let entitlementID = "pro"
+    static let entitlementID = "pro_access"
     static let annualProductID = "pro_annual"
     static let monthlyProductID = "pro_monthly"
     static let weeklyProductID = "pro_weekly"
   }
+
+  static var revenueCatEntitlementID: String { Constants.entitlementID }
 
   var context: BillingContextResponse?
   var packages: [Package] = []

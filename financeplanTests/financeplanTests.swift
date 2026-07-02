@@ -49,6 +49,10 @@ final class BillingManagerTests: XCTestCase {
     sessionStore = MockAuthSessionStore()
   }
 
+  func testRevenueCatEntitlementIDMatchesDashboard() {
+    XCTAssertEqual(BillingManager.revenueCatEntitlementID, "pro_access")
+  }
+
   func testIsProReturnsTrueWhenPremium() {
     let sut = BillingManager(
       environmentManager: environmentManager,
