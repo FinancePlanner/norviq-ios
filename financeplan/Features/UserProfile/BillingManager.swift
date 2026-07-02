@@ -3,6 +3,7 @@ import Foundation
 import Observation
 import PostHog
 import RevenueCat
+import StoreKit
 import StockPlanShared
 import UIKit
 
@@ -12,6 +13,7 @@ final class BillingManager {
   typealias BillingClientFactory = @MainActor @Sendable (URL, String?) -> BillingHTTPClient
   typealias RevenueCatAPIKeyProvider = @MainActor @Sendable () -> String?
   typealias SubscriptionURLOpener = @MainActor @Sendable (URL) -> Void
+  typealias AppleSubscriptionManagementOpener = @MainActor @Sendable () async throws -> Bool
 
   private enum Keys {
     static let entitlementLevel = "billing.entitlement_level"
@@ -46,6 +48,7 @@ final class BillingManager {
   private let billingClientFactory: BillingClientFactory
   private let revenueCatAPIKeyProvider: RevenueCatAPIKeyProvider
   private let subscriptionURLOpener: SubscriptionURLOpener
+  private let appleSubscriptionManagementOpener: AppleSubscriptionManagementOpener
   private var configuredUserID: String?
   private var didConfigureRevenueCat = false
   private var hasUserSelectedProduct = false
@@ -66,6 +69,21 @@ final class BillingManager {
     },
     subscriptionURLOpener: @escaping SubscriptionURLOpener = { url in
       UIApplication.shared.open(url)
+    },
+    appleSubscriptionManagementOpener: @escaping AppleSubscriptionManagementOpener = {
+      if let scene = UIApplication.shared.connectedScenes
+        .compactMap({ $0 as? UIWindowScene })
+        .first(where: { $0.activationState == .foregroundActive })
+        ?? UIApplication.shared.connectedScenes
+          .compactMap({ $0 as? UIWindowScene })
+          .first(where: { $0.activationState == .foregroundInactive }) {
+        try await AppStore.showManageSubscriptions(in: scene)
+        return true
+      }
+      guard let url = URL(string: "https://apps.apple.com/account/subscriptions") else {
+        return false
+      }
+      return await UIApplication.shared.open(url)
     }
   ) {
     self.environmentManager = environmentManager
@@ -74,6 +92,7 @@ final class BillingManager {
     self.billingClientFactory = billingClientFactory
     self.revenueCatAPIKeyProvider = revenueCatAPIKeyProvider
     self.subscriptionURLOpener = subscriptionURLOpener
+    self.appleSubscriptionManagementOpener = appleSubscriptionManagementOpener
     self.uiTestBillingTier = Self.normalizedUITestBillingTier()
     loadCachedEntitlement()
     applyUITestBillingContextIfNeeded()
@@ -385,13 +404,13 @@ final class BillingManager {
 
   func manageSubscription() async {
     guard uiTestBillingTier == nil else {
-      openAppleSubscriptionManagement()
+      await openAppleSubscriptionManagementOrSetError()
       return
     }
 
     let userID = await sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !userID.isEmpty else {
-      openAppleSubscriptionManagement()
+      await openAppleSubscriptionManagementOrSetError()
       return
     }
 
@@ -405,10 +424,10 @@ final class BillingManager {
         let response = try await billingClient(forceRefresh: true).createManagementURL()
         subscriptionURLOpener(response.managementURL)
       } catch {
-        errorMessage = "Could not open subscription management. Please try again."
+        await openAppleSubscriptionManagementOrSetError()
       }
     } catch {
-      errorMessage = "Could not open subscription management. Please try again."
+      await openAppleSubscriptionManagementOrSetError()
     }
   }
 
@@ -547,7 +566,7 @@ final class BillingManager {
     return Self.trialDays(from: intro.subscriptionPeriod)
   }
 
-  private static func trialDays(from period: SubscriptionPeriod) -> Int {
+  private static func trialDays(from period: RevenueCat.SubscriptionPeriod) -> Int {
     switch period.unit {
     case .day:
       return period.value
@@ -607,9 +626,13 @@ final class BillingManager {
     return billingClientFactory(environmentManager.current.apiBaseUrl, token)
   }
 
-  private func openAppleSubscriptionManagement() {
-    guard let url = URL(string: "https://apps.apple.com/account/subscriptions") else { return }
-    subscriptionURLOpener(url)
+  private func openAppleSubscriptionManagementOrSetError() async {
+    do {
+      if try await appleSubscriptionManagementOpener() {
+        return
+      }
+    } catch {}
+    errorMessage = "Could not open subscription management. Please try again."
   }
 
   private func apply(_ context: BillingContextResponse) {
