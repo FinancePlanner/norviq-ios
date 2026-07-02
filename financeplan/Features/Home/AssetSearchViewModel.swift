@@ -10,7 +10,7 @@ final class AssetSearchViewModel {
   var errorMessage: String?
 
   private let service: AssetSearchServicing
-  private nonisolated(unsafe) var searchTask: Task<Void, Never>?
+  private nonisolated var searchTask: Task<Void, Never>?
 
   init(service: AssetSearchServicing) {
     self.service = service
