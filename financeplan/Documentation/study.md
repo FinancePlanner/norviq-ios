@@ -77,7 +77,7 @@ Verified:
 Still needs external config:
 - Backend env: REVENUECAT_API_KEY
 - iOS build setting: REVENUECAT_IOS_API_KEY
-- RevenueCat: entitlement pro, products pro_monthly, pro_annual
+- RevenueCat: entitlement pro_access, products pro_monthly, pro_annual
 - App Store Connect: subscription group + 14-day annual trial.
 
 ## Purpose

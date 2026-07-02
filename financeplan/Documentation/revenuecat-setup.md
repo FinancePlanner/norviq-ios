@@ -23,7 +23,7 @@ See also: [`Documentation/revenuecat-apple-review-plan.md`](../../../../Document
 | `pro_monthly` | Monthly |
 | `pro_annual` | Annual (7-day free trial intro offer) |
 
-RevenueCat entitlement ID: **`pro`**
+RevenueCat entitlement ID: **`pro_access`**
 
 ---
 
@@ -39,7 +39,7 @@ RevenueCat entitlement ID: **`pro`**
 
 ## RevenueCat dashboard checklist
 
-- [ ] Entitlement `pro` with all three products attached
+- [ ] Entitlement `pro_access` with all three products attached
 - [ ] Default offering includes weekly, monthly, and annual packages
 - [ ] App Store Connect API / shared secret linked
 - [ ] Webhook → `POST https://<prod-api>/webhooks/revenuecat` with Authorization = `REVENUECAT_WEBHOOK_SECRET`
@@ -70,5 +70,5 @@ Earnings calendar list is available as a teaser to free users; transcripts and "
 - [ ] `RevenueCatAPIKey` in `Info.plist` is the production `appl_...` key
 - [ ] `pro_weekly`, `pro_monthly`, `pro_annual` exist in App Store Connect
 - [ ] `Products.storekit` attached to Run scheme for local QA
-- [ ] `pro` entitlement in RevenueCat with all three products
+- [ ] `pro_access` entitlement in RevenueCat with all three products
 - [ ] Production webhook + API key deployed and verified
