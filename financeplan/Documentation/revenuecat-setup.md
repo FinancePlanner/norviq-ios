@@ -21,7 +21,7 @@ See also: [`Documentation/revenuecat-apple-review-plan.md`](../../../../Document
 |------------|------|
 | `pro_weekly` | Weekly |
 | `pro_monthly` | Monthly |
-| `pro_annual` | Annual (7-day free trial intro offer) |
+| `pro_yearly` | Yearly (7-day free trial intro offer) |
 
 RevenueCat entitlement ID: **`pro_access`**
 
@@ -30,7 +30,7 @@ RevenueCat entitlement ID: **`pro_access`**
 ## App Store Connect checklist
 
 - [ ] Create all three auto-renewable subscriptions in **one subscription group**
-- [ ] Set 7-day free trial introductory offer on **`pro_annual` only**
+- [ ] Set 7-day free trial introductory offer on **`pro_yearly` only**
 - [ ] Add localizations and subscription review screenshot
 - [ ] Paid Apps Agreement, banking, and tax complete
 - [ ] Privacy Policy URL and Support URL on the app record
@@ -68,7 +68,7 @@ Earnings calendar list is available as a teaser to free users; transcripts and "
 ## iOS checklist
 
 - [ ] `RevenueCatAPIKey` in `Info.plist` is the production `appl_...` key
-- [ ] `pro_weekly`, `pro_monthly`, `pro_annual` exist in App Store Connect
+- [ ] `pro_weekly`, `pro_monthly`, `pro_yearly` exist in App Store Connect
 - [ ] `Products.storekit` attached to Run scheme for local QA
 - [ ] `pro_access` entitlement in RevenueCat with all three products
 - [ ] Production webhook + API key deployed and verified

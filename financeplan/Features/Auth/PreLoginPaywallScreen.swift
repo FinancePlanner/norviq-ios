@@ -132,8 +132,8 @@ struct PreLoginPaywallScreen: View {
           price: package.localizedPriceString,
           priceUnit: "/yr",
           badge: "Save 2 months",
-          isSelected: billingManager.selectedProductID == "pro_annual",
-          onSelect: { billingManager.select(productID: "pro_annual") }
+          isSelected: billingManager.selectedProductID == BillingManager.annualProductID,
+          onSelect: { billingManager.select(productID: BillingManager.annualProductID) }
         )
       }
 

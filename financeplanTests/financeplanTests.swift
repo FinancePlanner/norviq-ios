@@ -201,7 +201,7 @@ final class BillingManagerTests: XCTestCase {
       sessionStore: sessionStore
     )
 
-    sut.select(productID: "pro_annual")
+    sut.select(productID: "pro_yearly")
     XCTAssertFalse(sut.selectedPlanHasFreeTrial)
   }
 
@@ -211,7 +211,7 @@ final class BillingManagerTests: XCTestCase {
       authSessionManager: authSessionManager,
       sessionStore: sessionStore
     )
-    sut.select(productID: "pro_annual")
+    sut.select(productID: "pro_yearly")
     sut.context = makeBillingContext(
       entitlementLevel: "pro",
       isPremium: true,
@@ -235,7 +235,46 @@ final class BillingManagerTests: XCTestCase {
       subscription: makeSubscription(plan: "pro_weekly")
     )
 
-    XCTAssertEqual(sut.availableUpgradePlanOptions.map(\.productId), ["pro_monthly", "pro_annual"])
+    XCTAssertEqual(sut.availableUpgradePlanOptions.map(\.productId), ["pro_monthly", "pro_yearly"])
+  }
+
+  func testServerAnnualPlanOptionIsNormalizedToYearlyProductID() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+    sut.context = makeBillingContext(
+      entitlementLevel: "pro",
+      isPremium: true,
+      plan: "pro_weekly",
+      subscription: makeSubscription(plan: "pro_weekly"),
+      planOptions: [
+        BillingPlanOptionDTO(
+          productId: "pro_monthly",
+          plan: "pro_monthly",
+          displayName: "Monthly",
+          interval: "monthly",
+          rank: 2,
+          badge: "Better value",
+          isCurrent: false,
+          changeKind: "upgrade"
+        ),
+        BillingPlanOptionDTO(
+          productId: "pro_annual",
+          plan: "pro_annual",
+          displayName: "Annual",
+          interval: "annual",
+          rank: 3,
+          badge: "Best value",
+          isCurrent: false,
+          changeKind: "upgrade"
+        ),
+      ]
+    )
+
+    XCTAssertEqual(sut.availableUpgradePlanOptions.map(\.productId), ["pro_monthly", "pro_yearly"])
+    XCTAssertEqual(sut.availableUpgradePlanOptions.map(\.plan), ["pro_monthly", "pro_yearly"])
   }
 
   func testAnnualUserHasNoHigherUpgradeOptions() {
@@ -247,8 +286,8 @@ final class BillingManagerTests: XCTestCase {
     sut.context = makeBillingContext(
       entitlementLevel: "pro",
       isPremium: true,
-      plan: "pro_annual",
-      subscription: makeSubscription(plan: "pro_annual")
+      plan: "pro_yearly",
+      subscription: makeSubscription(plan: "pro_yearly")
     )
 
     XCTAssertTrue(sut.availableUpgradePlanOptions.isEmpty)
@@ -264,7 +303,7 @@ final class BillingManagerTests: XCTestCase {
 
     sut.clearCache()
 
-    XCTAssertEqual(sut.selectedProductID, "pro_annual")
+    XCTAssertEqual(sut.selectedProductID, "pro_yearly")
     XCTAssertNil(sut.selectedPackage)
   }
 

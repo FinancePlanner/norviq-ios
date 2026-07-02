@@ -6,7 +6,7 @@ Main work:
 - Added a pre-login privacy screen (`PrivacyWelcomeScreen`) highlighting data ownership and security.
 - Added a pre-login paywall screen (`PreLoginPaywallScreen`) allowing anonymous users to start a 7-day free trial on the Pro annual plan.
 - Configured Amplitude unified SDK for iOS analytics, initialized via DI (`AnalyticsService`), currently tracking "App Launched".
-- Set up local StoreKit testing (`Products.storekit`) in Xcode with `pro_weekly`, `pro_monthly`, and `pro_annual` to bypass App Store Connect for local simulator testing.
+- Set up local StoreKit testing (`Products.storekit`) in Xcode with `pro_weekly`, `pro_monthly`, and `pro_yearly` to bypass App Store Connect for local simulator testing.
 - Updated `BillingManager` to support anonymous RevenueCat initialization and purchases, aliasing to the user ID upon login/signup.
 
 Key files:
@@ -77,7 +77,7 @@ Verified:
 Still needs external config:
 - Backend env: REVENUECAT_API_KEY
 - iOS build setting: REVENUECAT_IOS_API_KEY
-- RevenueCat: entitlement pro_access, products pro_monthly, pro_annual
+- RevenueCat: entitlement pro_access, products pro_monthly, pro_yearly
 - App Store Connect: subscription group + 14-day annual trial.
 
 ## Purpose

@@ -16,7 +16,7 @@ Status snapshot for the current iOS app scope.
 - [x] Pre-login privacy screen (`PrivacyWelcomeScreen`) highlighting data ownership
 - [x] Pre-login paywall screen (`PreLoginPaywallScreen`) allowing anonymous users to start trials
 - [x] RevenueCat SDK integrated via `BillingManager` with full anonymous-to-authenticated aliasing
-- [x] Local StoreKit testing configuration (`Products.storekit`) setup in Xcode with `pro_weekly`, `pro_monthly`, `pro_annual`
+- [x] Local StoreKit testing configuration (`Products.storekit`) setup in Xcode with `pro_weekly`, `pro_monthly`, `pro_yearly`
 - [x] Amplitude unified SDK integrated via DI (`AnalyticsService`) for tracking events
 - [x] Backend RevenueCat webhook setup and event processing
 
@@ -118,8 +118,8 @@ Status snapshot for the current iOS app scope.
 ### App Store Connect Setup (One-Time)
 
 - [ ] Create app record (bundle ID `com.norviqa.app`, name, SKU)
-- [ ] Create subscription group + 3 products: `pro_annual`, `pro_monthly`, `pro_weekly`
-- [ ] Configure 14-day free trial on `pro_annual`
+- [ ] Create subscription group + 3 products: `pro_yearly`, `pro_monthly`, `pro_weekly`
+- [ ] Configure 14-day free trial on `pro_yearly`
 - [ ] Add app screenshots (6.7" iPhone minimum, required)
 - [ ] Write app description, keywords, support URL, privacy policy URL
 - [ ] Set age rating
