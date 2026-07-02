@@ -126,14 +126,14 @@
           },
           "localizations" : [
             {
-              "description" : "Annual Pro Subscription",
-              "displayName" : "Pro Annual",
+              "description" : "Yearly Pro Subscription",
+              "displayName" : "Pro Yearly",
               "locale" : "en_US"
             }
           ],
-          "productID" : "pro_annual",
+          "productID" : "pro_yearly",
           "recurringSubscriptionPeriod" : "P1Y",
-          "referenceName" : "Pro Annual",
+          "referenceName" : "Pro Yearly",
           "subscriptionGroupID" : "2B8C13DB",
           "type" : "RecurringSubscription"
         }

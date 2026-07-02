@@ -24,12 +24,14 @@ final class BillingManager {
 
   private enum Constants {
     static let entitlementID = "pro_access"
-    static let annualProductID = "pro_annual"
+    static let annualProductID = "pro_yearly"
+    static let legacyAnnualProductID = "pro_annual"
     static let monthlyProductID = "pro_monthly"
     static let weeklyProductID = "pro_weekly"
   }
 
   static var revenueCatEntitlementID: String { Constants.entitlementID }
+  static var annualProductID: String { Constants.annualProductID }
 
   var context: BillingContextResponse?
   var packages: [Package] = []
@@ -151,7 +153,9 @@ final class BillingManager {
     let options = context?.planOptions.isEmpty == false
       ? context?.planOptions ?? []
       : Self.fallbackPlanOptions(currentPlan: currentPlanID, isPremium: isPro)
-    return options.filter { $0.changeKind == "upgrade" }
+    return options
+      .map(Self.normalizedPlanOption)
+      .filter { $0.changeKind == "upgrade" }
   }
 
   /// Returns whether a named feature is available for the current user.
@@ -654,7 +658,7 @@ final class BillingManager {
 
   static func planDisplayName(for productID: String) -> String {
     switch productID {
-    case Constants.annualProductID:
+    case Constants.annualProductID, Constants.legacyAnnualProductID:
       return "Annual Plan"
     case Constants.monthlyProductID:
       return "Monthly Plan"
@@ -711,13 +715,35 @@ final class BillingManager {
     )
   }
 
+  private static func normalizedPlanOption(_ option: BillingPlanOptionDTO) -> BillingPlanOptionDTO {
+    let productID = normalizedProductID(option.productId)
+    let plan = normalizedProductID(option.plan)
+    guard productID != option.productId || plan != option.plan else {
+      return option
+    }
+    return BillingPlanOptionDTO(
+      productId: productID,
+      plan: plan,
+      displayName: option.displayName,
+      interval: option.interval,
+      rank: option.rank,
+      badge: option.badge,
+      isCurrent: option.isCurrent,
+      changeKind: option.changeKind
+    )
+  }
+
+  private static func normalizedProductID(_ productID: String) -> String {
+    productID == Constants.legacyAnnualProductID ? Constants.annualProductID : productID
+  }
+
   private static func planRank(_ plan: String) -> Int {
     switch plan {
     case Constants.weeklyProductID:
       return 1
     case Constants.monthlyProductID:
       return 2
-    case Constants.annualProductID:
+    case Constants.annualProductID, Constants.legacyAnnualProductID:
       return 3
     default:
       return 0
