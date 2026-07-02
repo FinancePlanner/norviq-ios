@@ -201,6 +201,55 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertFalse(sut.selectedPlanHasFreeTrial)
   }
 
+  func testCurrentPlanDisplayNameUsesBackendSubscriptionPlan() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+    sut.select(productID: "pro_annual")
+    sut.context = makeBillingContext(
+      entitlementLevel: "pro",
+      isPremium: true,
+      plan: "pro_monthly",
+      subscription: makeSubscription(plan: "pro_monthly")
+    )
+
+    XCTAssertEqual(sut.currentPlanDisplayName, "Monthly Plan")
+  }
+
+  func testWeeklyUserCanUpgradeToMonthlyAndAnnualOnly() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+    sut.context = makeBillingContext(
+      entitlementLevel: "pro",
+      isPremium: true,
+      plan: "pro_weekly",
+      subscription: makeSubscription(plan: "pro_weekly")
+    )
+
+    XCTAssertEqual(sut.availableUpgradePlanOptions.map(\.productId), ["pro_monthly", "pro_annual"])
+  }
+
+  func testAnnualUserHasNoHigherUpgradeOptions() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+    sut.context = makeBillingContext(
+      entitlementLevel: "pro",
+      isPremium: true,
+      plan: "pro_annual",
+      subscription: makeSubscription(plan: "pro_annual")
+    )
+
+    XCTAssertTrue(sut.availableUpgradePlanOptions.isEmpty)
+  }
+
   func testClearCacheResetsSelectionToAnnual() {
     let sut = BillingManager(
       environmentManager: environmentManager,
@@ -360,20 +409,45 @@ final class BillingManagerTests: XCTestCase {
   private func makeBillingContext(
     entitlementLevel: String,
     isPremium: Bool,
+    plan: String? = nil,
+    subscription: BillingSubscriptionDTO? = nil,
+    planOptions: [BillingPlanOptionDTO] = [],
     features: [BillingFeatureDTO] = [],
     trialDaysRemaining: Int? = nil,
     isTrialActive: Bool = false
   ) -> BillingContextResponse {
     BillingContextResponse(
-      plan: entitlementLevel,
+      plan: plan ?? entitlementLevel,
       entitlementLevel: entitlementLevel,
       isPremium: isPremium,
-      subscription: nil,
+      subscription: subscription,
+      planOptions: planOptions,
       features: features,
       usage: [],
       trialDaysRemaining: trialDaysRemaining,
       isTrialActive: isTrialActive,
       generatedAt: Date()
+    )
+  }
+
+  private func makeSubscription(plan: String) -> BillingSubscriptionDTO {
+    BillingSubscriptionDTO(
+      provider: "revenuecat",
+      productId: plan,
+      plan: plan,
+      status: "active",
+      periodStartedAt: Date(),
+      periodEndsAt: Date().addingTimeInterval(2_592_000),
+      trialEndsAt: nil,
+      gracePeriodEndsAt: nil,
+      cancelledAt: nil,
+      isTrial: false,
+      isInGracePeriod: false,
+      hasBillingIssue: false,
+      isCancelledButActive: false,
+      renewsOrExpiresAt: Date().addingTimeInterval(2_592_000),
+      willRenew: true,
+      accessEndsAt: Date().addingTimeInterval(2_592_000)
     )
   }
 }

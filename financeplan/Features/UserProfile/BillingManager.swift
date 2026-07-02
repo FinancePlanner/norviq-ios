@@ -91,6 +91,48 @@ final class BillingManager {
     context?.trialDaysRemaining
   }
 
+  var currentPlanID: String {
+    context?.subscription?.plan ?? context?.plan ?? selectedProductID
+  }
+
+  var currentPlanDisplayName: String {
+    Self.planDisplayName(for: currentPlanID)
+  }
+
+  var subscriptionRenewsOrExpiresAt: Date? {
+    context?.subscription?.renewsOrExpiresAt
+  }
+
+  var subscriptionAccessEndsAt: Date? {
+    context?.subscription?.accessEndsAt ?? context?.subscription?.periodEndsAt
+  }
+
+  var isCancelledButActive: Bool {
+    context?.subscription?.isCancelledButActive ?? false
+  }
+
+  var hasBillingIssue: Bool {
+    context?.subscription?.hasBillingIssue ?? false
+  }
+
+  var pendingPlanDisplayName: String? {
+    guard let pendingPlan = context?.subscription?.pendingPlan, !pendingPlan.isEmpty else {
+      return nil
+    }
+    return Self.planDisplayName(for: pendingPlan)
+  }
+
+  var pendingPlanEffectiveAt: Date? {
+    context?.subscription?.pendingPlanEffectiveAt
+  }
+
+  var availableUpgradePlanOptions: [BillingPlanOptionDTO] {
+    let options = context?.planOptions.isEmpty == false
+      ? context?.planOptions ?? []
+      : Self.fallbackPlanOptions(currentPlan: currentPlanID, isPremium: isPro)
+    return options.filter { $0.changeKind == "upgrade" }
+  }
+
   /// Returns whether a named feature is available for the current user.
   ///
   /// Checks the `features` list from the server-provided `BillingContextResponse` first,
@@ -582,15 +624,78 @@ final class BillingManager {
   }
 
   private var selectedPlanDisplayName: String {
-    switch selectedProductID {
+    Self.planDisplayName(for: selectedProductID).replacingOccurrences(of: " Plan", with: "")
+  }
+
+  static func planDisplayName(for productID: String) -> String {
+    switch productID {
     case Constants.annualProductID:
-      return "Annual"
+      return "Annual Plan"
     case Constants.monthlyProductID:
-      return "Monthly"
+      return "Monthly Plan"
     case Constants.weeklyProductID:
-      return "Weekly"
+      return "Weekly Plan"
+    case "free":
+      return "Free Plan"
+    case "pro":
+      return "Pro"
     default:
-      return "Selected"
+      return "Pro"
+    }
+  }
+
+  private static func fallbackPlanOptions(currentPlan: String, isPremium: Bool) -> [BillingPlanOptionDTO] {
+    let currentRank = planRank(currentPlan)
+    return [
+      makePlanOption(productID: Constants.weeklyProductID, displayName: "Weekly", interval: "weekly", rank: 1, currentRank: currentRank, isPremium: isPremium, badge: nil),
+      makePlanOption(productID: Constants.monthlyProductID, displayName: "Monthly", interval: "monthly", rank: 2, currentRank: currentRank, isPremium: isPremium, badge: "Better value"),
+      makePlanOption(productID: Constants.annualProductID, displayName: "Annual", interval: "annual", rank: 3, currentRank: currentRank, isPremium: isPremium, badge: "Best value"),
+    ]
+  }
+
+  private static func makePlanOption(
+    productID: String,
+    displayName: String,
+    interval: String,
+    rank: Int,
+    currentRank: Int,
+    isPremium: Bool,
+    badge: String?
+  ) -> BillingPlanOptionDTO {
+    let changeKind: String
+    if rank == currentRank {
+      changeKind = "current"
+    } else if !isPremium {
+      changeKind = "subscribe"
+    } else if currentRank > 0, rank > currentRank {
+      changeKind = "upgrade"
+    } else if currentRank > 0, rank < currentRank {
+      changeKind = "downgrade"
+    } else {
+      changeKind = "subscribe"
+    }
+    return BillingPlanOptionDTO(
+      productId: productID,
+      plan: productID,
+      displayName: displayName,
+      interval: interval,
+      rank: rank,
+      badge: badge,
+      isCurrent: changeKind == "current",
+      changeKind: changeKind
+    )
+  }
+
+  private static func planRank(_ plan: String) -> Int {
+    switch plan {
+    case Constants.weeklyProductID:
+      return 1
+    case Constants.monthlyProductID:
+      return 2
+    case Constants.annualProductID:
+      return 3
+    default:
+      return 0
     }
   }
 
