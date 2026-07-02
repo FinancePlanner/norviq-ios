@@ -1,14 +1,14 @@
 import Foundation
 import StockPlanShared
 
-protocol StatisticsServicing {
+protocol StatisticsServicing: Sendable {
   func fetchStatisticsOverview() async throws -> StatisticsDTO
   func fetchSectorAllocation() async throws -> [SectorAllocationDTO]
   func fetchSectorGains() async throws -> SectorGainsResponse
   func fetchStockAllocation() async throws -> [StockAllocationDTO]
 }
 
-final class StatisticsHTTPService: StatisticsServicing {
+final class StatisticsHTTPService: StatisticsServicing, Sendable {
   private let environmentManager: AppEnvironmentManager
   private let authSessionManager: AuthSessionManaging
 

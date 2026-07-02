@@ -75,19 +75,21 @@ final class BillingManager {
       UIApplication.shared.open(url)
     },
     appleSubscriptionManagementOpener: @escaping AppleSubscriptionManagementOpener = {
+      let fallbackURL = URL(string: "https://apps.apple.com/account/subscriptions")!
       if let scene = UIApplication.shared.connectedScenes
         .compactMap({ $0 as? UIWindowScene })
         .first(where: { $0.activationState == .foregroundActive })
         ?? UIApplication.shared.connectedScenes
           .compactMap({ $0 as? UIWindowScene })
           .first(where: { $0.activationState == .foregroundInactive }) {
-        try await AppStore.showManageSubscriptions(in: scene)
-        return true
+        do {
+          try await AppStore.showManageSubscriptions(in: scene)
+          return true
+        } catch {
+          return await UIApplication.shared.open(fallbackURL)
+        }
       }
-      guard let url = URL(string: "https://apps.apple.com/account/subscriptions") else {
-        return false
-      }
-      return await UIApplication.shared.open(url)
+      return await UIApplication.shared.open(fallbackURL)
     }
   ) {
     self.environmentManager = environmentManager
