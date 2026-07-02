@@ -13,6 +13,7 @@ import MediaPlayer
 import Observation
 import OSLog
 
+@MainActor
 @Observable
 final class EarningsAudioPlayer: NSObject {
     enum Playback: Equatable {
