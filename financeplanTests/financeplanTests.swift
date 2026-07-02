@@ -329,6 +329,7 @@ final class BillingManagerTests: XCTestCase {
   func testManageSubscriptionFallsBackToAppleWhenNoBackendUser() async {
     let session = BillingSessionMock()
     let recorder = SubscriptionURLRecorder()
+    let appleRecorder = AppleSubscriptionManagementRecorder()
     await sessionStore.setCurrentUserID("")
 
     session.handler = { request in
@@ -347,14 +348,59 @@ final class BillingManagerTests: XCTestCase {
           authTokenProvider: { token }
         )
       },
-      subscriptionURLOpener: { recorder.open($0) }
+      subscriptionURLOpener: { recorder.open($0) },
+      appleSubscriptionManagementOpener: { try await appleRecorder.open() }
     )
 
     await sut.manageSubscription()
 
-    XCTAssertEqual(recorder.openedURLs.map(\.absoluteString), [
-      "https://apps.apple.com/account/subscriptions",
-    ])
+    XCTAssertTrue(recorder.openedURLs.isEmpty)
+    XCTAssertEqual(appleRecorder.openCount, 1)
+    XCTAssertNil(sut.errorMessage)
+  }
+
+  func testManageSubscriptionFallsBackToAppleWhenBackendHasNoManageableSubscription() async throws {
+    let session = BillingSessionMock()
+    let recorder = SubscriptionURLRecorder()
+    let appleRecorder = AppleSubscriptionManagementRecorder()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+
+    session.handler = { request in
+      XCTAssertEqual(request.httpMethod, "POST")
+      XCTAssertEqual(request.url?.path, "/v1/billing/management-url")
+
+      let data = """
+      {
+        "error": true,
+        "reason": "No manageable subscription was found."
+      }
+      """.data(using: .utf8) ?? Data()
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 404, httpVersion: nil, headerFields: nil)
+      )
+      return (data, response)
+    }
+
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore,
+      billingClientFactory: { baseURL, token in
+        BillingHTTPClient(
+          baseURL: baseURL,
+          session: session,
+          authTokenProvider: { token }
+        )
+      },
+      subscriptionURLOpener: { recorder.open($0) },
+      appleSubscriptionManagementOpener: { try await appleRecorder.open() }
+    )
+
+    await sut.manageSubscription()
+
+    XCTAssertTrue(recorder.openedURLs.isEmpty)
+    XCTAssertEqual(appleRecorder.openCount, 1)
+    XCTAssertNil(sut.errorMessage)
   }
 
   func testRestorePurchasesConfiguresAnonymousWhenNoBackendUser() async {
@@ -470,6 +516,17 @@ private final class SubscriptionURLRecorder: @unchecked Sendable {
 
   func open(_ url: URL) {
     openedURLs.append(url)
+  }
+}
+
+@MainActor
+private final class AppleSubscriptionManagementRecorder: @unchecked Sendable {
+  private(set) var openCount = 0
+  var result: Result<Bool, Error> = .success(true)
+
+  func open() async throws -> Bool {
+    openCount += 1
+    return try result.get()
   }
 }
 
