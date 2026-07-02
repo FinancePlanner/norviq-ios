@@ -200,10 +200,12 @@ final class LoginViewModelTests: XCTestCase {
     await Task.yield()
 
     viewModel.hideSignup()
+    await Task.yield()
     XCTAssertFalse(viewModel.isSignup)
     XCTAssertFalse(store.loginIsSignup)
 
     viewModel.showSignup()
+    await Task.yield()
     XCTAssertTrue(viewModel.isSignup)
     XCTAssertTrue(store.loginIsSignup)
   }
@@ -453,5 +455,39 @@ final class LoginViewModelTests: XCTestCase {
     XCTAssertEqual(service.lastMFACode, "123456")
     XCTAssertEqual(store.authToken, "token-mfa")
     XCTAssertNil(viewModel.pendingMFAChallenge)
+  }
+
+  func testResendMFA_WhenRequestSucceeds_RefreshesChallengeAndClearsStaleCode() async {
+    let service = AuthServiceMock()
+    let store = AuthSessionStoreMock()
+    let viewModel = LoginViewModel(authService: service, sessionStore: store)
+    let originalChallengeID = UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
+    let refreshedChallengeID = UUID(uuidString: "55555555-5555-5555-5555-555555555555")!
+    let refreshedChallenge = AuthMFAChallengeResponsePayload(
+      challengeId: refreshedChallengeID,
+      channel: .email,
+      maskedDestination: "us***@e***.com",
+      expiresIn: 300,
+      resendAvailableIn: 30
+    )
+    service.resendMFAResult = .success(refreshedChallenge)
+
+    viewModel.pendingMFAChallenge = AuthMFAChallengeResponsePayload(
+      challengeId: originalChallengeID,
+      channel: .email,
+      maskedDestination: "us***@e***.com",
+      expiresIn: 300,
+      resendAvailableIn: 0
+    )
+    viewModel.mfaCode = "123456"
+
+    await viewModel.resendMFA()
+
+    XCTAssertEqual(service.resendMFACalls, 1)
+    XCTAssertEqual(service.lastMFAChallengeId, originalChallengeID)
+    XCTAssertEqual(viewModel.pendingMFAChallenge?.challengeId, refreshedChallengeID)
+    XCTAssertEqual(viewModel.mfaCode, "")
+    XCTAssertEqual(viewModel.mfaInfoMessage, "A new code has been sent.")
+    XCTAssertEqual(viewModel.mfaResendAvailableIn, 30)
   }
 }

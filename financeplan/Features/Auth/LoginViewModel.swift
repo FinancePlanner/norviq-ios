@@ -213,6 +213,7 @@ final class LoginViewModel: ObservableObject {
     do {
       let refreshed = try await authService.resendMFA(challengeId: challenge.challengeId)
       pendingMFAChallenge = refreshed
+      mfaCode = ""
       startMFAResendCountdown(seconds: refreshed.resendAvailableIn)
       mfaInfoMessage = "A new code has been sent."
     } catch {
