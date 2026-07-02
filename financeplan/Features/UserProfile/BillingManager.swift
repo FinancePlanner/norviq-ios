@@ -74,23 +74,7 @@ final class BillingManager {
     subscriptionURLOpener: @escaping SubscriptionURLOpener = { url in
       UIApplication.shared.open(url)
     },
-    appleSubscriptionManagementOpener: @escaping AppleSubscriptionManagementOpener = {
-      let fallbackURL = URL(string: "https://apps.apple.com/account/subscriptions")!
-      if let scene = UIApplication.shared.connectedScenes
-        .compactMap({ $0 as? UIWindowScene })
-        .first(where: { $0.activationState == .foregroundActive })
-        ?? UIApplication.shared.connectedScenes
-          .compactMap({ $0 as? UIWindowScene })
-          .first(where: { $0.activationState == .foregroundInactive }) {
-        do {
-          try await AppStore.showManageSubscriptions(in: scene)
-          return true
-        } catch {
-          return await UIApplication.shared.open(fallbackURL)
-        }
-      }
-      return await UIApplication.shared.open(fallbackURL)
-    }
+    appleSubscriptionManagementOpener: @escaping AppleSubscriptionManagementOpener = BillingManager.defaultAppleSubscriptionManagementOpener
   ) {
     self.environmentManager = environmentManager
     self.authSessionManager = authSessionManager
@@ -561,6 +545,22 @@ final class BillingManager {
   private func clearRestoreStatus() {
     restoreStatusMessage = nil
     restoreStatusIsSuccess = false
+  }
+
+  @MainActor
+  static func defaultAppleSubscriptionManagementOpener() async throws -> Bool {
+    let fallbackURL = URL(string: "https://apps.apple.com/account/subscriptions")!
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    if let scene = scenes.first(where: { $0.activationState == .foregroundActive })
+        ?? scenes.first(where: { $0.activationState == .foregroundInactive }) {
+      do {
+        try await AppStore.showManageSubscriptions(in: scene)
+        return true
+      } catch {
+        return await UIApplication.shared.open(fallbackURL)
+      }
+    }
+    return await UIApplication.shared.open(fallbackURL)
   }
 
   private static let defaultSubscriptionDisclosure =
