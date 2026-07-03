@@ -208,6 +208,8 @@ public struct ContentView: View {
 
       launchStarted = true
       
+      // UI-test session injection must never ship in release builds.
+      #if DEBUG
       let processInfo = ProcessInfo.processInfo
       if processInfo.arguments.contains("-ui_test_reset_session") {
         await sessionStore.clearSession()
@@ -236,6 +238,7 @@ public struct ContentView: View {
       if let importedUserID = processInfo.argumentValue(for: "-ui_test_imported_user_id") {
         await sessionStore.markInitialStockImportCompleted(for: importedUserID)
       }
+      #endif
 
       if splashDelay != .zero {
         try? await Task.sleep(for: splashDelay)
