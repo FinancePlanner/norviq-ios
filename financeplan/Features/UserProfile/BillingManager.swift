@@ -89,9 +89,11 @@ final class BillingManager {
   }
 
   var isPro: Bool {
+    #if DEBUG
     if ProcessInfo.processInfo.arguments.contains("-ui_test_pro_user") {
       return true
     }
+    #endif
     return context.map(Self.isPremiumContext)
       ?? UserDefaults.standard.bool(forKey: Keys.isPro)
   }
@@ -757,6 +759,8 @@ final class BillingManager {
   }
 
   private static func normalizedUITestBillingTier() -> String? {
+    // UI-test billing overrides must never ship in release builds.
+    #if DEBUG
     if ProcessInfo.processInfo.arguments.contains("-ui_test_pro_user") {
       return "pro"
     }
@@ -766,6 +770,9 @@ final class BillingManager {
     let normalized = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     guard ["free", "trial", "pro"].contains(normalized) else { return nil }
     return normalized
+    #else
+    return nil
+    #endif
   }
 
   private func applyUITestBillingContextIfNeeded() {
