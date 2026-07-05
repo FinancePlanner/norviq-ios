@@ -1,0 +1,8 @@
+# Signing certificates/profiles live in a private repo, encrypted with
+# MATCH_PASSWORD. Create the repo once, then run `bundle exec fastlane match appstore`
+# locally to seed it. CI only ever reads (readonly).
+git_url("git@github.com:FinancePlanner/norviq-certificates.git")
+storage_mode("git")
+type("appstore")
+app_identifier(["facorreia.financeplan"])
+team_id("84X9WYBF36")

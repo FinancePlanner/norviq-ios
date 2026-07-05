@@ -78,3 +78,10 @@ raw/
 .SourcePackages/
 SourcePackages/
 *.xcresult/
+# fastlane + local secrets
+Config/Secrets.xcconfig
+fastlane/build/
+fastlane/test_output/
+fastlane/ui_test_output/
+fastlane/report.xml
+fastlane/README.md
