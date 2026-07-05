@@ -72,3 +72,11 @@ fastlane/test_output
 
 # Project specific
 raw/
+
+# fastlane + local secrets
+Config/Secrets.xcconfig
+fastlane/build/
+fastlane/test_output/
+fastlane/ui_test_output/
+fastlane/report.xml
+fastlane/README.md
