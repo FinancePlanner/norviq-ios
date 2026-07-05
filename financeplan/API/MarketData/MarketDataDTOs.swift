@@ -1,7 +1,7 @@
 import Foundation
 import StockPlanShared
 
-// Price-chart DTOs are local compatibility models until the remote FinanceShared
+// Price-chart DTOs are local compatibility models until the remote norviq-shared
 // package publishes these market-chart contracts.
 enum PriceChartRange: String, Codable, Sendable, CaseIterable, Equatable {
     case oneHour = "1H"

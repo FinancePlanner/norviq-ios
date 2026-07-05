@@ -186,7 +186,7 @@ Run the backend locally (see `StockPlanBackend/README.md` and `docker-compose.ym
 
 ## Shared models dependency (StockPlanShared)
 
-DTOs and shared types come from **StockPlanShared** (FinanceShared package), e.g. `StockResponse`, `StockRequest`, watchlist types, bulk import, valuation requests.
+DTOs and shared types come from **StockPlanShared** (norviq-shared package), e.g. `StockResponse`, `StockRequest`, watchlist types, bulk import, valuation requests.
 
 Configure the Swift package in Xcode (`financeplan.xcodeproj`). Version policy (example): `0.1.0` up to next major.
 

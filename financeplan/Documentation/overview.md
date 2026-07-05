@@ -124,7 +124,7 @@ Primary packages currently linked to the app target:
 - Factory
 - Kingfisher
 - SwiftyCrop
-- StockPlanShared (from FinanceShared)
+- StockPlanShared (from norviq-shared)
 - EntityStore
 - BetterCodable
 - Drops
