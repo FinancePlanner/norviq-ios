@@ -24,6 +24,20 @@ struct HomeScreen: View {
   }
 
   var body: some View {
+    VStack(spacing: 0) {
+      if billingManager.shouldShowTrialEndedBanner {
+        TrialEndedBanner(onSubscribe: { isPaywallPresented = true })
+          .padding(.top, 8)
+          .padding(.bottom, 4)
+          .transition(.move(edge: .top).combined(with: .opacity))
+      }
+
+      tabView
+    }
+    .animation(.snappy(duration: 0.28), value: billingManager.shouldShowTrialEndedBanner)
+  }
+
+  private var tabView: some View {
     TabView(selection: $selectedTab) {
       Tab(HomeTab.dashboard.title, systemImage: "house", value: .dashboard) {
         DashboardRoot(

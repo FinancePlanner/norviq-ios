@@ -24,8 +24,8 @@ struct StockDetailTabBar: View {
                                     .foregroundStyle(selectedTab == tab ? .primary : .secondary)
                                 if tab.isProOnly && !isPro {
                                     Image(systemName: "lock.fill")
-                                        .font(.system(size: 9, weight: .semibold))
-                                        .foregroundStyle(.tertiary)
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                             .padding(.horizontal, 14)

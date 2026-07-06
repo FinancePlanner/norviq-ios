@@ -125,6 +125,9 @@ struct DashboardRoot: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 20)
+        // Center the dashboard column on iPad rather than stretching data
+        // edge-to-edge (Guideline 4). Background below still fills the screen.
+        .maxContentWidth(regularSizeClass: ContentWidth.dense)
       }
       .background(MeshGradientBackground())
       .navigationTitle(greetingText)

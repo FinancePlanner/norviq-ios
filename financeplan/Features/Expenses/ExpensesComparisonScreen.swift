@@ -82,6 +82,8 @@ struct ExpensesComparisonScreen: View {
               .padding(.horizontal, 16)
               .padding(.vertical, 20)
               .accessibilityIdentifier("reports.scrollContent")
+              // Center the reports column on iPad instead of stretching edge-to-edge (Guideline 4).
+              .maxContentWidth(regularSizeClass: ContentWidth.dense)
             }
           }
         }

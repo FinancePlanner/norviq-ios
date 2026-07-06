@@ -45,11 +45,11 @@ struct OnboardingSelectableRow: View {
     if isMultiSelect {
       Image(systemName: isSelected ? "checkmark.square.fill" : "square")
         .font(.title3)
-        .foregroundStyle(isSelected ? AppTheme.Colors.tint(for: colorScheme) : .secondary.opacity(0.5))
+        .foregroundStyle(isSelected ? AppTheme.Colors.tint(for: colorScheme) : .secondary)
     } else {
       Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
         .font(.title3)
-        .foregroundStyle(isSelected ? AppTheme.Colors.tint(for: colorScheme) : .secondary.opacity(0.5))
+        .foregroundStyle(isSelected ? AppTheme.Colors.tint(for: colorScheme) : .secondary)
     }
   }
 }

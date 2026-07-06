@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 public struct TypographyStyle {
   public let type: Typography
@@ -68,38 +69,65 @@ public struct TypographyStyle {
     type == .code
   }
 
+  /// A system font at the exact `size` from the ladder above, made to scale with the
+  /// user's Dynamic Type setting via `UIFontMetrics`. At the default text size the
+  /// rendered size is unchanged from the previous fixed fonts, so this only *adds*
+  /// accessibility scaling (Apple Guideline 4 — legible typography) without altering
+  /// the design at the default setting. The clamp at the app root bounds extreme sizes.
   public var font: Font {
-    if isMonospaced {
-      return Font.system(size: size, weight: .regular, design: .monospaced)
-    } else {
-      var font = Font.system(size: size, weight: weight.swiftUIFontWeight, design: .default)
-      if isItalic {
-        font = font.italic()
+    let uiWeight: UIFont.Weight = isMonospaced ? .regular : weight.uiFontWeight
+    let design: UIFontDescriptor.SystemDesign = isMonospaced ? .monospaced : .default
+
+    var descriptor = UIFont.systemFont(ofSize: size, weight: uiWeight).fontDescriptor
+    if let designed = descriptor.withDesign(design) {
+      descriptor = designed
+    }
+    if isItalic {
+      let traits = descriptor.symbolicTraits.union(.traitItalic)
+      if let italicised = descriptor.withSymbolicTraits(traits) {
+        descriptor = italicised
       }
-      return font
+    }
+
+    let baseFont = UIFont(descriptor: descriptor, size: size)
+    let scaled = UIFontMetrics(forTextStyle: relativeTextStyle.uiTextStyle).scaledFont(for: baseFont)
+    return Font(scaled)
+  }
+}
+
+private extension Font.TextStyle {
+  /// Maps the SwiftUI text style used for relative scaling to its UIKit counterpart
+  /// so `UIFontMetrics` can scale the custom point sizes.
+  var uiTextStyle: UIFont.TextStyle {
+    switch self {
+    case .largeTitle: .largeTitle
+    case .title: .title1
+    case .title2: .title2
+    case .title3: .title3
+    case .headline: .headline
+    case .subheadline: .subheadline
+    case .body: .body
+    case .callout: .callout
+    case .footnote: .footnote
+    case .caption: .caption1
+    case .caption2: .caption2
+    @unknown default: .body
     }
   }
 }
 
 private extension TypographyFontWeight {
-  var swiftUIFontWeight: Font.Weight {
+  var uiFontWeight: UIFont.Weight {
     switch self {
-    case .thin:
-      .thin
-    case .light:
-      .light
-    case .regular:
-      .regular
-    case .medium:
-      .medium
-    case .semibold:
-      .semibold
-    case .bold:
-      .bold
-    case .extraBold:
-      .heavy
-    case .black:
-      .black
+    case .thin: .thin
+    case .light: .light
+    case .regular: .regular
+    case .medium: .medium
+    case .semibold: .semibold
+    case .bold: .bold
+    case .extraBold: .heavy
+    case .black: .black
     }
   }
 }
+

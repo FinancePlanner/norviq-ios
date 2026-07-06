@@ -150,7 +150,9 @@ public struct ContentView: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-//    .environment(\.dynamicTypeSize, .xSmall)
+    // Honor the user's Dynamic Type setting (Guideline 4 legibility) while bounding
+    // the largest accessibility sizes so the data-dense layouts stay intact.
+    .dynamicTypeSize(...DynamicTypeSize.accessibility3)
     .task {
       await syncSessionUsername()
     }

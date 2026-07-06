@@ -189,7 +189,7 @@ struct OnboardingAccountCreationScreen: View {
 
       Text("By continuing, you agree to our **Terms** and **Privacy Policy**.")
         .typography(.nano)
-        .foregroundStyle(.secondary.opacity(0.7))
+        .foregroundStyle(.secondary)
         .multilineTextAlignment(.center)
         .padding(.horizontal, 16)
     }
