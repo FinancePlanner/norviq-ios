@@ -25,6 +25,9 @@ struct OnboardingQuestionnaireFlow: View {
         topChrome
         screenContent
           .frame(maxWidth: .infinity, maxHeight: .infinity)
+          // Keep the onboarding column readable on iPad instead of stretching
+          // edge-to-edge (Guideline 4). Chrome/progress bar above stays full-width.
+          .maxContentWidth(regularSizeClass: ContentWidth.marketing)
           .transition(.asymmetric(
             insertion: .opacity.combined(with: .move(edge: .trailing)),
             removal: .opacity.combined(with: .move(edge: .leading))

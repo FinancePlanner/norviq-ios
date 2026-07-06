@@ -121,7 +121,7 @@ struct OnboardingMenuButton: View {
 
         Image(systemName: "chevron.right")
           .font(.subheadline.weight(.bold))
-          .foregroundStyle(.secondary.opacity(0.5))
+          .foregroundStyle(.secondary)
       }
       .padding(.horizontal, 16)
       .padding(.vertical, 14)

@@ -102,6 +102,14 @@ final class BillingManager {
     context?.trialDaysRemaining
   }
 
+  /// True when the user's free trial has ended and they are not currently entitled.
+  /// Drives the trial-ended banner on Home. Stays false for never-trialed free users
+  /// and active subscribers, so the banner only shows to expired-trial users.
+  var shouldShowTrialEndedBanner: Bool {
+    guard !isPro else { return false }
+    return context?.trialExpired ?? false
+  }
+
   var currentPlanID: String {
     context?.subscription?.plan ?? context?.plan ?? selectedProductID
   }
@@ -768,7 +776,7 @@ final class BillingManager {
       return nil
     }
     let normalized = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    guard ["free", "trial", "pro"].contains(normalized) else { return nil }
+    guard ["free", "trial", "trial_expired", "pro"].contains(normalized) else { return nil }
     return normalized
     #else
     return nil
@@ -782,7 +790,8 @@ final class BillingManager {
 
   private static func makeUITestBillingContext(tier: String) -> BillingContextResponse {
     let isPaid = tier == "trial" || tier == "pro"
-    let entitlementLevel = tier == "trial" ? "temporary" : tier
+    // A trial_expired tester is a free user who previously had a trial.
+    let entitlementLevel = tier == "trial" ? "temporary" : (tier == "trial_expired" ? "free" : tier)
     return BillingContextResponse(
       plan: entitlementLevel,
       entitlementLevel: entitlementLevel,
@@ -792,6 +801,7 @@ final class BillingManager {
       usage: makeUITestUsage(hasFreeLimits: !isPaid),
       trialDaysRemaining: tier == "trial" ? 7 : nil,
       isTrialActive: tier == "trial",
+      trialExpired: tier == "trial_expired",
       generatedAt: Date()
     )
   }

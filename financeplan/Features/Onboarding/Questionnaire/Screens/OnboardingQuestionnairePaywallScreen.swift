@@ -208,7 +208,7 @@ struct OnboardingQuestionnairePaywallScreen: View {
       } label: {
         Text("Continue with limited Norviq")
           .font(.caption.weight(.medium))
-          .foregroundStyle(.secondary.opacity(0.8))
+          .foregroundStyle(.secondary)
       }
 
       HStack(spacing: 16) {

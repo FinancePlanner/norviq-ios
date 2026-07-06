@@ -315,6 +315,8 @@ struct ExpensesPlannerScreen: View {
         .padding(.bottom, 40)
       }
       .padding(.vertical, 10)
+      // Center the planner column on iPad instead of stretching edge-to-edge (Guideline 4).
+      .maxContentWidth(regularSizeClass: ContentWidth.dense)
     }
     .refreshable {
       await viewModel.load(force: true)
@@ -992,13 +994,13 @@ private struct MonthlyPlanItemsCard: View {
                       HStack(spacing: 4) {
                         if item.isSubscription {
                           Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 9))
+                            .font(.caption2)
                           Text("Subscription")
                             .font(.caption2)
                             .foregroundStyle(.teal)
                         } else if item.splitMode == .shared {
                           Image(systemName: "person.2.fill")
-                            .font(.system(size: 9))
+                            .font(.caption2)
                           Text("Shared • \(Int(item.userSharePercent))% yours")
                             .font(.caption2)
                         } else {
