@@ -234,7 +234,6 @@ Important files:
 The supported environments are:
 
 - local
-- dev
 - production
 
 Environment selection can come from:
@@ -1592,13 +1591,12 @@ Extensible to swap system fonts or custom families without touching views.
 
 ### Environment Switching
 
-Three runtime environments configurable from Settings (and AuthFooter in dev):
+Two runtime environments are available: local development and production.
 
 ```swift
 enum AppEnvironments {
   static let local       = AppEnvironment(apiBaseUrl: http://localhost:8080, …)
-  static let dev         = AppEnvironment(apiBaseUrl: https://www.dev-norviq.online, …)
-  static let production  = AppEnvironment(apiBaseUrl: https://www.prod-norviq.online, …)
+  static let production  = AppEnvironment(apiBaseUrl: https://api.norviq.org, …)
 }
 ```
 
@@ -1616,7 +1614,7 @@ enum AppEnvironments {
 
 ### Build & CI Notes
 
-- **Scheme**: `Norviqa TestFlight Dev` – test builds; scheme pre-actions currently write unused `SchemeEnvironment.swift`
+- **Scheme**: `financeplan` – local builds, tests, and production/TestFlight archives
 - **SwiftLint**: `.swiftlint.yml` present; run `swiftlint --fix`
 - **PostHog/Sentry**: env vars set in scheme or device
 - **UI test arguments**: `-ui_test_skip_splash`, `-ui_test_reset_session`, `-ui_test_auth_token`, `-ui_test_imported_user_id`, etc.

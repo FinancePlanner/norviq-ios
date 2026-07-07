@@ -19,7 +19,7 @@ Top 5 fix priorities (post–quick wins)
 5. NEW3 — Implement retry logic with exponential backoff in HTTP client base class for transient failures.
 
 ## Architectural mental model
-Single-target iOS SwiftUI app (iOS 26, Swift 6.2+) with feature-based modules under `financeplan/Features/*`. Each feature owns View + ViewModel + Services + DTOs. Dependency injection via Factory library with 15 `Container+*Factories.swift` files modularized across API domain boundaries. Networking uses hand-rolled `HTTPClient` + `Endpoint` pattern across 14 domain-specific clients, each wrapping a shared `URLSession` (injected via protocol). Auth tokens managed by `AuthService`; sessions stored in Keychain. Entry: `NorviqaApp` → `ContentView` → `HomeScreen` tab bar. Environment switching uses `AppEnvironmentManager` with runtime gates (local/dev visible, prod hidden) — correctly NOT using `#if DEBUG`.
+Single-target iOS SwiftUI app (iOS 26, Swift 6.2+) with feature-based modules under `financeplan/Features/*`. Each feature owns View + ViewModel + Services + DTOs. Dependency injection via Factory library with 15 `Container+*Factories.swift` files modularized across API domain boundaries. Networking uses hand-rolled `HTTPClient` + `Endpoint` pattern across 14 domain-specific clients, each wrapping a shared `URLSession` (injected via protocol). Auth tokens managed by `AuthService`; sessions stored in Keychain. Entry: `NorviqaApp` → `ContentView` → `HomeScreen` tab bar. Environment switching uses `AppEnvironmentManager` with runtime gates (local can switch, prod hidden) — correctly NOT using `#if DEBUG`.
 
 ## Findings
 
