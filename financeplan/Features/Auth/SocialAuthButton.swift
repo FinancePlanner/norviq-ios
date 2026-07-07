@@ -25,6 +25,7 @@ struct SocialAuthButton: View {
     }
     .buttonStyle(.plain)
     .accessibilityLabel(provider.title)
+    .accessibilityIdentifier("socialAuth.\(provider.rawValue)")
   }
 
   @ViewBuilder
@@ -48,7 +49,7 @@ struct SocialAuthButton: View {
 
   private var foregroundColor: Color {
     switch provider {
-    case .google: .primary
+    case .google: .black
     case .apple, .x: .white
     }
   }
@@ -63,7 +64,7 @@ struct SocialAuthButton: View {
 
   private var borderColor: Color {
     switch provider {
-    case .google: Color.black.opacity(0.08)
+    case .google: Color.black.opacity(0.12)
     case .apple, .x: Color.white.opacity(0.08)
     }
   }

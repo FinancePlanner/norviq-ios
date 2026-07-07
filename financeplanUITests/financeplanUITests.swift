@@ -36,6 +36,22 @@ final class FinanceplanUITests: XCTestCase {
   }
 
   @MainActor
+  func testUnauthenticatedGoogleAuthButtonExistsInDarkMode() throws {
+    let app = makeUnauthenticatedApp(appearance: "dark")
+    app.launch()
+
+    let loginButton = app.buttons["Already have an account? Log in"]
+    XCTAssertTrue(loginButton.waitForExistence(timeout: 20))
+    loginButton.tap()
+
+    let googleButton = app.buttons["socialAuth.google"]
+    XCTAssertTrue(
+      googleButton.waitForExistence(timeout: 10),
+      "Expected the Google OAuth button to be available on the dark-mode sign-in screen."
+    )
+  }
+
+  @MainActor
   func testSelectingImportMethod_TransitionsToHome() throws {
     let app = makeAuthenticatedFirstLoginApp(userID: "ui-test-\(UUID().uuidString)")
     app.launch()
@@ -344,6 +360,20 @@ final class FinanceplanUITests: XCTestCase {
     }
     if let billingTier {
       launchArguments += ["-ui_test_billing_tier", billingTier]
+    }
+    app.launchArguments += launchArguments
+    return app
+  }
+
+  @MainActor
+  private func makeUnauthenticatedApp(appearance: String? = nil) -> XCUIApplication {
+    let app = XCUIApplication()
+    var launchArguments = [
+      "-ui_test_skip_splash",
+      "-ui_test_reset_session"
+    ]
+    if let appearance {
+      launchArguments += ["-ui_test_app_appearance", appearance]
     }
     app.launchArguments += launchArguments
     return app

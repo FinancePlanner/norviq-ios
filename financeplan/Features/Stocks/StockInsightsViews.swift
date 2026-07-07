@@ -322,7 +322,7 @@ struct HeroMetricPill: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Text(value)
-                .typography(.small, weight: .semibold)
+                .typography(.numericSmall, weight: .semibold)
                 .foregroundStyle(.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
@@ -446,18 +446,15 @@ struct StockMarketSnapshotCard: View {
 
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     Text(snapshot.currentPrice.currency)
-                        .typography(.hero, weight: .bold)
-                        .monospacedDigit()
+                        .typography(.displayNumber)
 
                     Text(StockMetricFormatter.signedCurrencyText(sessionChange))
-                        .typography(.small, weight: .semibold)
-                        .monospacedDigit()
+                        .typography(.numericSmall, weight: .semibold)
                         .foregroundStyle(changeTint)
 
                     Text(StockMetricFormatter.signedPercentText(snapshot.resolvedPercentChange ?? 0))
-                        .typography(.small, weight: .semibold)
+                        .typography(.numericSmall, weight: .semibold)
                         .foregroundStyle(changeTint)
-                        .monospacedDigit()
                 }
 
                 StockSessionRangeBar(snapshot: snapshot, tint: changeTint)

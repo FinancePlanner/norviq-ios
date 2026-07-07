@@ -8,6 +8,12 @@ public enum Typography {
   case title
   case headline
 
+  // Financial data
+  case displayNumber
+  case metricNumber
+  case numeric
+  case numericSmall
+
   // Body content
   case body
   case small
@@ -32,7 +38,7 @@ extension Typography {
     switch self {
     case .button, .display, .heading, .hero, .title:
       .bold
-    case .headline:
+    case .displayNumber, .headline, .metricNumber:
       .semibold
     default:
       .regular

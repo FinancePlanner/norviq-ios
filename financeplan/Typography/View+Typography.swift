@@ -11,6 +11,9 @@ extension View {
       foregroundStyle(.tint)
         .underline()
         .font(style.font)
+    } else if style.usesTabularNumbers {
+      font(style.font)
+        .monospacedDigit()
     } else {
       font(style.font)
     }
