@@ -35,6 +35,10 @@ struct NorviqApp: App {
   }
 
   init() {
+    #if DEBUG
+    Self.applyUITestAppearanceOverride()
+    #endif
+
     TelemetryDeck.initialize(config: .init(appID: "C2B05381-D641-4BE4-B418-5AE02A8DB85F"))
     
     // Initialize Sentry
@@ -89,4 +93,32 @@ struct NorviqApp: App {
     }
     .modelContainer(sharedModelContainer)
   }
+
+  #if DEBUG
+  private static func applyUITestAppearanceOverride() {
+    guard let rawValue = ProcessInfo.processInfo.norviqArgumentValue(for: "-ui_test_app_appearance"),
+          let appearance = AppAppearance(rawValue: rawValue) else {
+      return
+    }
+
+    UserDefaults.standard.set(appearance.rawValue, forKey: AppAppearance.storageKey)
+  }
+  #endif
 }
+
+#if DEBUG
+private extension ProcessInfo {
+  func norviqArgumentValue(for name: String) -> String? {
+    guard let index = arguments.firstIndex(of: name) else {
+      return nil
+    }
+
+    let valueIndex = arguments.index(after: index)
+    guard arguments.indices.contains(valueIndex) else {
+      return nil
+    }
+
+    return arguments[valueIndex]
+  }
+}
+#endif

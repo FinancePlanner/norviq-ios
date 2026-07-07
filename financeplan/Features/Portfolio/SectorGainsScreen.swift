@@ -56,7 +56,7 @@ struct SectorGainsScreen: View {
               .foregroundStyle(.secondary)
 
             Text(signedCurrency(totalUnrealizedPnl))
-              .typography(.hero, weight: .bold)
+              .typography(.displayNumber)
               .foregroundStyle(pnlColor(totalUnrealizedPnl))
               .contentTransition(.numericText())
 
@@ -102,13 +102,11 @@ struct SectorGainsScreen: View {
 
       VStack(alignment: .trailing, spacing: 4) {
         Text(signedCurrency(sector.unrealizedPnl))
-          .typography(.label, weight: .semibold)
+          .typography(.numeric, weight: .semibold)
           .foregroundStyle(pnlColor(sector.unrealizedPnl))
-          .monospacedDigit()
         Text("\(signedPercent(sector.unrealizedPnlPercent)) on cost")
-          .typography(.nano)
+          .typography(.numericSmall)
           .foregroundStyle(.secondary)
-          .monospacedDigit()
       }
     }
   }

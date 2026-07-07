@@ -21,13 +21,14 @@ public struct TypographyStyle {
     switch type {
     case .display: 56
     case .heading: 48
+    case .displayNumber: 40
     case .hero: 32
-    case .title: 24
+    case .metricNumber, .title: 24
     case .headline: 20
-    case .body: 17
+    case .body, .numeric: 17
     case .small: 16
     case .mini: 15
-    case .nano: 13
+    case .nano, .numericSmall: 13
     case .tiny: 13
     case .caption: 12
     case .footnote, .overline: 11
@@ -44,17 +45,19 @@ public struct TypographyStyle {
     switch type {
     case .display, .heading:
       .largeTitle
+    case .displayNumber:
+      .largeTitle
     case .hero:
       .title
-    case .title:
+    case .metricNumber, .title:
       .title2
     case .headline:
       .title3
-    case .body:
+    case .body, .numeric:
       .body
     case .small, .label, .button, .link:
       .callout
-    case .mini, .nano:
+    case .mini, .nano, .numericSmall:
       .subheadline
     case .tiny, .caption:
       .caption
@@ -67,6 +70,15 @@ public struct TypographyStyle {
 
   public var isMonospaced: Bool {
     type == .code
+  }
+
+  public var usesTabularNumbers: Bool {
+    switch type {
+    case .displayNumber, .metricNumber, .numeric, .numericSmall:
+      true
+    default:
+      false
+    }
   }
 
   /// A system font at the exact `size` from the ladder above, made to scale with the
@@ -130,4 +142,3 @@ private extension TypographyFontWeight {
     }
   }
 }
-

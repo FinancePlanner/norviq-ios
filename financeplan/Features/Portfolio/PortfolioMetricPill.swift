@@ -12,7 +12,7 @@ struct PortfolioMetricPill: View {
         .typography(.caption)
         .foregroundStyle(.secondary)
       Text(value)
-        .typography(.small, weight: .semibold)
+        .typography(.numericSmall, weight: .semibold)
         .foregroundStyle(.primary)
         .contentTransition(.numericText())
     }
