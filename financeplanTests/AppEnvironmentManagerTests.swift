@@ -17,7 +17,7 @@ final class AppEnvironmentManagerTests: XCTestCase {
     defaults = nil
   }
 
-  func testBuildSettingForcesDevEnvironmentForBetaArchives() {
+  func testLegacyDevBuildSettingFallsBackToProductionForArchives() {
     let manager = AppEnvironmentManager(
       environmentVariables: [:],
       infoDictionary: ["NorviqAPIEnvironment": "dev"],
@@ -26,8 +26,8 @@ final class AppEnvironmentManagerTests: XCTestCase {
       isDebugBuild: false
     )
 
-    XCTAssertEqual(manager.current, AppEnvironments.dev)
-    XCTAssertEqual(manager.schemeEnvironment, AppEnvironments.dev)
+    XCTAssertEqual(manager.current, AppEnvironments.production)
+    XCTAssertNil(manager.schemeEnvironment)
   }
 
   func testBuildSettingForcesProductionEnvironmentForAppStoreRelease() {
@@ -48,17 +48,17 @@ final class AppEnvironmentManagerTests: XCTestCase {
 
     let manager = AppEnvironmentManager(
       environmentVariables: [:],
-      infoDictionary: ["NorviqAPIEnvironment": "dev"],
+      infoDictionary: ["NorviqAPIEnvironment": "production"],
       defaults: defaults,
       schemeEnvironmentValue: nil,
       isDebugBuild: false
     )
 
-    XCTAssertEqual(manager.current, AppEnvironments.dev)
+    XCTAssertEqual(manager.current, AppEnvironments.production)
   }
 
   func testPersistedEnvironmentOnlyAppliesToDebugBuilds() {
-    defaults.set(AppEnvironments.dev.title, forKey: "environment")
+    defaults.set("dev", forKey: "environment")
 
     let manager = AppEnvironmentManager(
       environmentVariables: [:],
@@ -85,7 +85,7 @@ final class AppEnvironmentManagerTests: XCTestCase {
     XCTAssertEqual(manager.current, AppEnvironments.local)
   }
 
-  func testTestFlightDefaultsToDev() {
+  func testTestFlightDefaultsToProduction() {
     let manager = AppEnvironmentManager(
       environmentVariables: [:],
       infoDictionary: [:],
@@ -95,7 +95,7 @@ final class AppEnvironmentManagerTests: XCTestCase {
       isTestFlight: true
     )
 
-    XCTAssertEqual(manager.current, AppEnvironments.dev)
+    XCTAssertEqual(manager.current, AppEnvironments.production)
   }
 
   func testAllowedEnvironmentsReturnsAllCasesWhenLocal() {

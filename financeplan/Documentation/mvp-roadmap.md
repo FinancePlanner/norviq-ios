@@ -147,7 +147,7 @@ Status snapshot for the current iOS app scope.
 1. Get Apple Developer account
 2. Create App Store Connect app record + bundle ID
 3. Configure APNS + Apple Sign In
-4. Archive with `Norviqa TestFlight Dev` scheme → upload via Xcode Organizer
+4. Archive with the `financeplan` scheme → upload via Xcode Organizer
 5. Add internal testers (your Apple ID) — no review needed, instant
 6. Set up RevenueCat + subscription products
 7. Test purchases via TestFlight sandbox
@@ -156,9 +156,8 @@ Status snapshot for the current iOS app scope.
 
 ### Already Done
 
-- [x] `Norviqa TestFlight Dev` scheme configured with `Beta` build configuration
-- [x] `AppEnvironmentManager` auto-routes TestFlight builds to `dev-norviq.online`
-- [x] `AppEnvironmentManager` auto-routes App Store builds to `prod-norviq.online`
+- [x] `financeplan` scheme archives with production API configuration
+- [x] `AppEnvironmentManager` auto-routes TestFlight and App Store builds to production
 - [x] Pro paywall UI (`PaywallView`) implemented with all 3 plan options
 - [x] Pro gates on stock detail tabs (Statements, Analysis, Compare, Earnings)
 - [x] Pro gates on expense features (Year Overview, Smart Suggestions, Household Partner, Recurring, Reports, Sync)

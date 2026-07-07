@@ -49,7 +49,7 @@ Notes:
   1. runtime env var `NORVIQA_ENVIRONMENT`
   2. generated `SchemeEnvironment.value`
   3. persisted user default `environment`
-  4. fallback default (`dev` in debug, `production` in release)
+  4. fallback default (`local` in debug, `production` in release/TestFlight)
 - Auth requests use `environmentManager.current.apiBaseUrl`.
 
 ### 4) Feature layering (auth)

@@ -90,9 +90,6 @@ final class AppEnvironmentManager: @unchecked Sendable {
     } else if isDebugBuild {
       forcedEnvironment = nil
       resolvedEnvironment = AppEnvironments.local
-    } else if isTestFlight {
-      forcedEnvironment = nil
-      resolvedEnvironment = AppEnvironments.dev
     } else {
       forcedEnvironment = nil
       resolvedEnvironment = AppEnvironments.production

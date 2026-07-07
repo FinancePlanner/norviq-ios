@@ -14,11 +14,6 @@ enum AppEnvironments {
     apiBaseUrl: URL(string: "http://localhost:8080")!,
     wsBaseUrl: URL(string: "ws://localhost:8080/ws")!
   )
-  static let dev = AppEnvironment(
-    title: "dev",
-    apiBaseUrl: URL(string: "https://dev.norviq.org")!,
-    wsBaseUrl: URL(string: "wss://dev.norviq.org/ws")!
-  )
   static let production = AppEnvironment(
     title: "production",
     apiBaseUrl: URL(string: "https://api.norviq.org")!,
@@ -29,7 +24,7 @@ enum AppEnvironments {
     allCases.first(where: { $0.title == key })
   }
 
-  static let allCases: [AppEnvironment] = [local, dev, production]
+  static let allCases: [AppEnvironment] = [local, production]
 
   static var allEnvironmentsExcludingLocal: [AppEnvironment] {
     allCases.filter { $0.title != "local" }
