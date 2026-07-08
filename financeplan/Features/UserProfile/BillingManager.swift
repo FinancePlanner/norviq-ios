@@ -184,6 +184,28 @@ final class BillingManager {
     return intro.paymentMode == .freeTrial
   }
 
+  /// Returns the number of free trial days for the given package (if it advertises a free trial introductory offer).
+  /// This value comes from the App Store product metadata via RevenueCat and will be nil when no
+  /// introductory offer is configured in App Store Connect.
+  func freeTrialDays(for package: Package?) -> Int? {
+    guard let intro = package?.storeProduct.introductoryDiscount,
+          intro.paymentMode == .freeTrial else {
+      return nil
+    }
+    return Self.trialDays(from: intro.subscriptionPeriod)
+  }
+
+  /// Dynamic subtitle for the Annual plan card. Shows the real free trial length when an
+  /// introductory offer exists on the product (from ASC), otherwise a safe value label.
+  /// This prevents the UI from advertising a trial that the sandbox (or production) payment
+  /// sheet will not actually present.
+  var annualPlanSubtitle: String {
+    if let days = freeTrialDays(for: annualPackage) {
+      return days == 1 ? "1-day free trial" : "\(days)-day free trial"
+    }
+    return "Best value"
+  }
+
   /// Primary paywall button title — trial wording only when StoreKit confirms a free trial.
   var purchaseCTATitle: String {
     guard selectedPackage != nil else {
@@ -577,11 +599,7 @@ final class BillingManager {
     "Payment will be charged to your Apple ID account. Subscription automatically renews unless it is canceled at least 24 hours before the end of the current period. Your account will be charged for renewal within 24 hours prior to the end of the current period. You can manage and cancel your subscriptions in your App Store account settings."
 
   private var selectedPlanFreeTrialDays: Int? {
-    guard let intro = selectedPackage?.storeProduct.introductoryDiscount,
-          intro.paymentMode == .freeTrial else {
-      return nil
-    }
-    return Self.trialDays(from: intro.subscriptionPeriod)
+    freeTrialDays(for: selectedPackage)
   }
 
   private static func trialDays(from period: RevenueCat.SubscriptionPeriod) -> Int {

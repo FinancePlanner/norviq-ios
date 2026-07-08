@@ -30,7 +30,7 @@ RevenueCat entitlement ID: **`pro_access`**
 ## App Store Connect checklist
 
 - [ ] Create all three auto-renewable subscriptions in **one subscription group**
-- [ ] Set 7-day free trial introductory offer on **`pro_yearly` only**
+- [ ] Set 7-day free trial introductory offer on **`pro_yearly` only** (critical: this must exist in App Store Connect for the sandbox payment sheet to show the trial that the app advertises)
 - [ ] Add localizations and subscription review screenshot
 - [ ] Paid Apps Agreement, banking, and tax complete
 - [ ] Privacy Policy URL and Support URL on the app record
@@ -69,6 +69,18 @@ Earnings calendar list is available as a teaser to free users; transcripts and "
 
 - [ ] `RevenueCatAPIKey` in `Info.plist` is the production `appl_...` key
 - [ ] `pro_weekly`, `pro_monthly`, `pro_yearly` exist in App Store Connect
+- [ ] **Introductory free trial (7 days) configured on `pro_yearly` in App Store Connect** (the sandbox payment sheet will not show a trial unless this exists)
 - [ ] `Products.storekit` attached to Run scheme for local QA
 - [ ] `pro_access` entitlement in RevenueCat with all three products
 - [ ] Production webhook + API key deployed and verified
+
+## Sandbox / App Review verification (Guideline 2.1(b))
+
+After configuring the introductory offer:
+1. Use a **fresh sandbox tester** (never purchased this subscription before).
+2. On device: sign into Sandbox Account in Settings > App Store (do **not** attach local Products.storekit for this test).
+3. Launch via TestFlight or appropriate build.
+4. Open paywall → select Annual.
+5. Start purchase: the Apple payment sheet **must** display the 7-day free trial (e.g. "Free for 7 days, then $XX.XX/yr").
+6. The CTA should read "Start 7-Day Free Trial" and disclosure must mention the trial when the offer is detected.
+7. Only after this passes, submit/reply to App Review.
