@@ -119,7 +119,7 @@ Status snapshot for the current iOS app scope.
 
 - [ ] Create app record (bundle ID `com.norviqa.app`, name, SKU)
 - [ ] Create subscription group + 3 products: `pro_yearly`, `pro_monthly`, `pro_weekly`
-- [ ] Configure 14-day free trial on `pro_yearly`
+- [ ] Configure 7-day free trial introductory offer on `pro_yearly` (must match the offer shown in the app's paywall and the ASC product)
 - [ ] Add app screenshots (6.7" iPhone minimum, required)
 - [ ] Write app description, keywords, support URL, privacy policy URL
 - [ ] Set age rating

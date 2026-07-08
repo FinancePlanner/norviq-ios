@@ -128,7 +128,7 @@ struct PreLoginPaywallScreen: View {
       if let package = billingManager.annualPackage {
         PaywallPlanCard(
           title: "Annual",
-          subtitle: "7-day free trial",
+          subtitle: billingManager.annualPlanSubtitle,
           price: package.localizedPriceString,
           priceUnit: "/yr",
           badge: "Save 2 months",

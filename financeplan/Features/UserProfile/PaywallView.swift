@@ -117,7 +117,7 @@ struct PaywallView: View {
       if let package = billingManager.annualPackage {
         PaywallPlanCard(
           title: "Annual",
-          subtitle: "7-day free trial",
+          subtitle: billingManager.annualPlanSubtitle,
           price: package.storeProduct.localizedPriceString,
           priceUnit: "/yr",
           badge: "Save 2 months",
