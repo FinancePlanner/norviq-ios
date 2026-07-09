@@ -79,10 +79,19 @@ struct OnboardingQuestionnairePaywallScreen: View {
         .font(.title.bold())
         .multilineTextAlignment(.center)
 
-      Text(billingManager.selectedPlanHasFreeTrial ? "7 days free. Cancel anytime." : "Cancel anytime.")
+      Text(trialHeadlineSubtitle)
         .font(.subheadline)
         .foregroundStyle(.secondary)
     }
+  }
+
+  /// Trial wording driven by the real StoreKit introductory offer so the headline
+  /// never promises a trial (or a length) the payment sheet won't present.
+  private var trialHeadlineSubtitle: String {
+    guard let days = billingManager.freeTrialDays(for: billingManager.selectedPackage) else {
+      return "Cancel anytime."
+    }
+    return days == 1 ? "1 day free. Cancel anytime." : "\(days) days free. Cancel anytime."
   }
 
   // MARK: - Testimonial
