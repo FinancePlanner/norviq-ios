@@ -114,7 +114,7 @@ struct MacroScreen: View {
                 Text(c.category)
                 Spacer()
                 Text("\(c.ourYoY, specifier: "%+.1f")%")
-                  .foregroundStyle(c.ourYoY >= 0 ? .primary : .green)
+                  .foregroundStyle(c.ourYoY >= 0 ? Color.primary : Color.green)
               }
               .font(.callout)
             }

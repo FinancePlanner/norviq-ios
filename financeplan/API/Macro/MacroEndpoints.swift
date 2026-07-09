@@ -30,7 +30,7 @@ struct GetTopMoversEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    var params: [String: Any] = [:]
+    var params: Parameters = [:]
     if let country { params["country"] = country }
     if let focus { params["focus"] = focus }
     return params
@@ -50,7 +50,7 @@ struct GetInflationSeriesEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    var p: [String: Any] = ["series": series]
+    var p: Parameters = ["series": series]
     if let country { p["country"] = country }
     if let from { p["from"] = from }
     if let to { p["to"] = to }
