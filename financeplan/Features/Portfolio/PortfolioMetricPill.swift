@@ -15,6 +15,7 @@ struct PortfolioMetricPill: View {
         .typography(.numericSmall, weight: .semibold)
         .foregroundStyle(.primary)
         .contentTransition(.numericText())
+        .appAnimation(AppMotion.state, value: value)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.horizontal, 12)

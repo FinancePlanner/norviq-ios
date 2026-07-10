@@ -270,15 +270,6 @@ struct ExpensesByCategoryCard: View {
                         .padding(.vertical, 4)
                   }
                 }
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                  Button(role: .destructive) { onDelete(activity) } label: {
-                    Label("Delete", systemImage: "trash")
-                  }
-                  Button { onEdit(activity) } label: {
-                    Label("Edit", systemImage: "pencil")
-                  }
-                  .tint(.blue)
-                }
               }
             }
             .padding(.vertical, 8)

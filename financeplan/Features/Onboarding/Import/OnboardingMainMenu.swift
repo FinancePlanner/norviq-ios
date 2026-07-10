@@ -128,7 +128,7 @@ struct OnboardingMenuButton: View {
       .appGlassEffect(.rect(cornerRadius: 20))
       .opacity(isDisabled ? 0.6 : 1.0)
     }
-    .buttonStyle(PressEffectStyle())
+    .buttonStyle(PressableStyle())
     .accessibilityIdentifier(accessibilityIdentifier ?? "onboarding.menuButton.\(title)")
     .disabled(isDisabled)
   }

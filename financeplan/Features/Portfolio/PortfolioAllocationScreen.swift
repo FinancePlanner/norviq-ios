@@ -131,7 +131,8 @@ struct PortfolioAllocationScreen: View {
 
                                 Text(totalValue.currency)
                                     .typography(.hero, weight: .bold)
-                                    .contentTransition(.numericText())
+                                    .contentTransition(.numericText(value: totalValue))
+                                    .appAnimation(AppMotion.state, value: totalValue)
 
                                 Text(
                                     "\(allocationSlices.count) positions · percentages sum to how much each holding contributes to total value."
@@ -166,12 +167,14 @@ struct PortfolioAllocationScreen: View {
                                                 .typography(.label, weight: .semibold)
                                                 .foregroundStyle(.secondary)
                                                 .monospacedDigit()
-                                                .contentTransition(.numericText())
+                                                .contentTransition(.numericText(value: slice.percentage))
+                                                .appAnimation(AppMotion.state, value: slice.percentage)
 
                                             Text(slice.value.currency)
                                                 .typography(.small)
                                                 .foregroundStyle(.secondary)
-                                                .contentTransition(.numericText())
+                                                .contentTransition(.numericText(value: slice.value))
+                                                .appAnimation(AppMotion.state, value: slice.value)
                                         }
                                     }
                                 }

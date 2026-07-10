@@ -38,7 +38,7 @@ struct OnboardingPrimaryButton: View {
         radius: 8, x: 0, y: 4
       )
     }
-    .buttonStyle(PressEffectStyle())
+    .buttonStyle(PressableStyle())
     .disabled(!isEnabled || isLoading)
     .opacity(isEnabled ? 1 : 0.45)
   }

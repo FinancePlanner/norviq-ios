@@ -37,7 +37,7 @@ struct OnboardingSelectableRow: View {
           )
       }
     }
-    .buttonStyle(PressEffectStyle())
+    .buttonStyle(PressableStyle())
   }
 
   @ViewBuilder

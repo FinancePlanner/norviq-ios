@@ -117,7 +117,7 @@ struct OnboardingSwipeStatementsScreen: View {
         .background(Circle().fill(tint))
         .shadow(color: tint.opacity(0.35), radius: 10, y: 4)
     }
-    .buttonStyle(PressEffectStyle())
+    .buttonStyle(PressableStyle())
     .disabled(topIndex >= Self.statements.count)
   }
 

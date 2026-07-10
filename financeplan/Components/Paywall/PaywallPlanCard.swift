@@ -67,7 +67,7 @@ struct PaywallPlanCard: View {
       }
       .contentShape(Rectangle())
     }
-    .buttonStyle(PressEffectStyle())
+    .buttonStyle(PressableStyle())
     .scaleEffect(isSelected ? 1.02 : 1.0)
     .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
     .sensoryFeedback(.selection, trigger: isSelected)
