@@ -176,6 +176,44 @@ struct MarketDataHTTPClient: Sendable {
     try await client.call(GetPriceChartComparisonEndpoint(symbols: symbols, range: range), errorType: Error.self)
   }
 
+  func fetchChartBuilder(
+    symbol: String,
+    metrics: [String],
+    period: ChartBuilderPeriodKind,
+    limit: Int,
+    compare: [String]
+  ) async throws -> ChartBuilderResponse {
+    try await client.call(
+      GetChartBuilderEndpoint(
+        symbol: symbol,
+        metrics: metrics,
+        period: period,
+        limit: limit,
+        compare: compare
+      ),
+      errorType: Error.self
+    )
+  }
+
+  func fetchChartBuilderCSV(
+    symbol: String,
+    metrics: [String],
+    period: ChartBuilderPeriodKind,
+    limit: Int,
+    compare: [String]
+  ) async throws -> Data {
+    try await client.execute(
+      GetChartBuilderCSVEndpoint(
+        symbol: symbol,
+        metrics: metrics,
+        period: period,
+        limit: limit,
+        compare: compare
+      ),
+      errorType: Error.self
+    )
+  }
+
   func searchAssets(query: String, limit: Int) async throws -> [SearchResultResponse] {
     try await client.call(SearchAssetsEndpoint(query: query, limit: limit), errorType: Error.self)
   }

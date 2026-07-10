@@ -1,7 +1,7 @@
 import Foundation
 import StockPlanShared
 
-struct AssetSearchResult: Identifiable, Equatable {
+struct AssetSearchResult: Identifiable, Hashable {
   let symbol: String
   let name: String
   let exchange: String?

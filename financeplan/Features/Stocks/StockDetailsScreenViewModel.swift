@@ -432,7 +432,7 @@ final class StockDetailsViewModel: ObservableObject {
             isChartLoading = false
             loadedTabs.insert(.chart)
             loadingTabs.remove(.chart)
-        case .overview, .news:
+        case .builder, .overview, .news:
             return
         }
     }
