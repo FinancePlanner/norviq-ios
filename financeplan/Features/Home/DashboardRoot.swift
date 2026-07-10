@@ -31,6 +31,7 @@ struct DashboardRoot: View {
   @State private var portfolioChartPoints: [ChartDataPoint] = []
   @State private var spendingChartPoints: [ChartDataPoint] = []
   @State private var isQuickAddPresented = false
+  @State private var isChartBuilderPresented = false
   @State private var hasLoadedContent = false
 
   private let dashboardService: any DashboardServicing = Container.shared.dashboardService()
@@ -120,6 +121,7 @@ struct DashboardRoot: View {
             onPortfolioTap: showPortfolioTab,
             onExpensesTap: showExpensesTab,
             onReportsTap: showReportsTab,
+            onChartBuilderTap: presentChartBuilder,
             onQuickAddTap: presentQuickAdd
           )
         }
@@ -132,6 +134,9 @@ struct DashboardRoot: View {
       .background(MeshGradientBackground())
       .navigationTitle(greetingText)
       .navigationBarTitleDisplayMode(.large)
+      .navigationDestination(isPresented: $isChartBuilderPresented) {
+        ChartBuilderStandaloneScreen()
+      }
       .task {
         await handleInitialTask()
       }
@@ -208,6 +213,10 @@ struct DashboardRoot: View {
 
   private func presentQuickAdd() {
     isQuickAddPresented = true
+  }
+
+  private func presentChartBuilder() {
+    isChartBuilderPresented = true
   }
 
   private func handleSearchQueryChange() {
@@ -365,6 +374,7 @@ private struct DashboardContentSection: View {
   let onPortfolioTap: () -> Void
   let onExpensesTap: () -> Void
   let onReportsTap: () -> Void
+  let onChartBuilderTap: () -> Void
   let onQuickAddTap: () -> Void
 
   @Environment(\.colorScheme) private var colorScheme
@@ -398,6 +408,8 @@ private struct DashboardContentSection: View {
       )
 
       MacroTeaserCard()
+
+      ChartBuilderDashboardCard(onOpen: onChartBuilderTap)
 
       QuickAddEntryButton(action: onQuickAddTap)
 
