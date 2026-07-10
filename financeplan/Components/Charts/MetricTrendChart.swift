@@ -22,7 +22,11 @@ struct MetricTrendChart: View {
         let tints: [Color] = [
             AppTheme.Colors.tint(for: colorScheme),
             AppTheme.Colors.secondaryTint(for: colorScheme),
-            AppTheme.Colors.warning
+            AppTheme.Colors.warning,
+            AppTheme.Colors.success,
+            .purple,
+            .pink,
+            AppTheme.Colors.danger
         ]
         guard let index = seriesNames.firstIndex(of: series) else { return tints[0] }
         return tints[index % tints.count]

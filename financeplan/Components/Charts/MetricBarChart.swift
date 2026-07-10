@@ -3,7 +3,7 @@ import SwiftUI
 
 /// A grouped, scrubbable bar chart over a categorical (period) x-axis.
 ///
-/// Supports one or two series (e.g. "Actual" vs "Estimate"). Drag across the
+/// Supports any number of grouped series. Drag across the
 /// chart to reveal a rule line and a value annotation for the selected period.
 struct MetricBarChart: View {
     let points: [MetricSeriesPoint]
@@ -19,12 +19,17 @@ struct MetricBarChart: View {
 
     private func color(for series: String) -> Color {
         if let color = seriesColors[series] { return color }
-        guard let index = seriesNames.firstIndex(of: series) else {
-            return AppTheme.Colors.tint(for: colorScheme)
-        }
-        return index == 0
-            ? AppTheme.Colors.tint(for: colorScheme)
-            : AppTheme.Colors.secondaryTint(for: colorScheme)
+        let palette: [Color] = [
+            AppTheme.Colors.tint(for: colorScheme),
+            AppTheme.Colors.secondaryTint(for: colorScheme),
+            AppTheme.Colors.warning,
+            AppTheme.Colors.success,
+            .purple,
+            .pink,
+            AppTheme.Colors.danger
+        ]
+        guard let index = seriesNames.firstIndex(of: series) else { return palette[0] }
+        return palette[index % palette.count]
     }
 
     private var selectedEntries: [MetricChartSelectionEntry] {

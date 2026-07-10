@@ -62,11 +62,23 @@ struct MacroHTTPClient: Sendable {
     try await client.call(GetTopMoversEndpoint(country: country, focus: focus), errorType: Error.self)
   }
 
-  func getSeries(country: String? = nil, series: String, from: String? = nil, to: String? = nil) async throws -> MacroSeriesResponse {
-    try await client.call(GetInflationSeriesEndpoint(country: country, series: series, from: from, to: to), errorType: Error.self)
+  func getSeries(country: String? = nil, series: String, from: String? = nil, to: String? = nil, limit: Int? = nil) async throws -> MacroSeriesResponse {
+    try await client.call(GetInflationSeriesEndpoint(country: country, series: series, from: from, to: to, limit: limit), errorType: Error.self)
   }
 
   func getSupportedCountries() async throws -> [SupportedCountry] {
     try await client.call(GetSupportedCountriesEndpoint(), errorType: Error.self)
+  }
+
+  func getFedWatch() async throws -> FedWatchResponse {
+    try await client.call(GetFedWatchEndpoint(), errorType: Error.self)
+  }
+
+  func getItems(country: String? = nil) async throws -> MacroItemsResponse {
+    try await client.call(GetMacroItemsEndpoint(country: country), errorType: Error.self)
+  }
+
+  func getItemSeries(itemId: String, country: String? = nil, limit: Int? = nil) async throws -> MacroItemSeriesResponse {
+    try await client.call(GetMacroItemSeriesEndpoint(itemId: itemId, country: country, limit: limit), errorType: Error.self)
   }
 }
