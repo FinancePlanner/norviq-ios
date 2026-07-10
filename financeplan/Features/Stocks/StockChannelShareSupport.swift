@@ -254,9 +254,7 @@ struct StockChannelShareActions: View {
   @Environment(\.openURL) private var openURL
   @State private var shareSheetItems: [Any] = []
   @State private var isShareSheetPresented = false
-  @State private var bannerMessage: String?
-  @State private var bannerStyle: ToastBanner.Style = .info
-  @State private var hideBannerTask: Task<Void, Never>?
+  @State private var bannerToast: ToastData?
 
   init(
     payload: StockSharePayload,
@@ -293,16 +291,11 @@ struct StockChannelShareActions: View {
         }
       }
 
-      if let bannerMessage {
-        ToastBanner(message: bannerMessage, style: bannerStyle)
-      }
     }
     .sheet(isPresented: $isShareSheetPresented) {
       ShareSheet(items: shareSheetItems)
     }
-    .onDisappear {
-      hideBannerTask?.cancel()
-    }
+    .toastOverlay($bannerToast)
   }
 
   private func share(to destination: StockShareDestination) {
@@ -362,14 +355,6 @@ struct StockChannelShareActions: View {
   }
 
   private func showBanner(_ message: String, style: ToastBanner.Style) {
-    bannerStyle = style
-    bannerMessage = message
-
-    hideBannerTask?.cancel()
-    hideBannerTask = Task { @MainActor in
-      try? await Task.sleep(for: .seconds(2))
-      guard !Task.isCancelled else { return }
-      bannerMessage = nil
-    }
+    bannerToast = ToastData(message: message, style: style)
   }
 }

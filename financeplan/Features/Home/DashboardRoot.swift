@@ -618,6 +618,8 @@ private struct FocusListCard: View {
               ProgressView()
             }
           }
+          .frame(width: 44, height: 44)
+          .contentShape(.rect)
           .buttonStyle(.plain)
           .disabled(viewModel.isSubmitting || viewModel.draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }

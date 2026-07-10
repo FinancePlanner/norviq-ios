@@ -37,7 +37,7 @@ struct EarningsCalendarScreen: View {
   @State private var upcomingEarnings: [EarningsEvent] = []
   @State private var isLoading = false
   @State private var isLoadingUpcoming = false
-  @State private var errorMessage: String?
+  @State private var errorToast: ToastData?
   @State private var selectedEvent: EarningsEvent?
   @State private var loadedMonthKeys: Set<String> = []
 
@@ -69,13 +69,7 @@ struct EarningsCalendarScreen: View {
     .task {
       await loadUpcomingEarnings()
     }
-    .overlay(alignment: .top) {
-      if let errorMessage {
-        ToastBanner(message: errorMessage, style: .error)
-          .padding(.horizontal, 16)
-          .padding(.top, 8)
-      }
-    }
+    .toastOverlay($errorToast)
   }
 
   private var earningsForSelectedDate: [EarningsEvent] {
@@ -171,7 +165,7 @@ struct EarningsCalendarScreen: View {
     let to = formatISODateOnly(endOfMonth)
 
     isLoading = true
-    errorMessage = nil
+    errorToast = nil
 
     do {
       let results = try await marketDataService.fetchEarningsCalendar(from: from, to: to)
@@ -182,7 +176,7 @@ struct EarningsCalendarScreen: View {
       self.earnings = Array(merged)
       loadedMonthKeys.insert(monthKey)
     } catch {
-      self.errorMessage = error.localizedDescription
+      self.errorToast = .error(error.localizedDescription)
     }
     isLoading = false
   }

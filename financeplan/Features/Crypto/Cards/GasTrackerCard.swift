@@ -2,6 +2,7 @@ import SwiftUI
 
 struct GasTrackerCard: View {
     let gwei: Int
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isPulsing = false
 
     private var statusColor: Color {
@@ -25,7 +26,10 @@ struct GasTrackerCard: View {
                         .frame(width: 6, height: 6)
                         .scaleEffect(isPulsing ? 1.4 : 0.8)
                         .opacity(isPulsing ? 0.5 : 1.0)
-                        .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: isPulsing)
+                        .animation(
+                            reduceMotion ? nil : .easeInOut(duration: 1.2).repeatForever(autoreverses: true),
+                            value: isPulsing
+                        )
                 }
 
                 HStack(alignment: .bottom, spacing: 4) {
@@ -51,6 +55,9 @@ struct GasTrackerCard: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(statusColor.opacity(0.25), lineWidth: 1)
         )
-        .onAppear { isPulsing = true }
+        .onAppear {
+            guard !reduceMotion else { return }
+            isPulsing = true
+        }
     }
 }

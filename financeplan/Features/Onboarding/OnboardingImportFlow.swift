@@ -62,6 +62,8 @@ struct OnboardingImportFlow: View {
         Color.clear.onAppear(perform: onFinished)
       }
     }
-    .animation(.spring(response: 0.5, dampingFraction: 0.85), value: viewModel.step)
+    .id(viewModel.step)
+    .transition(.opacity)
+    .appAnimation(AppMotion.structural, value: viewModel.step)
   }
 }

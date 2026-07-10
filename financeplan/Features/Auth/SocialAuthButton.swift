@@ -75,7 +75,7 @@ struct SocialAuthButton: View {
 
   private var borderColor: Color {
     switch provider {
-    case .google: Color.black.opacity(0.16)
+    case .google: Color.black.opacity(0.12)
     case .apple, .x: .clear
     }
   }

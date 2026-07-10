@@ -14,34 +14,38 @@ struct PortfolioPositionsSection: View {
   let onLoadMore: (() -> Void)?
 
   var body: some View {
-    if stocks.isEmpty {
-      ContentUnavailableView {
-        Label("No Positions", systemImage: "chart.line.uptrend.xyaxis")
-      } description: {
-        Text("Add your first holding or change your filter.")
-      } actions: {
-        Button("Add Position", action: onAddPosition)
-          .buttonStyle(.borderedProminent)
-          .accessibilityIdentifier("portfolio.addPositionButton")
-      }
-      .padding(.vertical, 24)
-    } else {
-      ForEach(stocks) { stock in
-        PortfolioStockLinkRow(
-          stock: stock,
-          targetAlert: targetAlertProvider(stock.symbol),
-          liveQuote: liveQuotes[stock.symbol.uppercased()],
-          onEdit: onEditStock,
-          onDelete: onDeleteStock,
-          onPresentTargetAlert: onPresentTargetAlert
-        )
-        .onAppear {
-          if let last = stocks.last, last.id == stock.id {
-            onLoadMore?()
+    Group {
+      if stocks.isEmpty {
+        ContentUnavailableView {
+          Label("No Positions", systemImage: "chart.line.uptrend.xyaxis")
+        } description: {
+          Text("Add your first holding or change your filter.")
+        } actions: {
+          Button("Add Position", action: onAddPosition)
+            .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("portfolio.addPositionButton")
+        }
+        .padding(.vertical, 24)
+      } else {
+        ForEach(stocks) { stock in
+          PortfolioStockLinkRow(
+            stock: stock,
+            targetAlert: targetAlertProvider(stock.symbol),
+            liveQuote: liveQuotes[stock.symbol.uppercased()],
+            onEdit: onEditStock,
+            onDelete: onDeleteStock,
+            onPresentTargetAlert: onPresentTargetAlert
+          )
+          .transition(.opacity.combined(with: .scale(scale: 0.98)))
+          .onAppear {
+            if let last = stocks.last, last.id == stock.id {
+              onLoadMore?()
+            }
           }
         }
       }
     }
+    .appAnimation(AppMotion.structural, value: stocks.map(\.id))
   }
 }
 
@@ -116,7 +120,7 @@ struct PortfolioRow: View {
   }
 
   var body: some View {
-    GlassCard(cornerRadius: 22) {
+    GlassCard(cornerRadius: AppTheme.Radius.hero) {
       HStack(spacing: 16) {
         Circle()
           .fill(Color.white.opacity(0.1))

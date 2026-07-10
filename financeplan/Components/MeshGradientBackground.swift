@@ -4,8 +4,11 @@ public struct MeshGradientBackground: View {
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var animate = false
+  private let animatesOnAppear: Bool
 
-  public init() {}
+  public init(animatesOnAppear: Bool = false) {
+    self.animatesOnAppear = animatesOnAppear
+  }
 
   public var body: some View {
     ZStack {
@@ -46,10 +49,8 @@ public struct MeshGradientBackground: View {
       }
     }
     .onAppear {
-      guard !reduceMotion else { return }
-      withAnimation(.easeInOut(duration: 12).repeatForever(autoreverses: true)) {
-        animate.toggle()
-      }
+      guard animatesOnAppear, !reduceMotion else { return }
+      withAnimation(.easeOut(duration: 0.6)) { animate = true }
     }
     .ignoresSafeArea()
   }

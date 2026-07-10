@@ -8,7 +8,7 @@ import SwiftUI
 struct ManualImportScreen: View {
   @Environment(\.colorScheme) private var colorScheme
   @StateObject private var viewModel = ManualImportViewModel()
-  @State private var errorMessage: String?
+  @State private var errorToast: ToastData?
   @State private var entriesVisible = false
   var headerNamespace: Namespace.ID?
 
@@ -139,35 +139,21 @@ struct ManualImportScreen: View {
       }
     }
     .background(MeshGradientBackground().ignoresSafeArea())
-    .overlay(alignment: .top) {
-      if let errorMessage {
-        ToastBanner(message: errorMessage, style: .error)
-          .padding(.horizontal, 16)
-          .padding(.top, 60)
-          .transition(.move(edge: .top).combined(with: .opacity))
-      }
-    }
-    .task(id: errorMessage) {
-      guard let current = errorMessage else { return }
-      try? await Task.sleep(for: .seconds(3))
-      guard errorMessage == current else { return }
-      withAnimation(.easeInOut(duration: 0.2)) {
-        errorMessage = nil
-      }
-    }
+    .toastOverlay($errorToast)
   }
 
   private func submitManualImport() {
-    errorMessage = nil
+    errorToast = nil
     let positions = viewModel.buildPositions()
     Task {
       do {
         try await viewModel.importPositions(positions)
         onDone(positions)
       } catch {
-        errorMessage =
+        errorToast = .error(
           (error as? LocalizedError)?.errorDescription
-          ?? "Could not import stocks. Please try again."
+            ?? "Could not import stocks. Please try again."
+        )
       }
     }
   }

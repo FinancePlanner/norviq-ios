@@ -48,6 +48,12 @@ enum AppAppearance: String, CaseIterable, Identifiable {
 }
 
 enum AppTheme {
+  enum Radius {
+    static let control: CGFloat = 12
+    static let card: CGFloat = 16
+    static let hero: CGFloat = 20
+  }
+
   enum Colors {
     // MARK: - Accent
 

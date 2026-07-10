@@ -13,7 +13,6 @@ struct MetricBarChart: View {
 
     @State private var selectedLabel: String?
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var seriesNames: [String] { points.orderedSeries }
 
@@ -80,7 +79,6 @@ struct MetricBarChart: View {
         .chartXSelection(value: $selectedLabel)
         .chartYAxis { AxisMarks(position: .leading) }
         .frame(height: 240)
-        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: selectedLabel)
     }
 }
 

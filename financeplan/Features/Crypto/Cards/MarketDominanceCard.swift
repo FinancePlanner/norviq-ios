@@ -2,7 +2,6 @@ import SwiftUI
 
 struct MarketDominanceCard: View {
     let data: [CryptoViewModel.DominanceData]
-    @State private var barProgress: CGFloat = 0
 
     var body: some View {
         GlassCard(cornerRadius: 16) {
@@ -17,7 +16,7 @@ struct MarketDominanceCard: View {
                         ForEach(data) { item in
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(item.color.gradient)
-                                .frame(width: max(0, (geometry.size.width * CGFloat(item.percentage / 100) * barProgress) - 2))
+                                .frame(width: max(0, (geometry.size.width * CGFloat(item.percentage / 100)) - 2))
                         }
                     }
                     .clipShape(Capsule())
@@ -39,11 +38,6 @@ struct MarketDominanceCard: View {
                         }
                     }
                 }
-            }
-        }
-        .onAppear {
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.3)) {
-                barProgress = 1.0
             }
         }
     }

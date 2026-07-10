@@ -14,7 +14,7 @@ struct PortfolioHeroCard: View {
   let onSelectTimeRange: (PortfolioScreen.TimeRange) -> Void
 
   var body: some View {
-    GlassCard(cornerRadius: 22) {
+    GlassCard(cornerRadius: AppTheme.Radius.hero) {
       VStack(alignment: .leading, spacing: 16) {
         VStack(alignment: .leading, spacing: 4) {
           Text(heroLabel)

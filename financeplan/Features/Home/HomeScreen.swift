@@ -9,6 +9,7 @@ import Factory
 
 @MainActor
 struct HomeScreen: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.colorScheme) private var colorScheme
   @InjectedObservable(\Container.billingManager) private var billingManager
   @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
@@ -29,12 +30,12 @@ struct HomeScreen: View {
         TrialEndedBanner(onSubscribe: { isPaywallPresented = true })
           .padding(.top, 8)
           .padding(.bottom, 4)
-          .transition(.move(edge: .top).combined(with: .opacity))
+          .transition(AppTransition.move(edge: .top, reduceMotion: reduceMotion))
       }
 
       tabView
     }
-    .animation(.snappy(duration: 0.28), value: billingManager.shouldShowTrialEndedBanner)
+    .appAnimation(AppMotion.structural, value: billingManager.shouldShowTrialEndedBanner)
   }
 
   private var tabView: some View {
@@ -68,7 +69,6 @@ struct HomeScreen: View {
     .tint(AppTheme.Colors.tint(for: colorScheme))
     .toolbarBackground(.visible, for: .tabBar)
     .toolbarBackground(AppTheme.Colors.tabBarBackground(for: colorScheme), for: .tabBar)
-    .animation(.snappy(duration: 0.28), value: selectedTab)
     .sheet(isPresented: $isSettingsPresented) {
       settingsSheet
     }

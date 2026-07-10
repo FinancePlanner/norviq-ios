@@ -67,6 +67,8 @@ struct PaywallView: View {
           .foregroundStyle(.secondary)
           .labelStyle(.iconOnly)
           .padding(8)
+          .frame(width: 44, height: 44)
+          .contentShape(.circle)
           .background(AppTheme.Colors.elevatedCardBackground(for: scheme), in: Circle())
         }
         ToolbarItem(placement: .principal) {

@@ -69,7 +69,7 @@ struct PaywallPlanCard: View {
     }
     .buttonStyle(PressableStyle())
     .scaleEffect(isSelected ? 1.02 : 1.0)
-    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+    .appAnimation(AppMotion.state, value: isSelected)
     .sensoryFeedback(.selection, trigger: isSelected)
     .accessibilityElement(children: .combine)
     .accessibilityLabel("\(title) plan, \(subtitle), \(price)\(priceUnit)")
@@ -97,7 +97,7 @@ struct PaywallPlanCard: View {
           .transition(.scale.combined(with: .opacity))
       }
     }
-    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+    .appAnimation(AppMotion.state, value: isSelected)
     .accessibilityHidden(true)
   }
 }

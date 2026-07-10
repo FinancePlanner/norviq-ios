@@ -23,6 +23,8 @@ struct VaultForgotPasswordView: View {
           .labelStyle(.iconOnly)
           .font(.system(size: 20, weight: .medium))
           .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+          .frame(width: 44, height: 44)
+          .contentShape(.rect)
           .accessibilityLabel("Back to sign in")
 
           Spacer()
@@ -35,7 +37,7 @@ struct VaultForgotPasswordView: View {
 
           // Invisible spacer for centering
           Color.clear
-            .frame(width: 20, height: 20)
+            .frame(width: 44, height: 44)
         }
         .padding(.horizontal, 24)
         .padding(.top, 20)

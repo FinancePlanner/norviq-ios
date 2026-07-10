@@ -12,6 +12,7 @@ struct OnboardingDemoBuildScreen: View {
 
   @State private var deck: [OnboardingDemoTicker] = []
   @State private var topIndex = 0
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var picks: [String] = []
   @State private var dragTranslation: CGSize = .zero
   @State private var fallbackBanner: String?
@@ -118,13 +119,17 @@ struct OnboardingDemoBuildScreen: View {
     DragGesture()
       .onChanged { value in dragTranslation = value.translation }
       .onEnded { value in
+        let horizontal = value.translation.width
+        // Momentum projection: a quick flick should dismiss even before
+        // the distance threshold is reached.
+        let projected = value.predictedEndTranslation.width
         let threshold: CGFloat = 110
-        if value.translation.width > threshold {
+        if horizontal > threshold || projected > threshold * 2 {
           finishSwipe(adding: true)
-        } else if value.translation.width < -threshold {
+        } else if horizontal < -threshold || projected < -threshold * 2 {
           finishSwipe(adding: false)
         } else {
-          withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+          withAnimation(reduceMotion ? AppMotion.reduced : AppMotion.structural) {
             dragTranslation = .zero
           }
         }
@@ -168,6 +173,21 @@ struct OnboardingDemoBuildScreen: View {
     if adding {
       picks.append(ticker.symbol)
       onPick(ticker.symbol)
+    }
+
+    guard !reduceMotion else {
+      topIndex += 1
+      dragTranslation = .zero
+      if picks.count >= Self.targetPickCount {
+        onComplete(picks, false)
+      } else if topIndex >= deck.count {
+        fallbackBanner = "We'll start you with three popular ones."
+        Task { @MainActor in
+          try? await Task.sleep(for: .milliseconds(900))
+          onComplete(OnboardingDemoTickers.fallbackPicks, true)
+        }
+      }
+      return
     }
 
     withAnimation(.easeOut(duration: 0.3)) {
