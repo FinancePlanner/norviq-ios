@@ -24,7 +24,8 @@ struct PortfolioHeroCard: View {
           HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(totalValue.currency)
               .typography(.displayNumber)
-              .contentTransition(.numericText())
+              .contentTransition(.numericText(value: totalValue))
+              .appAnimation(AppMotion.state, value: totalValue)
             Text(heroSubtitle)
               .typography(.small)
               .foregroundStyle(.secondary)

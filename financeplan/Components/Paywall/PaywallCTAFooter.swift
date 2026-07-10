@@ -101,7 +101,7 @@ struct PaywallCTAFooter: View {
         radius: 10, x: 0, y: 5
       )
     }
-    .buttonStyle(PressEffectStyle())
+    .buttonStyle(PressableStyle())
     .disabled(isLoading || isDisabled)
     .opacity(isDisabled ? 0.5 : 1.0)
   }

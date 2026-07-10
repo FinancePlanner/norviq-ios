@@ -86,7 +86,7 @@ struct CSVImportScreen: View {
             .frame(maxWidth: .infinity)
             .appGlassEffect(.rect(cornerRadius: 20))
           }
-          .buttonStyle(PressEffectStyle())
+          .buttonStyle(PressableStyle())
           .padding(.horizontal, 20)
 
           if let selectedFileName = viewModel.selectedFileName {

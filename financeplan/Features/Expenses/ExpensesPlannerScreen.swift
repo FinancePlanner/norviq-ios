@@ -576,12 +576,14 @@ private struct ExpensesYearOverviewCard: View {
 
           Text(totalSpent.currency)
             .typography(.hero, weight: .bold)
-            .contentTransition(.numericText())
+            .contentTransition(.numericText(value: totalSpent))
+            .appAnimation(AppMotion.state, value: totalSpent)
 
           Text("Avg \(averageSpent.currency) through \(lastMonthLabel)")
             .typography(.nano)
             .foregroundStyle(.secondary)
             .contentTransition(.numericText())
+            .appAnimation(AppMotion.state, value: averageSpent)
         }
 
         VStack(alignment: .leading, spacing: 12) {
@@ -751,7 +753,8 @@ private struct PlannerSalaryCard: View {
           Text(netSalary.currency)
             .font(.largeTitle.bold())
             .fontDesign(.rounded)
-            .contentTransition(.numericText())
+            .contentTransition(.numericText(value: netSalary))
+            .appAnimation(AppMotion.state, value: netSalary)
           Text("salary + side income")
             .typography(.small)
             .foregroundStyle(.secondary)
@@ -1012,15 +1015,6 @@ private struct MonthlyPlanItemsCard: View {
                     }
                   }
                   .padding(.vertical, 6)
-                  .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    Button(role: .destructive) { onDelete(item) } label: {
-                      Label("Delete", systemImage: "trash")
-                    }
-                    Button { onEdit(item) } label: {
-                      Label("Edit", systemImage: "pencil")
-                    }
-                    .tint(.blue)
-                  }
                   .transition(.move(edge: .trailing).combined(with: .opacity))
                   
                   if item.id != pillarItems.last?.id {
@@ -1260,7 +1254,7 @@ private struct PlannerItemRow: View {
       }
       .contentShape(Rectangle())
     }
-    .buttonStyle(CardButtonStyle())
+    .buttonStyle(PressableStyle())
     .contextMenu {
       Button("Edit", systemImage: "pencil", action: onEdit)
       Button("Delete", systemImage: "trash", role: .destructive, action: onDelete)
@@ -1373,6 +1367,8 @@ private struct NetSalaryEditorSheet: View {
   @State private var value: String
   @FocusState private var isValueFocused: Bool
   @State private var successFeedbackTrigger = 0
+  @State private var invalidFeedbackTrigger = 0
+  @State private var validationMessage: String?
 
   let monthTitle: String
   let onSave: (Double) -> Void
@@ -1394,6 +1390,16 @@ private struct NetSalaryEditorSheet: View {
             .keyboardType(.decimalPad)
             .focused($isValueFocused)
             .accessibilityIdentifier("expenses.salaryAmountField")
+            .onChange(of: value) {
+              validationMessage = nil
+            }
+
+          if let validationMessage {
+            Text(validationMessage)
+              .font(.footnote)
+              .foregroundStyle(.red)
+              .accessibilityIdentifier("expenses.salaryValidationMessage")
+          }
 
           Text("You can include take-home salary and extra monthly income sources.")
             .font(.footnote)
@@ -1410,7 +1416,11 @@ private struct NetSalaryEditorSheet: View {
 
         ToolbarItem(placement: .confirmationAction) {
           Button("Save") {
-            guard let parsed = parseMonetaryValue(value), parsed >= 0 else { return }
+            guard let parsed = parseMonetaryValue(value), parsed >= 0 else {
+              validationMessage = String(localized: "Enter a valid amount, like 2500 or 2500.50.")
+              invalidFeedbackTrigger += 1
+              return
+            }
             onSave(parsed)
             successFeedbackTrigger += 1
             dismiss()
@@ -1423,7 +1433,8 @@ private struct NetSalaryEditorSheet: View {
         }
       }
     }
-    .appSensoryFeedback(success: successFeedbackTrigger)
+    .appSensoryFeedback(success: successFeedbackTrigger, destructive: invalidFeedbackTrigger)
+    .animation(.easeOut(duration: 0.2), value: validationMessage)
   }
 
   private func parseMonetaryValue(_ raw: String) -> Double? {

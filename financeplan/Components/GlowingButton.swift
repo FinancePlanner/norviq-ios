@@ -14,7 +14,8 @@ public struct GlowingButtonStyle: ButtonStyle {
         interactive: true
       )
       .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-      .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+      .opacity(configuration.isPressed ? 0.9 : 1.0)
+      .animation(AppMotion.press, value: configuration.isPressed)
   }
 }
 

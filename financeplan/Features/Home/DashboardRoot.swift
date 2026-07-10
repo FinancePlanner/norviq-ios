@@ -393,6 +393,7 @@ private struct DashboardContentSection: View {
         onReportsTap: onReportsTap
       )
       .redacted(reason: isHomeMetricsRedacted ? .placeholder : [])
+      .appAnimation(AppMotion.state, value: isHomeMetricsRedacted)
 
       if isSearchResultsVisible {
         AssetSearchCard(viewModel: searchViewModel)
@@ -422,6 +423,7 @@ private struct DashboardContentSection: View {
       }
       .tint(AppTheme.Colors.tint(for: colorScheme))
     }
+    .appAnimation(AppMotion.structural, value: isSearchResultsVisible)
   }
 }
 
@@ -519,7 +521,8 @@ private struct DashboardHeroCard: View {
           Text(currentValue.currency)
             .typography(.displayNumber)
             .lineLimit(1)
-            .contentTransition(.numericText())
+            .contentTransition(.numericText(value: currentValue))
+            .appAnimation(AppMotion.state, value: currentValue)
 
           HStack(spacing: 4) {
             Image(systemName: deltaSymbol).accessibilityHidden(true)

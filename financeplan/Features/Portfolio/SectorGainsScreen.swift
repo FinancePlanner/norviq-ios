@@ -58,7 +58,8 @@ struct SectorGainsScreen: View {
             Text(signedCurrency(totalUnrealizedPnl))
               .typography(.displayNumber)
               .foregroundStyle(pnlColor(totalUnrealizedPnl))
-              .contentTransition(.numericText())
+              .contentTransition(.numericText(value: totalUnrealizedPnl))
+              .appAnimation(AppMotion.state, value: totalUnrealizedPnl)
 
             if let response = viewModel.response {
               Text(

@@ -1,14 +1,5 @@
 import SwiftUI
 
-struct PressEffectStyle: ButtonStyle {
-  func makeBody(configuration: Configuration) -> some View {
-    configuration.label
-      .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-      .opacity(configuration.isPressed ? 0.9 : 1.0)
-      .animation(.easeInOut(duration: 0.12), value: configuration.isPressed)
-  }
-}
-
 enum StockImportMethod: String, CaseIterable, Identifiable {
   case csv
   case manual
@@ -147,7 +138,7 @@ struct InitialStockImportScreen: View {
         .padding(.vertical, 10)
         .appGlassEffect(.capsule)
       }
-      .buttonStyle(PressEffectStyle())
+      .buttonStyle(PressableStyle())
       .accessibilityIdentifier("stockImportSignOutButton")
       .disabled(isSigningOut)
     }
@@ -255,7 +246,7 @@ struct InitialStockImportScreen: View {
     } label: {
       ImportMethodCard(method: method, isSelected: selectedMethod == method)
     }
-    .buttonStyle(PressEffectStyle())
+    .buttonStyle(PressableStyle())
     .contentShape(Rectangle())
     .accessibilityIdentifier("stockImportMethod.\(method.rawValue)")
     .opacity(animatedIndices.contains(index) ? 1 : 0)

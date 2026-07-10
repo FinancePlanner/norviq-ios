@@ -66,7 +66,7 @@ struct PortfolioStockLinkRow: View {
       PortfolioRow(stock: stock, targetAlert: targetAlert, liveQuote: liveQuote)
         .accessibilityIdentifier("portfolio.stockRow.\(stock.symbol)")
     }
-    .buttonStyle(CardButtonStyle())
+    .buttonStyle(PressableStyle())
     .contextMenu {
       Button(
         targetAlert == nil ? "Add price alert" : "Edit price alert",

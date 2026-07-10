@@ -260,7 +260,7 @@ struct PortfolioScreen: View {
       PortfolioRow(stock: stock, targetAlert: targetAlert, liveQuote: nil)
         .accessibilityIdentifier("portfolio.stockRow.\(stock.symbol)")
     }
-    .buttonStyle(CardButtonStyle())
+    .buttonStyle(PressableStyle())
     .contextMenu {
       Button(targetAlert == nil ? "Add price alert" : "Edit price alert", systemImage: targetAlert == nil ? "bell.badge" : "bell.fill") {
         presentTargetAlert(for: stock)

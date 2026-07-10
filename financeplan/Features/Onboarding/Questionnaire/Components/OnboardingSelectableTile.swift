@@ -43,6 +43,6 @@ struct OnboardingSelectableTile: View {
         }
       }
     }
-    .buttonStyle(PressEffectStyle())
+    .buttonStyle(PressableStyle())
   }
 }
