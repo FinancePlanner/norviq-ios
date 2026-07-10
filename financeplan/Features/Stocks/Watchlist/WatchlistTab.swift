@@ -336,7 +336,6 @@ private struct WatchlistRow: View {
             .typography(.label, weight: .bold)
             .monospacedDigit()
             .foregroundStyle(.primary)
-            .animation(.easeInOut(duration: 0.25), value: q.currentPrice)
         }
 
         Text(item.status.capitalized)
@@ -351,8 +350,6 @@ private struct WatchlistRow: View {
         Text(StockMetricFormatter.signedCurrencyText(chg) + " (" + StockMetricFormatter.signedPercentText(pct) + ")")
           .typography(.caption)
           .foregroundStyle(chg >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger)
-          .animation(.easeInOut(duration: 0.3), value: chg)
-          .animation(.easeInOut(duration: 0.3), value: pct)
       }
 
       if let note = item.note, !note.isEmpty {

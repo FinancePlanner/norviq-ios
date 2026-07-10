@@ -2,6 +2,7 @@ import SwiftUI
 import StockPlanShared
 
 struct FeaturedCryptoCard: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let asset: CryptoQuoteResponse
     @Environment(\.colorScheme) private var colorScheme
     @State private var chartProgress: CGFloat = 0
@@ -45,7 +46,8 @@ struct FeaturedCryptoCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(asset.price.formatted(.currency(code: "USD")))
                         .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .contentTransition(.numericText())
+                        .contentTransition(.numericText(value: asset.price))
+                        .appAnimation(AppMotion.state, value: asset.price)
 
                     HStack(spacing: 6) {
                         Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
@@ -80,12 +82,16 @@ struct FeaturedCryptoCard: View {
             }
         }
         .scaleEffect(isPressed ? 0.97 : 1.0)
-        .animation(.spring(response: 0.3), value: isPressed)
+        .animation(AppMotion.press, value: isPressed)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
             isPressed = pressing
         }, perform: {})
         .onAppear {
-            withAnimation(.easeOut(duration: 1.0).delay(0.2)) {
+            guard !reduceMotion else {
+                chartProgress = 1.0
+                return
+            }
+            withAnimation(AppMotion.dataReveal) {
                 chartProgress = 1.0
             }
         }

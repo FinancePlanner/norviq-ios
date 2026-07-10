@@ -62,7 +62,7 @@ public struct BadgesView: View {
                         style: StrokeStyle(lineWidth: 10, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))
-                    .animation(.easeInOut(duration: 1.0), value: overallProgress)
+                    .appAnimation(AppMotion.dataReveal, value: overallProgress)
 
                 VStack(spacing: 2) {
                     Text("\(viewModel.totalEarnedTiers)")
@@ -153,7 +153,7 @@ public struct BadgesView: View {
                         Capsule()
                             .fill(progressGradient(for: badge))
                             .frame(width: geo.size.width * badge.progress, height: 6)
-                            .animation(.easeInOut(duration: 0.8), value: badge.progress)
+                            .appAnimation(AppMotion.dataReveal, value: badge.progress)
                     }
                 }
                 .frame(height: 6)

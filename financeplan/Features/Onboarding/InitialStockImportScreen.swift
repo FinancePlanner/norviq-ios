@@ -48,6 +48,7 @@ struct InitialStockImportScreen: View {
   let onSignOut: () -> Void
   let onBack: () -> Void
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let headerNamespace: Namespace.ID?
 
   @State private var selectedMethod: StockImportMethod?
@@ -213,6 +214,10 @@ struct InitialStockImportScreen: View {
       }
     }
     .onAppear {
+      guard !reduceMotion else {
+        headerVisible = true
+        return
+      }
       withAnimation(.spring(response: 0.7, dampingFraction: 0.75).delay(0.1)) {
         headerVisible = true
       }
@@ -252,7 +257,7 @@ struct InitialStockImportScreen: View {
     .opacity(animatedIndices.contains(index) ? 1 : 0)
     .offset(y: animatedIndices.contains(index) ? 0 : 24)
     .scaleEffect(tappedMethod == method ? 1.02 : 1.0)
-    .animation(.spring(response: 0.25, dampingFraction: 0.8), value: tappedMethod)
+    .appAnimation(AppMotion.state, value: tappedMethod)
   }
 
   private var buttonTitle: String {
@@ -265,6 +270,10 @@ struct InitialStockImportScreen: View {
   // MARK: - Helpers
 
   private func animateMethodOptions() {
+    guard !reduceMotion else {
+      animatedIndices = Set(StockImportMethod.allCases.indices)
+      return
+    }
     for (index, _) in StockImportMethod.allCases.enumerated() {
       Task { @MainActor in
         try? await Task.sleep(for: .seconds(Double(index) * 0.12 + 0.35))

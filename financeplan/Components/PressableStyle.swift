@@ -4,11 +4,12 @@ import SwiftUI
 /// Replaces the former `CardButtonStyle` and `PressEffectStyle` so every
 /// pressable element in the app responds the same way.
 struct PressableStyle: ButtonStyle {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   var scale: CGFloat = 0.97
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .scaleEffect(configuration.isPressed ? scale : 1.0)
+      .scaleEffect(reduceMotion ? 1 : configuration.isPressed ? scale : 1)
       .opacity(configuration.isPressed ? 0.9 : 1.0)
       .animation(AppMotion.press, value: configuration.isPressed)
   }

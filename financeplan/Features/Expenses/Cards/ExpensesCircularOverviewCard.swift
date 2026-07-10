@@ -3,31 +3,29 @@ import SwiftUI
 struct ExpensesCircularOverviewCard: View {
   let leftAmount: Double
   let totalAmount: Double
+  @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var progress: Double = 0
+
+  private var targetProgress: Double {
+    totalAmount > 0 ? max(0, min(1, leftAmount / totalAmount)) : 0
+  }
+
+  private var statusColor: Color {
+    if leftAmount <= 0 { return AppTheme.Colors.danger }
+    if targetProgress <= 0.25 { return AppTheme.Colors.warning }
+    return AppTheme.Colors.tint(for: colorScheme)
+  }
 
   var body: some View {
     VStack {
       ZStack {
         Circle()
-          .stroke(Color.white.opacity(0.1), lineWidth: 20)
+          .stroke(AppTheme.Colors.tertiaryFill(for: colorScheme), lineWidth: 10)
 
         Circle()
           .trim(from: 0, to: progress)
-          .stroke(
-            AngularGradient(
-              gradient: Gradient(colors: [
-                Color(red: 0.7, green: 0.3, blue: 1.0),
-                Color(red: 0.9, green: 0.4, blue: 0.8),
-                Color(red: 0.5, green: 0.3, blue: 1.0),
-                Color(red: 0.2, green: 0.6, blue: 1.0),
-                Color(red: 0.7, green: 0.3, blue: 1.0)
-              ]),
-              center: .center,
-              startAngle: .degrees(-90),
-              endAngle: .degrees(270)
-            ),
-            style: StrokeStyle(lineWidth: 20, lineCap: .round)
-          )
+          .stroke(statusColor, style: StrokeStyle(lineWidth: 10, lineCap: .round))
           .rotationEffect(.degrees(-90))
 
         VStack(spacing: 8) {
@@ -35,28 +33,34 @@ struct ExpensesCircularOverviewCard: View {
             .typography(.small)
             .foregroundStyle(.secondary)
 
-          HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text(leftAmount.currency)
-              .font(.largeTitle.bold())
-              .fontDesign(.rounded)
-            Text("Left")
-              .typography(.headline)
-          }
+          Text(leftAmount.currency)
+            .font(.largeTitle.weight(.semibold))
+            .monospacedDigit()
 
-          Text("of \(totalAmount.currency)")
+          Text(leftAmount < 0 ? "Over budget" : "Remaining")
+            .typography(.small, weight: .semibold)
+            .foregroundStyle(statusColor)
+
+          Text("\(targetProgress.formatted(.percent.precision(.fractionLength(0)))) of \(totalAmount.currency)")
             .typography(.small)
             .foregroundStyle(.secondary)
         }
       }
       .aspectRatio(1, contentMode: .fit)
-      .frame(maxHeight: 280)
-      .padding(.horizontal, 40)
-      .padding(.vertical, 20)
+      .frame(maxHeight: 220)
+      .padding(.horizontal, 24)
+      .padding(.vertical, 16)
     }
-    .onAppear {
-      withAnimation(.spring(response: 1.5, dampingFraction: 0.8).delay(0.2)) {
-        progress = totalAmount > 0 ? max(0, min(1, leftAmount / totalAmount)) : 0
-      }
+    .accessibilityElement(children: .combine)
+    .onAppear(perform: updateProgress)
+    .onChange(of: targetProgress) { _, _ in updateProgress() }
+  }
+
+  private func updateProgress() {
+    guard !reduceMotion else {
+      progress = targetProgress
+      return
     }
+    withAnimation(AppMotion.dataReveal) { progress = targetProgress }
   }
 }

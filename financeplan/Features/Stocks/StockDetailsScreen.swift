@@ -267,9 +267,6 @@ struct StockDetailScreen: View {
             await viewModel.load(stockId: stockId, force: true)
             await viewModel.loadSupplementaryDataIfNeeded(for: selectedTab)
         }
-        .animation(.snappy(duration: 0.24), value: selectedTab)
-        .animation(.snappy(duration: 0.24), value: selectedScenario)
-        .animation(.snappy(duration: 0.24), value: selectedStatementPeriod)
         .tint(AppTheme.Colors.tint(for: colorScheme))
     }
 

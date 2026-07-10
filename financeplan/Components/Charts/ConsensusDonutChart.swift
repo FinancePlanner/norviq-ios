@@ -52,7 +52,6 @@ struct ConsensusDonutChart: View {
             .chartLegend(.hidden)
             .frame(height: 200)
             .overlay { centerLabel }
-            .animation(.snappy(duration: 0.2), value: selectedBucket)
         }
     }
 

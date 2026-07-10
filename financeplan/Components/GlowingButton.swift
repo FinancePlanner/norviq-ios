@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct GlowingButtonStyle: ButtonStyle {
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   public func makeBody(configuration: Configuration) -> some View {
     configuration.label
@@ -13,7 +14,7 @@ public struct GlowingButtonStyle: ButtonStyle {
         tint: AppTheme.Colors.tint(for: colorScheme),
         interactive: true
       )
-      .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+      .scaleEffect(reduceMotion ? 1 : configuration.isPressed ? 0.98 : 1)
       .opacity(configuration.isPressed ? 0.9 : 1.0)
       .animation(AppMotion.press, value: configuration.isPressed)
   }

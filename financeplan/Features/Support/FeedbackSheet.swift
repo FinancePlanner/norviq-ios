@@ -93,11 +93,11 @@ struct FeedbackSheet: View {
     Task {
       do {
         _ = try await feedbackService.submitFeedback(topic: topic, message: message)
-        withAnimation { showSuccessToast = true }
-        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        withAnimation(AppMotion.structural) { showSuccessToast = true }
+        try? await Task.sleep(for: AppMotion.toastLifetime)
         dismiss()
       } catch {
-        withAnimation {
+        withAnimation(AppMotion.structural) {
           errorMessage = error.localizedDescription
         }
         isSubmitting = false

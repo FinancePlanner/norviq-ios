@@ -8,14 +8,14 @@ enum AppMotion {
   static let press: Animation = .easeOut(duration: 0.15)
 
   /// State changes: selection, toggles, loading crossfades, value updates.
-  static let state: Animation = .snappy(duration: 0.25)
+  static let state: Animation = .snappy(duration: 0.2)
 
   /// Structural motion: step changes, banners, row insertion/removal.
-  static let structural: Animation = .spring(response: 0.4, dampingFraction: 0.85)
+  static let structural: Animation = .spring(response: 0.32, dampingFraction: 1)
 
-  /// One-shot data reveals (chart draw-in). Critically damped — financial data
-  /// should settle precisely, without overshoot.
-  static let dataReveal: Animation = .spring(response: 0.55, dampingFraction: 0.9)
+  /// One-shot data reveals (chart draw-in). Financial data should settle
+  /// precisely and without overshoot.
+  static let dataReveal: Animation = .easeOut(duration: 0.24)
 
   /// Fallback when Reduce Motion is on: a short fade, no movement.
   static let reduced: Animation = .easeOut(duration: 0.15)
@@ -25,10 +25,28 @@ enum AppMotion {
 }
 
 extension View {
-  /// Reduce Motion–aware equivalent of `.animation(_:value:)`. Movement-based
-  /// animations collapse to a short fade when the user has Reduce Motion on.
+  /// Reduce Motion–aware equivalent of `.animation(_:value:)`.
+  /// Moving transitions must still choose an opacity-only `AppTransition`.
   func appAnimation(_ animation: Animation, value: some Equatable) -> some View {
     modifier(AppAnimationModifier(animation: animation, value: value))
+  }
+}
+
+enum AppTransition {
+  static func move(edge: Edge, reduceMotion: Bool) -> AnyTransition {
+    reduceMotion ? .opacity : .move(edge: edge).combined(with: .opacity)
+  }
+
+  static func directional(
+    insertion: Edge,
+    removal: Edge,
+    reduceMotion: Bool
+  ) -> AnyTransition {
+    guard !reduceMotion else { return .opacity }
+    return .asymmetric(
+      insertion: .move(edge: insertion).combined(with: .opacity),
+      removal: .move(edge: removal).combined(with: .opacity)
+    )
   }
 }
 

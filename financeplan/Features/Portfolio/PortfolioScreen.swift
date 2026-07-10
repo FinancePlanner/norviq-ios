@@ -29,8 +29,7 @@ struct PortfolioScreen: View {
   @State private var selectedAssetFilter: AssetFilter = .all
   @State private var chartData: [ChartDataPoint] = []
   @State private var pushNavigationRoute: PushNavigationRoute?
-  @State private var pushFallbackMessage: String?
-  @State private var pushFallbackMessageToken: UUID?
+  @State private var pushFallbackToast: ToastData?
   @State private var targetAlertStock: TargetAlertDraftStock?
   @State private var isPaywallPresented = false
   @State private var isEarningsCalendarPresented = false
@@ -149,7 +148,6 @@ struct PortfolioScreen: View {
     ZStack {
       mainContent
     }
-    .animation(.smooth(duration: 0.3), value: viewModel.isLoading)
     .onAppear(perform: prepareScreen)
     .onChange(of: totalValue) { _, _ in
       rebuildChartData()
@@ -232,14 +230,7 @@ struct PortfolioScreen: View {
     .navigationDestination(item: $pushNavigationRoute) { route in
       StockDetailScreen(stockId: route.stockID, initialSymbol: route.symbol)
     }
-    .overlay(alignment: .top) {
-      if let pushFallbackMessage {
-        ToastBanner(message: pushFallbackMessage, style: .info)
-          .padding(.top, 8)
-          .padding(.horizontal, 16)
-          .transition(.move(edge: .top).combined(with: .opacity))
-      }
-    }
+    .toastOverlay($pushFallbackToast)
     .appSensoryFeedback(destructive: destructiveFeedbackTrigger)
   }
 
@@ -584,13 +575,13 @@ struct PortfolioScreen: View {
   }
 
   private func selectTimeRange(_ range: TimeRange) {
-    withAnimation {
+    withAnimation(AppMotion.state) {
       selectedTimeRange = range
     }
   }
 
   private func selectAssetFilter(_ filter: AssetFilter) {
-    withAnimation {
+    withAnimation(AppMotion.state) {
       selectedAssetFilter = filter
     }
   }
@@ -642,20 +633,7 @@ struct PortfolioScreen: View {
   }
 
   private func showPushFallbackMessage(_ message: String) {
-    withAnimation(.easeInOut(duration: 0.2)) {
-      pushFallbackMessage = message
-    }
-
-    let token = UUID()
-    pushFallbackMessageToken = token
-
-    Task { @MainActor in
-      try? await Task.sleep(for: .seconds(4))
-      guard pushFallbackMessageToken == token else { return }
-      withAnimation(.easeInOut(duration: 0.2)) {
-        pushFallbackMessage = nil
-      }
-    }
+    pushFallbackToast = .info(message)
   }
 
   private static func makeChartData(totalValue: Double, timeRange: TimeRange) -> [ChartDataPoint] {

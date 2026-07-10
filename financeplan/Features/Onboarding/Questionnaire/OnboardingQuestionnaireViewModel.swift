@@ -22,7 +22,15 @@ final class OnboardingQuestionnaireViewModel {
     case paywall
   }
 
+  enum NavigationDirection {
+    case forward
+    case backward
+  }
+
   private(set) var step: Step = .welcome
+  /// Which way the last step change moved, so the flow can mirror its
+  /// slide transition when navigating back (spatial consistency).
+  private(set) var navigationDirection: NavigationDirection = .forward
   var answers = OnboardingQuestionnaireAnswers()
 
   private static let logger = Logger(
@@ -58,6 +66,7 @@ final class OnboardingQuestionnaireViewModel {
 
   func transition(to next: Step) {
     let previous = step
+    navigationDirection = next.rawValue >= previous.rawValue ? .forward : .backward
     step = next
     Self.logger.info("step.transition from=\(previous.analyticsName, privacy: .public) to=\(next.analyticsName, privacy: .public)")
     captureScreenViewed(next)

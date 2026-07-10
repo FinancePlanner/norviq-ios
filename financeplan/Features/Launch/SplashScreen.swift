@@ -4,7 +4,9 @@ struct SplashScreen: View {
   @State private var isAnimating = false
   @State private var pulseAnimation = false
   @State private var dotsAnimation = 0
+  @State private var dotsTimer: Timer?
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     ZStack {
@@ -46,9 +48,11 @@ struct SplashScreen: View {
                 .scaleEffect(dotsAnimation == index ? 1.3 : 1.0)
                 .opacity(dotsAnimation == index ? 1.0 : 0.5)
                 .animation(
-                  .easeInOut(duration: 0.6)
-                    .repeatForever(autoreverses: false)
-                    .delay(Double(index) * 0.2),
+                  reduceMotion
+                    ? nil
+                    : .easeInOut(duration: 0.6)
+                      .repeatForever(autoreverses: false)
+                      .delay(Double(index) * 0.2),
                   value: dotsAnimation
                 )
             }
@@ -64,21 +68,25 @@ struct SplashScreen: View {
       }
     }
     .onAppear {
-      // Stagger animations for smooth entrance
-      withAnimation(.easeOut(duration: 0.8)) {
+      withAnimation(reduceMotion ? AppMotion.reduced : .easeOut(duration: 0.8)) {
         isAnimating = true
       }
+
+      guard !reduceMotion else { return }
 
       withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
         pulseAnimation = true
       }
 
-      // Animate dots
-      Timer.scheduledTimer(withTimeInterval: 0.6, repeats: true) { _ in
+      dotsTimer = Timer.scheduledTimer(withTimeInterval: 0.6, repeats: true) { _ in
         Task { @MainActor in
           dotsAnimation = (dotsAnimation + 1) % 3
         }
       }
+    }
+    .onDisappear {
+      dotsTimer?.invalidate()
+      dotsTimer = nil
     }
   }
 }

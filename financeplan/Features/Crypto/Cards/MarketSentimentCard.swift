@@ -3,6 +3,7 @@ import SwiftUI
 private let tickIntervalMs: Double = 800.0
 
 struct MarketSentimentCard: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let value: Int
     let label: String
     @State private var animatedValue: CGFloat = 0
@@ -27,7 +28,8 @@ struct MarketSentimentCard: View {
                 HStack(alignment: .bottom, spacing: 4) {
                     Text("\(displayValue)")
                         .font(.system(.title2, design: .rounded, weight: .bold))
-                        .contentTransition(.numericText())
+                        .contentTransition(.numericText(value: Double(displayValue)))
+                        .appAnimation(AppMotion.state, value: displayValue)
                     Text(label)
                         .font(.caption.bold())
                         .foregroundStyle(sentimentColor)
@@ -69,7 +71,12 @@ struct MarketSentimentCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .onAppear {
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.1)) {
+            guard !reduceMotion else {
+                animatedValue = CGFloat(value) / 100.0
+                displayValue = value
+                return
+            }
+            withAnimation(AppMotion.dataReveal) {
                 animatedValue = CGFloat(value) / 100.0
             }
             animateCounter(to: value)

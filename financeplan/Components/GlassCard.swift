@@ -6,13 +6,17 @@ public struct GlassCard<Content: View>: View {
   private let content: Content
   private let backgroundColor: Color?
 
-    public init(cornerRadius: CGFloat = 24, backgroundColor: Color? = nil, @ViewBuilder content: () -> Content) {
+  public init(
+    cornerRadius: CGFloat = 20,
+    backgroundColor: Color? = nil,
+    @ViewBuilder content: () -> Content
+  ) {
     self.cornerRadius = cornerRadius
     self.content = content()
     self.backgroundColor = backgroundColor
   }
 
-    public var body: some View {
+  public var body: some View {
         content
           .padding()
           .background {

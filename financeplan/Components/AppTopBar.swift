@@ -68,7 +68,7 @@ struct AppTopBar<LeadingAccessory: View, TrailingAccessory: View>: View {
       EmptyView()
     } else {
       accessory
-        .frame(width: 40, height: 40)
+        .frame(width: 44, height: 44)
     }
   }
 }

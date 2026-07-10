@@ -86,7 +86,7 @@ struct PortfolioAllocationScreen: View {
                     .transition(.opacity)
             }
         }
-        .animation(.smooth(duration: 0.3), value: viewModel.isLoading)
+        .appAnimation(AppMotion.reduced, value: viewModel.isLoading)
         .onAppear {
             viewModel.setModelContext(modelContext)
         }
@@ -208,6 +208,7 @@ struct PortfolioAllocationScreen: View {
         let slices: [PortfolioAllocationSlice]
         let colorScheme: ColorScheme
 
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
         @State private var animationProgress: Double = 0.0
 
         var body: some View {
@@ -226,9 +227,11 @@ struct PortfolioAllocationScreen: View {
             )
             .chartLegend(.hidden)
             .onAppear {
-                withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2)) {
-                    animationProgress = 1.0
+                guard !reduceMotion else {
+                    animationProgress = 1
+                    return
                 }
+                withAnimation(AppMotion.dataReveal) { animationProgress = 1 }
             }
         }
     }

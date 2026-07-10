@@ -142,6 +142,7 @@ private struct SectorGainsBarChart: View {
   let sectors: [SectorGainItem]
   let colorScheme: ColorScheme
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var animationProgress: Double = 0
 
   var body: some View {
@@ -161,9 +162,11 @@ private struct SectorGainsBarChart: View {
       AxisMarks(position: .leading)
     }
     .onAppear {
-      withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.15)) {
+      guard !reduceMotion else {
         animationProgress = 1
+        return
       }
+      withAnimation(AppMotion.dataReveal) { animationProgress = 1 }
     }
   }
 }

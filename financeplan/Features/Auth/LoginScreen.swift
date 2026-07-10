@@ -6,6 +6,7 @@ struct LoginScreen: View {
   @InjectedObject(\Container.windowSize) private var windowSize
   @InjectedObservable(\Container.appEnvironment) private var environment
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @StateObject private var viewModel: LoginViewModel
   @State private var isShowingMFA = false
 
@@ -37,7 +38,7 @@ struct LoginScreen: View {
           Spacer()
         }
         .zIndex(100)
-        .transition(.move(edge: .top).combined(with: .opacity))
+        .transition(AppTransition.move(edge: .top, reduceMotion: reduceMotion))
       }
 
       if let info = viewModel.infoMessage {
@@ -47,13 +48,15 @@ struct LoginScreen: View {
           Spacer()
         }
         .zIndex(100)
-        .transition(.move(edge: .top).combined(with: .opacity))
+        .transition(AppTransition.move(edge: .top, reduceMotion: reduceMotion))
       }
     }
     .background {
       MeshGradientBackground()
     }
-    .animation(.easeInOut(duration: 0.3), value: viewModel.isSignup)
+    .appAnimation(AppMotion.state, value: viewModel.isSignup)
+    .appAnimation(AppMotion.structural, value: viewModel.error)
+    .appAnimation(AppMotion.structural, value: viewModel.infoMessage)
     .sheet(isPresented: $viewModel.isForgotPasswordPresented) {
       forgotPasswordSheet
     }
@@ -77,10 +80,10 @@ struct LoginScreen: View {
   private var authContent: some View {
     if viewModel.isSignup {
       SignUpView(viewModel: viewModel)
-        .transition(.opacity.combined(with: .move(edge: .trailing)))
+        .transition(AppTransition.move(edge: .trailing, reduceMotion: reduceMotion))
     } else {
       SignInView(viewModel: viewModel)
-        .transition(.opacity.combined(with: .move(edge: .leading)))
+        .transition(AppTransition.move(edge: .leading, reduceMotion: reduceMotion))
     }
   }
 
@@ -100,7 +103,7 @@ struct LoginScreen: View {
     guard let currentMessage = viewModel.infoMessage else { return }
     try? await Task.sleep(for: .seconds(3))
     guard viewModel.infoMessage == currentMessage else { return }
-    withAnimation(.easeInOut(duration: 0.2)) {
+    withAnimation(AppMotion.reduced) {
       viewModel.infoMessage = nil
     }
   }

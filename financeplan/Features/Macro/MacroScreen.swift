@@ -89,7 +89,8 @@ private struct MacroHeroCard: View {
         Text("\(snapshot.headline.nowValue, specifier: "%.2f")%")
           .font(.system(size: 48, weight: .bold, design: .rounded))
           .foregroundStyle(.tint)
-          .contentTransition(.numericText())
+          .contentTransition(.numericText(value: snapshot.headline.nowValue))
+          .appAnimation(AppMotion.state, value: snapshot.headline.nowValue)
 
         VStack(alignment: .leading, spacing: 2) {
           Text(snapshot.headline.name)

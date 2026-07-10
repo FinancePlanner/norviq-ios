@@ -22,6 +22,8 @@ struct SignUpView: View {
           .labelStyle(.iconOnly)
           .font(.system(size: 16, weight: .medium))
           .foregroundStyle(.secondary)
+          .frame(width: 44, height: 44)
+          .contentShape(.rect)
           .accessibilityLabel("Close sign up")
         }
         .padding(.horizontal, 24)
@@ -37,7 +39,7 @@ struct SignUpView: View {
             .foregroundStyle(.primary)
             .multilineTextAlignment(.center)
 
-          Text("Join an elite community and experience the future of editorial financial management.")
+          Text("Bring your portfolio and budgets together in one secure place.")
             .font(.subheadline)
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
@@ -48,7 +50,7 @@ struct SignUpView: View {
         .padding(.bottom, 40)
 
         // Form Fields
-        GlassCard(cornerRadius: 24) {
+        GlassCard(cornerRadius: AppTheme.Radius.hero) {
           VStack(spacing: 20) {
             VaultTextField(
               label: "Username",
@@ -79,7 +81,9 @@ struct SignUpView: View {
                   action: { isPasswordVisible.toggle() }
                 )
                 .labelStyle(.iconOnly)
-                .foregroundStyle(.secondary),
+                .foregroundStyle(.secondary)
+                .frame(width: 44, height: 44)
+                .contentShape(.rect),
               textContentType: .newPassword,
               submitLabel: .next
             )
@@ -101,7 +105,9 @@ struct SignUpView: View {
                   action: { isConfirmPasswordVisible.toggle() }
                 )
                 .labelStyle(.iconOnly)
-                .foregroundStyle(.secondary),
+                .foregroundStyle(.secondary)
+                .frame(width: 44, height: 44)
+                .contentShape(.rect),
               textContentType: .newPassword,
               submitLabel: .next
             )
