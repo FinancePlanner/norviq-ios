@@ -44,6 +44,7 @@ struct GetInflationSeriesEndpoint: Endpoint {
   let series: String
   let from: String?
   let to: String?
+  var limit: Int?
 
   var method: HTTPMethod { .get }
   var path: String { "/v1/macro/inflation/series" }
@@ -54,6 +55,51 @@ struct GetInflationSeriesEndpoint: Endpoint {
     if let country { p["country"] = country }
     if let from { p["from"] = from }
     if let to { p["to"] = to }
+    if let limit { p["limit"] = String(limit) }
+    return p
+  }
+}
+
+struct GetFedWatchEndpoint: Endpoint {
+  typealias Response = FedWatchResponse
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/macro/fed-watch" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+struct GetMacroItemsEndpoint: Endpoint {
+  typealias Response = MacroItemsResponse
+
+  let country: String?
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/macro/items" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    if let country { return ["country": country] }
+    return [:]
+  }
+}
+
+struct GetMacroItemSeriesEndpoint: Endpoint {
+  typealias Response = MacroItemSeriesResponse
+
+  let itemId: String
+  let country: String?
+  var limit: Int?
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/macro/items/\(itemId)/series" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    var p: Parameters = [:]
+    if let country { p["country"] = country }
+    if let limit { p["limit"] = String(limit) }
     return p
   }
 }
