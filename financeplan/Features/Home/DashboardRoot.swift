@@ -397,6 +397,8 @@ private struct DashboardContentSection: View {
         financialHealthUnavailable: financialHealthUnavailable
       )
 
+      MacroTeaserCard()
+
       QuickAddEntryButton(action: onQuickAddTap)
 
       DisclosureGroup(LocalizedStringKey("More Insights")) {
