@@ -180,6 +180,13 @@ struct StockDetailScreen: View {
                         errorMessage: viewModel.chartErrorMessage,
                         onSelectRange: viewModel.switchChartRange
                     )
+                case .builder:
+                    ProGateView(billingManager: billingManager) {
+                        ChartBuilderScreen(
+                            symbol: viewModel.details?.symbol ?? initialSymbol,
+                            companyName: viewModel.companyProfile?.name
+                        )
+                    }
                 case .overview:
                     StockOverviewTab(
                         details: viewModel.details,

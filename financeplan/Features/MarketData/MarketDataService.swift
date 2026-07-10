@@ -29,6 +29,42 @@ protocol MarketDataServicing: Sendable {
   func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements
   func fetchPriceChart(symbol: String, range: String) async throws -> PriceChartSeries
   func fetchPriceChartComparison(symbols: [String], range: String) async throws -> PriceChartComparisonResponse
+  func fetchChartBuilder(
+    symbol: String,
+    metrics: [String],
+    period: ChartBuilderPeriodKind,
+    limit: Int,
+    compare: [String]
+  ) async throws -> ChartBuilderResponse
+  func fetchChartBuilderCSV(
+    symbol: String,
+    metrics: [String],
+    period: ChartBuilderPeriodKind,
+    limit: Int,
+    compare: [String]
+  ) async throws -> Data
+}
+
+extension MarketDataServicing {
+  func fetchChartBuilder(
+    symbol _: String,
+    metrics _: [String],
+    period _: ChartBuilderPeriodKind,
+    limit _: Int,
+    compare _: [String]
+  ) async throws -> ChartBuilderResponse {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchChartBuilderCSV(
+    symbol _: String,
+    metrics _: [String],
+    period _: ChartBuilderPeriodKind,
+    limit _: Int,
+    compare _: [String]
+  ) async throws -> Data {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
 }
 
 final class MarketDataHTTPService: MarketDataServicing {
@@ -207,6 +243,42 @@ final class MarketDataHTTPService: MarketDataServicing {
     }
   }
 
+  func fetchChartBuilder(
+    symbol: String,
+    metrics: [String],
+    period: ChartBuilderPeriodKind,
+    limit: Int,
+    compare: [String]
+  ) async throws -> ChartBuilderResponse {
+    try await performAuthenticated { client in
+      try await client.fetchChartBuilder(
+        symbol: symbol,
+        metrics: metrics,
+        period: period,
+        limit: limit,
+        compare: compare
+      )
+    }
+  }
+
+  func fetchChartBuilderCSV(
+    symbol: String,
+    metrics: [String],
+    period: ChartBuilderPeriodKind,
+    limit: Int,
+    compare: [String]
+  ) async throws -> Data {
+    try await performAuthenticated { client in
+      try await client.fetchChartBuilderCSV(
+        symbol: symbol,
+        metrics: metrics,
+        period: period,
+        limit: limit,
+        compare: compare
+      )
+    }
+  }
+
   private func makeClient(forceRefresh: Bool = false) async throws -> MarketDataHTTPClient {
     let token = try await resolvedAccessToken(forceRefresh: forceRefresh)
     return MarketDataHTTPClient(
@@ -334,9 +406,27 @@ struct MarketDataServiceStub: MarketDataServicing {
   func fetchPriceChart(symbol _: String, range _: String) async throws -> PriceChartSeries {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
-
-
   func fetchPriceChartComparison(symbols _: [String], range _: String) async throws -> PriceChartComparisonResponse {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchChartBuilder(
+    symbol _: String,
+    metrics _: [String],
+    period _: ChartBuilderPeriodKind,
+    limit _: Int,
+    compare _: [String]
+  ) async throws -> ChartBuilderResponse {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchChartBuilderCSV(
+    symbol _: String,
+    metrics _: [String],
+    period _: ChartBuilderPeriodKind,
+    limit _: Int,
+    compare _: [String]
+  ) async throws -> Data {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 }
@@ -354,7 +444,7 @@ protocol CompanyProfileCaching: Sendable {
 
 final class CompanyProfileCache: CompanyProfileCaching {
   static let shared = CompanyProfileCache()
-  
+
   private let store: UserDefaultsProfileStore
   private let keyPrefix = "CompanyProfileCache_"
 

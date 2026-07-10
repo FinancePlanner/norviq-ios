@@ -3,6 +3,7 @@ import StockPlanShared
 
 enum StockDetailTab: String, CaseIterable, Identifiable {
     case chart
+    case builder
     case overview
     case statements
     case analysis
@@ -17,6 +18,8 @@ enum StockDetailTab: String, CaseIterable, Identifiable {
         switch self {
         case .chart:
             "Chart"
+        case .builder:
+            "Builder"
         case .overview:
             "Overview"
         case .statements:
@@ -37,7 +40,7 @@ enum StockDetailTab: String, CaseIterable, Identifiable {
     var isProOnly: Bool {
         switch self {
         case .chart, .overview, .news: return false
-        case .forecast, .statements, .analysis, .compare, .earnings: return true
+        case .builder, .forecast, .statements, .analysis, .compare, .earnings: return true
         }
     }
 }
@@ -292,4 +295,3 @@ struct StockComparisonProfile: Identifiable, Equatable {
     let dcfBearPrice: Double?
     let dcfBullPrice: Double?
 }
-
