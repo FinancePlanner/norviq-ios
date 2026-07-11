@@ -20,6 +20,7 @@ private enum UserProfileDestination: Hashable {
     case dataHandling
     case dataAvailability
     case connect
+    case integrations
     case sensitiveActions
     case subscription
 }
@@ -434,6 +435,13 @@ public struct UserProfileView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
+            Section(LocalizedStringKey("Integrations")) {
+                NavigationLink(value: UserProfileDestination.integrations) {
+                    Label(LocalizedStringKey("Connected Accounts"), systemImage: "building.columns")
+                }
+            }
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
             // Connect
             Section(LocalizedStringKey("Connect")) {
                 NavigationLink(value: UserProfileDestination.connect) {
@@ -574,6 +582,8 @@ public struct UserProfileView: View {
             DataAvailabilityView()
         case .connect:
             ConnectView()
+        case .integrations:
+            IntegrationsView()
         case .sensitiveActions:
             Text("Sensitive actions")
         case .subscription:
