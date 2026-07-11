@@ -5,6 +5,10 @@ protocol TaxServiceProtocol: Sendable {
   func dashboard(jurisdiction: TaxJurisdiction, taxYear: Int) async throws -> TaxDashboardResponse
   func createScenario(_ request: TaxScenarioRequest) async throws -> TaxScenarioResponse
   func createActionPlan(_ request: TaxActionPlanRequest) async throws -> TaxActionPlanResponse
+  func notificationPreferences() async throws -> TaxNotificationPreferences
+  func saveNotificationPreferences(_ request: TaxNotificationPreferences) async throws -> TaxNotificationPreferences
+  func reports() async throws -> [TaxReportResponse]
+  func createReport(_ request: TaxReportRequest) async throws -> TaxReportResponse
 }
 
 final class TaxService: TaxServiceProtocol, @unchecked Sendable {
@@ -37,6 +41,22 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
 
   func createActionPlan(_ request: TaxActionPlanRequest) async throws -> TaxActionPlanResponse {
     try await send(path: "v1/tax/action-plans", body: JSONEncoder().encode(request))
+  }
+
+  func notificationPreferences() async throws -> TaxNotificationPreferences {
+    try await send(url: environment.current.apiBaseUrl.appending(path: "v1/tax/notifications"), method: "GET", body: nil)
+  }
+
+  func saveNotificationPreferences(_ request: TaxNotificationPreferences) async throws -> TaxNotificationPreferences {
+    try await send(url: environment.current.apiBaseUrl.appending(path: "v1/tax/notifications"), method: "PUT", body: JSONEncoder().encode(request))
+  }
+
+  func reports() async throws -> [TaxReportResponse] {
+    try await send(url: environment.current.apiBaseUrl.appending(path: "v1/tax/reports"), method: "GET", body: nil)
+  }
+
+  func createReport(_ request: TaxReportRequest) async throws -> TaxReportResponse {
+    try await send(path: "v1/tax/reports", body: JSONEncoder().encode(request))
   }
 
   private func send<Response: Decodable>(path: String, body: Data) async throws -> Response {

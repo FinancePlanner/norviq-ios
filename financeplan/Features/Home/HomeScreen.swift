@@ -91,6 +91,9 @@ struct HomeScreen: View {
     .onReceive(NotificationCenter.default.publisher(for: .openPortfolioFromPushNotification)) { _ in
       openPortfolioTab()
     }
+    .onReceive(NotificationCenter.default.publisher(for: .openTaxFromPushNotification)) { _ in
+      selectedTab = .tax
+    }
   }
 
   private var settingsSheet: some View {

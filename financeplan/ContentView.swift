@@ -351,6 +351,13 @@ public struct ContentView: View {
         object: nil,
         userInfo: userInfo
       )
+    case .taxOpportunity:
+      Self.pushLogger.info("push.analytics routed_success destination=tax opportunity=\(route.opportunityID ?? "-", privacy: .public)")
+      NotificationCenter.default.post(
+        name: .openTaxFromPushNotification,
+        object: nil,
+        userInfo: route.opportunityID.map { ["opportunityId": $0] }
+      )
     }
   }
 
