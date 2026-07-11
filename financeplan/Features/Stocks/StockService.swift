@@ -229,9 +229,14 @@ final class StockService: StockServicing {
   func fetchPortfolio(portfolioListId: String? = nil, cursor: String? = nil, limit: Int? = nil) async throws -> (items: [StockResponse], nextCursor: String?) {
     try await performAuthenticated { client in
       let endpoint = GetStocksEndpoint(portfolioListId: portfolioListId, cursor: cursor, limit: limit)
-      let (items, response) = try await client.callWithHeaders(endpoint)
+      let (list, response) = try await client.callWithHeaders(endpoint)
+      if list.droppedCount > 0 {
+        stockServiceLogger.error(
+          "Dropped \(list.droppedCount, privacy: .public) malformed holding row(s) from /v1/stocks"
+        )
+      }
       let nextCursor = response.value(forHTTPHeaderField: "X-Next-Cursor")
-      return (items, nextCursor)
+      return (list.items.map { $0.asStockResponse() }, nextCursor)
     }
   }
 

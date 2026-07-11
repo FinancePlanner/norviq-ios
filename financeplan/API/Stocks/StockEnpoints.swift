@@ -60,7 +60,9 @@ struct BulkCreateStocksEndpoint: Endpoint {
 }
 
 struct GetStocksEndpoint: Endpoint {
-  typealias Response = [StockResponse]
+  // Lenient list decode: tolerates a missing `createdAt` and drops individual
+  // malformed rows instead of failing the entire holdings list.
+  typealias Response = LenientStockList
   let portfolioListId: String?
   let cursor: String?
   let limit: Int?
