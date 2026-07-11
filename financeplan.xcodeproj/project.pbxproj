@@ -278,7 +278,7 @@
 				60543E262F48D90000B67ADA /* XCRemoteSwiftPackageReference "MarkdownUI" */,
 				60543E272F48D90000B67ADA /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				60543E282F48D90000B67ADA /* XCRemoteSwiftPackageReference "SwiftyCrop" */,
-				70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "FinanceShared" */,
+				70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "norviq-shared" */,
 				70B002A53C5E11AA00F02001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 				60543D592F48C8B400B67ADA /* XCRemoteSwiftPackageReference "AnyAPI" */,
 				60543DE82F48D35700B67ADA /* XCRemoteSwiftPackageReference "EntityStore" */,
@@ -928,12 +928,12 @@
 				kind = branch;
 			};
 		};
-		70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "FinanceShared" */ = {
+		70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "norviq-shared" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/FinancePlanner/FinanceShared.git";
+			repositoryURL = "https://github.com/FinancePlanner/norviq-shared.git";
 			requirement = {
-				branch = main;
-				kind = branch;
+				kind = exactVersion;
+				version = 3.7.0;
 			};
 		};
 		70B002A53C5E11AA00F02001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
@@ -1022,7 +1022,7 @@
 		};
 		70B001A23C5E11AA00F01001 /* StockPlanShared */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "FinanceShared" */;
+			package = 70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "norviq-shared" */;
 			productName = StockPlanShared;
 		};
 		70B002A23C5E11AA00F02001 /* RevenueCat */ = {

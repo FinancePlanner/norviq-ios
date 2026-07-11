@@ -1,5 +1,5 @@
 {
-  "originHash" : "5bad97ba671f30feb7cef3d98a1149dd02354a1ae760edc8f96645b7b1780345",
+  "originHash" : "9e44a238fb054dc21101faca4f3c9c1428150fb0a2faabe2e2845d64a9565206",
   "pins" : [
     {
       "identity" : "alamofire",
@@ -128,15 +128,6 @@
       }
     },
     {
-      "identity" : "financeshared",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/FinancePlanner/FinanceShared.git",
-      "state" : {
-        "branch" : "main",
-        "revision" : "58f5fa9f94b3cee35f4352616b09266a29511c54"
-      }
-    },
-    {
       "identity" : "jsonsafeencoding-swift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/segmentio/jsonsafeencoding-swift.git",
@@ -179,6 +170,15 @@
       "state" : {
         "revision" : "2849f5323265386e200484b0d0f896e73c3411b9",
         "version" : "6.0.1"
+      }
+    },
+    {
+      "identity" : "norviq-shared",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FinancePlanner/norviq-shared.git",
+      "state" : {
+        "revision" : "fe2c1a687d06abdec1ac98789448061e9f52d170",
+        "version" : "3.7.0"
       }
     },
     {
