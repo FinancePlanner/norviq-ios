@@ -36,7 +36,7 @@ public struct UserProfileView: View {
     @InjectedObservable(\Container.billingManager) private var billingManager
     @State private var path: [UserProfileDestination] = []
     @State private var isEditPresented = false
-    @State private var isAIInfoPresented = false
+    @State private var isAssistantPresented = false
     @State private var isPaywallPresented = false
     @State private var isLoggingOut = false
     @State private var isDeletingAccount = false
@@ -83,6 +83,15 @@ public struct UserProfileView: View {
                 .navigationTitle(LocalizedStringKey("Settings"))
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            isAssistantPresented = true
+                        } label: {
+                            Image(systemName: "sparkles")
+                        }
+                        .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+                        .accessibilityLabel("Assistant")
+                    }
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Done") { dismiss() }
                             .font(.headline)
@@ -108,8 +117,8 @@ public struct UserProfileView: View {
                 .sheet(isPresented: $isEditPresented) {
                     editProfileSheet
                 }
-                .sheet(isPresented: $isAIInfoPresented) {
-                    AIModelIntegrationsInfoSheet()
+                .sheet(isPresented: $isAssistantPresented) {
+                    AssistantView()
                 }
                 .sheet(isPresented: $isPaywallPresented) {
                     PaywallView(billingManager: billingManager)
