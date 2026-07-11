@@ -29,6 +29,13 @@ struct PortfolioRoot: View {
           .tint(AppTheme.Colors.tint(for: colorScheme))
           .accessibilityLabel(LocalizedStringKey("Open settings"))
         }
+        ToolbarItem(placement: .topBarTrailing) {
+          NavigationLink(destination: ScenarioPlanningScreen()) {
+            Label("Scenario planning", systemImage: "chart.xyaxis.line")
+          }
+            .labelStyle(.iconOnly)
+            .accessibilityLabel("Open scenario planning")
+        }
       }
       .sheet(isPresented: $isPaywallPresented) {
         PaywallView(billingManager: billingManager)
