@@ -14,13 +14,15 @@ struct TaxSettingsSheet: View {
   var body: some View {
     NavigationStack {
       Form {
-        Section("Harvesting alerts") {
+        Section {
           Toggle("Notify me about actionable opportunities", isOn: $enabled)
           TextField("Minimum estimated benefit", text: $minimumBenefit)
             .keyboardType(.decimalPad)
             .disabled(!enabled)
           Stepper("Cooldown: \(cooldownDays) days", value: $cooldownDays, in: 1...30)
             .disabled(!enabled)
+        } header: {
+          Text("Harvesting alerts")
         } footer: {
           Text("Norviq also requires a benefit above 0.5% of your taxable portfolio or 250 in your reporting currency, whichever is greater.")
         }

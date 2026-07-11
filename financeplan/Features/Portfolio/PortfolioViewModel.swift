@@ -106,11 +106,16 @@ final class PortfolioViewModel: ObservableObject {
 
       async let stocksTask = service.fetchPortfolio(portfolioListId: selectedPortfolioListId, limit: 50)
       async let summaryTask = service.fetchPortfolioSummary(portfolioListId: selectedPortfolioListId)
-      let (stocksResult, summary) = try await (stocksTask, summaryTask)
-      let (remoteStocks, fetchedNextCursor) = stocksResult
+      let (remoteStocks, fetchedNextCursor) = try await stocksTask
       await syncWithSwiftData(remoteStocks, listId: selectedPortfolioListId)
       nextCursor = fetchedNextCursor
-      cashBalance = extractCashBalance(from: summary)
+
+      // Summary failures must not block holdings sync; keep the last known balance.
+      do {
+        cashBalance = extractCashBalance(from: try await summaryTask)
+      } catch {
+        portfolioViewModelLogger.warning("Portfolio summary failed: \(error.localizedDescription)")
+      }
 
       do {
         let targets = try await service.fetchTargets(symbol: nil)
@@ -166,6 +171,7 @@ final class PortfolioViewModel: ObservableObject {
       portfolioViewModelLogger.error(
         "SwiftData portfolio sync failed: \(error.localizedDescription, privacy: .public)"
       )
+      errorMessage = "Couldn't update your cached portfolio. Pull to refresh to try again."
     }
   }
 
@@ -462,6 +468,17 @@ struct SwiftDataPortfolioLocalStore: PortfolioLocalPersisting {
 
   func reconcile(with remoteStocks: [StockResponse], in portfolioListId: String?) throws {
     guard !ownerUserId.isEmpty else { return }
+    do {
+      try incrementalReconcile(with: remoteStocks, in: portfolioListId)
+    } catch {
+      // A single bad row must not discard the whole remote batch: rebuild the
+      // scope from scratch instead of leaving the stale cache in place.
+      modelContext.rollback()
+      try rebuildScope(with: remoteStocks, in: portfolioListId)
+    }
+  }
+
+  private func incrementalReconcile(with remoteStocks: [StockResponse], in portfolioListId: String?) throws {
     let remoteIds = remoteStocks.map(\.id)
     let listId = portfolioListId ?? ""
 
@@ -509,6 +526,35 @@ struct SwiftDataPortfolioLocalStore: PortfolioLocalPersisting {
         local.portfolioListId = listId
         modelContext.insert(local)
       }
+    }
+
+    if modelContext.hasChanges {
+      try modelContext.save()
+    }
+  }
+
+  /// Recovery path: wipe every row that could conflict with the remote batch
+  /// (same list scope, or same unique id anywhere) and reinsert fresh.
+  private func rebuildScope(with remoteStocks: [StockResponse], in portfolioListId: String?) throws {
+    let remoteIds = remoteStocks.map(\.id)
+    let listId = portfolioListId ?? ""
+
+    try deleteLegacyRows()
+
+    let conflictingDescriptor = FetchDescriptor<SDPortfolioStock>(
+      predicate: #Predicate { local in
+        (local.ownerUserId == ownerUserId && (local.portfolioListId ?? "") == listId)
+          || remoteIds.contains(local.id)
+      }
+    )
+    let conflictingRows = try modelContext.fetch(conflictingDescriptor)
+    conflictingRows.forEach(modelContext.delete)
+
+    for remote in remoteStocks {
+      let local = SDPortfolioStock(from: remote)
+      local.ownerUserId = ownerUserId
+      local.portfolioListId = listId
+      modelContext.insert(local)
     }
 
     if modelContext.hasChanges {
