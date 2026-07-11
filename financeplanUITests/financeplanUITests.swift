@@ -36,6 +36,16 @@ final class FinanceplanUITests: XCTestCase {
   }
 
   @MainActor
+  func testUnauthenticatedSocialAuthButtonsAreAccessibleInDarkMode() throws {
+    try assertSocialAuthButtonsAreAccessible(appearance: "dark")
+  }
+
+  @MainActor
+  func testUnauthenticatedSocialAuthButtonsAreAccessibleInLightMode() throws {
+    try assertSocialAuthButtonsAreAccessible(appearance: "light")
+  }
+
+  @MainActor
   func testSelectingImportMethod_TransitionsToHome() throws {
     let app = makeAuthenticatedFirstLoginApp(userID: "ui-test-\(UUID().uuidString)")
     app.launch()
@@ -347,5 +357,66 @@ final class FinanceplanUITests: XCTestCase {
     }
     app.launchArguments += launchArguments
     return app
+  }
+
+  @MainActor
+  private func makeUnauthenticatedApp(appearance: String? = nil) -> XCUIApplication {
+    let app = XCUIApplication()
+    var launchArguments = [
+      "-ui_test_skip_splash",
+      "-ui_test_reset_session"
+    ]
+    if let appearance {
+      launchArguments += ["-ui_test_app_appearance", appearance]
+    }
+    app.launchArguments += launchArguments
+    return app
+  }
+
+  @MainActor
+  private func assertSocialAuthButtonsAreAccessible(
+    appearance: String,
+    file: StaticString = #filePath,
+    line: UInt = #line
+  ) throws {
+    let app = makeUnauthenticatedApp(appearance: appearance)
+    app.launch()
+
+    let loginButton = app.buttons["Already have an account? Log in"]
+    XCTAssertTrue(loginButton.waitForExistence(timeout: 20), file: file, line: line)
+    loginButton.tap()
+
+    for identifier in ["socialAuth.apple", "socialAuth.google", "socialAuth.x"] {
+      let button = app.buttons[identifier]
+      XCTAssertTrue(
+        button.waitForExistence(timeout: 10),
+        "Expected \(identifier) in \(appearance) mode.",
+        file: file,
+        line: line
+      )
+
+      if !button.isHittable {
+        app.swipeUp()
+      }
+
+      XCTAssertTrue(
+        button.isHittable,
+        "Expected \(identifier) to be hittable in \(appearance) mode.",
+        file: file,
+        line: line
+      )
+      XCTAssertGreaterThanOrEqual(
+        button.frame.height,
+        44,
+        "Expected \(identifier) to meet the minimum tap-target height.",
+        file: file,
+        line: line
+      )
+    }
+
+    let screenshot = XCTAttachment(screenshot: app.screenshot())
+    screenshot.name = "Social authentication buttons - \(appearance) mode"
+    screenshot.lifetime = .keepAlways
+    add(screenshot)
   }
 }

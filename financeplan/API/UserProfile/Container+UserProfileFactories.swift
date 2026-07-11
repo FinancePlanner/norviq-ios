@@ -22,4 +22,13 @@ extension Container {
       )
     }
   }
+
+  var accountLinkingService: Factory<AccountLinkingServiceProtocol> {
+    self { @MainActor [unowned self] in
+      AccountLinkingService(
+        environmentManager: self.appEnvironment(),
+        authSessionManager: self.authSessionManager()
+      )
+    }
+  }
 }

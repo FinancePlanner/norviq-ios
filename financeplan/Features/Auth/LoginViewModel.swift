@@ -213,6 +213,7 @@ final class LoginViewModel: ObservableObject {
     do {
       let refreshed = try await authService.resendMFA(challengeId: challenge.challengeId)
       pendingMFAChallenge = refreshed
+      mfaCode = ""
       startMFAResendCountdown(seconds: refreshed.resendAvailableIn)
       mfaInfoMessage = "A new code has been sent."
     } catch {
@@ -291,6 +292,7 @@ final class LoginViewModel: ObservableObject {
       )
 
       let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+      await sessionStore.markPendingOnboardingAfterSignup(email: trimmedEmail)
       // PostHog: Track new account creation
       PostHogSDK.shared.capture("user_signed_up", properties: [
         "username": username.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -310,6 +312,10 @@ final class LoginViewModel: ObservableObject {
     await sessionStore.store(authResponse: auth)
     let userId = auth.userId.uuidString
     let username = auth.username.trimmingCharacters(in: .whitespacesAndNewlines)
+    if await sessionStore.hasPendingOnboardingAfterSignup(email: auth.email) {
+      await sessionStore.markOnboardingQuestionnaireRequired(for: userId)
+      await sessionStore.clearPendingOnboardingAfterSignup(email: auth.email)
+    }
     // Sentry: attach user to crash reports
     let sentryUser = Sentry.User(userId: userId)
     sentryUser.username = username

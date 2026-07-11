@@ -72,3 +72,9 @@ fastlane/test_output
 
 # Project specific
 raw/
+
+# Build artifacts / Xcode SPM cache
+.artifacts/
+.SourcePackages/
+SourcePackages/
+*.xcresult/

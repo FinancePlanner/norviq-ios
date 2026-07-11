@@ -31,7 +31,8 @@ struct FormSheetHeader: View {
           .labelStyle(.iconOnly)
           .font(.system(size: 12, weight: .bold))
           .foregroundStyle(.secondary)
-          .frame(width: 30, height: 30)
+          .frame(width: 44, height: 44)
+          .contentShape(.circle)
           .appGlassEffect(.circle, interactive: true)
 
         Spacer()

@@ -15,8 +15,11 @@ struct PaywallCTAFooter: View {
   var isRestoring: Bool = false
 
   var errorMessage: String?
-  var privacyURL: URL? = URL(string: "https://your-privacy-policy-url.com") // TODO: Replace with real URL
-  var termsURL: URL?
+  var restoreStatusMessage: String?
+  var restoreStatusIsSuccess = false
+  var privacyURL: URL? = Constants.Norviq.privacyPolicyUrl
+  var termsURL: URL? = Constants.Norviq.termsOfUseUrl
+  var disclosureText: String?
 
   /// When true, adds a fade gradient above the bar and a solid background.
   /// Use for sticky-positioned footers. Set false for inline footers in scroll content.
@@ -41,8 +44,10 @@ struct PaywallCTAFooter: View {
 
       VStack(spacing: 12) {
         purchaseButton
+        disclosureLabel
         skipButton
         errorLabel
+        restoreStatusLabel
 
         HStack(spacing: 16) {
           restoreButton
@@ -56,7 +61,7 @@ struct PaywallCTAFooter: View {
 
           if let termsURL {
             Text("•").foregroundStyle(.tertiary)
-            Button("Terms of Service") {
+            Button("Terms of Use") {
               openURL(termsURL)
             }
           }
@@ -67,6 +72,8 @@ struct PaywallCTAFooter: View {
       .padding(.horizontal, 24)
       .padding(.bottom, isSticky ? 32 : 16)
       .padding(.top, 8)
+      .maxContentWidth(regularSizeClass: ContentWidth.marketing)
+      .frame(maxWidth: .infinity)
       .background(isSticky ? AppTheme.Colors.pageBackground(for: colorScheme) : .clear)
     }
   }
@@ -94,9 +101,20 @@ struct PaywallCTAFooter: View {
         radius: 10, x: 0, y: 5
       )
     }
-    .buttonStyle(PressEffectStyle())
+    .buttonStyle(PressableStyle())
     .disabled(isLoading || isDisabled)
     .opacity(isDisabled ? 0.5 : 1.0)
+  }
+
+  @ViewBuilder
+  private var disclosureLabel: some View {
+    if let disclosureText, !disclosureText.isEmpty {
+      Text(disclosureText)
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+    }
   }
 
   @ViewBuilder
@@ -116,6 +134,24 @@ struct PaywallCTAFooter: View {
         .font(.caption)
         .foregroundStyle(AppTheme.Colors.danger)
         .multilineTextAlignment(.center)
+    }
+  }
+
+  @ViewBuilder
+  private var restoreStatusLabel: some View {
+    if let restoreStatusMessage, !restoreStatusMessage.isEmpty {
+      Label(
+        restoreStatusMessage,
+        systemImage: restoreStatusIsSuccess ? "checkmark.circle.fill" : "info.circle"
+      )
+      .font(.caption)
+      .foregroundStyle(
+        restoreStatusIsSuccess
+          ? AppTheme.Colors.success
+          : AppTheme.Colors.tint(for: colorScheme)
+      )
+      .multilineTextAlignment(.center)
+      .fixedSize(horizontal: false, vertical: true)
     }
   }
 

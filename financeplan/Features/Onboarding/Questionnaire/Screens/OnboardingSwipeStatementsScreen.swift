@@ -15,6 +15,7 @@ struct OnboardingSwipeStatementsScreen: View {
   @State private var topIndex = 0
   @State private var dragTranslation: CGSize = .zero
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     VStack(spacing: 0) {
@@ -80,13 +81,16 @@ struct OnboardingSwipeStatementsScreen: View {
       }
       .onEnded { value in
         let horizontal = value.translation.width
+        // Momentum projection: a quick flick should dismiss even before
+        // the distance threshold is reached.
+        let projected = value.predictedEndTranslation.width
         let threshold: CGFloat = 110
-        if horizontal > threshold {
+        if horizontal > threshold || projected > threshold * 2 {
           finishSwipe(agreed: true)
-        } else if horizontal < -threshold {
+        } else if horizontal < -threshold || projected < -threshold * 2 {
           finishSwipe(agreed: false)
         } else {
-          withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+          withAnimation(reduceMotion ? AppMotion.reduced : AppMotion.structural) {
             dragTranslation = .zero
           }
         }
@@ -117,7 +121,7 @@ struct OnboardingSwipeStatementsScreen: View {
         .background(Circle().fill(tint))
         .shadow(color: tint.opacity(0.35), radius: 10, y: 4)
     }
-    .buttonStyle(PressEffectStyle())
+    .buttonStyle(PressableStyle())
     .disabled(topIndex >= Self.statements.count)
   }
 
@@ -127,6 +131,15 @@ struct OnboardingSwipeStatementsScreen: View {
     guard topIndex < Self.statements.count else { return }
     let index = topIndex
     onSwipe(index, agreed)
+
+    guard !reduceMotion else {
+      topIndex += 1
+      dragTranslation = .zero
+      if topIndex >= Self.statements.count {
+        onComplete()
+      }
+      return
+    }
 
     withAnimation(.easeOut(duration: 0.3)) {
       dragTranslation = CGSize(width: agreed ? 600 : -600, height: 0)

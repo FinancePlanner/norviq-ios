@@ -24,7 +24,8 @@ struct OnboardingQuestionnairePaywallScreen: View {
         planCards
 
         OnboardingPrimaryButton(
-          title: "Start my 7-day free trial",
+          title: billingManager.purchaseCTATitle,
+          isEnabled: billingManager.canPurchaseSelectedPackage,
           isLoading: billingManager.isPurchasing,
           action: {
             Task {
@@ -34,15 +35,15 @@ struct OnboardingQuestionnairePaywallScreen: View {
           }
         )
 
+        Text(billingManager.subscriptionDisclosureText)
+          .font(.caption2)
+          .foregroundStyle(.secondary)
+          .multilineTextAlignment(.center)
+          .fixedSize(horizontal: false, vertical: true)
+
         secondaryLinks
 
-        PaywallTrustStrip()
-
-        Text("We'll remind you 3 days before billing.")
-          .font(.caption)
-          .foregroundStyle(.secondary.opacity(0.7))
-          .multilineTextAlignment(.center)
-          .padding(.top, 4)
+        PaywallTrustStrip(showsTrialChargeMessage: billingManager.selectedPlanHasFreeTrial)
       }
       .padding(.horizontal, 20)
       .padding(.top, 8)
@@ -67,7 +68,7 @@ struct OnboardingQuestionnairePaywallScreen: View {
   // MARK: - Logo
 
   private var logoBlock: some View {
-    NorviqLogo(size: 56)
+    NorviqFullLogo(width: 190)
   }
 
   // MARK: - Headline
@@ -78,10 +79,19 @@ struct OnboardingQuestionnairePaywallScreen: View {
         .font(.title.bold())
         .multilineTextAlignment(.center)
 
-      Text("7 days free. Cancel anytime.")
+      Text(trialHeadlineSubtitle)
         .font(.subheadline)
         .foregroundStyle(.secondary)
     }
+  }
+
+  /// Trial wording driven by the real StoreKit introductory offer so the headline
+  /// never promises a trial (or a length) the payment sheet won't present.
+  private var trialHeadlineSubtitle: String {
+    guard let days = billingManager.freeTrialDays(for: billingManager.selectedPackage) else {
+      return "Cancel anytime."
+    }
+    return days == 1 ? "1 day free. Cancel anytime." : "\(days) days free. Cancel anytime."
   }
 
   // MARK: - Testimonial
@@ -149,33 +159,39 @@ struct OnboardingQuestionnairePaywallScreen: View {
 
   private var planCards: some View {
     VStack(spacing: 10) {
-      PaywallPlanCard(
-        title: "Annual",
-        subtitle: "7-day free trial",
-        price: price(for: billingManager.annualPackage, fallback: "$49.99"),
-        priceUnit: "/yr",
-        badge: "Save 2 months",
-        isSelected: billingManager.selectedProductID == "pro_annual",
-        onSelect: { billingManager.select(productID: "pro_annual") }
-      )
+      if let package = billingManager.annualPackage {
+        PaywallPlanCard(
+          title: "Annual",
+          subtitle: billingManager.annualPlanSubtitle,
+          price: package.localizedPriceString,
+          priceUnit: "/yr",
+          badge: "Save 2 months",
+          isSelected: billingManager.selectedProductID == BillingManager.annualProductID,
+          onSelect: { billingManager.select(productID: BillingManager.annualProductID) }
+        )
+      }
 
-      PaywallPlanCard(
-        title: "Monthly",
-        subtitle: "Cancel anytime",
-        price: price(for: billingManager.monthlyPackage, fallback: "$4.99"),
-        priceUnit: "/mo",
-        isSelected: billingManager.selectedProductID == "pro_monthly",
-        onSelect: { billingManager.select(productID: "pro_monthly") }
-      )
+      if let package = billingManager.monthlyPackage {
+        PaywallPlanCard(
+          title: "Monthly",
+          subtitle: "Cancel anytime",
+          price: package.localizedPriceString,
+          priceUnit: "/mo",
+          isSelected: billingManager.selectedProductID == "pro_monthly",
+          onSelect: { billingManager.select(productID: "pro_monthly") }
+        )
+      }
 
-      PaywallPlanCard(
-        title: "Weekly",
-        subtitle: "Short term",
-        price: price(for: billingManager.weeklyPackage, fallback: "$0.99"),
-        priceUnit: "/wk",
-        isSelected: billingManager.selectedProductID == "pro_weekly",
-        onSelect: { billingManager.select(productID: "pro_weekly") }
-      )
+      if let package = billingManager.weeklyPackage {
+        PaywallPlanCard(
+          title: "Weekly",
+          subtitle: "Short term",
+          price: package.localizedPriceString,
+          priceUnit: "/wk",
+          isSelected: billingManager.selectedProductID == "pro_weekly",
+          onSelect: { billingManager.select(productID: "pro_weekly") }
+        )
+      }
     }
   }
 
@@ -201,15 +217,17 @@ struct OnboardingQuestionnairePaywallScreen: View {
       } label: {
         Text("Continue with limited Norviq")
           .font(.caption.weight(.medium))
-          .foregroundStyle(.secondary.opacity(0.8))
+          .foregroundStyle(.secondary)
       }
+
+      HStack(spacing: 16) {
+        Link("Privacy Policy", destination: Constants.Norviq.privacyPolicyUrl)
+        Text("•").foregroundStyle(.tertiary)
+        Link("Terms of Use", destination: Constants.Norviq.termsOfUseUrl)
+      }
+      .font(.caption)
+      .foregroundStyle(.secondary)
     }
-  }
-
-  // MARK: - Helpers
-
-  private func price(for package: Package?, fallback: String) -> String {
-    package?.localizedPriceString ?? fallback
   }
 
   // MARK: - Feature Data

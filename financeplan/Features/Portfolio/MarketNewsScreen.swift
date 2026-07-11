@@ -44,7 +44,14 @@ struct MarketNewsScreen: View {
                             summary: item.summary
                         )
                     }
-                    StockNewsTab(news: displayNews)
+                    let trackingMetadata = Dictionary(
+                        newsItems.compactMap { item -> (String, NewsArticleTrackingMetadata)? in
+                            guard let url = item.url, !url.isEmpty else { return nil }
+                            return (url, NewsArticleTrackingMetadata(newsId: item.id, symbol: item.symbol))
+                        },
+                        uniquingKeysWith: { first, _ in first }
+                    )
+                    StockNewsTab(news: displayNews, trackingMetadataByURL: trackingMetadata)
                         .padding(.horizontal, 16)
 
                     // Infinite scroll trigger

@@ -26,6 +26,20 @@ struct GetQuoteEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
+struct GetQuoteBatchEndpoint: Endpoint {
+  typealias Response = QuoteBatchResponse
+
+  let symbols: [String]
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/quote/batch" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    ["symbols": symbols.joined(separator: ",")]
+  }
+}
+
 struct GetGradesConsensusEndpoint: Endpoint {
   typealias Response = [StockAnalystConsensus]
 
@@ -115,6 +129,25 @@ struct GetCashFlowStatementEndpoint: Endpoint {
 
   var method: HTTPMethod { .get }
   var path: String { "/v1/market/cash-flow-statement/\(symbol.uppercased())" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [:]
+    if let limit { params["limit"] = limit }
+    if let period { params["period"] = period }
+    return params
+  }
+}
+
+struct GetIncomeStatementEndpoint: Endpoint {
+  typealias Response = [IncomeStatementResponse]
+
+  let symbol: String
+  let limit: Int?
+  let period: String?
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/income-statement/\(symbol.uppercased())" }
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
@@ -221,5 +254,58 @@ struct GetPriceChartComparisonEndpoint: Endpoint {
 
   func asParameters() throws -> Parameters {
     ["symbols": symbols.joined(separator: ","), "range": range]
+  }
+}
+
+struct GetChartBuilderEndpoint: Endpoint {
+  typealias Response = ChartBuilderResponse
+
+  let symbol: String
+  let metrics: [String]
+  let period: ChartBuilderPeriodKind
+  let limit: Int
+  let compare: [String]
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/chart-builder/\(symbol.uppercased())" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [
+      "metrics": metrics.joined(separator: ","),
+      "period": period.rawValue,
+      "limit": limit
+    ]
+    if !compare.isEmpty {
+      params["compare"] = compare.joined(separator: ",")
+    }
+    return params
+  }
+}
+
+struct GetChartBuilderCSVEndpoint: Endpoint {
+  typealias Response = Data
+
+  let symbol: String
+  let metrics: [String]
+  let period: ChartBuilderPeriodKind
+  let limit: Int
+  let compare: [String]
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/chart-builder/\(symbol.uppercased())/csv" }
+  var decoder: JSONDecoder { .stockPlanShared }
+  var headers: [(String, String)] { [("Accept", "text/csv")] }
+
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [
+      "metrics": metrics.joined(separator: ","),
+      "period": period.rawValue,
+      "limit": limit
+    ]
+    if !compare.isEmpty {
+      params["compare"] = compare.joined(separator: ",")
+    }
+    return params
   }
 }

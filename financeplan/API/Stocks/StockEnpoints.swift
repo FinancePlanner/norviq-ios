@@ -60,7 +60,9 @@ struct BulkCreateStocksEndpoint: Endpoint {
 }
 
 struct GetStocksEndpoint: Endpoint {
-  typealias Response = [StockResponse]
+  // Lenient list decode: tolerates a missing `createdAt` and drops individual
+  // malformed rows instead of failing the entire holdings list.
+  typealias Response = LenientStockList
   let portfolioListId: String?
   let cursor: String?
   let limit: Int?
@@ -349,6 +351,42 @@ struct GetWatchlistEndpoint: Endpoint {
     }
     return params
   }
+}
+
+struct WatchlistCSVImportPreviewEndpoint: Endpoint, StockRequestBodyEndpoint {
+  typealias Response = WatchlistCsvImportPreviewResponse
+  let watchlistListId: String?
+  let csvData: Data
+
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/watchlist/import/csv/preview" }
+  var decoder: JSONDecoder { .stockPlanShared }
+  var headers: [(String, String)] { [("Content-Type", "text/csv")] }
+
+  func asParameters() throws -> Parameters { watchlistCSVImportParameters(watchlistListId) }
+  func bodyData() throws -> Data? { csvData }
+}
+
+struct WatchlistCSVImportCommitEndpoint: Endpoint, StockRequestBodyEndpoint {
+  typealias Response = WatchlistCsvImportCommitResponse
+  let watchlistListId: String?
+  let csvData: Data
+
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/watchlist/import/csv/commit" }
+  var decoder: JSONDecoder { .stockPlanShared }
+  var headers: [(String, String)] { [("Content-Type", "text/csv")] }
+
+  func asParameters() throws -> Parameters { watchlistCSVImportParameters(watchlistListId) }
+  func bodyData() throws -> Data? { csvData }
+}
+
+private func watchlistCSVImportParameters(_ watchlistListId: String?) -> Parameters {
+  var params: Parameters = [:]
+  if let watchlistListId, !watchlistListId.isEmpty {
+    params["watchlistListId"] = watchlistListId
+  }
+  return params
 }
 
 struct CreateWatchlistEndpoint: Endpoint {

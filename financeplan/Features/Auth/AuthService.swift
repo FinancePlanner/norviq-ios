@@ -45,6 +45,13 @@ protocol AuthSessionStoring: Sendable {
   func clearSession() async
   func hasCompletedInitialStockImport(for userID: String) async -> Bool
   func markInitialStockImportCompleted(for userID: String) async
+  func hasCompletedOnboardingQuestionnaire(for userID: String) async -> Bool
+  func markOnboardingQuestionnaireCompleted(for userID: String) async
+  func requiresOnboardingQuestionnaire(for userID: String) async -> Bool
+  func markOnboardingQuestionnaireRequired(for userID: String) async
+  func markPendingOnboardingAfterSignup(email: String) async
+  func hasPendingOnboardingAfterSignup(email: String) async -> Bool
+  func clearPendingOnboardingAfterSignup(email: String) async
 }
 
 final class AuthService: AuthServicing, @unchecked Sendable {
@@ -111,8 +118,8 @@ final class AuthService: AuthServicing, @unchecked Sendable {
 
   @MainActor
   func oauthSignIn(provider: OAuthProviderKind) async throws -> AuthLoginOutcomePayload {
-    let callbackScheme = oauthCallbackScheme()
-    let redirectURI = oauthRedirectURI(for: callbackScheme)
+    let callbackScheme = oauthCallbackScheme(for: provider)
+    let redirectURI = oauthRedirectURI(for: provider, callbackScheme: callbackScheme)
 
     let startResponse = try await client().oauthStart(
       provider: provider,
@@ -153,7 +160,10 @@ final class AuthService: AuthServicing, @unchecked Sendable {
     AuthHTTPClient(baseURL: environmentManager.current.apiBaseUrl, session: session)
   }
 
-  private func oauthCallbackScheme() -> String {
+  private func oauthCallbackScheme(for provider: OAuthProviderKind) -> String {
+    if provider == .google, let reversed = googleReversedClientID() {
+      return reversed
+    }
     let configured = (Bundle.main.object(forInfoDictionaryKey: "OAuthCallbackScheme") as? String)?
       .trimmingCharacters(in: .whitespacesAndNewlines)
     if let configured, !configured.isEmpty {
@@ -162,8 +172,36 @@ final class AuthService: AuthServicing, @unchecked Sendable {
     return "norviqa"
   }
 
-  private func oauthRedirectURI(for callbackScheme: String) -> String {
-    "\(callbackScheme)://oauth/callback"
+  private func oauthRedirectURI(for provider: OAuthProviderKind, callbackScheme: String) -> String {
+    if provider == .google {
+      return "\(callbackScheme):/oauth2redirect"
+    }
+    if (provider == .x || provider == .apple), let bridge = httpsBridgeURL(for: provider) {
+      return bridge
+    }
+    return "\(callbackScheme)://oauth/callback"
+  }
+
+  private func httpsBridgeURL(for provider: OAuthProviderKind) -> String? {
+    let host = environmentManager.current.apiBaseUrl.absoluteString
+      .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    return "\(host)/v1/auth/oauth/\(provider.rawValue)/callback"
+  }
+
+  private func googleReversedClientID() -> String? {
+    guard let raw = Bundle.main.object(forInfoDictionaryKey: "GoogleOAuthClientID") as? String else {
+      return nil
+    }
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return nil }
+    let suffix = ".apps.googleusercontent.com"
+    let prefix: String
+    if trimmed.hasSuffix(suffix) {
+      prefix = String(trimmed.dropLast(suffix.count))
+    } else {
+      prefix = trimmed
+    }
+    return "com.googleusercontent.apps.\(prefix)"
   }
 }
 
@@ -177,6 +215,9 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring, @unchecked Sendabl
     static let currentUserID = "current_user_id"
     static let currentUsername = "current_username"
     static let initialStockImportUserIDs = "initial_stock_import_user_ids"
+    static let onboardingQuestionnaireCompletedUserIDs = "onboarding_questionnaire_completed_user_ids"
+    static let onboardingQuestionnaireRequiredUserIDs = "onboarding_questionnaire_required_user_ids"
+    static let pendingOnboardingSignupEmails = "pending_onboarding_signup_emails"
   }
 
   private let defaults: UserDefaults
@@ -295,8 +336,98 @@ final class UserDefaultsAuthSessionStore: AuthSessionStoring, @unchecked Sendabl
     defaults.set(Array(allUserIDs), forKey: Keys.initialStockImportUserIDs)
   }
 
+  func hasCompletedOnboardingQuestionnaire(for userID: String) -> Bool {
+    let normalizedUserID = normalizedUserID(userID)
+    guard !normalizedUserID.isEmpty else {
+      return false
+    }
+    return onboardingQuestionnaireCompletedUserIDs.contains(normalizedUserID)
+  }
+
+  func markOnboardingQuestionnaireCompleted(for userID: String) {
+    let normalizedUserID = normalizedUserID(userID)
+    guard !normalizedUserID.isEmpty else {
+      return
+    }
+    var completedUserIDs = onboardingQuestionnaireCompletedUserIDs
+    completedUserIDs.insert(normalizedUserID)
+    defaults.set(Array(completedUserIDs), forKey: Keys.onboardingQuestionnaireCompletedUserIDs)
+
+    var requiredUserIDs = onboardingQuestionnaireRequiredUserIDs
+    requiredUserIDs.remove(normalizedUserID)
+    defaults.set(Array(requiredUserIDs), forKey: Keys.onboardingQuestionnaireRequiredUserIDs)
+  }
+
+  func requiresOnboardingQuestionnaire(for userID: String) -> Bool {
+    let normalizedUserID = normalizedUserID(userID)
+    guard !normalizedUserID.isEmpty else {
+      return false
+    }
+    return onboardingQuestionnaireRequiredUserIDs.contains(normalizedUserID)
+      && !onboardingQuestionnaireCompletedUserIDs.contains(normalizedUserID)
+  }
+
+  func markOnboardingQuestionnaireRequired(for userID: String) {
+    let normalizedUserID = normalizedUserID(userID)
+    guard !normalizedUserID.isEmpty,
+          !onboardingQuestionnaireCompletedUserIDs.contains(normalizedUserID) else {
+      return
+    }
+    var requiredUserIDs = onboardingQuestionnaireRequiredUserIDs
+    requiredUserIDs.insert(normalizedUserID)
+    defaults.set(Array(requiredUserIDs), forKey: Keys.onboardingQuestionnaireRequiredUserIDs)
+  }
+
+  func markPendingOnboardingAfterSignup(email: String) {
+    let normalizedEmail = normalizedEmail(email)
+    guard !normalizedEmail.isEmpty else {
+      return
+    }
+    var emails = pendingOnboardingSignupEmails
+    emails.insert(normalizedEmail)
+    defaults.set(Array(emails), forKey: Keys.pendingOnboardingSignupEmails)
+  }
+
+  func hasPendingOnboardingAfterSignup(email: String) -> Bool {
+    let normalizedEmail = normalizedEmail(email)
+    guard !normalizedEmail.isEmpty else {
+      return false
+    }
+    return pendingOnboardingSignupEmails.contains(normalizedEmail)
+  }
+
+  func clearPendingOnboardingAfterSignup(email: String) {
+    let normalizedEmail = normalizedEmail(email)
+    guard !normalizedEmail.isEmpty else {
+      return
+    }
+    var emails = pendingOnboardingSignupEmails
+    emails.remove(normalizedEmail)
+    defaults.set(Array(emails), forKey: Keys.pendingOnboardingSignupEmails)
+  }
+
   private var initialStockImportUserIDs: Set<String> {
     Set(defaults.stringArray(forKey: Keys.initialStockImportUserIDs) ?? [])
+  }
+
+  private var onboardingQuestionnaireCompletedUserIDs: Set<String> {
+    Set(defaults.stringArray(forKey: Keys.onboardingQuestionnaireCompletedUserIDs) ?? [])
+  }
+
+  private var onboardingQuestionnaireRequiredUserIDs: Set<String> {
+    Set(defaults.stringArray(forKey: Keys.onboardingQuestionnaireRequiredUserIDs) ?? [])
+  }
+
+  private var pendingOnboardingSignupEmails: Set<String> {
+    Set(defaults.stringArray(forKey: Keys.pendingOnboardingSignupEmails) ?? [])
+  }
+
+  private func normalizedUserID(_ userID: String) -> String {
+    userID.trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+
+  private func normalizedEmail(_ email: String) -> String {
+    email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
   }
 
   private func setSecureValue(_ value: String, for key: String) {

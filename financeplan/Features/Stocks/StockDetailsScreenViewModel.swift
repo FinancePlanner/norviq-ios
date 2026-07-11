@@ -45,6 +45,9 @@ final class StockDetailsViewModel: ObservableObject {
     }
 
     @Published var details: StockDetails?
+    /// True when the requested stock id no longer exists on the server (stale
+    /// local cache row); the screen should purge the row and pop back.
+    @Published private(set) var isStaleStock = false
     @Published var history: [StockHistory] = []
     @Published var news: [StockNews] = []
     @Published var valuation: StockValuationRequest?
@@ -55,8 +58,12 @@ final class StockDetailsViewModel: ObservableObject {
     @Published private(set) var analystConsensusMessage: String?
     @Published private(set) var basicFinancials: StockBasicFinancials?
     @Published private(set) var stockEarnings: [EarningsEvent] = []
+    @Published private(set) var earningsIncomeStatements: [IncomeStatementResponse] = []
     @Published private(set) var stockEarningsMessage: String?
     @Published private(set) var isEarningsLoading = false
+    @Published private(set) var selectedEarningsTranscript: EarningsTranscript?
+    @Published private(set) var earningsTranscriptMessage: String?
+    @Published private(set) var isEarningsTranscriptLoading = false
     @Published private(set) var analysisMetrics: StockAnalysisMetrics?
     @Published private(set) var analysisMetricsMessage: String?
     @Published private(set) var financialStatements: StockFinancialStatements?
@@ -88,6 +95,7 @@ final class StockDetailsViewModel: ObservableObject {
     private var loadingTabs: Set<StockDetailTab> = []
     private var comparisonRefreshTask: Task<Void, Never>?
     private var loadedStockID: String?
+    private var isRefreshingQuote = false
 
     var shareSnapshot: StockShareSnapshot? {
         guard let details else { return nil }
@@ -279,6 +287,7 @@ final class StockDetailsViewModel: ObservableObject {
         let start = ContinuousClock.now
         isLoading = true
         errorMessage = nil
+        isStaleStock = false
         comparisonRefreshTask?.cancel()
         comparisonRefreshTask = nil
         defer {
@@ -321,8 +330,12 @@ final class StockDetailsViewModel: ObservableObject {
             self.basicFinancials = await basicFinancialsTask
             self.portfolioSummary = await portfolioSummaryTask
             self.stockEarnings = []
+            self.earningsIncomeStatements = []
             self.stockEarningsMessage = nil
             self.isEarningsLoading = false
+            self.selectedEarningsTranscript = nil
+            self.earningsTranscriptMessage = nil
+            self.isEarningsTranscriptLoading = false
 
             // Heavy sections are loaded lazily when their tabs are selected.
             self.analysisMetrics = nil
@@ -344,8 +357,12 @@ final class StockDetailsViewModel: ObservableObject {
             analystConsensusMessage = nil
             basicFinancials = nil
             stockEarnings = []
+            earningsIncomeStatements = []
             stockEarningsMessage = nil
             isEarningsLoading = false
+            selectedEarningsTranscript = nil
+            earningsTranscriptMessage = nil
+            isEarningsTranscriptLoading = false
             analysisMetrics = nil
             analysisMetricsMessage = nil
             financialStatements = nil
@@ -359,9 +376,36 @@ final class StockDetailsViewModel: ObservableObject {
             loadingTabs = []
             loadedStockID = nil
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            isStaleStock = Self.isNotFoundError(error)
             Self.logger.error(
                 "Stock details load failed stock_id=\(stockId, privacy: .public) error=\(error.localizedDescription, privacy: .public)"
             )
+        }
+    }
+
+    /// The gating call is `GET /v1/stocks/id/{stockId}`; a 404 means the local
+    /// cache row points at a position that no longer exists server-side.
+    private static func isNotFoundError(_ error: Error) -> Bool {
+        guard let clientError = error as? StockHTTPClient.Error else { return false }
+        switch clientError {
+        case .invalidStatus(404):
+            return true
+        case let .api(message):
+            return message.localizedCaseInsensitiveContains("not found")
+        default:
+            return false
+        }
+    }
+
+    func refreshQuote() async {
+        guard !isRefreshingQuote else { return }
+        guard let symbol = details?.symbol else { return }
+
+        isRefreshingQuote = true
+        defer { isRefreshingQuote = false }
+
+        if let quote = await loadQuote(symbol: symbol) {
+            marketSnapshot = quote
         }
     }
 
@@ -390,7 +434,10 @@ final class StockDetailsViewModel: ObservableObject {
             guard !loadedTabs.contains(.earnings), !loadingTabs.contains(.earnings) else { return }
             loadingTabs.insert(.earnings)
             isEarningsLoading = true
-            let result = await loadStockEarnings(symbol: symbol)
+            async let earningsResult = loadStockEarnings(symbol: symbol)
+            async let incomeStatementsResult = loadIncomeStatements(symbol: symbol)
+            let result = await earningsResult
+            earningsIncomeStatements = await incomeStatementsResult
             stockEarnings = result.events
             stockEarningsMessage = result.message
             isEarningsLoading = false
@@ -404,13 +451,39 @@ final class StockDetailsViewModel: ObservableObject {
             isChartLoading = false
             loadedTabs.insert(.chart)
             loadingTabs.remove(.chart)
-        case .overview, .news:
+        case .builder, .overview, .news:
             return
         }
     }
 
     func projectionScenario(_ kind: StockProjectionScenarioKind) -> StockProjectionScenario? {
         primaryComparisonProfile?.projectionScenarios[kind]
+    }
+
+    func loadEarningsTranscript(for event: EarningsEvent) async {
+        guard event.hasTranscript == true else { return }
+        let symbol = details?.symbol ?? event.symbol
+        guard !isEarningsTranscriptLoading else { return }
+
+        isEarningsTranscriptLoading = true
+        selectedEarningsTranscript = nil
+        earningsTranscriptMessage = nil
+        defer { isEarningsTranscriptLoading = false }
+
+        do {
+            selectedEarningsTranscript = try await marketDataService.fetchStockEarningsTranscript(
+                symbol: symbol,
+                date: event.date
+            )
+        } catch {
+            earningsTranscriptMessage = error.localizedDescription
+        }
+    }
+
+    func clearEarningsTranscript() {
+        selectedEarningsTranscript = nil
+        earningsTranscriptMessage = nil
+        isEarningsTranscriptLoading = false
     }
 
     func comparisonProfile(for symbol: String) -> StockComparisonProfile? {
@@ -484,14 +557,7 @@ final class StockDetailsViewModel: ObservableObject {
 
         do {
             let saved = try await service.updateStock(
-                StockResponse(
-                    id: details.id,
-                    symbol: details.symbol,
-                    shares: details.shares,
-                    buyPrice: details.buyPrice,
-                    buyDate: details.buyDate,
-                    notes: analysis
-                )
+                details.replacing(notes: analysis)
             )
             self.details = saved
             return nil
@@ -537,8 +603,12 @@ final class StockDetailsViewModel: ObservableObject {
         analystConsensusMessage = nil
         basicFinancials = nil
         stockEarnings = []
+        earningsIncomeStatements = []
         stockEarningsMessage = nil
         isEarningsLoading = false
+        selectedEarningsTranscript = nil
+        earningsTranscriptMessage = nil
+        isEarningsTranscriptLoading = false
         analysisMetrics = nil
         analysisMetricsMessage = nil
         financialStatements = nil
@@ -675,6 +745,14 @@ final class StockDetailsViewModel: ObservableObject {
             return (events, nil)
         } catch {
             return ([], error.localizedDescription)
+        }
+    }
+
+    private func loadIncomeStatements(symbol: String) async -> [IncomeStatementResponse] {
+        do {
+            return try await marketDataService.fetchIncomeStatement(symbol: symbol, limit: 4, period: "quarter")
+        } catch {
+            return []
         }
     }
 

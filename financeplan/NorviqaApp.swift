@@ -35,15 +35,31 @@ struct NorviqApp: App {
   }
 
   init() {
+    #if DEBUG
+    Self.applyUITestAppearanceOverride()
+    #endif
+
     TelemetryDeck.initialize(config: .init(appID: "C2B05381-D641-4BE4-B418-5AE02A8DB85F"))
     
     // Initialize Sentry
-    if let dsn = Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String {
+    if let dsn = Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String, !dsn.isEmpty {
+      #if DEBUG
+      let defaultEnvironment = "development"
+      #else
+      let defaultEnvironment = "production"
+      #endif
+      let environment = Bundle.main.object(forInfoDictionaryKey: "SENTRY_ENVIRONMENT") as? String
+        ?? defaultEnvironment
       SentrySDK.start { options in
         options.dsn = dsn
+        options.environment = environment
         options.tracesSampleRate = 0.2
         options.enableAppHangTracking = true
         options.enableCaptureFailedRequests = true
+        options.beforeSend = { event in
+          event.tags?["platform"] = "cocoa"
+          return event
+        }
       }
     }
 
@@ -77,4 +93,32 @@ struct NorviqApp: App {
     }
     .modelContainer(sharedModelContainer)
   }
+
+  #if DEBUG
+  private static func applyUITestAppearanceOverride() {
+    guard let rawValue = ProcessInfo.processInfo.norviqArgumentValue(for: "-ui_test_app_appearance"),
+          let appearance = AppAppearance(rawValue: rawValue) else {
+      return
+    }
+
+    UserDefaults.standard.set(appearance.rawValue, forKey: AppAppearance.storageKey)
+  }
+  #endif
 }
+
+#if DEBUG
+private extension ProcessInfo {
+  func norviqArgumentValue(for name: String) -> String? {
+    guard let index = arguments.firstIndex(of: name) else {
+      return nil
+    }
+
+    let valueIndex = arguments.index(after: index)
+    guard arguments.indices.contains(valueIndex) else {
+      return nil
+    }
+
+    return arguments[valueIndex]
+  }
+}
+#endif

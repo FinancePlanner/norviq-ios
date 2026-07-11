@@ -4,7 +4,9 @@ struct SplashScreen: View {
   @State private var isAnimating = false
   @State private var pulseAnimation = false
   @State private var dotsAnimation = 0
+  @State private var dotsTimer: Timer?
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     ZStack {
@@ -19,67 +21,11 @@ struct SplashScreen: View {
       VStack(spacing: 0) {
         Spacer()
 
-        // Owl mascot with glow effect
-        ZStack {
-          // Outer glow ring
-          Circle()
-            .fill(
-              RadialGradient(
-                colors: [
-                  AppTheme.Colors.tint(for: colorScheme).opacity(0.3),
-                  AppTheme.Colors.tint(for: colorScheme).opacity(0.0)
-                ],
-                center: .center,
-                startRadius: 60,
-                endRadius: 120
-              )
-            )
-            .frame(width: 240, height: 240)
-            .scaleEffect(pulseAnimation ? 1.1 : 0.9)
-            .opacity(pulseAnimation ? 0.6 : 0.3)
-
-          // Inner glow
-          Circle()
-            .fill(
-              RadialGradient(
-                colors: [
-                  AppTheme.Colors.secondaryTint(for: colorScheme).opacity(0.4),
-                  AppTheme.Colors.secondaryTint(for: colorScheme).opacity(0.0)
-                ],
-                center: .center,
-                startRadius: 40,
-                endRadius: 100
-              )
-            )
-            .frame(width: 200, height: 200)
-            .scaleEffect(pulseAnimation ? 0.95 : 1.05)
-            .opacity(pulseAnimation ? 0.4 : 0.2)
-
-          // Owl image
-          Image("FoxMascotTransparent")
-            .resizable()
-            .scaledToFit()
-            .frame(width: 160, height: 160)
-            .scaleEffect(isAnimating ? 1.0 : 0.8)
-            .opacity(isAnimating ? 1.0 : 0.0)
-        }
+        SplashBrandStage(
+          isAnimating: isAnimating,
+          pulseAnimation: pulseAnimation
+        )
         .padding(.bottom, 40)
-
-        // App name
-        Text("Norviq")
-          .font(.system(size: 48, weight: .bold, design: .rounded))
-          .foregroundStyle(
-            LinearGradient(
-              colors: [
-                AppTheme.Colors.tint(for: colorScheme),
-                AppTheme.Colors.secondaryTint(for: colorScheme)
-              ],
-              startPoint: .leading,
-              endPoint: .trailing
-            )
-          )
-          .opacity(isAnimating ? 1.0 : 0.0)
-          .offset(y: isAnimating ? 0 : 20)
 
         // Tagline
         Text("Your wealth, wisely managed")
@@ -102,9 +48,11 @@ struct SplashScreen: View {
                 .scaleEffect(dotsAnimation == index ? 1.3 : 1.0)
                 .opacity(dotsAnimation == index ? 1.0 : 0.5)
                 .animation(
-                  .easeInOut(duration: 0.6)
-                    .repeatForever(autoreverses: false)
-                    .delay(Double(index) * 0.2),
+                  reduceMotion
+                    ? nil
+                    : .easeInOut(duration: 0.6)
+                      .repeatForever(autoreverses: false)
+                      .delay(Double(index) * 0.2),
                   value: dotsAnimation
                 )
             }
@@ -120,22 +68,81 @@ struct SplashScreen: View {
       }
     }
     .onAppear {
-      // Stagger animations for smooth entrance
-      withAnimation(.easeOut(duration: 0.8)) {
+      withAnimation(reduceMotion ? AppMotion.reduced : .easeOut(duration: 0.8)) {
         isAnimating = true
       }
+
+      guard !reduceMotion else { return }
 
       withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
         pulseAnimation = true
       }
 
-      // Animate dots
-      Timer.scheduledTimer(withTimeInterval: 0.6, repeats: true) { _ in
+      dotsTimer = Timer.scheduledTimer(withTimeInterval: 0.6, repeats: true) { _ in
         Task { @MainActor in
           dotsAnimation = (dotsAnimation + 1) % 3
         }
       }
     }
+    .onDisappear {
+      dotsTimer?.invalidate()
+      dotsTimer = nil
+    }
+  }
+}
+
+private struct SplashBrandStage: View {
+  var isAnimating: Bool
+  var pulseAnimation: Bool
+
+  @Environment(\.colorScheme) private var colorScheme
+
+  private let stageSize: CGFloat = 280
+  private let outerGlowSize: CGFloat = 218
+  private let innerGlowSize: CGFloat = 180
+  private let logoWidth: CGFloat = 236
+
+  var body: some View {
+    ZStack {
+      Circle()
+        .fill(
+          RadialGradient(
+            colors: [
+              AppTheme.Colors.tint(for: colorScheme).opacity(0.3),
+              AppTheme.Colors.tint(for: colorScheme).opacity(0.0)
+            ],
+            center: .center,
+            startRadius: 54,
+            endRadius: 116
+          )
+        )
+        .frame(width: outerGlowSize, height: outerGlowSize)
+        .scaleEffect(pulseAnimation ? 1.1 : 0.9)
+        .opacity(pulseAnimation ? 0.6 : 0.3)
+
+      Circle()
+        .fill(
+          RadialGradient(
+            colors: [
+              AppTheme.Colors.secondaryTint(for: colorScheme).opacity(0.4),
+              AppTheme.Colors.secondaryTint(for: colorScheme).opacity(0.0)
+            ],
+            center: .center,
+            startRadius: 36,
+            endRadius: 96
+          )
+        )
+        .frame(width: innerGlowSize, height: innerGlowSize)
+        .scaleEffect(pulseAnimation ? 0.95 : 1.05)
+        .opacity(pulseAnimation ? 0.4 : 0.2)
+
+      NorviqFullLogo(width: logoWidth)
+        .scaleEffect(isAnimating ? 1.0 : 0.8)
+        .opacity(isAnimating ? 1.0 : 0.0)
+    }
+    .frame(width: stageSize, height: stageSize)
+    .clipped()
+    .compositingGroup()
   }
 }
 

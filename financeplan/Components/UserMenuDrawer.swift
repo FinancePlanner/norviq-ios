@@ -2,6 +2,7 @@ import SwiftUI
 
 struct UserMenuDrawer: View {
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Binding var isPresented: Bool
   @Binding var showLogoutConfirmation: Bool
   let username: String
@@ -11,7 +12,7 @@ struct UserMenuDrawer: View {
     ZStack {
       if isPresented {
         Button {
-          withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+          withAnimation(reduceMotion ? AppMotion.reduced : AppMotion.structural) {
             isPresented = false
           }
         } label: {
@@ -28,7 +29,7 @@ struct UserMenuDrawer: View {
 
         if isPresented {
           drawerContent
-            .transition(.move(edge: .trailing).combined(with: .opacity))
+            .transition(AppTransition.move(edge: .trailing, reduceMotion: reduceMotion))
         }
       }
     }
@@ -96,12 +97,12 @@ struct UserMenuDrawer: View {
 
         VStack(alignment: .leading, spacing: 2) {
           Text(username)
-            .font(.system(size: 18, weight: .bold, design: .rounded))
+            .font(.system(size: 18, weight: .bold))
             .foregroundStyle(.primary)
 
           if let email {
             Text(email)
-              .font(.system(size: 13, weight: .medium, design: .rounded))
+              .font(.system(size: 13, weight: .medium))
               .foregroundStyle(.secondary)
               .lineLimit(1)
           }
@@ -123,7 +124,7 @@ struct UserMenuDrawer: View {
           .foregroundStyle(.primary.opacity(0.85))
 
         Text(title)
-          .font(.system(size: 14, weight: .semibold, design: .rounded))
+          .font(.system(size: 14, weight: .semibold))
           .foregroundStyle(.primary)
 
         Spacer()
@@ -135,6 +136,7 @@ struct UserMenuDrawer: View {
       }
       .padding(.horizontal, 12)
       .padding(.vertical, 12)
+      .frame(minHeight: 44)
       .appGlassEffect(
         .rect(cornerRadius: 16),
         tint: .secondary.opacity(colorScheme == .dark ? 0.16 : 0.10),

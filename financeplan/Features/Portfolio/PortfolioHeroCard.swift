@@ -14,7 +14,7 @@ struct PortfolioHeroCard: View {
   let onSelectTimeRange: (PortfolioScreen.TimeRange) -> Void
 
   var body: some View {
-    GlassCard(cornerRadius: 22) {
+    GlassCard(cornerRadius: AppTheme.Radius.hero) {
       VStack(alignment: .leading, spacing: 16) {
         VStack(alignment: .leading, spacing: 4) {
           Text(heroLabel)
@@ -23,8 +23,9 @@ struct PortfolioHeroCard: View {
 
           HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(totalValue.currency)
-              .typography(.hero, weight: .bold)
-              .contentTransition(.numericText())
+              .typography(.displayNumber)
+              .contentTransition(.numericText(value: totalValue))
+              .appAnimation(AppMotion.state, value: totalValue)
             Text(heroSubtitle)
               .typography(.small)
               .foregroundStyle(.secondary)

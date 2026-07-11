@@ -1,6 +1,5 @@
 import Foundation
-
-import Foundation
+import StockPlanShared
 
 struct PortfolioListDTORequest: Sendable, Equatable {
     let name: String

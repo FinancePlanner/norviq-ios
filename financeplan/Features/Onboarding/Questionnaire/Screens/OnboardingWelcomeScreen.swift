@@ -48,7 +48,7 @@ struct OnboardingWelcomeScreen: View {
   private var legalFootnote: some View {
     Text("By continuing, you agree to our **Terms** and **Privacy Policy**.")
       .typography(.nano)
-      .foregroundStyle(.secondary.opacity(0.7))
+      .foregroundStyle(.secondary)
       .multilineTextAlignment(.center)
   }
 }

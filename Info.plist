@@ -26,6 +26,16 @@
 				<string>norviqa</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.543855343463-8mhma1ss69aboaum7qetf1li2ko8mg5g</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
@@ -35,6 +45,8 @@
 	<string>Norviq uses Face ID to unlock your app session.</string>
 	<key>NorviqAPIEnvironment</key>
 	<string>$(NORVIQ_API_ENVIRONMENT)</string>
+	<key>GoogleOAuthClientID</key>
+	<string>543855343463-8mhma1ss69aboaum7qetf1li2ko8mg5g.apps.googleusercontent.com</string>
 	<key>OAuthCallbackScheme</key>
 	<string>norviqa</string>
 	<key>PexelsAPIKey</key>
@@ -46,11 +58,7 @@
 	<key>RevenueCatAPIKey</key>
 	<string>appl_WhkrrqIARwWCJUrxETkxkzdZzni</string>
 	<key>SENTRY_DSN</key>
-	<string>https://411b556d71653054edc88bb96f8a6cbc@o4511327200215040.ingest.de.sentry.io/4511327202115664</string>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>audio</string>
-	</array>
+	<string>https://a8b2cb36518b8be68b0b8f41d7095b05@o4510766840872960.ingest.de.sentry.io/4511577338282064</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

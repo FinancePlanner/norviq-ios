@@ -141,7 +141,7 @@ struct ExpensesPlannerScreen: View {
         Image(systemName: "plus.circle")
           .font(.system(size: 16, weight: .semibold))
       }
-.buttonStyle(.borderedProminent)
+      .buttonStyle(.borderedProminent)
       .tint(AppTheme.Colors.tint(for: colorScheme))
       .accessibilityLabel("Record spend")
       .accessibilityIdentifier("expenses.recordSpendButton")
@@ -167,16 +167,14 @@ struct ExpensesPlannerScreen: View {
         Image(systemName: "ellipsis.circle")
           .font(.system(size: 16, weight: .semibold))
       }
-.buttonStyle(.borderedProminent)
-      .tint(AppTheme.Colors.tint(for: colorScheme))
+      .buttonStyle(.bordered)
       .accessibilityLabel("Expense actions")
 
       Button(action: openSettings) {
         Image(systemName: "gearshape")
           .font(.system(size: 16, weight: .semibold))
       }
-.buttonStyle(.borderedProminent)
-      .tint(AppTheme.Colors.tint(for: colorScheme))
+      .buttonStyle(.bordered)
       .accessibilityLabel("Open settings")
     }
   }
@@ -225,6 +223,19 @@ struct ExpensesPlannerScreen: View {
           onAdd: { presentNewPlanItemDraft(pillar: viewModel.preferredInitialPillar) },
           onEdit: { item in presentExistingPlanItemDraft(item) },
           onDelete: { item in itemToDelete = item },
+          onUpdateAmount: { item, amount in
+            viewModel.addOrUpdatePlanItem(
+              BudgetPlanItemDraft(
+                itemID: item.id,
+                title: item.title,
+                plannedAmount: amount,
+                pillar: item.pillar,
+                categoryId: item.categoryId,
+                splitMode: item.splitMode,
+                userSharePercent: item.userSharePercent
+              )
+            )
+          },
           onLogRecurring: { template in recurringTemplateToLog = template },
           onManageRecurring: {
             if billingManager.isPro {
@@ -315,6 +326,8 @@ struct ExpensesPlannerScreen: View {
         .padding(.bottom, 40)
       }
       .padding(.vertical, 10)
+      // Center the planner column on iPad instead of stretching edge-to-edge (Guideline 4).
+      .maxContentWidth(regularSizeClass: ContentWidth.dense)
     }
     .refreshable {
       await viewModel.load(force: true)
@@ -554,11 +567,12 @@ private struct ExpensesYearOverviewCard: View {
   let chartPoints: [BudgetMonthChartPoint]
 
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   @State private var chartProgress: Double = 0.0
 
   var body: some View {
-    GlassCard(cornerRadius: 28) {
+    GlassCard(cornerRadius: AppTheme.Radius.hero) {
       VStack(alignment: .leading, spacing: 18) {
         Picker("Year", selection: $selectedYear) {
           ForEach(availableYears, id: \.self) { year in
@@ -574,12 +588,14 @@ private struct ExpensesYearOverviewCard: View {
 
           Text(totalSpent.currency)
             .typography(.hero, weight: .bold)
-            .contentTransition(.numericText())
+            .contentTransition(.numericText(value: totalSpent))
+            .appAnimation(AppMotion.state, value: totalSpent)
 
           Text("Avg \(averageSpent.currency) through \(lastMonthLabel)")
             .typography(.nano)
             .foregroundStyle(.secondary)
             .contentTransition(.numericText())
+            .appAnimation(AppMotion.state, value: averageSpent)
         }
 
         VStack(alignment: .leading, spacing: 12) {
@@ -616,9 +632,11 @@ private struct ExpensesYearOverviewCard: View {
       }
     }
     .onAppear {
-      withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.1)) {
-        chartProgress = 1.0
+      guard !reduceMotion else {
+        chartProgress = 1
+        return
       }
+      withAnimation(AppMotion.dataReveal) { chartProgress = 1 }
     }
   }
 }
@@ -749,7 +767,8 @@ private struct PlannerSalaryCard: View {
           Text(netSalary.currency)
             .font(.largeTitle.bold())
             .fontDesign(.rounded)
-            .contentTransition(.numericText())
+            .contentTransition(.numericText(value: netSalary))
+            .appAnimation(AppMotion.state, value: netSalary)
           Text("salary + side income")
             .typography(.small)
             .foregroundStyle(.secondary)
@@ -873,6 +892,7 @@ private struct MonthlyPlanItemsCard: View {
   let onAdd: () -> Void
   let onEdit: (BudgetPlanItem) -> Void
   let onDelete: (BudgetPlanItem) -> Void
+  let onUpdateAmount: (BudgetPlanItem, Double) -> Void
   let onLogRecurring: (RecurringTemplateResponse) -> Void
   let onManageRecurring: () -> Void
 
@@ -968,15 +988,16 @@ private struct MonthlyPlanItemsCard: View {
                             .transition(.scale.combined(with: .opacity))
                         } else {
                           Button {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            withAnimation(AppMotion.state) {
                               startInlineEdit(item)
                             }
                           } label: {
                             Text(item.plannedAmount.currency)
                               .font(.subheadline.weight(.semibold))
-                              .contentTransition(.numericText())
+                              .contentTransition(.numericText(value: item.plannedAmount))
+                              .appAnimation(AppMotion.state, value: item.plannedAmount)
                           }
-.buttonStyle(.bordered)
+                          .buttonStyle(.bordered)
                           
                           Menu {
                             Button("Edit", systemImage: "pencil") { onEdit(item) }
@@ -992,13 +1013,13 @@ private struct MonthlyPlanItemsCard: View {
                       HStack(spacing: 4) {
                         if item.isSubscription {
                           Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 9))
+                            .font(.caption2)
                           Text("Subscription")
                             .font(.caption2)
                             .foregroundStyle(.teal)
                         } else if item.splitMode == .shared {
                           Image(systemName: "person.2.fill")
-                            .font(.system(size: 9))
+                            .font(.caption2)
                           Text("Shared • \(Int(item.userSharePercent))% yours")
                             .font(.caption2)
                         } else {
@@ -1010,15 +1031,6 @@ private struct MonthlyPlanItemsCard: View {
                     }
                   }
                   .padding(.vertical, 6)
-                  .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    Button(role: .destructive) { onDelete(item) } label: {
-                      Label("Delete", systemImage: "trash")
-                    }
-                    Button { onEdit(item) } label: {
-                      Label("Edit", systemImage: "pencil")
-                    }
-                    .tint(.blue)
-                  }
                   .transition(.move(edge: .trailing).combined(with: .opacity))
                   
                   if item.id != pillarItems.last?.id {
@@ -1132,12 +1144,17 @@ private struct MonthlyPlanItemsCard: View {
   }
   
   private func saveInlineEdit(_ item: BudgetPlanItem) {
-    guard MoneyInputParser.parse(editAmount) != nil else {
-      editingItemID = nil
-      return
+    defer {
+      withAnimation(AppMotion.state) {
+        editingItemID = nil
+      }
+      focusedItemID = nil
     }
-    editingItemID = nil
-    focusedItemID = nil
+    guard let parsed = MoneyInputParser.parse(editAmount),
+          parsed >= 0,
+          parsed != item.plannedAmount
+    else { return }
+    onUpdateAmount(item, parsed)
   }
 }
 
@@ -1245,7 +1262,8 @@ private struct PlannerItemRow: View {
         Text(variance.currency)
           .typography(.small, weight: .semibold)
           .foregroundStyle(variance >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger)
-          .contentTransition(.numericText())
+          .contentTransition(.numericText(value: variance))
+          .appAnimation(AppMotion.state, value: variance)
 
         Menu {
           Button("Edit", systemImage: "pencil", action: onEdit)
@@ -1258,7 +1276,7 @@ private struct PlannerItemRow: View {
       }
       .contentShape(Rectangle())
     }
-    .buttonStyle(CardButtonStyle())
+    .buttonStyle(PressableStyle())
     .contextMenu {
       Button("Edit", systemImage: "pencil", action: onEdit)
       Button("Delete", systemImage: "trash", role: .destructive, action: onDelete)
@@ -1344,6 +1362,7 @@ private struct SummaryMetric: View {
         .typography(.small, weight: .semibold)
         .foregroundStyle(accent)
         .contentTransition(.numericText())
+        .appAnimation(AppMotion.state, value: value)
     }
     .accessibilityElement(children: .combine)
     .accessibilityLabel(Text(title))
@@ -1371,6 +1390,8 @@ private struct NetSalaryEditorSheet: View {
   @State private var value: String
   @FocusState private var isValueFocused: Bool
   @State private var successFeedbackTrigger = 0
+  @State private var invalidFeedbackTrigger = 0
+  @State private var validationMessage: String?
 
   let monthTitle: String
   let onSave: (Double) -> Void
@@ -1392,6 +1413,16 @@ private struct NetSalaryEditorSheet: View {
             .keyboardType(.decimalPad)
             .focused($isValueFocused)
             .accessibilityIdentifier("expenses.salaryAmountField")
+            .onChange(of: value) {
+              validationMessage = nil
+            }
+
+          if let validationMessage {
+            Text(validationMessage)
+              .font(.footnote)
+              .foregroundStyle(.red)
+              .accessibilityIdentifier("expenses.salaryValidationMessage")
+          }
 
           Text("You can include take-home salary and extra monthly income sources.")
             .font(.footnote)
@@ -1408,7 +1439,11 @@ private struct NetSalaryEditorSheet: View {
 
         ToolbarItem(placement: .confirmationAction) {
           Button("Save") {
-            guard let parsed = parseMonetaryValue(value), parsed >= 0 else { return }
+            guard let parsed = parseMonetaryValue(value), parsed >= 0 else {
+              validationMessage = String(localized: "Enter a valid amount, like 2500 or 2500.50.")
+              invalidFeedbackTrigger += 1
+              return
+            }
             onSave(parsed)
             successFeedbackTrigger += 1
             dismiss()
@@ -1421,7 +1456,8 @@ private struct NetSalaryEditorSheet: View {
         }
       }
     }
-    .appSensoryFeedback(success: successFeedbackTrigger)
+    .appSensoryFeedback(success: successFeedbackTrigger, destructive: invalidFeedbackTrigger)
+    .animation(.easeOut(duration: 0.2), value: validationMessage)
   }
 
   private func parseMonetaryValue(_ raw: String) -> Double? {

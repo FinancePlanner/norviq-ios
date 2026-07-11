@@ -27,6 +27,7 @@ private enum UserProfileDestination: Hashable {
 @MainActor
 public struct UserProfileView: View {
     @State private var viewModel: UserProfileViewModel
+    @State private var accountLinkingViewModel: AccountLinkingViewModel
     @StateObject private var pushNotificationsCoordinator: PushNotificationsCoordinator
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dismiss) private var dismiss
@@ -38,6 +39,9 @@ public struct UserProfileView: View {
     @State private var isAIInfoPresented = false
     @State private var isPaywallPresented = false
     @State private var isLoggingOut = false
+    @State private var isDeletingAccount = false
+    @State private var isDeleteAccountConfirmPresented = false
+    @State private var deleteAccountErrorMessage: String?
     @State private var securityCodeEnabled = false
     @State private var faceIDErrorMessage: String?
     @State private var isNotificationsOn = false
@@ -65,6 +69,7 @@ public struct UserProfileView: View {
 
     public init(viewModel: UserProfileViewModel? = nil) {
         _viewModel = State(initialValue: viewModel ?? UserProfileViewModel())
+        _accountLinkingViewModel = State(initialValue: AccountLinkingViewModel())
         _pushNotificationsCoordinator = StateObject(
             wrappedValue: Container.shared.pushNotificationsCoordinator()
         )
@@ -160,7 +165,7 @@ public struct UserProfileView: View {
             Section(LocalizedStringKey("Subscription")) {
                 if billingManager.isPro {
                     Button {
-                        billingManager.manageSubscription()
+                        Task { await billingManager.manageSubscription() }
                     } label: {
                         Label(
                             LocalizedStringKey("Manage Subscription"),
@@ -221,6 +226,18 @@ public struct UserProfileView: View {
                         .typography(.caption)
                         .foregroundStyle(AppTheme.Colors.danger)
                 }
+
+                if let message = billingManager.restoreStatusMessage, !message.isEmpty {
+                    Label(
+                        message,
+                        systemImage: billingManager.restoreStatusIsSuccess ? "checkmark.circle.fill" : "info.circle")
+                        .typography(.caption)
+                        .foregroundStyle(
+                            billingManager.restoreStatusIsSuccess
+                                ? AppTheme.Colors.success
+                                : AppTheme.Colors.tint(for: scheme))
+                        .accessibilityIdentifier("settings.subscription.restoreStatus")
+                }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
@@ -246,6 +263,31 @@ public struct UserProfileView: View {
                         .typography(.caption)
                         .foregroundStyle(.secondary)
                     }
+                }
+
+                ForEach([OAuthProviderKind.apple, .google, .x], id: \.self) { provider in
+                    connectedAccountRow(provider)
+                }
+
+                if accountLinkingViewModel.isLoading {
+                    HStack {
+                        ProgressView()
+                        Text(LocalizedStringKey("Loading connected accounts..."))
+                            .typography(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let message = accountLinkingViewModel.successMessage, !message.isEmpty {
+                    Label(message, systemImage: "checkmark.circle.fill")
+                        .typography(.caption)
+                        .foregroundStyle(.green)
+                }
+
+                if let message = accountLinkingViewModel.errorMessage, !message.isEmpty {
+                    Label(message, systemImage: "exclamationmark.triangle.fill")
+                        .typography(.caption)
+                        .foregroundStyle(AppTheme.Colors.danger)
                 }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
@@ -336,32 +378,6 @@ public struct UserProfileView: View {
             Section(LocalizedStringKey("Achievements")) {
                 NavigationLink(value: UserProfileDestination.badges) {
                     Label(LocalizedStringKey("Badges"), systemImage: "trophy.fill")
-                }
-            }
-            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
-
-            // Integrations (Coming Soon)
-            Section(LocalizedStringKey("Integrations")) {
-                HStack {
-                    Label(LocalizedStringKey("AI Model Integrations"), systemImage: "cpu")
-                        .opacity(0.6)
-                    Spacer()
-                    Text(LocalizedStringKey("Soon"))
-                        .typography(.nano, weight: .bold).fontDesign(.rounded)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.red, in: Capsule())
-                    Button {
-                        isAIInfoPresented = true
-                    } label: {
-                        Image(systemName: "info.circle")
-                            .imageScale(.large)
-                            .frame(width: 44, height: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(AppTheme.Colors.tint(for: scheme))
-                    .accessibilityLabel("Why connect AI models?")
                 }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
@@ -458,6 +474,31 @@ public struct UserProfileView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
+            // Delete Account
+            Section {
+                Button(role: .destructive) {
+                    isDeleteAccountConfirmPresented = true
+                } label: {
+                    HStack(spacing: 8) {
+                        if isDeletingAccount {
+                            ProgressView()
+                        }
+                        Text(LocalizedStringKey("Delete account"))
+                            .typography(.button, weight: .semibold)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .foregroundStyle(AppTheme.Colors.danger)
+                }
+                .disabled(isDeletingAccount || isLoggingOut)
+            } footer: {
+                Text(LocalizedStringKey(
+                    "Permanently deletes your account and all associated data. This can't be undone."
+                ))
+                .typography(.nano)
+                .foregroundStyle(.secondary)
+            }
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
             // Footer
             Section {
                 VStack(spacing: 4) {
@@ -477,6 +518,36 @@ public struct UserProfileView: View {
         .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
         .refreshable {
             await viewModel.load(force: true)
+            await accountLinkingViewModel.load()
+        }
+        .confirmationDialog(
+            LocalizedStringKey("Delete account?"),
+            isPresented: $isDeleteAccountConfirmPresented,
+            titleVisibility: .visible
+        ) {
+            Button(role: .destructive) {
+                deleteAccount()
+            } label: {
+                Text(LocalizedStringKey("Delete account"))
+            }
+            Button(role: .cancel) {} label: {
+                Text(LocalizedStringKey("Cancel"))
+            }
+        } message: {
+            Text(LocalizedStringKey(
+                "This permanently deletes your account and all associated data. This can't be undone."
+            ))
+        }
+        .alert(
+            LocalizedStringKey("Couldn't delete account"),
+            isPresented: Binding(
+                get: { deleteAccountErrorMessage != nil },
+                set: { if !$0 { deleteAccountErrorMessage = nil } }
+            )
+        ) {
+            Button(role: .cancel) {} label: { Text(LocalizedStringKey("OK")) }
+        } message: {
+            Text(deleteAccountErrorMessage ?? "")
         }
     }
 
@@ -520,6 +591,7 @@ public struct UserProfileView: View {
         billingManager.configureForCurrentUser()
         await billingManager.refreshBillingContext()
         await viewModel.load()
+        await accountLinkingViewModel.load()
         pushNotificationsCoordinator.handleAuthenticatedSessionBecameActive()
         securityCodeEnabled = securityCodeManager.isEnabled
         isNotificationsOn = pushNotificationsCoordinator.isOptedIn
@@ -555,6 +627,65 @@ public struct UserProfileView: View {
             .frame(width: 28, height: 28)
             .background(backgroundColor)
             .clipShape(.rect(cornerRadius: 6))
+    }
+
+    private func connectedAccountRow(_ provider: OAuthProviderKind) -> some View {
+        let account = accountLinkingViewModel.account(for: provider)
+        let isActive = accountLinkingViewModel.activeProvider == provider
+
+        return HStack(spacing: 12) {
+            Label {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(accountLinkingViewModel.label(for: provider))
+                        .foregroundStyle(.primary)
+                    if account.connected, let email = account.email, !email.isEmpty {
+                        Text(email)
+                            .typography(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(LocalizedStringKey("Not connected"))
+                            .typography(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } icon: {
+                Image(systemName: signInProviderIcon(for: provider))
+            }
+
+            Spacer()
+
+            if account.connected {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .accessibilityLabel(LocalizedStringKey("Connected"))
+            } else {
+                Button {
+                    connectSignInProvider(provider)
+                } label: {
+                    if isActive {
+                        ProgressView()
+                    } else {
+                        Text(LocalizedStringKey("Connect"))
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(isActive || accountLinkingViewModel.activeProvider != nil)
+            }
+        }
+        .accessibilityIdentifier("settings.connectedAccount.\(provider.rawValue)")
+    }
+
+    private func signInProviderIcon(for provider: OAuthProviderKind) -> String {
+        switch provider {
+        case .apple:
+            return "apple.logo"
+        case .google:
+            return "g.circle"
+        case .x:
+            return "xmark"
+        @unknown default:
+            return "person.crop.circle.badge.checkmark"
+        }
     }
 
     private func setFaceIDEnabled(_ enabled: Bool) async {
@@ -649,6 +780,10 @@ public struct UserProfileView: View {
         Task { await pushNotificationsCoordinator.setNotificationsEnabled(true) }
     }
 
+    private func connectSignInProvider(_ provider: OAuthProviderKind) {
+        Task { await accountLinkingViewModel.connect(provider) }
+    }
+
     private func logOut() {
         Task {
             guard !isLoggingOut else { return }
@@ -658,6 +793,27 @@ public struct UserProfileView: View {
             PostHogSDK.shared.reset()
             await Container.shared.authSessionManager().logout()
             isLoggingOut = false
+        }
+    }
+
+    private func deleteAccount() {
+        Task {
+            guard !isDeletingAccount else { return }
+            isDeletingAccount = true
+            defer { isDeletingAccount = false }
+
+            let success = await viewModel.deleteAccount()
+            guard success else {
+                deleteAccountErrorMessage = viewModel.errorMessage
+                    ?? String(localized: "Failed to delete account.")
+                return
+            }
+
+            // Account removed server-side: tear down the local session so the
+            // app returns to the signed-out state.
+            PostHogSDK.shared.capture("user_account_deleted")
+            PostHogSDK.shared.reset()
+            await Container.shared.authSessionManager().logout()
         }
     }
 }

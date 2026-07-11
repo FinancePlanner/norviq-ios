@@ -177,7 +177,6 @@ The HTTP API this app calls is implemented by **StockPlanBackend**, in the same 
 | Environment | API base | WebSocket base |
 |-------------|----------|----------------|
 | **local** | `http://localhost:8080` | `ws://localhost:8080/ws` |
-| **dev** | `https://dev-api.norviqa.io` | `wss://dev-api.norviqa.io/ws` |
 | **production** | `https://api.norviqa.io` | `wss://api.norviqa.io/ws` |
 
 Run the backend locally (see `StockPlanBackend/README.md` and `docker-compose.yml`) when using the **local** environment.

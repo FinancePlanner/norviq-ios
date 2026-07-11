@@ -47,7 +47,9 @@ struct ProGateView<Content: View>: View {
                 .typography(.title, weight: .bold)
                 .accessibilityIdentifier("proGate.title")
 
-            Text("Subscribe to unlock this view.\nFree trial available.")
+            Text(billingManager.selectedPlanHasFreeTrial
+                 ? "Subscribe to unlock this view.\nFree trial available."
+                 : "Subscribe to unlock this view.")
                 .typography(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

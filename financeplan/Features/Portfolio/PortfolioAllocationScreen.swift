@@ -86,7 +86,7 @@ struct PortfolioAllocationScreen: View {
                     .transition(.opacity)
             }
         }
-        .animation(.smooth(duration: 0.3), value: viewModel.isLoading)
+        .appAnimation(AppMotion.reduced, value: viewModel.isLoading)
         .onAppear {
             viewModel.setModelContext(modelContext)
         }
@@ -135,7 +135,8 @@ struct PortfolioAllocationScreen: View {
 
                                 Text(totalValue.currency)
                                     .typography(.hero, weight: .bold)
-                                    .contentTransition(.numericText())
+                                    .contentTransition(.numericText(value: totalValue))
+                                    .appAnimation(AppMotion.state, value: totalValue)
 
                                 Text(
                                     "\(allocationSlices.count) positions · percentages sum to how much each holding contributes to total value."
@@ -170,12 +171,14 @@ struct PortfolioAllocationScreen: View {
                                                 .typography(.label, weight: .semibold)
                                                 .foregroundStyle(.secondary)
                                                 .monospacedDigit()
-                                                .contentTransition(.numericText())
+                                                .contentTransition(.numericText(value: slice.percentage))
+                                                .appAnimation(AppMotion.state, value: slice.percentage)
 
                                             Text(slice.value.currency)
                                                 .typography(.small)
                                                 .foregroundStyle(.secondary)
-                                                .contentTransition(.numericText())
+                                                .contentTransition(.numericText(value: slice.value))
+                                                .appAnimation(AppMotion.state, value: slice.value)
                                         }
                                     }
                                 }
@@ -209,6 +212,7 @@ struct PortfolioAllocationScreen: View {
         let slices: [PortfolioAllocationSlice]
         let colorScheme: ColorScheme
 
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
         @State private var animationProgress: Double = 0.0
 
         var body: some View {
@@ -227,9 +231,11 @@ struct PortfolioAllocationScreen: View {
             )
             .chartLegend(.hidden)
             .onAppear {
-                withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2)) {
-                    animationProgress = 1.0
+                guard !reduceMotion else {
+                    animationProgress = 1
+                    return
                 }
+                withAnimation(AppMotion.dataReveal) { animationProgress = 1 }
             }
         }
     }

@@ -10,9 +10,11 @@ struct ChartDataPoint: Identifiable, Equatable {
 struct InteractiveLineChart: View {
     let data: [ChartDataPoint]
     let color: Color
+    var currencyCode = "USD"
 
     @State private var selectedDataPoint: ChartDataPoint?
     @State private var selectionFeedbackTrigger = 0
+    @State private var lastFeedbackIndex: Int?
 
     private var minDate: Date { data.first?.date ?? .now }
     private var maxDate: Date { data.last?.date ?? .now }
@@ -89,7 +91,7 @@ struct InteractiveLineChart: View {
                         Text(selected.date.formatted(.dateTime.month().day()))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
-                        Text(selected.value.formatted(.currency(code: "USD")))
+                        Text(selected.value.formatted(.currency(code: currencyCode)))
                             .font(.caption.bold())
                             .foregroundStyle(.primary)
                     }
@@ -99,7 +101,7 @@ struct InteractiveLineChart: View {
                     .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                     .position(
                         x: max(50, min(geometry.size.width - 50, xPos)),
-                        y: -20
+                        y: 24
                     )
                 }
 
@@ -112,6 +114,7 @@ struct InteractiveLineChart: View {
                             }
                             .onEnded { _ in
                                 selectedDataPoint = nil
+                                lastFeedbackIndex = nil
                             }
                     )
             }
@@ -125,9 +128,13 @@ struct InteractiveLineChart: View {
         let index = Int(round(progress * CGFloat(data.count - 1)))
         let safeIndex = max(0, min(data.count - 1, index))
 
-        if selectedDataPoint != data[safeIndex] {
+        guard selectedDataPoint != data[safeIndex] else { return }
+        selectedDataPoint = data[safeIndex]
+
+        let feedbackStride = max(1, data.count / 12)
+        if lastFeedbackIndex == nil || abs(safeIndex - (lastFeedbackIndex ?? 0)) >= feedbackStride {
             selectionFeedbackTrigger += 1
-            selectedDataPoint = data[safeIndex]
+            lastFeedbackIndex = safeIndex
         }
     }
 

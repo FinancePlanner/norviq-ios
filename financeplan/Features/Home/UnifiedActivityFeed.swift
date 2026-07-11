@@ -79,6 +79,7 @@ struct UnifiedActivityFeed: View {
   let financialHealth: DashboardFinancialHealthDTO?
   let isFinancialHealthLoading: Bool
   let financialHealthUnavailable: Bool
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   private var financialHealthCardState: FinancialHealthCardState {
     FinancialHealthCardState(
@@ -107,7 +108,7 @@ struct UnifiedActivityFeed: View {
         .font(.title2.bold())
         .padding(.horizontal, 4)
 
-      GlassCard(cornerRadius: 22) {
+      GlassCard(cornerRadius: AppTheme.Radius.hero) {
         VStack(spacing: 0) {
           if viewModel.isLoading && viewModel.activities.isEmpty {
             ProgressView()
@@ -165,7 +166,7 @@ struct UnifiedActivityFeed: View {
       }
 
       if !recentExpenses.isEmpty {
-        GlassCard(cornerRadius: 22) {
+        GlassCard(cornerRadius: AppTheme.Radius.hero) {
           VStack(alignment: .leading, spacing: 12) {
             Text("Recent spend")
               .font(.headline)
@@ -194,7 +195,7 @@ struct UnifiedActivityFeed: View {
         }
       }
 
-      GlassCard(cornerRadius: 22) {
+      GlassCard(cornerRadius: AppTheme.Radius.hero) {
         HStack(spacing: 16) {
           ZStack {
             Circle()
@@ -203,7 +204,7 @@ struct UnifiedActivityFeed: View {
               .trim(from: 0, to: financialHealthCardState.ringProgress)
               .stroke(healthTint, style: StrokeStyle(lineWidth: 6, lineCap: .round))
               .rotationEffect(.degrees(-90))
-              .animation(.easeInOut(duration: 0.35), value: financialHealthCardState.ringProgress)
+              .animation(reduceMotion ? nil : AppMotion.dataReveal, value: financialHealthCardState.ringProgress)
             Text(financialHealthCardState.scoreText)
               .font(.headline)
           }
@@ -223,9 +224,9 @@ struct UnifiedActivityFeed: View {
       }
       .frame(maxWidth: .infinity, minHeight: 112)
       .redacted(reason: isFinancialHealthLoading ? .placeholder : [])
-      .scaleEffect(isFinancialHealthLoading ? 0.99 : 1)
+      .scaleEffect(reduceMotion ? 1 : isFinancialHealthLoading ? 0.99 : 1)
       .opacity(isFinancialHealthLoading ? 0.9 : 1)
-      .animation(.easeOut(duration: 0.25), value: isFinancialHealthLoading)
+      .appAnimation(AppMotion.state, value: isFinancialHealthLoading)
     }
   }
 }

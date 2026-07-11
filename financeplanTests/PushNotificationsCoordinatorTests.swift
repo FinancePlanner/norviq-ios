@@ -11,7 +11,7 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     var lastRegisterDeviceToken: String?
     var lastRegisterEnvironment: PushAPNSEnvironment?
     var lastRegisterAuthorizationStatus: PushAuthorizationStatus?
-    var earningsPreferences = EarningsNotificationPreferencesResponse(enabled: true)
+    var earningsPreferences = financeplan.EarningsNotificationPreferencesResponse(enabled: true)
 
     func registerDevice(
       deviceToken: String,
@@ -37,12 +37,12 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
       deactivateCalls += 1
     }
 
-    func fetchEarningsPreferences() async throws -> EarningsNotificationPreferencesResponse {
+    func fetchEarningsPreferences() async throws -> financeplan.EarningsNotificationPreferencesResponse {
       earningsPreferences
     }
 
-    func updateEarningsPreferences(enabled: Bool) async throws -> EarningsNotificationPreferencesResponse {
-      earningsPreferences = EarningsNotificationPreferencesResponse(enabled: enabled)
+    func updateEarningsPreferences(enabled: Bool) async throws -> financeplan.EarningsNotificationPreferencesResponse {
+      earningsPreferences = financeplan.EarningsNotificationPreferencesResponse(enabled: enabled)
       return earningsPreferences
     }
   }
@@ -104,6 +104,13 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     func clearSession() async {}
     func hasCompletedInitialStockImport(for _: String) async -> Bool { false }
     func markInitialStockImportCompleted(for _: String) async {}
+    func hasCompletedOnboardingQuestionnaire(for _: String) async -> Bool { false }
+    func markOnboardingQuestionnaireCompleted(for _: String) async {}
+    func requiresOnboardingQuestionnaire(for _: String) async -> Bool { false }
+    func markOnboardingQuestionnaireRequired(for _: String) async {}
+    func markPendingOnboardingAfterSignup(email _: String) async {}
+    func hasPendingOnboardingAfterSignup(email _: String) async -> Bool { false }
+    func clearPendingOnboardingAfterSignup(email _: String) async {}
   }
 
   private func makeDefaults() -> UserDefaults {

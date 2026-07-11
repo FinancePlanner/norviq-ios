@@ -123,6 +123,41 @@ final class AuthSessionStoreTests: XCTestCase {
     XCTAssertEqual(store.currentUserID, "")
   }
 
+  @MainActor
+  func testPendingSignupEmailIsNormalizedForOnboardingRouting() {
+    let defaults = UserDefaults(suiteName: #function)!
+    defaults.removePersistentDomain(forName: #function)
+    let store = UserDefaultsAuthSessionStore(
+      defaults: defaults,
+      secureStore: InMemorySecureStore()
+    )
+
+    store.markPendingOnboardingAfterSignup(email: " New.User@Example.COM ")
+
+    XCTAssertTrue(store.hasPendingOnboardingAfterSignup(email: "new.user@example.com"))
+    XCTAssertTrue(store.hasPendingOnboardingAfterSignup(email: " NEW.USER@example.com "))
+    XCTAssertFalse(store.hasPendingOnboardingAfterSignup(email: "other@example.com"))
+  }
+
+  @MainActor
+  func testCompletingOnboardingClearsRequiredOnboardingForUser() {
+    let defaults = UserDefaults(suiteName: #function)!
+    defaults.removePersistentDomain(forName: #function)
+    let store = UserDefaultsAuthSessionStore(
+      defaults: defaults,
+      secureStore: InMemorySecureStore()
+    )
+
+    store.markOnboardingQuestionnaireRequired(for: "user-1")
+
+    XCTAssertTrue(store.requiresOnboardingQuestionnaire(for: "user-1"))
+
+    store.markOnboardingQuestionnaireCompleted(for: "user-1")
+
+    XCTAssertFalse(store.requiresOnboardingQuestionnaire(for: "user-1"))
+    XCTAssertTrue(store.hasCompletedOnboardingQuestionnaire(for: "user-1"))
+  }
+
   private func makeJWT(userID: UUID, expiresAt: Date) -> String {
     let header = ["alg": "none", "typ": "JWT"]
     let payload: [String: Any] = [

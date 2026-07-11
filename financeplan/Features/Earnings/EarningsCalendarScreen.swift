@@ -1,6 +1,7 @@
-import SwiftUI
 import Factory
 import OSLog
+import StockPlanShared
+import SwiftUI
 
 private let earningsCalendarLogger = Logger(
   subsystem: Bundle.main.bundleIdentifier ?? "financeplan",
@@ -36,7 +37,7 @@ struct EarningsCalendarScreen: View {
   @State private var upcomingEarnings: [EarningsEvent] = []
   @State private var isLoading = false
   @State private var isLoadingUpcoming = false
-  @State private var errorMessage: String?
+  @State private var errorToast: ToastData?
   @State private var selectedEvent: EarningsEvent?
   @State private var loadedMonthKeys: Set<String> = []
 
@@ -68,13 +69,7 @@ struct EarningsCalendarScreen: View {
     .task {
       await loadUpcomingEarnings()
     }
-    .overlay(alignment: .top) {
-      if let errorMessage {
-        ToastBanner(message: errorMessage, style: .error)
-          .padding(.horizontal, 16)
-          .padding(.top, 8)
-      }
-    }
+    .toastOverlay($errorToast)
   }
 
   private var earningsForSelectedDate: [EarningsEvent] {
@@ -87,7 +82,6 @@ struct EarningsCalendarScreen: View {
       upcomingSection
       calendarSection
       selectedDateSection
-      transcriptsSection
     }
   }
 
@@ -145,32 +139,6 @@ struct EarningsCalendarScreen: View {
     }
   }
 
-  private var transcriptsSection: some View {
-    Section {
-      VStack(alignment: .leading, spacing: 16) {
-        Text("Earnings Transcripts")
-          .typography(.title, weight: .bold)
-
-        HStack(alignment: .top, spacing: 12) {
-          Image(systemName: "info.circle.fill")
-            .foregroundStyle(Color.blue)
-          VStack(alignment: .leading, spacing: 4) {
-            Text("Coming in Future Updates")
-              .typography(.small, weight: .semibold)
-            Text("Earnings Transcripts and the ability to select the specific timestamp of the earnings (pre-market vs. after-hours) are currently limited and will be fully supported in future versions.")
-              .typography(.nano)
-              .foregroundStyle(.secondary)
-              .fixedSize(horizontal: false, vertical: true)
-          }
-        }
-        .padding()
-        .appGlassEffect(.rect(cornerRadius: 16), tint: Color.blue.opacity(0.05))
-      }
-    }
-    .listRowBackground(Color.clear)
-    .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 24, trailing: 16))
-  }
-
   private func refreshCalendar() async {
     loadedMonthKeys = []
     earnings = []
@@ -197,7 +165,7 @@ struct EarningsCalendarScreen: View {
     let to = formatISODateOnly(endOfMonth)
 
     isLoading = true
-    errorMessage = nil
+    errorToast = nil
 
     do {
       let results = try await marketDataService.fetchEarningsCalendar(from: from, to: to)
@@ -208,7 +176,7 @@ struct EarningsCalendarScreen: View {
       self.earnings = Array(merged)
       loadedMonthKeys.insert(monthKey)
     } catch {
-      self.errorMessage = error.localizedDescription
+      self.errorToast = .error(error.localizedDescription)
     }
     isLoading = false
   }
@@ -304,6 +272,22 @@ struct EarningsDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
+    @InjectedObservable(\Container.billingManager) private var billingManager
+    @InjectedObservable(\Container.earningsAudioPlayer) private var audioPlayer
+    @State private var transcript: EarningsTranscript?
+    @State private var isTranscriptLoading = false
+    @State private var transcriptMessage: String?
+    @State private var incomeStatements: [IncomeStatementResponse] = []
+    @State private var isIncomeStatementLoading = false
+
+    private var marketDataService: any MarketDataServicing {
+        Container.shared.marketDataService()
+    }
+
+    private var canAccessTranscript: Bool {
+        billingManager.isPro || billingManager.isFeatureAvailable("earnings_text")
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -327,6 +311,18 @@ struct EarningsDetailView: View {
                     }
                     .padding(.horizontal)
 
+                    EarningsFlowVisualizer(
+                        symbol: event.symbol,
+                        statements: incomeStatements,
+                        isLoading: isIncomeStatementLoading
+                    )
+                    .padding(.horizontal)
+
+                    // Transcript teaser / access (teaser model: list free, transcript Pro)
+                    if event.hasTranscript == true {
+                        transcriptSection
+                    }
+
                     // Metadata
                     if let lastUpdated = event.lastUpdated {
                         Text("Data last updated: \(lastUpdated)")
@@ -344,7 +340,79 @@ struct EarningsDetailView: View {
             }
             .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
+        .task {
+            await loadIncomeStatements()
+        }
+    }
+
+    @ViewBuilder
+    private var transcriptSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Transcript")
+                .typography(.label, weight: .bold)
+
+            if !canAccessTranscript {
+                ProGateView(billingManager: billingManager) {
+                    Color.clear.frame(height: 60)
+                }
+            } else if isTranscriptLoading {
+                ProgressView("Loading transcript…")
+            } else if let transcript {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(transcript.content)
+                        .typography(.small)
+                        .lineLimit(8)
+                        .textSelection(.enabled)
+
+                    Button {
+                        audioPlayer.toggle(transcript)
+                    } label: {
+                        Label(
+                            audioPlayer.isPlaying(transcript) ? "Pause audio" : "Listen (TTS)",
+                            systemImage: audioPlayer.isPlaying(transcript) ? "pause.circle.fill" : "play.circle.fill"
+                        )
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            } else if let transcriptMessage {
+                Text(transcriptMessage)
+                    .typography(.small)
+                    .foregroundStyle(.secondary)
+            } else {
+                Button("Load transcript & listen") {
+                    Task { await loadTranscript() }
+                }
+            }
+        }
+        .padding()
+        .appGlassEffect(.rect(cornerRadius: 16))
+        .padding(.horizontal)
+    }
+
+    private func loadTranscript() async {
+        guard canAccessTranscript else { return }
+        isTranscriptLoading = true
+        transcriptMessage = nil
+        defer { isTranscriptLoading = false }
+
+        do {
+            transcript = try await marketDataService.fetchStockEarningsTranscript(symbol: event.symbol, date: event.date)
+        } catch {
+            transcriptMessage = error.localizedDescription
+        }
+    }
+
+    private func loadIncomeStatements() async {
+        guard incomeStatements.isEmpty else { return }
+        isIncomeStatementLoading = true
+        defer { isIncomeStatementLoading = false }
+
+        do {
+            incomeStatements = try await marketDataService.fetchIncomeStatement(symbol: event.symbol, limit: 4, period: "quarter")
+        } catch {
+            incomeStatements = []
+        }
     }
 }
 

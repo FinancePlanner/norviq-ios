@@ -11,7 +11,14 @@ enum Constants {
 
     static let webAppBaseUrl = URL(string: "https://www.norviqaapp.com")!
 
-    static let shareBaseUrl = URL(string: "https://www.norviqaapp.com")!
+    static let privacyPolicyUrl = URL(
+      string: "https://gist.github.com/FACorreiaa/a60bcbf818a50a0e60df625f10021ef4"
+    )!
+
+    /// Apple's standard EULA (Terms of Use) used for auto-renewable subscriptions.
+    static let termsOfUseUrl = URL(
+      string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+    )!
 
     static let swiftyCropConfiguration = SwiftyCropConfiguration(
       maxMagnificationScale: 4.0,
@@ -83,9 +90,6 @@ final class AppEnvironmentManager: @unchecked Sendable {
     } else if isDebugBuild {
       forcedEnvironment = nil
       resolvedEnvironment = AppEnvironments.local
-    } else if isTestFlight {
-      forcedEnvironment = nil
-      resolvedEnvironment = AppEnvironments.dev
     } else {
       forcedEnvironment = nil
       resolvedEnvironment = AppEnvironments.production

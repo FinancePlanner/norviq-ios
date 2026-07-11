@@ -8,6 +8,8 @@ final class StockDetailsViewModelTests: XCTestCase {
   @MainActor
   private final class StockServiceMock: StockServicing, @unchecked Sendable {
     var fetchStockDetailsCalls = 0
+    var fetchStockHistoryCalls = 0
+    var fetchStockNewsCalls = 0
     var createValuationCalls = 0
     var updateValuationCalls = 0
     var lastCreateValuationSymbol: String?
@@ -84,11 +86,13 @@ final class StockDetailsViewModelTests: XCTestCase {
     }
 
     func fetchStockHistory(symbol _: String) async throws -> [StockHistory] {
-      try fetchStockHistoryResult.get()
+      fetchStockHistoryCalls += 1
+      return try fetchStockHistoryResult.get()
     }
 
     func fetchStockNews(symbol _: String) async throws -> [StockNews] {
-      try fetchStockNewsResult.get()
+      fetchStockNewsCalls += 1
+      return try fetchStockNewsResult.get()
     }
 
     func updateStock(_ stock: StockResponse) async throws -> StockResponse {
@@ -240,10 +244,15 @@ final class StockDetailsViewModelTests: XCTestCase {
 
   @MainActor
   private final class MarketDataServiceMock: MarketDataServicing, @unchecked Sendable {
+    var fetchQuoteCalls = 0
+    var lastFetchQuoteSymbol: String?
     var fetchAnalystConsensusCalls = 0
     var lastFetchAnalystConsensusSymbol: String?
     var fetchStockEarningsCalls = 0
     var lastFetchStockEarningsSymbol: String?
+    var fetchStockEarningsTranscriptCalls = 0
+    var lastFetchStockEarningsTranscriptSymbol: String?
+    var lastFetchStockEarningsTranscriptDate: String?
     var fetchCompanyProfileResult: Result<CompanyProfileResponse, Error> = .failure(MockError.notConfigured)
     var fetchQuoteResult: Result<QuoteResponse, Error> = .failure(MockError.notConfigured)
     var fetchAnalystConsensusResult: Result<StockAnalystConsensus, Error> = .failure(MockError.notConfigured)
@@ -251,11 +260,23 @@ final class StockDetailsViewModelTests: XCTestCase {
     var fetchAnalysisMetricsResult: Result<StockAnalysisMetrics, Error> = .failure(MockError.notConfigured)
     var fetchBalanceSheetStatementResult: Result<[BalanceSheetStatementResponse], Error> = .success([])
     var fetchCashFlowStatementResult: Result<[CashFlowStatementResponse], Error> = .success([])
+    var fetchIncomeStatementResult: Result<[IncomeStatementResponse], Error> = .success([])
     var fetchRatiosResult: Result<[RatiosResponse], Error> = .success([])
     var fetchRatiosTTMResult: Result<[RatiosTTMResponse], Error> = .success([])
     var fetchFinancialGrowthResult: Result<[FinancialGrowthResponse], Error> = .success([])
     var fetchAnalystEstimatesResult: Result<[AnalystEstimatesResponse], Error> = .success([])
     var fetchStockEarningsResult: Result<[EarningsEvent], Error> = .success([])
+    var fetchStockEarningsTranscriptResult: Result<EarningsTranscript, Error> = .success(
+      EarningsTranscript(
+        symbol: "AAPL",
+        date: "2026-01-30",
+        year: 2026,
+        quarter: 1,
+        period: "Q1",
+        content: "Prepared remarks.",
+        provider: "fmp"
+      )
+    )
     var fetchEarningsCalendarResult: Result<[EarningsEvent], Error> = .success([])
     var fetchMarketNewsResult: Result<[StockNews], Error> = .success([])
     var fetchMarketCompareResult: Result<[StockAnalysisMetrics], Error> = .success([])
@@ -264,8 +285,14 @@ final class StockDetailsViewModelTests: XCTestCase {
       try fetchCompanyProfileResult.get()
     }
 
-    func fetchQuote(symbol _: String) async throws -> QuoteResponse {
-      try fetchQuoteResult.get()
+    func fetchQuoteBatch(symbols _: [String]) async throws -> QuoteBatchResponse {
+      throw MockError.notConfigured
+    }
+
+    func fetchQuote(symbol: String) async throws -> QuoteResponse {
+      fetchQuoteCalls += 1
+      lastFetchQuoteSymbol = symbol
+      return try fetchQuoteResult.get()
     }
 
     func fetchAnalystConsensus(symbol: String) async throws -> StockAnalystConsensus {
@@ -299,6 +326,10 @@ final class StockDetailsViewModelTests: XCTestCase {
       try fetchCashFlowStatementResult.get()
     }
 
+    func fetchIncomeStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [IncomeStatementResponse] {
+      try fetchIncomeStatementResult.get()
+    }
+
     func fetchRatios(symbol _: String, limit _: Int?, period _: String?) async throws -> [RatiosResponse] {
       try fetchRatiosResult.get()
     }
@@ -319,6 +350,13 @@ final class StockDetailsViewModelTests: XCTestCase {
       fetchStockEarningsCalls += 1
       lastFetchStockEarningsSymbol = symbol
       return try fetchStockEarningsResult.get()
+    }
+
+    func fetchStockEarningsTranscript(symbol: String, date: String) async throws -> EarningsTranscript {
+      fetchStockEarningsTranscriptCalls += 1
+      lastFetchStockEarningsTranscriptSymbol = symbol
+      lastFetchStockEarningsTranscriptDate = date
+      return try fetchStockEarningsTranscriptResult.get()
     }
 
     func fetchEarningsCalendar(from _: String, to _: String) async throws -> [EarningsEvent] {
@@ -395,6 +433,21 @@ final class StockDetailsViewModelTests: XCTestCase {
       title: title,
       url: "https://example.com/apple-services",
       date: date
+    )
+  }
+
+  private func makeQuote(symbol: String = "AAPL", currentPrice: Double = 171) -> QuoteResponse {
+    QuoteResponse(
+      symbol: symbol,
+      currency: "USD",
+      currentPrice: currentPrice,
+      change: 1.25,
+      percentChange: 0.73,
+      high: currentPrice + 2,
+      low: currentPrice - 2,
+      open: currentPrice - 1,
+      previousClose: currentPrice - 1.25,
+      timestamp: 1_775_073_600
     )
   }
 
@@ -1111,6 +1164,64 @@ final class StockDetailsViewModelTests: XCTestCase {
     XCTAssertEqual(service.fetchStockDetailsCalls, 2)
   }
 
+  func testRefreshQuoteUpdatesOnlyMarketSnapshot() async throws {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "AAPL"))
+    service.fetchStockHistoryResult = .success([makeHistory()])
+    service.fetchStockNewsResult = .success([makeNews()])
+    marketDataService.fetchQuoteResult = .success(makeQuote(symbol: "AAPL", currentPrice: 171))
+
+    await viewModel.load(stockId: "stock-1")
+
+    let detailsCallsAfterLoad = service.fetchStockDetailsCalls
+    let historyCallsAfterLoad = service.fetchStockHistoryCalls
+    let newsCallsAfterLoad = service.fetchStockNewsCalls
+    let quoteCallsAfterLoad = marketDataService.fetchQuoteCalls
+    marketDataService.fetchQuoteResult = .success(makeQuote(symbol: "AAPL", currentPrice: 172.5))
+
+    await viewModel.refreshQuote()
+
+    XCTAssertEqual(service.fetchStockDetailsCalls, detailsCallsAfterLoad)
+    XCTAssertEqual(service.fetchStockHistoryCalls, historyCallsAfterLoad)
+    XCTAssertEqual(service.fetchStockNewsCalls, newsCallsAfterLoad)
+    XCTAssertEqual(marketDataService.fetchQuoteCalls, quoteCallsAfterLoad + 1)
+    XCTAssertEqual(marketDataService.lastFetchQuoteSymbol, "AAPL")
+    let currentPrice = try XCTUnwrap(viewModel.marketSnapshot?.currentPrice)
+    XCTAssertEqual(currentPrice, 172.5, accuracy: 0.001)
+  }
+
+  func testRefreshQuoteWithoutLoadedDetailsDoesNothing() async {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    await viewModel.refreshQuote()
+
+    XCTAssertEqual(marketDataService.fetchQuoteCalls, 0)
+    XCTAssertNil(viewModel.marketSnapshot)
+  }
+
+  func testRefreshQuoteFailurePreservesExistingSnapshotAndErrorState() async throws {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "AAPL"))
+    marketDataService.fetchQuoteResult = .success(makeQuote(symbol: "AAPL", currentPrice: 171))
+
+    await viewModel.load(stockId: "stock-1")
+    marketDataService.fetchQuoteResult = .failure(MockError.notConfigured)
+
+    await viewModel.refreshQuote()
+
+    let currentPrice = try XCTUnwrap(viewModel.marketSnapshot?.currentPrice)
+    XCTAssertEqual(currentPrice, 171, accuracy: 0.001)
+    XCTAssertNil(viewModel.errorMessage)
+  }
+
   func testLoad_WhenOneStatementsEndpointReturnsNotFound_PreservesOtherStatementData() async {
     let service = StockServiceMock()
     let marketDataService = MarketDataServiceMock()
@@ -1217,6 +1328,128 @@ final class StockDetailsViewModelTests: XCTestCase {
     XCTAssertEqual(marketDataService.lastFetchStockEarningsSymbol, "AAPL")
     XCTAssertEqual(viewModel.stockEarnings.first?.surprisePercent, 2.6)
     XCTAssertEqual(viewModel.stockEarnings.first?.hasTranscript, true)
+  }
+
+  func testLoadEarningsTranscript_LoadsSelectedEarningsTranscript() async {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "AAPL"))
+    let event = EarningsEvent(
+      symbol: "AAPL",
+      date: "2026-01-30",
+      epsActual: 2.41,
+      epsEstimated: 2.35,
+      hasTranscript: true
+    )
+    marketDataService.fetchStockEarningsTranscriptResult = .success(
+      EarningsTranscript(
+        symbol: "AAPL",
+        date: "2026-01-30",
+        year: 2026,
+        quarter: 1,
+        period: "Q1",
+        content: "Prepared remarks for Apple earnings.",
+        provider: "fmp"
+      )
+    )
+
+    await viewModel.load(stockId: "stock-1")
+    await viewModel.loadEarningsTranscript(for: event)
+
+    XCTAssertEqual(marketDataService.fetchStockEarningsTranscriptCalls, 1)
+    XCTAssertEqual(marketDataService.lastFetchStockEarningsTranscriptSymbol, "AAPL")
+    XCTAssertEqual(marketDataService.lastFetchStockEarningsTranscriptDate, "2026-01-30")
+    XCTAssertEqual(viewModel.selectedEarningsTranscript?.content, "Prepared remarks for Apple earnings.")
+    XCTAssertNil(viewModel.earningsTranscriptMessage)
+    XCTAssertFalse(viewModel.isEarningsTranscriptLoading)
+  }
+
+  func testLoadEarningsTranscript_NetworkFailure_SetsErrorMessage() async {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "AAPL"))
+    let event = EarningsEvent(
+      symbol: "AAPL",
+      date: "2026-01-30",
+      epsActual: 2.41,
+      epsEstimated: 2.35,
+      hasTranscript: true
+    )
+    struct StubError: LocalizedError {
+      var errorDescription: String? { "Transcript fetch failed." }
+    }
+    marketDataService.fetchStockEarningsTranscriptResult = .failure(StubError())
+
+    await viewModel.load(stockId: "stock-1")
+    await viewModel.loadEarningsTranscript(for: event)
+
+    XCTAssertEqual(marketDataService.fetchStockEarningsTranscriptCalls, 1)
+    XCTAssertNil(viewModel.selectedEarningsTranscript)
+    XCTAssertEqual(viewModel.earningsTranscriptMessage, "Transcript fetch failed.")
+    XCTAssertFalse(viewModel.isEarningsTranscriptLoading)
+  }
+
+  func testLoadEarningsTranscript_NoTranscriptCapability_ShortCircuits() async {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "AAPL"))
+    let event = EarningsEvent(
+      symbol: "AAPL",
+      date: "2026-01-30",
+      epsActual: 2.41,
+      epsEstimated: 2.35,
+      hasTranscript: false
+    )
+
+    await viewModel.load(stockId: "stock-1")
+    await viewModel.loadEarningsTranscript(for: event)
+
+    XCTAssertEqual(marketDataService.fetchStockEarningsTranscriptCalls, 0)
+    XCTAssertNil(viewModel.selectedEarningsTranscript)
+    XCTAssertNil(viewModel.earningsTranscriptMessage)
+    XCTAssertFalse(viewModel.isEarningsTranscriptLoading)
+  }
+
+  func testClearEarningsTranscript_ResetsAllState() async {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "AAPL"))
+    let event = EarningsEvent(
+      symbol: "AAPL",
+      date: "2026-01-30",
+      epsActual: 2.41,
+      epsEstimated: 2.35,
+      hasTranscript: true
+    )
+    marketDataService.fetchStockEarningsTranscriptResult = .success(
+      EarningsTranscript(
+        symbol: "AAPL",
+        date: "2026-01-30",
+        year: 2026,
+        quarter: 1,
+        period: "Q1",
+        content: "Prepared remarks.",
+        provider: "fmp"
+      )
+    )
+
+    await viewModel.load(stockId: "stock-1")
+    await viewModel.loadEarningsTranscript(for: event)
+    XCTAssertNotNil(viewModel.selectedEarningsTranscript)
+
+    viewModel.clearEarningsTranscript()
+
+    XCTAssertNil(viewModel.selectedEarningsTranscript)
+    XCTAssertNil(viewModel.earningsTranscriptMessage)
+    XCTAssertFalse(viewModel.isEarningsTranscriptLoading)
   }
 
   func testMarketSnapshot_WhenChangeFieldsMissing_ComputesChangeAndPercent() throws {

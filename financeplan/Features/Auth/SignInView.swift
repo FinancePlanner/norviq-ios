@@ -11,7 +11,7 @@ struct SignInView: View {
       VStack(spacing: 32) {
         // Header
         VStack(spacing: 16) {
-          NorviqLogo(size: 78)
+          NorviqFullLogo(width: 220)
             .padding(.top, 24)
 
           VStack(spacing: 8) {
@@ -19,7 +19,7 @@ struct SignInView: View {
               .font(.largeTitle.weight(.bold))
               .foregroundStyle(.primary)
 
-            Text("Securely access your private financial editorial and curated portfolio.")
+            Text("Review your portfolio, budgets, and financial insights securely.")
               .font(.subheadline)
               .foregroundStyle(.secondary)
               .multilineTextAlignment(.center)
@@ -29,7 +29,7 @@ struct SignInView: View {
         }
 
         // Form Card
-        GlassCard(cornerRadius: 24) {
+        GlassCard(cornerRadius: AppTheme.Radius.hero) {
           VStack(spacing: 24) {
             VaultTextField(
               label: "Email Address",
@@ -56,6 +56,8 @@ struct SignInView: View {
                   )
                   .labelStyle(.iconOnly)
                   .foregroundStyle(.secondary)
+                  .frame(width: 44, height: 44)
+                  .contentShape(.rect)
                   .accessibilityLabel(isPasswordVisible ? "Hide password" : "Show password"),
                 textContentType: .password,
                 submitLabel: .done,

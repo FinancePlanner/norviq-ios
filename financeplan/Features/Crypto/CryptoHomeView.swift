@@ -71,7 +71,6 @@ struct CryptoHomeView: View {
             .sheet(item: $editingHolding) { holding in
                 EditCryptoHoldingSheet(viewModel: viewModel, holding: holding)
             }
-            .animation(.smooth(duration: 0.3), value: selectedSegment)
         }
     }
 

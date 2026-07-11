@@ -6,7 +6,7 @@ Main work:
 - Added a pre-login privacy screen (`PrivacyWelcomeScreen`) highlighting data ownership and security.
 - Added a pre-login paywall screen (`PreLoginPaywallScreen`) allowing anonymous users to start a 7-day free trial on the Pro annual plan.
 - Configured Amplitude unified SDK for iOS analytics, initialized via DI (`AnalyticsService`), currently tracking "App Launched".
-- Set up local StoreKit testing (`Products.storekit`) in Xcode with `pro_weekly`, `pro_monthly`, and `pro_annual` to bypass App Store Connect for local simulator testing.
+- Set up local StoreKit testing (`Products.storekit`) in Xcode with `pro_weekly`, `pro_monthly`, and `pro_yearly` to bypass App Store Connect for local simulator testing.
 - Updated `BillingManager` to support anonymous RevenueCat initialization and purchases, aliasing to the user ID upon login/signup.
 
 Key files:
@@ -77,7 +77,7 @@ Verified:
 Still needs external config:
 - Backend env: REVENUECAT_API_KEY
 - iOS build setting: REVENUECAT_IOS_API_KEY
-- RevenueCat: entitlement pro, products pro_monthly, pro_annual
+- RevenueCat: entitlement pro_access, products pro_monthly, pro_yearly
 - App Store Connect: subscription group + 14-day annual trial.
 
 ## Purpose
@@ -234,7 +234,6 @@ Important files:
 The supported environments are:
 
 - local
-- dev
 - production
 
 Environment selection can come from:
@@ -1592,13 +1591,12 @@ Extensible to swap system fonts or custom families without touching views.
 
 ### Environment Switching
 
-Three runtime environments configurable from Settings (and AuthFooter in dev):
+Two runtime environments are available: local development and production.
 
 ```swift
 enum AppEnvironments {
   static let local       = AppEnvironment(apiBaseUrl: http://localhost:8080, …)
-  static let dev         = AppEnvironment(apiBaseUrl: https://www.dev-norviq.online, …)
-  static let production  = AppEnvironment(apiBaseUrl: https://www.prod-norviq.online, …)
+  static let production  = AppEnvironment(apiBaseUrl: https://api.norviq.org, …)
 }
 ```
 
@@ -1616,7 +1614,7 @@ enum AppEnvironments {
 
 ### Build & CI Notes
 
-- **Scheme**: `Norviqa TestFlight Dev` – test builds; scheme pre-actions currently write unused `SchemeEnvironment.swift`
+- **Scheme**: `financeplan` – local builds, tests, and production/TestFlight archives
 - **SwiftLint**: `.swiftlint.yml` present; run `swiftlint --fix`
 - **PostHog/Sentry**: env vars set in scheme or device
 - **UI test arguments**: `-ui_test_skip_splash`, `-ui_test_reset_session`, `-ui_test_auth_token`, `-ui_test_imported_user_id`, etc.

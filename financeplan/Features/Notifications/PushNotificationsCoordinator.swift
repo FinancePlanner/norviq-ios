@@ -10,6 +10,7 @@ struct PushNotificationRoute: Equatable, Sendable {
     case targetHit = "target_hit"
     case earningsReminder = "earnings_reminder"
     case openPortfolio = "open_portfolio"
+    case taxOpportunity = "tax_harvest_opportunity"
   }
 
   let kind: Kind
@@ -19,6 +20,7 @@ struct PushNotificationRoute: Equatable, Sendable {
   let earningsDate: String?
   let leadDays: Int?
   let deepLink: String?
+  let opportunityID: String?
 
   nonisolated init(
     kind: Kind,
@@ -27,7 +29,8 @@ struct PushNotificationRoute: Equatable, Sendable {
     targetID: String? = nil,
     earningsDate: String? = nil,
     leadDays: Int? = nil,
-    deepLink: String? = nil
+    deepLink: String? = nil,
+    opportunityID: String? = nil
   ) {
     self.kind = kind
     self.symbol = symbol
@@ -36,6 +39,7 @@ struct PushNotificationRoute: Equatable, Sendable {
     self.earningsDate = earningsDate
     self.leadDays = leadDays
     self.deepLink = deepLink
+    self.opportunityID = opportunityID
   }
 }
 
@@ -57,6 +61,7 @@ enum PushNotificationPayloadParser {
     let earningsDate = normalize(stringValue(for: ["earningsDate", "earnings_date"], in: payload))
     let leadDays = intValue(for: ["leadDays", "lead_days"], in: payload)
     let deepLink = normalize(stringValue(for: ["deepLink", "deep_link"], in: payload))
+    let opportunityID = normalize(stringValue(for: ["opportunityId", "opportunity_id"], in: payload))
 
     return PushNotificationRoute(
       kind: kind,
@@ -65,7 +70,8 @@ enum PushNotificationPayloadParser {
       targetID: targetID,
       earningsDate: earningsDate,
       leadDays: leadDays,
-      deepLink: deepLink
+      deepLink: deepLink,
+      opportunityID: opportunityID
     )
   }
 

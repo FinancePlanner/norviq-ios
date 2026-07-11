@@ -18,6 +18,7 @@ public struct ContentView: View {
   @State private var launchStarted = false
   @State private var isAuthenticated: Bool
   @State private var requiresInitialStockImport: Bool
+  @State private var requiresOnboardingQuestionnaire = false
   @State private var isUnlocking = false
   @State private var isAppLocked = false
   @State private var securityCodeInput = ""
@@ -25,9 +26,9 @@ public struct ContentView: View {
   @State private var showSessionRecoveryAlert = false
   @State private var sessionRecoveryMessage = ""
   @State private var startWithSignup = false
+  @State private var hasRequestedLoginThisSession = false
   @StateObject private var pushNotificationsCoordinator: PushNotificationsCoordinator
   @AppStorage("useFaceID") private var useFaceID: Bool = true
-  @AppStorage("hasCompletedOnboardingQuestionnaire") private var hasCompletedOnboardingQuestionnaire: Bool = false
   private let splashDelay: Duration
   private let authSessionManager: AuthSessionManaging
   private let sessionStore: AuthSessionStoring
@@ -60,7 +61,17 @@ public struct ContentView: View {
           ZStack {
             AppTheme.Colors.topBarBackground(for: colorScheme).ignoresSafeArea()
 
-            if requiresInitialStockImport {
+            if requiresOnboardingQuestionnaire {
+              OnboardingQuestionnairePaywallScreen(
+                onCompleted: { _ in
+                  Task {
+                    let userID = await sessionStore.currentUserID
+                    await sessionStore.markOnboardingQuestionnaireCompleted(for: userID)
+                    requiresOnboardingQuestionnaire = false
+                  }
+                }
+              )
+            } else if requiresInitialStockImport {
               OnboardingImportFlow(
                 onFinished: {
                   Task {
@@ -110,14 +121,17 @@ public struct ContentView: View {
           }
         } else {
           Group {
-            if !hasCompletedOnboardingQuestionnaire {
+            if !hasRequestedLoginThisSession {
               OnboardingQuestionnaireFlow(
                 onLogInRequested: {
-                  hasCompletedOnboardingQuestionnaire = true
+                  hasRequestedLoginThisSession = true
                 },
                 onCompleted: {
-                  hasCompletedOnboardingQuestionnaire = true
-                  applyAuthenticatedState()
+                  Task {
+                    let userID = await sessionStore.currentUserID
+                    await sessionStore.markOnboardingQuestionnaireCompleted(for: userID)
+                    applyAuthenticatedState()
+                  }
                 }
               )
             } else {
@@ -136,7 +150,9 @@ public struct ContentView: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-//    .environment(\.dynamicTypeSize, .xSmall)
+    // Honor the user's Dynamic Type setting (Guideline 4 legibility) while bounding
+    // the largest accessibility sizes so the data-dense layouts stay intact.
+    .dynamicTypeSize(...DynamicTypeSize.accessibility3)
     .task {
       await syncSessionUsername()
     }
@@ -163,6 +179,7 @@ public struct ContentView: View {
           await pushNotificationsCoordinator.refreshAuthorizationStatus()
           if isAuthenticated {
             billingManager.configureForCurrentUser()
+            await billingManager.linkCurrentUserAndSyncEntitlements()
             await billingManager.refreshBillingContext()
           }
           await enforceAppLockIfNeeded()
@@ -180,6 +197,9 @@ public struct ContentView: View {
     .onChange(of: requiresInitialStockImport) { _, _ in
       deliverPendingPushNotificationRouteIfPossible()
     }
+    .onChange(of: requiresOnboardingQuestionnaire) { _, _ in
+      deliverPendingPushNotificationRouteIfPossible()
+    }
     .onChange(of: launchCompleted) { _, _ in
       deliverPendingPushNotificationRouteIfPossible()
     }
@@ -190,6 +210,8 @@ public struct ContentView: View {
 
       launchStarted = true
       
+      // UI-test session injection must never ship in release builds.
+      #if DEBUG
       let processInfo = ProcessInfo.processInfo
       if processInfo.arguments.contains("-ui_test_reset_session") {
         await sessionStore.clearSession()
@@ -218,6 +240,7 @@ public struct ContentView: View {
       if let importedUserID = processInfo.argumentValue(for: "-ui_test_imported_user_id") {
         await sessionStore.markInitialStockImportCompleted(for: importedUserID)
       }
+      #endif
 
       if splashDelay != .zero {
         try? await Task.sleep(for: splashDelay)
@@ -261,6 +284,7 @@ public struct ContentView: View {
     isAuthenticated = true
     Task {
       let userID = await sessionStore.currentUserID
+      requiresOnboardingQuestionnaire = await sessionStore.requiresOnboardingQuestionnaire(for: userID)
       let hasImported = await sessionStore.hasCompletedInitialStockImport(for: userID)
       requiresInitialStockImport = userID.isEmpty || !hasImported
       
@@ -268,6 +292,7 @@ public struct ContentView: View {
       sessionManager.updateUsername(username)
       
       billingManager.configureForCurrentUser()
+      await billingManager.linkCurrentUserAndSyncEntitlements()
       await billingManager.refreshBillingContext()
       pushNotificationsCoordinator.handleAuthenticatedSessionBecameActive()
       await enforceAppLockIfNeeded()
@@ -278,6 +303,8 @@ public struct ContentView: View {
   private func handleSessionInvalidation() {
     isAuthenticated = false
     requiresInitialStockImport = false
+    requiresOnboardingQuestionnaire = false
+    hasRequestedLoginThisSession = false
     isAppLocked = false
     securityCodeInput = ""
     securityCodeError = nil
@@ -288,7 +315,10 @@ public struct ContentView: View {
   }
 
   private func deliverPendingPushNotificationRouteIfPossible() {
-    guard launchCompleted, isAuthenticated, !requiresInitialStockImport else {
+    guard launchCompleted,
+          isAuthenticated,
+          !requiresInitialStockImport,
+          !requiresOnboardingQuestionnaire else {
       return
     }
 
@@ -320,6 +350,13 @@ public struct ContentView: View {
         name: .openPortfolioFromPushNotification,
         object: nil,
         userInfo: userInfo
+      )
+    case .taxOpportunity:
+      Self.pushLogger.info("push.analytics routed_success destination=tax opportunity=\(route.opportunityID ?? "-", privacy: .public)")
+      NotificationCenter.default.post(
+        name: .openTaxFromPushNotification,
+        object: nil,
+        userInfo: route.opportunityID.map { ["opportunityId": $0] }
       )
     }
   }

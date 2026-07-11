@@ -79,6 +79,10 @@ struct MarketDataHTTPClient: Sendable {
     try await client.call(GetQuoteEndpoint(symbol: symbol), errorType: Error.self)
   }
 
+  func fetchQuoteBatch(symbols: [String]) async throws -> QuoteBatchResponse {
+    try await client.call(GetQuoteBatchEndpoint(symbols: symbols), errorType: Error.self)
+  }
+
   func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable & Sendable {
     try await client.call(endpoint, errorType: Error.self)
   }
@@ -128,6 +132,10 @@ struct MarketDataHTTPClient: Sendable {
     try await client.call(GetCashFlowStatementEndpoint(symbol: symbol, limit: limit, period: period), errorType: Error.self)
   }
 
+  func fetchIncomeStatement(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [IncomeStatementResponse] {
+    try await client.call(GetIncomeStatementEndpoint(symbol: symbol, limit: limit, period: period), errorType: Error.self)
+  }
+
   func fetchRatios(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [RatiosResponse] {
     try await client.call(GetRatiosEndpoint(symbol: symbol, limit: limit, period: period), errorType: Error.self)
   }
@@ -148,6 +156,10 @@ struct MarketDataHTTPClient: Sendable {
     try await client.call(GetStockEarningsEndpoint(symbol: symbol, limit: limit), errorType: Error.self)
   }
 
+  func fetchStockEarningsTranscript(symbol: String, date: String) async throws -> EarningsTranscript {
+    try await client.call(GetStockEarningsTranscriptEndpoint(symbol: symbol, date: date), errorType: Error.self)
+  }
+
   func fetchEarningsCalendar(from: String, to: String) async throws -> [EarningsEvent] {
     try await client.call(GetEarningsCalendarEndpoint(from: from, to: to), errorType: Error.self)
   }
@@ -162,6 +174,44 @@ struct MarketDataHTTPClient: Sendable {
 
   func fetchPriceChartComparison(symbols: [String], range: String) async throws -> PriceChartComparisonResponse {
     try await client.call(GetPriceChartComparisonEndpoint(symbols: symbols, range: range), errorType: Error.self)
+  }
+
+  func fetchChartBuilder(
+    symbol: String,
+    metrics: [String],
+    period: ChartBuilderPeriodKind,
+    limit: Int,
+    compare: [String]
+  ) async throws -> ChartBuilderResponse {
+    try await client.call(
+      GetChartBuilderEndpoint(
+        symbol: symbol,
+        metrics: metrics,
+        period: period,
+        limit: limit,
+        compare: compare
+      ),
+      errorType: Error.self
+    )
+  }
+
+  func fetchChartBuilderCSV(
+    symbol: String,
+    metrics: [String],
+    period: ChartBuilderPeriodKind,
+    limit: Int,
+    compare: [String]
+  ) async throws -> Data {
+    try await client.execute(
+      GetChartBuilderCSVEndpoint(
+        symbol: symbol,
+        metrics: metrics,
+        period: period,
+        limit: limit,
+        compare: compare
+      ),
+      errorType: Error.self
+    )
   }
 
   func searchAssets(query: String, limit: Int) async throws -> [SearchResultResponse] {

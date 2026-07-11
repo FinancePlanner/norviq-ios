@@ -78,11 +78,17 @@ struct StockHTTPClient: Sendable {
   }
 
   func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable & Sendable {
-    try await client.call(endpoint, errorType: Error.self)
+    if let bodyEndpoint = endpoint as? StockRequestBodyEndpoint,
+       let body = try bodyEndpoint.bodyData() {
+      let request = try await rawBodyRequest(for: endpoint, body: body)
+      let data = try await client.sendRequest(request, errorType: Error.self)
+      return try endpoint.decoder.decode(E.Response.self, from: data)
+    }
+    return try await client.call(endpoint, errorType: Error.self)
   }
 
   func callWithoutResponse<E: Endpoint>(_ endpoint: E) async throws where E.Response: Codable {
-    try await client.callWithoutResponse(endpoint, errorType: Error.self)
+    return try await client.callWithoutResponse(endpoint, errorType: Error.self)
   }
 
   func callWithHeaders<E: Endpoint>(_ endpoint: E) async throws -> (response: E.Response, headers: HTTPURLResponse) where E.Response: Codable & Sendable {
@@ -92,7 +98,23 @@ struct StockHTTPClient: Sendable {
   // MARK: - Legacy / Special Methods
   
   func execute<E: Endpoint>(_ endpoint: E) async throws -> Data where E.Response: Codable {
-    try await client.execute(endpoint, errorType: Error.self)
+    if let bodyEndpoint = endpoint as? StockRequestBodyEndpoint,
+       let body = try bodyEndpoint.bodyData() {
+      let request = try await rawBodyRequest(for: endpoint, body: body)
+      return try await client.sendRequest(request, errorType: Error.self)
+    }
+    return try await client.execute(endpoint, errorType: Error.self)
+  }
+
+  private func rawBodyRequest<E: Endpoint>(for endpoint: E, body: Data) async throws -> URLRequest where E.Response: Codable {
+    var request = try await client.makeURLRequest(for: endpoint)
+    let parameters = try endpoint.asParameters()
+    if !parameters.isEmpty, let url = request.url, var components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+      components.queryItems = parameters.map { URLQueryItem(name: $0.key, value: String(describing: $0.value)) }
+      request.url = components.url
+    }
+    request.httpBody = body
+    return request
   }
 
   nonisolated private static func logValuationRequestIfNeeded(logger: Logger, path: String, method: HTTPMethod, parameters: Parameters) {

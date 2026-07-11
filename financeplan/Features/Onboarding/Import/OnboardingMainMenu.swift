@@ -18,6 +18,9 @@ struct OnboardingMainMenu: View {
   var body: some View {
     VStack(spacing: 32) {
       VStack(spacing: 12) {
+        NorviqFullLogo(width: 190)
+          .padding(.bottom, 4)
+
         Text("Welcome to Norviq")
           .typography(.hero, weight: .bold)
 
@@ -46,16 +49,6 @@ struct OnboardingMainMenu: View {
           color: .orange,
           accessibilityIdentifier: "onboarding.importExpensesButton",
           action: onSelectExpenses
-        )
-
-        OnboardingMenuButton(
-          title: "Crypto Assets",
-          subtitle: "Sync wallets and exchange data",
-          icon: "bitcoinsign.circle.fill",
-          color: .red,
-          isDisabled: true,
-          showSoonBadge: true,
-          action: { /* Soon */ }
         )
       }
       .padding(.horizontal, 24)
@@ -98,7 +91,6 @@ struct OnboardingMenuButton: View {
   let color: Color
   var accessibilityIdentifier: String?
   var isDisabled: Bool = false
-  var showSoonBadge: Bool = false
   let action: () -> Void
   @Environment(\.colorScheme) private var colorScheme
 
@@ -116,20 +108,9 @@ struct OnboardingMenuButton: View {
         }
 
         VStack(alignment: .leading, spacing: 2) {
-          HStack(spacing: 6) {
-            Text(title)
-              .typography(.label, weight: .bold)
-              .foregroundStyle(isDisabled ? .secondary : .primary)
-
-            if showSoonBadge {
-              Text("Soon")
-                .typography(.nano, weight: .bold).fontDesign(.rounded)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Color.red, in: Capsule())
-            }
-          }
+          Text(title)
+            .typography(.label, weight: .bold)
+            .foregroundStyle(isDisabled ? .secondary : .primary)
 
           Text(subtitle)
             .typography(.nano)
@@ -140,14 +121,14 @@ struct OnboardingMenuButton: View {
 
         Image(systemName: "chevron.right")
           .font(.subheadline.weight(.bold))
-          .foregroundStyle(.secondary.opacity(0.5))
+          .foregroundStyle(.secondary)
       }
       .padding(.horizontal, 16)
       .padding(.vertical, 14)
       .appGlassEffect(.rect(cornerRadius: 20))
       .opacity(isDisabled ? 0.6 : 1.0)
     }
-    .buttonStyle(PressEffectStyle())
+    .buttonStyle(PressableStyle())
     .accessibilityIdentifier(accessibilityIdentifier ?? "onboarding.menuButton.\(title)")
     .disabled(isDisabled)
   }

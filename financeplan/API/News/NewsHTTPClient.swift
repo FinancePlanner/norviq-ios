@@ -77,4 +77,8 @@ final class NewsHTTPClient: Sendable {
     func deleteNews(newsId: String) async throws {
         try await client.callWithoutResponse(DeleteNewsEndpoint(newsId: newsId), errorType: Error.self)
     }
+
+    func recordNewsView(payload: NewsViewPayload) async throws {
+        try await client.callWithoutResponse(RecordNewsViewEndpoint(payload: payload), errorType: Error.self)
+    }
 }

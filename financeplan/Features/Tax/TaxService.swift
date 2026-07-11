@@ -1,0 +1,80 @@
+import Foundation
+import StockPlanShared
+
+protocol TaxServiceProtocol: Sendable {
+  func dashboard(jurisdiction: TaxJurisdiction, taxYear: Int) async throws -> TaxDashboardResponse
+  func createScenario(_ request: TaxScenarioRequest) async throws -> TaxScenarioResponse
+  func createActionPlan(_ request: TaxActionPlanRequest) async throws -> TaxActionPlanResponse
+  func notificationPreferences() async throws -> TaxNotificationPreferences
+  func saveNotificationPreferences(_ request: TaxNotificationPreferences) async throws -> TaxNotificationPreferences
+  func reports() async throws -> [TaxReportResponse]
+  func createReport(_ request: TaxReportRequest) async throws -> TaxReportResponse
+}
+
+final class TaxService: TaxServiceProtocol, @unchecked Sendable {
+  private let environment: AppEnvironmentManager
+  private let auth: AuthSessionManaging
+  private let session: URLSession
+
+  init(environment: AppEnvironmentManager, auth: AuthSessionManaging, session: URLSession = .shared) {
+    self.environment = environment
+    self.auth = auth
+    self.session = session
+  }
+
+  func dashboard(jurisdiction: TaxJurisdiction, taxYear: Int) async throws -> TaxDashboardResponse {
+    var components = URLComponents(
+      url: environment.current.apiBaseUrl.appending(path: "v1/tax/dashboard"),
+      resolvingAgainstBaseURL: false
+    )
+    components?.queryItems = [
+      URLQueryItem(name: "jurisdiction", value: jurisdiction.rawValue),
+      URLQueryItem(name: "taxYear", value: String(taxYear))
+    ]
+    guard let url = components?.url else { throw URLError(.badURL) }
+    return try await send(url: url, method: "GET", body: Optional<Data>.none)
+  }
+
+  func createScenario(_ request: TaxScenarioRequest) async throws -> TaxScenarioResponse {
+    try await send(path: "v1/tax/scenarios", body: JSONEncoder().encode(request))
+  }
+
+  func createActionPlan(_ request: TaxActionPlanRequest) async throws -> TaxActionPlanResponse {
+    try await send(path: "v1/tax/action-plans", body: JSONEncoder().encode(request))
+  }
+
+  func notificationPreferences() async throws -> TaxNotificationPreferences {
+    try await send(url: environment.current.apiBaseUrl.appending(path: "v1/tax/notifications"), method: "GET", body: nil)
+  }
+
+  func saveNotificationPreferences(_ request: TaxNotificationPreferences) async throws -> TaxNotificationPreferences {
+    try await send(url: environment.current.apiBaseUrl.appending(path: "v1/tax/notifications"), method: "PUT", body: JSONEncoder().encode(request))
+  }
+
+  func reports() async throws -> [TaxReportResponse] {
+    try await send(url: environment.current.apiBaseUrl.appending(path: "v1/tax/reports"), method: "GET", body: nil)
+  }
+
+  func createReport(_ request: TaxReportRequest) async throws -> TaxReportResponse {
+    try await send(path: "v1/tax/reports", body: JSONEncoder().encode(request))
+  }
+
+  private func send<Response: Decodable>(path: String, body: Data) async throws -> Response {
+    try await send(url: environment.current.apiBaseUrl.appending(path: path), method: "POST", body: body)
+  }
+
+  private func send<Response: Decodable>(url: URL, method: String, body: Data?) async throws -> Response {
+    guard let token = try await auth.validAccessToken() else { throw AuthSessionError.notAuthenticated }
+    var request = URLRequest(url: url)
+    request.httpMethod = method
+    request.httpBody = body
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    if body != nil { request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
+    let (data, response) = try await session.data(for: request)
+    guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+      throw URLError(.badServerResponse)
+    }
+    return try JSONDecoder().decode(Response.self, from: data)
+  }
+}

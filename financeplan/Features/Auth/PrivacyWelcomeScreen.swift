@@ -8,7 +8,7 @@ struct PrivacyWelcomeScreen: View {
   var body: some View {
     ZStack {
       VStack(spacing: 24) {
-        NorviqLogo(size: 78)
+        NorviqFullLogo(width: 220)
           .padding(.top, 60)
 
         VStack(spacing: 8) {

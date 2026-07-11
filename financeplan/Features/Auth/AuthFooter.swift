@@ -32,7 +32,7 @@ struct AuthFooter: View {
 
       Text("© 2024 The Editorial Financial Experience. All rights reserved.")
         .font(.caption2)
-        .foregroundStyle(.secondary.opacity(0.6))
+        .foregroundStyle(.secondary)
     }
     .padding(.bottom, 40)
     .confirmationDialog(

@@ -82,6 +82,8 @@ struct ExpensesComparisonScreen: View {
               .padding(.horizontal, 16)
               .padding(.vertical, 20)
               .accessibilityIdentifier("reports.scrollContent")
+              // Center the reports column on iPad instead of stretching edge-to-edge (Guideline 4).
+              .maxContentWidth(regularSizeClass: ContentWidth.dense)
             }
           }
         }
@@ -115,7 +117,7 @@ struct ExpensesComparisonScreen: View {
   }
 
   private var tabPicker: some View {
-    Picker("Report Section", selection: $selectedTab.animation(.easeInOut(duration: 0.3))) {
+    Picker("Report Section", selection: $selectedTab) {
       ForEach(ReportTab.allCases, id: \.self) { tab in
         Label(tab.title, systemImage: tab.icon).tag(tab)
       }
@@ -306,14 +308,14 @@ private struct CustomizeDashboardSheet: View {
               Spacer()
               
               Button {
-                withAnimation {
+                withAnimation(AppMotion.state) {
                   preferences.toggleCard(card)
                 }
               } label: {
                 Image(systemName: preferences.hiddenCards.contains(card) ? "eye.slash" : "eye")
                   .foregroundStyle(preferences.hiddenCards.contains(card) ? Color.secondary : Color.blue)
               }
-.buttonStyle(.bordered)
+              .buttonStyle(.bordered)
             }
           }
           .onMove { source, destination in
@@ -325,7 +327,7 @@ private struct CustomizeDashboardSheet: View {
         
         Section {
           Button("Reset to Default") {
-            withAnimation {
+            withAnimation(AppMotion.state) {
               preferences.resetToDefault()
             }
           }

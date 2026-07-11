@@ -8,9 +8,9 @@ import XCTest
 @MainActor
 final class WatchlistViewModelTests: XCTestCase {
   func testLoadWithoutForceUsesCachedResultAfterInitialSuccess() async {
-    let service = MockStockService()
+    let service = WatchlistViewModelMockStockService()
     service.fetchWatchlistResult = .success([makeWatchlistItem(symbol: "AAPL")])
-    let viewModel = WatchlistViewModel(service: service)
+    let viewModel = WatchlistViewModel(service: service, marketDataService: MarketDataServiceStub())
 
     await viewModel.load()
     await viewModel.load()
@@ -20,9 +20,9 @@ final class WatchlistViewModelTests: XCTestCase {
   }
 
   func testLoadWithForceRefetchesAfterInitialSuccess() async {
-    let service = MockStockService()
+    let service = WatchlistViewModelMockStockService()
     service.fetchWatchlistResult = .success([makeWatchlistItem(symbol: "AAPL")])
-    let viewModel = WatchlistViewModel(service: service)
+    let viewModel = WatchlistViewModel(service: service, marketDataService: MarketDataServiceStub())
 
     await viewModel.load()
     await viewModel.load(force: true)
@@ -31,18 +31,108 @@ final class WatchlistViewModelTests: XCTestCase {
   }
 
   func testLoadReconcilesRemoteItemsThroughLocalStore() async {
-    let service = MockStockService()
+    let service = WatchlistViewModelMockStockService()
     service.fetchWatchlistResult = .success([
       makeWatchlistItem(symbol: "AAPL"),
       makeWatchlistItem(symbol: "MSFT")
     ])
     let localStore = MockWatchlistLocalStore()
-    let viewModel = WatchlistViewModel(service: service, localStore: localStore)
+    let viewModel = WatchlistViewModel(service: service, marketDataService: MarketDataServiceStub(), localStore: localStore)
 
     await viewModel.load()
 
     XCTAssertEqual(localStore.reconcileCalls, 1)
     XCTAssertEqual(localStore.lastReconciledCount, 2)
+  }
+
+  func testLoadUsesSelectedListWhenLoadingRemoteRows() async {
+    let service = WatchlistViewModelMockStockService()
+    service.fetchWatchlistListsResult = .success([
+      .init(id: "tech", name: "Tech", isDefault: false, createdAt: nil, updatedAt: nil),
+      .init(id: "energy", name: "Energy", isDefault: false, createdAt: nil, updatedAt: nil)
+    ])
+    service.fetchWatchlistResult = .success([makeWatchlistItem(symbol: "AAPL")])
+    let localStore = MockWatchlistLocalStore()
+    let viewModel = WatchlistViewModel(service: service, marketDataService: MarketDataServiceStub(), localStore: localStore)
+
+    await viewModel.load()
+
+    XCTAssertEqual(service.fetchWatchlistCallsByListID, ["tech"])
+    XCTAssertEqual(viewModel.selectedWatchlistListId, "tech")
+    XCTAssertEqual(localStore.lastReconciledListId, "tech")
+  }
+
+  func testSelectWatchlistListRefreshesNewList() async {
+    let service = WatchlistViewModelMockStockService()
+    service.fetchWatchlistListsResult = .success([
+      .init(id: "tech", name: "Tech", isDefault: true, createdAt: nil, updatedAt: nil),
+      .init(id: "energy", name: "Energy", isDefault: false, createdAt: nil, updatedAt: nil)
+    ])
+    service.fetchWatchlistResult = .success([makeWatchlistItem(symbol: "AAPL")])
+    let viewModel = WatchlistViewModel(service: service, marketDataService: MarketDataServiceStub())
+
+    await viewModel.load()
+    await viewModel.selectWatchlistList("energy")
+
+    XCTAssertEqual(viewModel.selectedWatchlistListId, "energy")
+    XCTAssertEqual(service.fetchWatchlistCallsByListID, ["tech", "energy"])
+  }
+
+  func testRefreshLiveQuotesUsesQuoteBatchWithoutReloadingWatchlistRows() async {
+    let service = WatchlistViewModelMockStockService()
+    service.fetchWatchlistResult = .success([
+      makeWatchlistItem(symbol: "AAPL"),
+      makeWatchlistItem(symbol: "MSFT")
+    ])
+    let marketDataService = WatchlistQuoteMarketDataServiceMock()
+    marketDataService.fetchQuoteBatchResult = .success(
+      QuoteBatchResponse(quotes: [
+        makeQuote(symbol: "AAPL", currentPrice: 171),
+        makeQuote(symbol: "MSFT", currentPrice: 311)
+      ])
+    )
+    let viewModel = WatchlistViewModel(service: service, marketDataService: marketDataService)
+
+    await viewModel.load()
+
+    let watchlistCallsAfterLoad = service.fetchWatchlistCalls
+    marketDataService.fetchQuoteBatchResult = .success(
+      QuoteBatchResponse(quotes: [
+        makeQuote(symbol: "AAPL", currentPrice: 172.5),
+        makeQuote(symbol: "MSFT", currentPrice: 314.2)
+      ])
+    )
+
+    await viewModel.refreshLiveQuotes()
+
+    XCTAssertEqual(marketDataService.fetchQuoteBatchCalls, 2)
+    XCTAssertEqual(Set(marketDataService.requestedSymbolBatches.last ?? []), Set(["AAPL", "MSFT"]))
+    XCTAssertEqual(service.fetchWatchlistCalls, watchlistCallsAfterLoad)
+    XCTAssertEqual(viewModel.liveQuotes["AAPL"]?.currentPrice, 172.5)
+    XCTAssertEqual(viewModel.liveQuotes["MSFT"]?.currentPrice, 314.2)
+  }
+
+  func testRefreshLiveQuotesFailurePreservesExistingWatchlistQuotesAndErrorState() async {
+    let service = WatchlistViewModelMockStockService()
+    service.fetchWatchlistResult = .success([
+      makeWatchlistItem(symbol: "AAPL")
+    ])
+    let marketDataService = WatchlistQuoteMarketDataServiceMock()
+    marketDataService.fetchQuoteBatchResult = .success(
+      QuoteBatchResponse(quotes: [
+        makeQuote(symbol: "AAPL", currentPrice: 171)
+      ])
+    )
+    let viewModel = WatchlistViewModel(service: service, marketDataService: marketDataService)
+
+    await viewModel.load()
+    marketDataService.fetchQuoteBatchResult = .failure(MockStockError.notConfigured)
+
+    await viewModel.refreshLiveQuotes()
+
+    XCTAssertEqual(marketDataService.fetchQuoteBatchCalls, 2)
+    XCTAssertEqual(viewModel.liveQuotes["AAPL"]?.currentPrice, 171)
+    XCTAssertNil(viewModel.errorMessage)
   }
 
   func testSwiftDataStoreReconcileAppliesCreateUpdateDelete() throws {
@@ -63,6 +153,34 @@ final class WatchlistViewModelTests: XCTestCase {
     XCTAssertEqual(Set(all.map(\.id)), Set(["aapl", "msft"]))
     XCTAssertEqual(all.first(where: { $0.id == "aapl" })?.status, WatchlistStatus.waiting.rawValue)
     XCTAssertEqual(all.first(where: { $0.id == "aapl" })?.note, "updated")
+  }
+
+  func testSwiftDataWatchlistItemMappingPreservesRemoteListId() {
+    let response = WatchlistItemResponse(
+      id: "aapl",
+      symbol: "AAPL",
+      note: "core",
+      status: .active,
+      nextReviewAt: nil,
+      watchlistListId: "tech-list"
+    )
+
+    let item = SDWatchlistItem(from: response)
+
+    XCTAssertEqual(item.watchlistListId, "tech-list")
+
+    item.update(
+      from: WatchlistItemResponse(
+        id: "aapl",
+        symbol: "AAPL",
+        note: "updated",
+        status: .waiting,
+        nextReviewAt: nil,
+        watchlistListId: "energy-list"
+      )
+    )
+
+    XCTAssertEqual(item.watchlistListId, "energy-list")
   }
 
   func testSwiftDataStoreReconcileDoesNotDeleteOtherUsersRows() throws {
@@ -90,13 +208,13 @@ final class WatchlistViewModelTests: XCTestCase {
   }
 
   func testSaveWatchlistPropagatesLocalStoreError() async {
-    let service = MockStockService()
+    let service = WatchlistViewModelMockStockService()
     service.createWatchlistItemResult = .success(
       WatchlistItemResponse(id: "aapl", symbol: "AAPL", note: nil, status: .active, nextReviewAt: nil)
     )
     let localStore = MockWatchlistLocalStore()
     localStore.upsertError = MockStockError.notConfigured
-    let viewModel = WatchlistViewModel(service: service, localStore: localStore)
+    let viewModel = WatchlistViewModel(service: service, marketDataService: MarketDataServiceStub(), localStore: localStore)
 
     let error = await viewModel.saveWatchlist(AddWatchlistDraft(symbol: "AAPL", note: "", status: .active))
 
@@ -119,6 +237,34 @@ final class WatchlistViewModelTests: XCTestCase {
       status: .active,
       nextReviewAt: nil
     )
+  }
+
+  private func makeQuote(symbol: String, currentPrice: Double) -> QuoteResponse {
+    QuoteResponse(
+      symbol: symbol,
+      currency: "USD",
+      currentPrice: currentPrice,
+      change: 1.25,
+      percentChange: 0.73,
+      high: currentPrice + 2,
+      low: currentPrice - 2,
+      open: currentPrice - 1,
+      previousClose: currentPrice - 1.25,
+      timestamp: 1_775_073_600
+    )
+  }
+}
+
+@MainActor
+private final class WatchlistQuoteMarketDataServiceMock: MarketDataServicing, @unchecked Sendable {
+  var fetchQuoteBatchCalls = 0
+  var requestedSymbolBatches: [[String]] = []
+  var fetchQuoteBatchResult: Result<QuoteBatchResponse, Error> = .failure(QuoteMarketDataMockError.notConfigured)
+
+  func fetchQuoteBatch(symbols: [String]) async throws -> QuoteBatchResponse {
+    fetchQuoteBatchCalls += 1
+    requestedSymbolBatches.append(symbols)
+    return try fetchQuoteBatchResult.get()
   }
 }
 
@@ -147,21 +293,55 @@ private final class MockWatchlistLocalStore: WatchlistLocalPersisting {
 }
 
 @MainActor
-private final class MockStockService: StockServicing {
+final class WatchlistViewModelMockStockService: StockServicing {
   var fetchWatchlistCalls = 0
+  var fetchWatchlistCallsByListID: [String?] = []
   var fetchWatchlistResult: Result<[WatchlistItemResponse], Error> = .success([])
   var fetchWatchlistListsResult: Result<[WatchlistListDTOResponse], Error> = .success([
     WatchlistListDTOResponse(id: "default-watchlist", name: "Default", isDefault: true, createdAt: nil, updatedAt: nil)
   ])
   var createWatchlistItemResult: Result<WatchlistItemResponse, Error> = .failure(MockStockError.notConfigured)
+  var previewWatchlistCsvImportResult: Result<WatchlistCsvImportPreviewResponse, Error> = .success(
+    WatchlistCsvImportPreviewResponse(watchlistListId: "default-watchlist", items: [], errors: [])
+  )
+  var commitWatchlistCsvImportResult: Result<WatchlistCsvImportCommitResponse, Error> = .success(
+    WatchlistCsvImportCommitResponse(watchlistListId: "default-watchlist", inserted: [], updated: [], errors: [])
+  )
+  var previewWatchlistCsvImportCalls = 0
+  var commitWatchlistCsvImportCalls = 0
+  var lastPreviewWatchlistListId: String?
+  var lastCommitWatchlistListId: String?
+  var lastPreviewCsvData: Data?
+  var lastCommitCsvData: Data?
 
   func fetchWatchlist() async throws -> [WatchlistItemResponse] {
+    return try await fetchWatchlist(watchlistListId: nil)
+  }
+
+  func fetchWatchlist(watchlistListId: String?) async throws -> [WatchlistItemResponse] {
     fetchWatchlistCalls += 1
+    fetchWatchlistCallsByListID.append(watchlistListId)
     return try fetchWatchlistResult.get()
   }
 
-  func fetchWatchlist(watchlistListId _: String?) async throws -> [WatchlistItemResponse] {
-    try await fetchWatchlist()
+  func previewWatchlistCsvImport(
+    watchlistListId: String?,
+    csvData: Data
+  ) async throws -> WatchlistCsvImportPreviewResponse {
+    previewWatchlistCsvImportCalls += 1
+    lastPreviewWatchlistListId = watchlistListId
+    lastPreviewCsvData = csvData
+    return try previewWatchlistCsvImportResult.get()
+  }
+
+  func commitWatchlistCsvImport(
+    watchlistListId: String?,
+    csvData: Data
+  ) async throws -> WatchlistCsvImportCommitResponse {
+    commitWatchlistCsvImportCalls += 1
+    lastCommitWatchlistListId = watchlistListId
+    lastCommitCsvData = csvData
+    return try commitWatchlistCsvImportResult.get()
   }
 
   func create(stock _: StockRequest, portfolioListId _: String?) async throws -> StockResponse {

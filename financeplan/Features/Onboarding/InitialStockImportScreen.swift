@@ -1,18 +1,8 @@
 import SwiftUI
 
-struct PressEffectStyle: ButtonStyle {
-  func makeBody(configuration: Configuration) -> some View {
-    configuration.label
-      .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-      .opacity(configuration.isPressed ? 0.9 : 1.0)
-      .animation(.easeInOut(duration: 0.12), value: configuration.isPressed)
-  }
-}
-
 enum StockImportMethod: String, CaseIterable, Identifiable {
   case csv
   case manual
-  case api
 
   var id: String { rawValue }
 
@@ -22,19 +12,15 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
       return "Import CSV"
     case .manual:
       return "Enter Manually"
-    case .api:
-      return "Connect API"
     }
   }
 
   var subtitle: String {
     switch self {
     case .csv:
-      return "Upload a broker export or CSV file with your positions."
+      return "CSV with symbol, shares, buy_price, buy_date (+ optional notes)."
     case .manual:
       return "Type in your holdings one position at a time."
-    case .api:
-      return "Sync holdings automatically from a broker integration."
     }
   }
 
@@ -44,8 +30,6 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
       return "doc.text.fill"
     case .manual:
       return "square.and.pencil"
-    case .api:
-      return "link.circle.fill"
     }
   }
 
@@ -55,22 +39,6 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
       return { scheme in AppTheme.Colors.secondaryTint(for: scheme) }
     case .manual:
       return { scheme in AppTheme.Colors.tint(for: scheme) }
-    case .api:
-      return { _ in .indigo }
-    }
-  }
-
-  var isDisabled: Bool {
-    switch self {
-    case .csv, .manual: return false
-    case .api: return true
-    }
-  }
-
-  var badge: String? {
-    switch self {
-    case .csv, .manual: return nil
-    case .api: return "Soon"
     }
   }
 }
@@ -80,6 +48,7 @@ struct InitialStockImportScreen: View {
   let onSignOut: () -> Void
   let onBack: () -> Void
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let headerNamespace: Namespace.ID?
 
   @State private var selectedMethod: StockImportMethod?
@@ -170,7 +139,7 @@ struct InitialStockImportScreen: View {
         .padding(.vertical, 10)
         .appGlassEffect(.capsule)
       }
-      .buttonStyle(PressEffectStyle())
+      .buttonStyle(PressableStyle())
       .accessibilityIdentifier("stockImportSignOutButton")
       .disabled(isSigningOut)
     }
@@ -229,9 +198,6 @@ struct InitialStockImportScreen: View {
         Text("Import Your Portfolio")
           .typography(.heading, weight: .bold)
           .multilineTextAlignment(.center)
-          .modifier(
-            MatchedGeometryIfAvailable(
-              id: "onboarding.header.title", namespace: headerNamespace))
           .opacity(headerVisible ? 1 : 0)
           .offset(y: headerVisible ? 0 : 12)
 
@@ -248,6 +214,10 @@ struct InitialStockImportScreen: View {
       }
     }
     .onAppear {
+      guard !reduceMotion else {
+        headerVisible = true
+        return
+      }
       withAnimation(.spring(response: 0.7, dampingFraction: 0.75).delay(0.1)) {
         headerVisible = true
       }
@@ -267,7 +237,6 @@ struct InitialStockImportScreen: View {
 
   private func methodSelectionButton(for method: StockImportMethod, index: Int) -> some View {
     Button {
-      guard !method.isDisabled else { return }
       withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
         selectedMethod = method
         message = nil
@@ -282,14 +251,13 @@ struct InitialStockImportScreen: View {
     } label: {
       ImportMethodCard(method: method, isSelected: selectedMethod == method)
     }
-    .buttonStyle(PressEffectStyle())
+    .buttonStyle(PressableStyle())
     .contentShape(Rectangle())
     .accessibilityIdentifier("stockImportMethod.\(method.rawValue)")
     .opacity(animatedIndices.contains(index) ? 1 : 0)
     .offset(y: animatedIndices.contains(index) ? 0 : 24)
     .scaleEffect(tappedMethod == method ? 1.02 : 1.0)
-    .animation(.spring(response: 0.25, dampingFraction: 0.8), value: tappedMethod)
-    .disabled(method.isDisabled)
+    .appAnimation(AppMotion.state, value: tappedMethod)
   }
 
   private var buttonTitle: String {
@@ -302,6 +270,10 @@ struct InitialStockImportScreen: View {
   // MARK: - Helpers
 
   private func animateMethodOptions() {
+    guard !reduceMotion else {
+      animatedIndices = Set(StockImportMethod.allCases.indices)
+      return
+    }
     for (index, _) in StockImportMethod.allCases.enumerated() {
       Task { @MainActor in
         try? await Task.sleep(for: .seconds(Double(index) * 0.12 + 0.35))
@@ -338,29 +310,18 @@ private struct ImportMethodCard: View {
       // Icon
       ZStack {
         RoundedRectangle(cornerRadius: 12, style: .continuous)
-          .fill(method.iconColor(colorScheme).opacity(method.isDisabled ? 0.06 : (isSelected ? 0.18 : 0.10)))
+          .fill(method.iconColor(colorScheme).opacity(isSelected ? 0.18 : 0.10))
           .frame(width: 44, height: 44)
 
         Image(systemName: method.icon)
           .font(.headline)
-          .foregroundStyle(method.isDisabled ? AnyShapeStyle(.tertiary) : AnyShapeStyle(method.iconColor(colorScheme)))
+          .foregroundStyle(method.iconColor(colorScheme))
       }
 
       VStack(alignment: .leading, spacing: 3) {
-        HStack(spacing: 8) {
-          Text(method.title)
-            .typography(.label, weight: .semibold)
-            .foregroundStyle(method.isDisabled ? .tertiary : .primary)
-
-          if let badge = method.badge {
-            Text(badge)
-              .typography(.nano, weight: .bold)
-              .foregroundStyle(.secondary)
-              .padding(.horizontal, 7)
-              .padding(.vertical, 3)
-              .background(AppTheme.Colors.tertiaryFill(for: colorScheme), in: Capsule())
-          }
-        }
+        Text(method.title)
+          .typography(.label, weight: .semibold)
+          .foregroundStyle(.primary)
 
         Text(method.subtitle)
           .typography(.nano)

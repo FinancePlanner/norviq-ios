@@ -9,6 +9,7 @@ import Factory
 
 @MainActor
 struct HomeScreen: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.colorScheme) private var colorScheme
   @InjectedObservable(\Container.billingManager) private var billingManager
   @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
@@ -24,6 +25,20 @@ struct HomeScreen: View {
   }
 
   var body: some View {
+    VStack(spacing: 0) {
+      if billingManager.shouldShowTrialEndedBanner {
+        TrialEndedBanner(onSubscribe: { isPaywallPresented = true })
+          .padding(.top, 8)
+          .padding(.bottom, 4)
+          .transition(AppTransition.move(edge: .top, reduceMotion: reduceMotion))
+      }
+
+      tabView
+    }
+    .appAnimation(AppMotion.structural, value: billingManager.shouldShowTrialEndedBanner)
+  }
+
+  private var tabView: some View {
     TabView(selection: $selectedTab) {
       Tab(HomeTab.dashboard.title, systemImage: "house", value: .dashboard) {
         DashboardRoot(
@@ -49,12 +64,16 @@ struct HomeScreen: View {
         ExpensesComparisonScreen()
           .accessibilityIdentifier("tab.reports")
       }
+
+      Tab(HomeTab.tax.title, systemImage: "building.columns", value: .tax) {
+        TaxDashboardScreen()
+          .accessibilityIdentifier("tab.tax")
+      }
     }
     .id(appLanguage.rawValue)
     .tint(AppTheme.Colors.tint(for: colorScheme))
     .toolbarBackground(.visible, for: .tabBar)
     .toolbarBackground(AppTheme.Colors.tabBarBackground(for: colorScheme), for: .tabBar)
-    .animation(.snappy(duration: 0.28), value: selectedTab)
     .sheet(isPresented: $isSettingsPresented) {
       settingsSheet
     }
@@ -71,6 +90,9 @@ struct HomeScreen: View {
     }
     .onReceive(NotificationCenter.default.publisher(for: .openPortfolioFromPushNotification)) { _ in
       openPortfolioTab()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .openTaxFromPushNotification)) { _ in
+      selectedTab = .tax
     }
   }
 

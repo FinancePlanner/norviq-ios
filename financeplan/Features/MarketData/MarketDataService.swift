@@ -4,6 +4,7 @@ import StockPlanShared
 protocol MarketDataServicing: Sendable {
   func fetchCompanyProfile(symbol: String) async throws -> CompanyProfileResponse
   func fetchQuote(symbol: String) async throws -> QuoteResponse
+  func fetchQuoteBatch(symbols: [String]) async throws -> QuoteBatchResponse
   func fetchAnalystConsensus(symbol: String) async throws -> StockAnalystConsensus
   func fetchBasicFinancials(symbol: String) async throws -> StockBasicFinancials
   func fetchAnalysisMetrics(
@@ -16,16 +17,54 @@ protocol MarketDataServicing: Sendable {
   func fetchMarketCompare(symbols: [String]) async throws -> [StockAnalysisMetrics]
   func fetchBalanceSheetStatement(symbol: String, limit: Int?, period: String?) async throws -> [BalanceSheetStatementResponse]
   func fetchCashFlowStatement(symbol: String, limit: Int?, period: String?) async throws -> [CashFlowStatementResponse]
+  func fetchIncomeStatement(symbol: String, limit: Int?, period: String?) async throws -> [IncomeStatementResponse]
   func fetchRatios(symbol: String, limit: Int?, period: String?) async throws -> [RatiosResponse]
   func fetchRatiosTTM(symbol: String) async throws -> [RatiosTTMResponse]
   func fetchFinancialGrowth(symbol: String, limit: Int?, period: String?) async throws -> [FinancialGrowthResponse]
   func fetchAnalystEstimates(symbol: String, limit: Int?, period: String?) async throws -> [AnalystEstimatesResponse]
   func fetchStockEarnings(symbol: String, limit: Int) async throws -> [EarningsEvent]
+  func fetchStockEarningsTranscript(symbol: String, date: String) async throws -> EarningsTranscript
   func fetchEarningsCalendar(from: String, to: String) async throws -> [EarningsEvent]
   func fetchMarketNews(limit: Int?) async throws -> [StockNews]
   func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements
   func fetchPriceChart(symbol: String, range: String) async throws -> PriceChartSeries
   func fetchPriceChartComparison(symbols: [String], range: String) async throws -> PriceChartComparisonResponse
+  func fetchChartBuilder(
+    symbol: String,
+    metrics: [String],
+    period: ChartBuilderPeriodKind,
+    limit: Int,
+    compare: [String]
+  ) async throws -> ChartBuilderResponse
+  func fetchChartBuilderCSV(
+    symbol: String,
+    metrics: [String],
+    period: ChartBuilderPeriodKind,
+    limit: Int,
+    compare: [String]
+  ) async throws -> Data
+}
+
+extension MarketDataServicing {
+  func fetchChartBuilder(
+    symbol _: String,
+    metrics _: [String],
+    period _: ChartBuilderPeriodKind,
+    limit _: Int,
+    compare _: [String]
+  ) async throws -> ChartBuilderResponse {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchChartBuilderCSV(
+    symbol _: String,
+    metrics _: [String],
+    period _: ChartBuilderPeriodKind,
+    limit _: Int,
+    compare _: [String]
+  ) async throws -> Data {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
 }
 
 final class MarketDataHTTPService: MarketDataServicing {
@@ -62,6 +101,12 @@ final class MarketDataHTTPService: MarketDataServicing {
   func fetchQuote(symbol: String) async throws -> QuoteResponse {
     try await performAuthenticated { client in
       try await client.fetchQuote(symbol: symbol)
+    }
+  }
+
+  func fetchQuoteBatch(symbols: [String]) async throws -> QuoteBatchResponse {
+    try await performAuthenticated { client in
+      try await client.fetchQuoteBatch(symbols: symbols)
     }
   }
 
@@ -113,6 +158,12 @@ final class MarketDataHTTPService: MarketDataServicing {
     }
   }
 
+  func fetchIncomeStatement(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [IncomeStatementResponse] {
+    try await performAuthenticated { client in
+      try await client.fetchIncomeStatement(symbol: symbol, limit: limit, period: period)
+    }
+  }
+
   func fetchRatios(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [RatiosResponse] {
     try await performAuthenticated { client in
       try await client.fetchRatios(symbol: symbol, limit: limit, period: period)
@@ -140,6 +191,12 @@ final class MarketDataHTTPService: MarketDataServicing {
   func fetchStockEarnings(symbol: String, limit: Int) async throws -> [EarningsEvent] {
     try await performAuthenticated { client in
       try await client.fetchStockEarnings(symbol: symbol, limit: limit)
+    }
+  }
+
+  func fetchStockEarningsTranscript(symbol: String, date: String) async throws -> EarningsTranscript {
+    try await performAuthenticated { client in
+      try await client.fetchStockEarningsTranscript(symbol: symbol, date: date)
     }
   }
 
@@ -183,6 +240,42 @@ final class MarketDataHTTPService: MarketDataServicing {
   func fetchPriceChartComparison(symbols: [String], range: String) async throws -> PriceChartComparisonResponse {
     try await performAuthenticated { client in
       try await client.fetchPriceChartComparison(symbols: symbols, range: range)
+    }
+  }
+
+  func fetchChartBuilder(
+    symbol: String,
+    metrics: [String],
+    period: ChartBuilderPeriodKind,
+    limit: Int,
+    compare: [String]
+  ) async throws -> ChartBuilderResponse {
+    try await performAuthenticated { client in
+      try await client.fetchChartBuilder(
+        symbol: symbol,
+        metrics: metrics,
+        period: period,
+        limit: limit,
+        compare: compare
+      )
+    }
+  }
+
+  func fetchChartBuilderCSV(
+    symbol: String,
+    metrics: [String],
+    period: ChartBuilderPeriodKind,
+    limit: Int,
+    compare: [String]
+  ) async throws -> Data {
+    try await performAuthenticated { client in
+      try await client.fetchChartBuilderCSV(
+        symbol: symbol,
+        metrics: metrics,
+        period: period,
+        limit: limit,
+        compare: compare
+      )
     }
   }
 
@@ -236,6 +329,10 @@ struct MarketDataServiceStub: MarketDataServicing {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 
+  func fetchQuoteBatch(symbols _: [String]) async throws -> QuoteBatchResponse {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
   func fetchAnalystConsensus(symbol _: String) async throws -> StockAnalystConsensus {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
@@ -266,6 +363,10 @@ struct MarketDataServiceStub: MarketDataServicing {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 
+  func fetchIncomeStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [IncomeStatementResponse] {
+    []
+  }
+
   func fetchRatios(symbol _: String, limit _: Int?, period _: String?) async throws -> [RatiosResponse] {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
@@ -286,6 +387,10 @@ struct MarketDataServiceStub: MarketDataServicing {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 
+  func fetchStockEarningsTranscript(symbol _: String, date _: String) async throws -> EarningsTranscript {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
   func fetchEarningsCalendar(from _: String, to _: String) async throws -> [EarningsEvent] {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
@@ -301,9 +406,27 @@ struct MarketDataServiceStub: MarketDataServicing {
   func fetchPriceChart(symbol _: String, range _: String) async throws -> PriceChartSeries {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
-
-
   func fetchPriceChartComparison(symbols _: [String], range _: String) async throws -> PriceChartComparisonResponse {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchChartBuilder(
+    symbol _: String,
+    metrics _: [String],
+    period _: ChartBuilderPeriodKind,
+    limit _: Int,
+    compare _: [String]
+  ) async throws -> ChartBuilderResponse {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchChartBuilderCSV(
+    symbol _: String,
+    metrics _: [String],
+    period _: ChartBuilderPeriodKind,
+    limit _: Int,
+    compare _: [String]
+  ) async throws -> Data {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 }
@@ -321,7 +444,7 @@ protocol CompanyProfileCaching: Sendable {
 
 final class CompanyProfileCache: CompanyProfileCaching {
   static let shared = CompanyProfileCache()
-  
+
   private let store: UserDefaultsProfileStore
   private let keyPrefix = "CompanyProfileCache_"
 

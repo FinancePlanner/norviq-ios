@@ -668,6 +668,42 @@ final class BudgetPlannerViewModelTests: XCTestCase {
     }
   }
 
+  func testLoadSucceedsWhenRecurringTemplatesFail() async {
+    let mock = BudgetPlannerServiceMock()
+    mock.snapshotsResult = .success(
+      [
+        BudgetSnapshotResponse(
+          id: "44444444-4444-4444-8444-444444444444",
+          monthStart: "2026-04-01",
+          netSalary: 4200,
+          targetShares: [
+            BudgetPillar.fundamentals.rawValue: 0.5,
+            BudgetPillar.futureYou.rawValue: 0.3,
+            BudgetPillar.fun.rawValue: 0.2
+          ],
+          createdAt: nil,
+          updatedAt: nil
+        )
+      ]
+    )
+    mock.itemsResult = .success([])
+    mock.expensesResult = .success([])
+    mock.categoriesResult = .success([])
+    mock.recurringTemplatesResult = .failure(MockPlannerError.notConfigured)
+
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(monthlySnapshots: [], activities: [], expensesService: mock)
+    }
+
+    await viewModel.load(force: true)
+
+    await MainActor.run {
+      XCTAssertEqual(viewModel.monthlySnapshots.count, 1)
+      XCTAssertTrue(viewModel.recurringTemplates.isEmpty)
+      XCTAssertNil(viewModel.errorMessage)
+    }
+  }
+
   func testLoadFailurePublishesPlannerErrorAndKeepsCollectionsEmpty() async {
     let mock = BudgetPlannerServiceMock()
     mock.snapshotsResult = .failure(MockPlannerError.notConfigured)

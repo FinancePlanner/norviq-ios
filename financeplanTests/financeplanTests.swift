@@ -8,6 +8,7 @@
 import XCTest
 @testable import financeplan
 import StockPlanShared
+import Foundation
 
 final class FinanceplanTests: XCTestCase {
 
@@ -46,6 +47,10 @@ final class BillingManagerTests: XCTestCase {
     environmentManager = AppEnvironmentManager()
     authSessionManager = MockAuthSessionManager()
     sessionStore = MockAuthSessionStore()
+  }
+
+  func testRevenueCatEntitlementIDMatchesDashboard() {
+    XCTAssertEqual(BillingManager.revenueCatEntitlementID, "pro_access")
   }
 
   func testIsProReturnsTrueWhenPremium() {
@@ -132,52 +137,174 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertFalse(sut.isFeatureAvailable("advanced_research"))
   }
 
-  func testRedeemCouponAppliesReturnedProContext() async {
-    authSessionManager.validAccessTokenResult = .success("token-123")
-    let proContext = makeBillingContext(entitlementLevel: "pro", isPremium: true)
+  func testSelectingMonthlyWithoutPackagesUpdatesSelectedProductID() {
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
-      sessionStore: sessionStore,
-      billingClientFactory: { _, _ in
-        BillingHTTPClient(
-          baseURL: URL(string: "https://example.test")!,
-          session: BillingSessionMock(response: .success(.couponRedemption(context: proContext))),
-          authTokenProvider: { "token-123" }
-        )
-      }
+      sessionStore: sessionStore
     )
 
-    await sut.redeemCoupon(code: " forever ")
+    sut.select(productID: "pro_monthly")
 
-    XCTAssertEqual(sut.context?.entitlementLevel, "pro")
-    XCTAssertTrue(sut.isPro)
-    XCTAssertEqual(sut.couponRedemptionMessage, "Coupon redeemed. Pro is active.")
-    XCTAssertNil(sut.errorMessage)
+    XCTAssertEqual(sut.selectedProductID, "pro_monthly")
+    XCTAssertNil(sut.selectedPackage)
   }
 
-  func testRedeemCouponErrorLeavesCurrentEntitlementUnchanged() async {
-    authSessionManager.validAccessTokenResult = .success("token-123")
-    let existingContext = makeBillingContext(entitlementLevel: "free", isPremium: false)
+  func testSelectingWeeklyWithoutPackagesUpdatesSelectedProductID() {
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
-      sessionStore: sessionStore,
-      billingClientFactory: { _, _ in
-        BillingHTTPClient(
-          baseURL: URL(string: "https://example.test")!,
-          session: BillingSessionMock(response: .failure(statusCode: 400, message: "Invalid coupon code.")),
-          authTokenProvider: { "token-123" }
-        )
-      }
+      sessionStore: sessionStore
     )
-    sut.context = existingContext
 
-    await sut.redeemCoupon(code: "bad")
+    sut.select(productID: "pro_weekly")
 
-    XCTAssertEqual(sut.context, existingContext)
-    XCTAssertEqual(sut.errorMessage, "Invalid coupon code.")
-    XCTAssertNil(sut.couponRedemptionMessage)
+    XCTAssertEqual(sut.selectedProductID, "pro_weekly")
+    XCTAssertNil(sut.selectedPackage)
+  }
+
+  func testPurchasingUnavailableSelectedPlanReturnsFalseAndSetsPlanSpecificError() async {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+    sut.select(productID: "pro_monthly")
+
+    let didPurchase = await sut.purchaseSelectedPackage()
+
+    XCTAssertFalse(didPurchase)
+    XCTAssertEqual(sut.errorMessage, "Monthly plan is currently unavailable. Please try again later.")
+  }
+
+  func testPurchaseCTATitleShowsUnavailableWithoutLoadedPackage() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+
+    sut.select(productID: "pro_monthly")
+    XCTAssertFalse(sut.canPurchaseSelectedPackage)
+    XCTAssertEqual(sut.purchaseCTATitle, "Subscriptions Unavailable")
+    XCTAssertEqual(sut.subscriptionDisclosureText, "Subscriptions are currently unavailable. Please try again later.")
+
+    sut.select(productID: "pro_weekly")
+    XCTAssertFalse(sut.canPurchaseSelectedPackage)
+    XCTAssertEqual(sut.purchaseCTATitle, "Subscriptions Unavailable")
+  }
+
+  func testSelectedPlanHasFreeTrialIsFalseWithoutPackages() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+
+    sut.select(productID: "pro_yearly")
+    XCTAssertFalse(sut.selectedPlanHasFreeTrial)
+  }
+
+  func testCurrentPlanDisplayNameUsesBackendSubscriptionPlan() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+    sut.select(productID: "pro_yearly")
+    sut.context = makeBillingContext(
+      entitlementLevel: "pro",
+      isPremium: true,
+      plan: "pro_monthly",
+      subscription: makeSubscription(plan: "pro_monthly")
+    )
+
+    XCTAssertEqual(sut.currentPlanDisplayName, "Monthly Plan")
+  }
+
+  func testWeeklyUserCanUpgradeToMonthlyAndAnnualOnly() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+    sut.context = makeBillingContext(
+      entitlementLevel: "pro",
+      isPremium: true,
+      plan: "pro_weekly",
+      subscription: makeSubscription(plan: "pro_weekly")
+    )
+
+    XCTAssertEqual(sut.availableUpgradePlanOptions.map(\.productId), ["pro_monthly", "pro_yearly"])
+  }
+
+  func testServerAnnualPlanOptionIsNormalizedToYearlyProductID() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+    sut.context = makeBillingContext(
+      entitlementLevel: "pro",
+      isPremium: true,
+      plan: "pro_weekly",
+      subscription: makeSubscription(plan: "pro_weekly"),
+      planOptions: [
+        BillingPlanOptionDTO(
+          productId: "pro_monthly",
+          plan: "pro_monthly",
+          displayName: "Monthly",
+          interval: "monthly",
+          rank: 2,
+          badge: "Better value",
+          isCurrent: false,
+          changeKind: "upgrade"
+        ),
+        BillingPlanOptionDTO(
+          productId: "pro_annual",
+          plan: "pro_annual",
+          displayName: "Annual",
+          interval: "annual",
+          rank: 3,
+          badge: "Best value",
+          isCurrent: false,
+          changeKind: "upgrade"
+        ),
+      ]
+    )
+
+    XCTAssertEqual(sut.availableUpgradePlanOptions.map(\.productId), ["pro_monthly", "pro_yearly"])
+    XCTAssertEqual(sut.availableUpgradePlanOptions.map(\.plan), ["pro_monthly", "pro_yearly"])
+  }
+
+  func testAnnualUserHasNoHigherUpgradeOptions() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+    sut.context = makeBillingContext(
+      entitlementLevel: "pro",
+      isPremium: true,
+      plan: "pro_yearly",
+      subscription: makeSubscription(plan: "pro_yearly")
+    )
+
+    XCTAssertTrue(sut.availableUpgradePlanOptions.isEmpty)
+  }
+
+  func testClearCacheResetsSelectionToAnnual() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+    sut.select(productID: "pro_weekly")
+
+    sut.clearCache()
+
+    XCTAssertEqual(sut.selectedProductID, "pro_yearly")
+    XCTAssertNil(sut.selectedPackage)
   }
 
   func testIsProFallsBackToUserDefaultsWhenContextIsNil() {
@@ -197,18 +324,193 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertFalse(sut.isPro)
   }
 
+  func testManageSubscriptionUsesBackendManagementURLForAuthenticatedUser() async throws {
+    let session = BillingSessionMock()
+    let recorder = SubscriptionURLRecorder()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+
+    session.handler = { request in
+      XCTAssertEqual(request.httpMethod, "POST")
+      XCTAssertEqual(request.url?.path, "/v1/billing/management-url")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+
+      let data = """
+      {
+        "managementUrl": "https://billing.revenuecat.com/session/abc?token=123",
+        "provider": "rc_billing",
+        "source": "revenuecat_customer_portal"
+      }
+      """.data(using: .utf8) ?? Data()
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (data, response)
+    }
+
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore,
+      billingClientFactory: { baseURL, token in
+        BillingHTTPClient(
+          baseURL: baseURL,
+          session: session,
+          authTokenProvider: { token }
+        )
+      },
+      subscriptionURLOpener: { recorder.open($0) }
+    )
+
+    await sut.manageSubscription()
+
+    XCTAssertEqual(recorder.openedURLs.map(\.absoluteString), [
+      "https://billing.revenuecat.com/session/abc?token=123",
+    ])
+    XCTAssertNil(sut.errorMessage)
+  }
+
+  func testManageSubscriptionFallsBackToAppleWhenNoBackendUser() async {
+    let session = BillingSessionMock()
+    let recorder = SubscriptionURLRecorder()
+    let appleRecorder = AppleSubscriptionManagementRecorder()
+    await sessionStore.setCurrentUserID("")
+
+    session.handler = { request in
+      XCTFail("Expected no backend call, got \(request.url?.absoluteString ?? "<nil>")")
+      return (Data(), URLResponse())
+    }
+
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore,
+      billingClientFactory: { baseURL, token in
+        BillingHTTPClient(
+          baseURL: baseURL,
+          session: session,
+          authTokenProvider: { token }
+        )
+      },
+      subscriptionURLOpener: { recorder.open($0) },
+      appleSubscriptionManagementOpener: { try await appleRecorder.open() }
+    )
+
+    await sut.manageSubscription()
+
+    XCTAssertTrue(recorder.openedURLs.isEmpty)
+    XCTAssertEqual(appleRecorder.openCount, 1)
+    XCTAssertNil(sut.errorMessage)
+  }
+
+  func testManageSubscriptionFallsBackToAppleWhenBackendHasNoManageableSubscription() async throws {
+    let session = BillingSessionMock()
+    let recorder = SubscriptionURLRecorder()
+    let appleRecorder = AppleSubscriptionManagementRecorder()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+
+    session.handler = { request in
+      XCTAssertEqual(request.httpMethod, "POST")
+      XCTAssertEqual(request.url?.path, "/v1/billing/management-url")
+
+      let data = """
+      {
+        "error": true,
+        "reason": "No manageable subscription was found."
+      }
+      """.data(using: .utf8) ?? Data()
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 404, httpVersion: nil, headerFields: nil)
+      )
+      return (data, response)
+    }
+
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore,
+      billingClientFactory: { baseURL, token in
+        BillingHTTPClient(
+          baseURL: baseURL,
+          session: session,
+          authTokenProvider: { token }
+        )
+      },
+      subscriptionURLOpener: { recorder.open($0) },
+      appleSubscriptionManagementOpener: { try await appleRecorder.open() }
+    )
+
+    await sut.manageSubscription()
+
+    XCTAssertTrue(recorder.openedURLs.isEmpty)
+    XCTAssertEqual(appleRecorder.openCount, 1)
+    XCTAssertNil(sut.errorMessage)
+  }
+
+  func testRestorePurchasesConfiguresAnonymousWhenNoBackendUser() async {
+    await sessionStore.setCurrentUserID("")
+
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore,
+      revenueCatAPIKeyProvider: { nil }
+    )
+
+    await sut.restorePurchases()
+
+    XCTAssertEqual(sut.errorMessage, "RevenueCat API key is not configured.")
+  }
+
+  func testRestoreResultShowsNoActivePurchaseMessageWhenBackendStaysFree() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+
+    sut.recordRestoreResult(
+      foundActiveRevenueCatEntitlement: false,
+      syncedContext: makeBillingContext(entitlementLevel: "free", isPremium: false)
+    )
+
+    XCTAssertEqual(sut.restoreStatusMessage, "No active purchases found for this account.")
+    XCTAssertFalse(sut.restoreStatusIsSuccess)
+    XCTAssertFalse(sut.isPro)
+  }
+
+  func testRestoreResultShowsSuccessWhenBackendReturnsPremium() {
+    let sut = BillingManager(
+      environmentManager: environmentManager,
+      authSessionManager: authSessionManager,
+      sessionStore: sessionStore
+    )
+
+    sut.recordRestoreResult(
+      foundActiveRevenueCatEntitlement: false,
+      syncedContext: makeBillingContext(entitlementLevel: "pro_monthly", isPremium: true)
+    )
+
+    XCTAssertEqual(sut.restoreStatusMessage, "Purchases restored. Pro is active.")
+    XCTAssertTrue(sut.restoreStatusIsSuccess)
+    XCTAssertTrue(sut.isPro)
+  }
+
   private func makeBillingContext(
     entitlementLevel: String,
     isPremium: Bool,
+    plan: String? = nil,
+    subscription: BillingSubscriptionDTO? = nil,
+    planOptions: [BillingPlanOptionDTO] = [],
     features: [BillingFeatureDTO] = [],
     trialDaysRemaining: Int? = nil,
     isTrialActive: Bool = false
   ) -> BillingContextResponse {
     BillingContextResponse(
-      plan: entitlementLevel,
+      plan: plan ?? entitlementLevel,
       entitlementLevel: entitlementLevel,
       isPremium: isPremium,
-      subscription: nil,
+      subscription: subscription,
+      planOptions: planOptions,
       features: features,
       usage: [],
       trialDaysRemaining: trialDaysRemaining,
@@ -216,44 +518,61 @@ final class BillingManagerTests: XCTestCase {
       generatedAt: Date()
     )
   }
-}
 
-@MainActor
-final class BillingHTTPClientTests: XCTestCase {
-  func testRedeemCouponEncodesCodeAndAuthHeader() async throws {
-    let session = BillingSessionMock(response: .success(.couponRedemption(context: makeContext())))
-    let client = BillingHTTPClient(
-      baseURL: URL(string: "https://api.example.test")!,
-      session: session,
-      authTokenProvider: { "access-token" }
-    )
-
-    _ = try await client.redeemCoupon(code: "Life123")
-
-    let request = try XCTUnwrap(session.requests.first)
-    XCTAssertEqual(request.url?.path, "/v1/billing/coupons/redeem")
-    XCTAssertEqual(request.httpMethod, "POST")
-    XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer access-token")
-
-    let body = try XCTUnwrap(request.httpBody)
-    let payload = try JSONSerialization.jsonObject(with: body) as? [String: String]
-    XCTAssertEqual(payload?["code"], "Life123")
-  }
-
-  private func makeContext() -> BillingContextResponse {
-    BillingContextResponse(
-      plan: "pro",
-      entitlementLevel: "pro",
-      isPremium: true,
-      subscription: nil,
-      features: [],
-      usage: [],
-      generatedAt: Date(timeIntervalSinceReferenceDate: 0)
+  private func makeSubscription(plan: String) -> BillingSubscriptionDTO {
+    BillingSubscriptionDTO(
+      provider: "revenuecat",
+      productId: plan,
+      plan: plan,
+      status: "active",
+      periodStartedAt: Date(),
+      periodEndsAt: Date().addingTimeInterval(2_592_000),
+      trialEndsAt: nil,
+      gracePeriodEndsAt: nil,
+      cancelledAt: nil,
+      isTrial: false,
+      isInGracePeriod: false,
+      hasBillingIssue: false,
+      isCancelledButActive: false,
+      renewsOrExpiresAt: Date().addingTimeInterval(2_592_000),
+      willRenew: true,
+      accessEndsAt: Date().addingTimeInterval(2_592_000)
     )
   }
 }
 
 // Minimal mocks for testing
+private final class BillingSessionMock: HTTPClientSession, @unchecked Sendable {
+  var handler: ((URLRequest) throws -> (Data, URLResponse))?
+
+  func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+    guard let handler else {
+      fatalError("BillingSessionMock.handler must be configured before use")
+    }
+    return try handler(request)
+  }
+}
+
+@MainActor
+private final class SubscriptionURLRecorder: @unchecked Sendable {
+  private(set) var openedURLs: [URL] = []
+
+  func open(_ url: URL) {
+    openedURLs.append(url)
+  }
+}
+
+@MainActor
+private final class AppleSubscriptionManagementRecorder: @unchecked Sendable {
+  private(set) var openCount = 0
+  var result: Result<Bool, Error> = .success(true)
+
+  func open() async throws -> Bool {
+    openCount += 1
+    return try result.get()
+  }
+}
+
 private final class MockAuthSessionManager: AuthSessionManaging, @unchecked Sendable {
   var validAccessTokenResult: Result<String?, Error> = .success(nil)
   var refreshAccessTokenResult: Result<String?, Error> = .success(nil)
@@ -303,63 +622,11 @@ private final class MockAuthSessionStore: AuthSessionStoring, @unchecked Sendabl
   func clearSession() async {}
   func hasCompletedInitialStockImport(for userID: String) async -> Bool { return false }
   func markInitialStockImportCompleted(for userID: String) async {}
-}
-
-private final class BillingSessionMock: PushNotificationsURLSessionProtocol, @unchecked Sendable {
-  enum Response {
-    case success(Payload)
-    case failure(statusCode: Int, message: String)
-  }
-
-  enum Payload {
-    case couponRedemption(context: BillingContextResponse)
-  }
-
-  private(set) var requests: [URLRequest] = []
-  private let response: Response
-
-  init(response: Response) {
-    self.response = response
-  }
-
-  func data(for request: URLRequest) async throws -> (Data, URLResponse) {
-    requests.append(request)
-    let statusCode: Int
-    let data: Data
-    switch response {
-    case let .success(payload):
-      statusCode = 200
-      data = try payloadData(payload)
-    case let .failure(code, message):
-      statusCode = code
-      data = try JSONSerialization.data(withJSONObject: ["error": message])
-    }
-
-    let response = HTTPURLResponse(
-      url: request.url!,
-      statusCode: statusCode,
-      httpVersion: nil,
-      headerFields: ["Content-Type": "application/json"]
-    )!
-    return (data, response)
-  }
-
-  private func payloadData(_ payload: Payload) throws -> Data {
-    switch payload {
-    case let .couponRedemption(context):
-      let encodedContext = try JSONEncoder.stockPlanShared.encode(context)
-      let contextObject = try JSONSerialization.jsonObject(with: encodedContext) as? [String: Any]
-      return try JSONSerialization.data(withJSONObject: [
-        "coupon": [
-          "code": "FOREVER",
-          "grantType": "lifetime_pro",
-          "trialDays": 0,
-          "discount": [:],
-        ],
-        "trialDaysRemaining": NSNull(),
-        "isTrialActive": false,
-        "billingContext": contextObject ?? [:],
-      ])
-    }
-  }
+  func hasCompletedOnboardingQuestionnaire(for userID: String) async -> Bool { return false }
+  func markOnboardingQuestionnaireCompleted(for userID: String) async {}
+  func requiresOnboardingQuestionnaire(for userID: String) async -> Bool { return false }
+  func markOnboardingQuestionnaireRequired(for userID: String) async {}
+  func markPendingOnboardingAfterSignup(email: String) async {}
+  func hasPendingOnboardingAfterSignup(email: String) async -> Bool { return false }
+  func clearPendingOnboardingAfterSignup(email: String) async {}
 }

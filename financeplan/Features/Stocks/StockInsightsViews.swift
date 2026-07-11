@@ -24,8 +24,8 @@ struct StockDetailTabBar: View {
                                     .foregroundStyle(selectedTab == tab ? .primary : .secondary)
                                 if tab.isProOnly && !isPro {
                                     Image(systemName: "lock.fill")
-                                        .font(.system(size: 9, weight: .semibold))
-                                        .foregroundStyle(.tertiary)
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                             .padding(.horizontal, 14)
@@ -322,7 +322,7 @@ struct HeroMetricPill: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Text(value)
-                .typography(.small, weight: .semibold)
+                .typography(.numericSmall, weight: .semibold)
                 .foregroundStyle(.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
@@ -446,18 +446,15 @@ struct StockMarketSnapshotCard: View {
 
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     Text(snapshot.currentPrice.currency)
-                        .typography(.hero, weight: .bold)
-                        .monospacedDigit()
+                        .typography(.displayNumber)
 
                     Text(StockMetricFormatter.signedCurrencyText(sessionChange))
-                        .typography(.small, weight: .semibold)
-                        .monospacedDigit()
+                        .typography(.numericSmall, weight: .semibold)
                         .foregroundStyle(changeTint)
 
                     Text(StockMetricFormatter.signedPercentText(snapshot.resolvedPercentChange ?? 0))
-                        .typography(.small, weight: .semibold)
+                        .typography(.numericSmall, weight: .semibold)
                         .foregroundStyle(changeTint)
-                        .monospacedDigit()
                 }
 
                 StockSessionRangeBar(snapshot: snapshot, tint: changeTint)
@@ -664,6 +661,8 @@ struct StockConsensusCard: View {
                     )
                 }
 
+                ConsensusDonutChart(consensus: consensus)
+
                 VStack(spacing: 12) {
                     ForEach(consensus.buckets) { bucket in
                         ConsensusDistributionRow(
@@ -705,7 +704,7 @@ struct StockConsensusPlaceholderCard: View {
                     Text("Consensus")
                         .typography(.small, weight: .semibold)
 
-                    Text("This section is ready for analyst recommendation trends once the wrapped endpoint is available.")
+                    Text("Analyst recommendation trends aren't available for this stock right now.")
                         .typography(.small)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -773,7 +772,7 @@ struct StockBasicFinancialsPlaceholderCard: View {
                 Text("Basic financials")
                     .typography(.small, weight: .semibold)
 
-                Text("This section is ready for P/E, margins, current ratio, beta, 52-week range, and annual series once the wrapped endpoint is available.")
+                Text("Detailed financials aren't available for this stock right now.")
                     .typography(.small)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)

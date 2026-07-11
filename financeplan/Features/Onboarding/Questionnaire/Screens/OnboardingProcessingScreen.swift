@@ -11,8 +11,8 @@ struct OnboardingProcessingScreen: View {
   ]
 
   @State private var phase = 0
-  @State private var pulse = false
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     VStack(spacing: 24) {
@@ -33,8 +33,6 @@ struct OnboardingProcessingScreen: View {
             )
           )
           .frame(width: 160, height: 160)
-          .scaleEffect(pulse ? 1.05 : 0.95)
-          .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: pulse)
 
         Circle()
           .fill(AppTheme.Colors.tintSoft(for: colorScheme))
@@ -43,6 +41,10 @@ struct OnboardingProcessingScreen: View {
         Image(systemName: "sparkles")
           .font(.largeTitle.bold())
           .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+
+        ProgressView()
+          .controlSize(.small)
+          .offset(y: 58)
       }
 
       VStack(spacing: 10) {
@@ -55,14 +57,13 @@ struct OnboardingProcessingScreen: View {
           .foregroundStyle(.secondary)
           .multilineTextAlignment(.center)
           .id(phase)
-          .transition(.opacity.combined(with: .move(edge: .bottom)))
+          .transition(AppTransition.move(edge: .bottom, reduceMotion: reduceMotion))
       }
       .padding(.horizontal, 24)
 
       Spacer()
     }
     .onAppear {
-      pulse = true
       runCycle()
     }
   }
@@ -70,11 +71,11 @@ struct OnboardingProcessingScreen: View {
   private func runCycle() {
     Task { @MainActor in
       try? await Task.sleep(for: .milliseconds(700))
-      withAnimation(.easeInOut(duration: 0.3)) {
+      withAnimation(reduceMotion ? AppMotion.reduced : AppMotion.state) {
         phase = 1
       }
       try? await Task.sleep(for: .milliseconds(700))
-      withAnimation(.easeInOut(duration: 0.3)) {
+      withAnimation(reduceMotion ? AppMotion.reduced : AppMotion.state) {
         phase = 2
       }
       try? await Task.sleep(for: .milliseconds(600))

@@ -161,7 +161,7 @@ private struct BudgetCategoryCard: View {
               HStack(spacing: 2) {
                 Image(systemName: change.amount >= 0 ? "arrow.up.right" : "arrow.down.right")
                   .accessibilityHidden(true)
-                  .font(.system(size: 8))
+                  .font(.caption2)
                 Text("\(abs(Int(change.percentage)))% vs last month")
                   .font(.caption2)
               }

@@ -15,6 +15,7 @@ struct PortfolioScreen: View {
 
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.modelContext) private var modelContext
+  @Environment(\.scenePhase) private var scenePhase
   @EnvironmentObject private var viewModel: PortfolioViewModel
   @InjectedObservable(\Container.billingManager) private var billingManager
   @Binding var pendingOpenSymbol: String?
@@ -28,10 +29,15 @@ struct PortfolioScreen: View {
   @State private var selectedAssetFilter: AssetFilter = .all
   @State private var chartData: [ChartDataPoint] = []
   @State private var pushNavigationRoute: PushNavigationRoute?
-  @State private var pushFallbackMessage: String?
-  @State private var pushFallbackMessageToken: UUID?
+  @State private var pushFallbackToast: ToastData?
+  @State private var refreshErrorToast: ToastData?
   @State private var targetAlertStock: TargetAlertDraftStock?
   @State private var isPaywallPresented = false
+  @State private var isEarningsCalendarPresented = false
+  @State private var isSectorGainsPresented = false
+  @State private var selectedTradingSymbol: String?
+
+  private let quoteRefreshTimer = Timer.publish(every: 20, on: .main, in: .common).autoconnect()
 
   enum TimeRange: String, CaseIterable, Identifiable {
       case day = "1D"
@@ -79,7 +85,10 @@ struct PortfolioScreen: View {
   }
 
   private var holdingsValue: Double {
-    scopedStocks.reduce(0) { $0 + ($1.shares * $1.buyPrice) }
+    scopedStocks.reduce(0) { total, stock in
+      let price = viewModel.liveQuotes[stock.symbol.uppercased()]?.currentPrice ?? stock.buyPrice
+      return total + (stock.shares * price)
+    }
   }
 
   private var cashBalance: Double {
@@ -140,7 +149,6 @@ struct PortfolioScreen: View {
     ZStack {
       mainContent
     }
-    .animation(.smooth(duration: 0.3), value: viewModel.isLoading)
     .onAppear(perform: prepareScreen)
     .onChange(of: totalValue) { _, _ in
       rebuildChartData()
@@ -150,6 +158,11 @@ struct PortfolioScreen: View {
     }
     .onChange(of: viewModel.selectedPortfolioListId) { _, _ in
       rebuildChartData()
+    }
+    .onChange(of: scenePhase) { _, newPhase in
+      if newPhase == .active {
+        refreshPortfolioQuotesIfActive()
+      }
     }
     .refreshable {
       await reloadPortfolio(force: true)
@@ -193,16 +206,45 @@ struct PortfolioScreen: View {
     .sheet(isPresented: $isPaywallPresented) {
       PaywallView(billingManager: billingManager)
     }
+    .sheet(isPresented: $isEarningsCalendarPresented) {
+      EarningsCalendarScreen()
+    }
+    .sheet(isPresented: $isSectorGainsPresented) {
+      NavigationStack {
+        SectorGainsScreen()
+      }
+    }
+    .sheet(
+      isPresented: Binding(
+        get: { selectedTradingSymbol != nil },
+        set: { isPresented in
+          if !isPresented {
+            selectedTradingSymbol = nil
+          }
+        }
+      )
+    ) {
+      if let selectedTradingSymbol {
+        TradingStockSheet(symbol: selectedTradingSymbol)
+      }
+    }
     .navigationDestination(item: $pushNavigationRoute) { route in
       StockDetailScreen(stockId: route.stockID, initialSymbol: route.symbol)
     }
-    .overlay(alignment: .top) {
-      if let pushFallbackMessage {
-        ToastBanner(message: pushFallbackMessage, style: .info)
-          .padding(.top, 8)
-          .padding(.horizontal, 16)
-          .transition(.move(edge: .top).combined(with: .opacity))
-      }
+    .toastOverlay($pushFallbackToast)
+    .toastOverlay($refreshErrorToast)
+    .onChange(of: viewModel.errorMessage) { _, newValue in
+      // Full-screen error only covers the empty-cache case; when cached rows
+      // are showing, a failed refresh must still be visible.
+      guard let newValue, !scopedStocks.isEmpty else { return }
+      refreshErrorToast = .error(newValue)
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .stalePositionPurged)) { note in
+      let symbol = note.userInfo?["symbol"] as? String
+      refreshErrorToast = .info(
+        symbol.map { "\($0) was updated elsewhere — refreshed your portfolio." }
+          ?? "Position was updated elsewhere — refreshed your portfolio."
+      )
     }
     .appSensoryFeedback(destructive: destructiveFeedbackTrigger)
   }
@@ -212,16 +254,7 @@ struct PortfolioScreen: View {
   }
 
   private func makeEditableStock(from stock: SDPortfolioStock) -> StockResponse {
-    let category = AssetCategory(rawValue: stock.category ?? AssetCategory.stock.rawValue) ?? .stock
-    return StockResponse(
-      id: stock.id,
-      symbol: stock.symbol,
-      shares: stock.shares,
-      buyPrice: stock.buyPrice,
-      buyDate: stock.buyDate,
-      notes: stock.notes,
-      category: category
-    )
+    StockResponse.editableDraft(from: stock)
   }
 
   private func portfolioStockRow(_ stock: SDPortfolioStock) -> some View {
@@ -230,10 +263,10 @@ struct PortfolioScreen: View {
     return NavigationLink {
       StockDetailScreen(stockId: stock.id, initialSymbol: stock.symbol)
     } label: {
-      PortfolioRow(stock: stock, targetAlert: targetAlert)
+      PortfolioRow(stock: stock, targetAlert: targetAlert, liveQuote: nil)
         .accessibilityIdentifier("portfolio.stockRow.\(stock.symbol)")
     }
-    .buttonStyle(CardButtonStyle())
+    .buttonStyle(PressableStyle())
     .contextMenu {
       Button(targetAlert == nil ? "Add price alert" : "Edit price alert", systemImage: targetAlert == nil ? "bell.badge" : "bell.fill") {
         presentTargetAlert(for: stock)
@@ -285,8 +318,63 @@ struct PortfolioScreen: View {
           onSelectFilter: selectAssetFilter
         )
 
+        // Revived from PortfolioSegment.earnings — teaser entry (list free, transcripts Pro)
+        Button {
+          isEarningsCalendarPresented = true
+        } label: {
+          HStack {
+            Image(systemName: "calendar")
+              .font(.title3)
+            VStack(alignment: .leading, spacing: 2) {
+              Text("Earnings Calendar")
+                .typography(.headline, weight: .semibold)
+              Text("Upcoming reports & transcripts")
+                .typography(.nano)
+                .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+              .foregroundStyle(.secondary)
+          }
+          .padding()
+          .appGlassEffect(.rect(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("portfolio.earningsCalendarLink")
+
+        Button {
+          if billingManager.isPro {
+            isSectorGainsPresented = true
+          } else {
+            PostHogSDK.shared.capture("paywall_viewed", properties: [
+              "source": "portfolio_sector_gains",
+            ])
+            isPaywallPresented = true
+          }
+        } label: {
+          HStack {
+            Image(systemName: "chart.bar.fill")
+              .font(.title3)
+            VStack(alignment: .leading, spacing: 2) {
+              Text("Sector Gains")
+                .typography(.headline, weight: .semibold)
+              Text("Unrealized P/L by sector")
+                .typography(.nano)
+                .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+              .foregroundStyle(.secondary)
+          }
+          .padding()
+          .appGlassEffect(.rect(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("portfolio.sectorGainsLink")
+
         PortfolioPositionsSection(
           stocks: filteredStocks,
+          liveQuotes: viewModel.liveQuotes,
           targetAlertProvider: viewModel.targetAlert(for:),
           onAddPosition: presentAddPositionSheet,
           onEditStock: beginEditing,
@@ -297,6 +385,9 @@ struct PortfolioScreen: View {
       }
       .padding(.horizontal, 16)
       .padding(.vertical, 12)
+      .onReceive(quoteRefreshTimer) { _ in
+        refreshPortfolioQuotesIfActive()
+      }
     }
   }
 
@@ -347,6 +438,12 @@ struct PortfolioScreen: View {
       } label: {
         Label("Import CSV", systemImage: "square.and.arrow.down.on.square")
       }
+
+      Button {
+        selectedTradingSymbol = "AAPL" // Demo: opens polished trading sheet with candle chart
+      } label: {
+        Label("Quick Trade (Sheet)", systemImage: "chart.candlestick")
+      }
     } label: {
       Image(systemName: "plus")
     }
@@ -367,6 +464,11 @@ struct PortfolioScreen: View {
 
   private func reloadPortfolio(force: Bool = false) async {
     await viewModel.load(force: force)
+  }
+
+  private func refreshPortfolioQuotesIfActive() {
+    guard scenePhase == .active else { return }
+    Task { await viewModel.refreshLiveQuotes() }
   }
 
   private func retryLoad() {
@@ -488,13 +590,13 @@ struct PortfolioScreen: View {
   }
 
   private func selectTimeRange(_ range: TimeRange) {
-    withAnimation {
+    withAnimation(AppMotion.state) {
       selectedTimeRange = range
     }
   }
 
   private func selectAssetFilter(_ filter: AssetFilter) {
-    withAnimation {
+    withAnimation(AppMotion.state) {
       selectedAssetFilter = filter
     }
   }
@@ -546,20 +648,7 @@ struct PortfolioScreen: View {
   }
 
   private func showPushFallbackMessage(_ message: String) {
-    withAnimation(.easeInOut(duration: 0.2)) {
-      pushFallbackMessage = message
-    }
-
-    let token = UUID()
-    pushFallbackMessageToken = token
-
-    Task { @MainActor in
-      try? await Task.sleep(for: .seconds(4))
-      guard pushFallbackMessageToken == token else { return }
-      withAnimation(.easeInOut(duration: 0.2)) {
-        pushFallbackMessage = nil
-      }
-    }
+    pushFallbackToast = .info(message)
   }
 
   private static func makeChartData(totalValue: Double, timeRange: TimeRange) -> [ChartDataPoint] {

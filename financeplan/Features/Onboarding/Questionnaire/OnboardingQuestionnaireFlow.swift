@@ -5,8 +5,7 @@ import SwiftUI
 ///
 /// Outcomes:
 /// - `onLogInRequested`: user tapped "Log in" on the welcome screen — caller should route
-///   to the existing `LoginScreen`. Caller should also mark the questionnaire complete so
-///   returning users don't see it again.
+///   to the existing `LoginScreen` for this session. This is not questionnaire completion.
 /// - `onCompleted`: user reached the end of the flow (signed up via Screen 12 + chose a
 ///   paywall outcome on Screen 13). At this point the user IS authenticated; the caller
 ///   should apply authenticated state.
@@ -17,22 +16,27 @@ struct OnboardingQuestionnaireFlow: View {
   let onCompleted: () -> Void
 
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     ZStack {
-      MeshGradientBackground().ignoresSafeArea()
+      MeshGradientBackground(animatesOnAppear: true).ignoresSafeArea()
 
       VStack(spacing: 0) {
         topChrome
         screenContent
           .frame(maxWidth: .infinity, maxHeight: .infinity)
-          .transition(.asymmetric(
-            insertion: .opacity.combined(with: .move(edge: .trailing)),
-            removal: .opacity.combined(with: .move(edge: .leading))
+          // Keep the onboarding column readable on iPad instead of stretching
+          // edge-to-edge (Guideline 4). Chrome/progress bar above stays full-width.
+          .maxContentWidth(regularSizeClass: ContentWidth.marketing)
+          .transition(AppTransition.directional(
+            insertion: viewModel.navigationDirection == .forward ? .trailing : .leading,
+            removal: viewModel.navigationDirection == .forward ? .leading : .trailing,
+            reduceMotion: reduceMotion
           ))
       }
     }
-    .animation(.spring(response: 0.42, dampingFraction: 0.85), value: viewModel.step)
+    .appAnimation(AppMotion.structural, value: viewModel.step)
   }
 
   // MARK: - Chrome
@@ -46,11 +50,12 @@ struct OnboardingQuestionnaireFlow: View {
           Image(systemName: "chevron.left")
             .font(.body.weight(.semibold))
             .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-            .padding(8)
+            .frame(width: 44, height: 44)
+            .contentShape(.rect)
         }
         .accessibilityLabel("Back")
       } else {
-        Color.clear.frame(width: 36, height: 36)
+        Color.clear.frame(width: 44, height: 44)
       }
 
       if viewModel.progressBarVisible {
@@ -66,7 +71,7 @@ struct OnboardingQuestionnaireFlow: View {
         Spacer()
       }
 
-      Color.clear.frame(width: 36, height: 36)
+      Color.clear.frame(width: 44, height: 44)
     }
     .padding(.horizontal, 12)
     .padding(.top, 8)

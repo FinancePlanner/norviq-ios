@@ -14,7 +14,7 @@ final class PortfolioViewModelTests: XCTestCase {
       makeStock(id: "msft", symbol: "MSFT", shares: 5, buyPrice: 200)
     ])
 
-    let viewModel = PortfolioViewModel(service: service)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
     await viewModel.load()
 
     XCTAssertEqual(service.fetchPortfolioCalls, 1)
@@ -23,13 +23,31 @@ final class PortfolioViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.errorMessage)
   }
 
+  func testLoadSucceedsWhenTargetAlertsFail() async {
+    let service = MockStockService()
+    service.fetchPortfolioResult = .success([
+      makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150)
+    ])
+    service.fetchTargetsResult = .failure(MockError("Upgrade required."))
+
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
+    await viewModel.load()
+
+    XCTAssertEqual(service.fetchPortfolioCalls, 1)
+    XCTAssertEqual(service.fetchPortfolioSummaryCalls, 1)
+    XCTAssertEqual(service.fetchTargetsCalls, 1)
+    XCTAssertFalse(viewModel.isLoading)
+    XCTAssertNil(viewModel.errorMessage)
+    XCTAssertTrue(viewModel.targetAlertsBySymbol.isEmpty)
+  }
+
   func testLoadWithoutForceUsesCachedResultAfterFirstSuccess() async {
     let service = MockStockService()
     service.fetchPortfolioResult = .success([
       makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150)
     ])
 
-    let viewModel = PortfolioViewModel(service: service)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
     await viewModel.load()
     await viewModel.load()
 
@@ -42,12 +60,73 @@ final class PortfolioViewModelTests: XCTestCase {
       makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150)
     ])
 
-    let viewModel = PortfolioViewModel(service: service)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
     await viewModel.load()
     await viewModel.load(force: true)
 
     XCTAssertEqual(service.fetchPortfolioCalls, 2)
     XCTAssertEqual(service.fetchPortfolioSummaryCalls, 2)
+  }
+
+  func testRefreshLiveQuotesUsesQuoteBatchWithoutReloadingPortfolioData() async {
+    let service = MockStockService()
+    service.fetchPortfolioResult = .success([
+      makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150),
+      makeStock(id: "msft", symbol: "MSFT", shares: 5, buyPrice: 200)
+    ])
+    let marketDataService = PortfolioQuoteMarketDataServiceMock()
+    marketDataService.fetchQuoteBatchResult = .success(
+      QuoteBatchResponse(quotes: [
+        makeQuote(symbol: "AAPL", currentPrice: 171),
+        makeQuote(symbol: "MSFT", currentPrice: 311)
+      ])
+    )
+    let viewModel = PortfolioViewModel(service: service, marketDataService: marketDataService)
+
+    await viewModel.load()
+
+    let portfolioCallsAfterLoad = service.fetchPortfolioCalls
+    let summaryCallsAfterLoad = service.fetchPortfolioSummaryCalls
+    let targetsCallsAfterLoad = service.fetchTargetsCalls
+    marketDataService.fetchQuoteBatchResult = .success(
+      QuoteBatchResponse(quotes: [
+        makeQuote(symbol: "AAPL", currentPrice: 172.5),
+        makeQuote(symbol: "MSFT", currentPrice: 314.2)
+      ])
+    )
+
+    await viewModel.refreshLiveQuotes()
+
+    XCTAssertEqual(marketDataService.fetchQuoteBatchCalls, 2)
+    XCTAssertEqual(Set(marketDataService.requestedSymbolBatches.last ?? []), Set(["AAPL", "MSFT"]))
+    XCTAssertEqual(service.fetchPortfolioCalls, portfolioCallsAfterLoad)
+    XCTAssertEqual(service.fetchPortfolioSummaryCalls, summaryCallsAfterLoad)
+    XCTAssertEqual(service.fetchTargetsCalls, targetsCallsAfterLoad)
+    XCTAssertEqual(viewModel.liveQuotes["AAPL"]?.currentPrice, 172.5)
+    XCTAssertEqual(viewModel.liveQuotes["MSFT"]?.currentPrice, 314.2)
+  }
+
+  func testRefreshLiveQuotesFailurePreservesExistingQuotesAndErrorState() async {
+    let service = MockStockService()
+    service.fetchPortfolioResult = .success([
+      makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150)
+    ])
+    let marketDataService = PortfolioQuoteMarketDataServiceMock()
+    marketDataService.fetchQuoteBatchResult = .success(
+      QuoteBatchResponse(quotes: [
+        makeQuote(symbol: "AAPL", currentPrice: 171)
+      ])
+    )
+    let viewModel = PortfolioViewModel(service: service, marketDataService: marketDataService)
+
+    await viewModel.load()
+    marketDataService.fetchQuoteBatchResult = .failure(MockError("Quote refresh failed."))
+
+    await viewModel.refreshLiveQuotes()
+
+    XCTAssertEqual(marketDataService.fetchQuoteBatchCalls, 2)
+    XCTAssertEqual(viewModel.liveQuotes["AAPL"]?.currentPrice, 171)
+    XCTAssertNil(viewModel.errorMessage)
   }
 
   func testLoadDerivesCashBalanceFromCashAllocation() async {
@@ -63,7 +142,7 @@ final class PortfolioViewModelTests: XCTestCase {
       )
     )
 
-    let viewModel = PortfolioViewModel(service: service)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
     await viewModel.load()
 
     XCTAssertEqual(viewModel.cashBalance, 275.4, accuracy: 0.001)
@@ -79,7 +158,7 @@ final class PortfolioViewModelTests: XCTestCase {
       ])
     )
 
-    let viewModel = PortfolioViewModel(service: service)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
     await viewModel.load()
 
     XCTAssertEqual(viewModel.cashBalance, 0, accuracy: 0.001)
@@ -89,7 +168,7 @@ final class PortfolioViewModelTests: XCTestCase {
     let service = MockStockService()
     service.deleteResult = .failure(MockError("Delete failed."))
 
-    let viewModel = PortfolioViewModel(service: service)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
     let ok = await viewModel.delete(id: "aapl")
 
     XCTAssertFalse(ok)
@@ -102,7 +181,7 @@ final class PortfolioViewModelTests: XCTestCase {
     let created = makeStock(id: "nvda", symbol: "NVDA", shares: 3, buyPrice: 120)
     service.createResult = .success(created)
 
-    let viewModel = PortfolioViewModel(service: service)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
     let message = await viewModel.saveNewPosition(
       AddPositionDraft(
         symbol: " nvda ",
@@ -126,7 +205,7 @@ final class PortfolioViewModelTests: XCTestCase {
 
   func testSaveNewPositionRejectsInvalidDraft() async {
     let service = MockStockService()
-    let viewModel = PortfolioViewModel(service: service)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
 
     let message = await viewModel.saveNewPosition(
       AddPositionDraft(
@@ -151,7 +230,7 @@ final class PortfolioViewModelTests: XCTestCase {
       makeStock(id: "msft", symbol: "MSFT", shares: 5, buyPrice: 200)
     ])
     let localStore = MockPortfolioLocalStore()
-    let viewModel = PortfolioViewModel(service: service, localStore: localStore)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub(), localStore: localStore)
 
     await viewModel.load()
 
@@ -164,7 +243,7 @@ final class PortfolioViewModelTests: XCTestCase {
     service.createResult = .success(makeStock(id: "nvda", symbol: "NVDA", shares: 3, buyPrice: 120))
     let localStore = MockPortfolioLocalStore()
     localStore.upsertError = MockError("SwiftData save failed.")
-    let viewModel = PortfolioViewModel(service: service, localStore: localStore)
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub(), localStore: localStore)
 
     let message = await viewModel.saveNewPosition(
       AddPositionDraft(
@@ -265,7 +344,23 @@ final class PortfolioViewModelTests: XCTestCase {
       shares: shares,
       buyPrice: buyPrice,
       buyDate: "2026-03-26",
-      notes: nil
+      notes: nil,
+      createdAt: "2026-03-26T00:00:00Z"
+    )
+  }
+
+  private func makeQuote(symbol: String, currentPrice: Double) -> QuoteResponse {
+    QuoteResponse(
+      symbol: symbol,
+      currency: "USD",
+      currentPrice: currentPrice,
+      change: 1.25,
+      percentChange: 0.73,
+      high: currentPrice + 2,
+      low: currentPrice - 2,
+      open: currentPrice - 1,
+      previousClose: currentPrice - 1.25,
+      timestamp: 1_775_073_600
     )
   }
 
@@ -305,6 +400,119 @@ final class PortfolioViewModelTests: XCTestCase {
   }
 }
 
+extension MarketDataServicing {
+  func fetchCompanyProfile(symbol _: String) async throws -> CompanyProfileResponse {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchQuote(symbol _: String) async throws -> QuoteResponse {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchQuoteBatch(symbols _: [String]) async throws -> QuoteBatchResponse {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchAnalystConsensus(symbol _: String) async throws -> StockAnalystConsensus {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchBasicFinancials(symbol _: String) async throws -> StockBasicFinancials {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchAnalysisMetrics(
+    symbol _: String,
+    wacc _: Double?,
+    terminalGrowthRate _: Double?,
+    terminalMargin _: Double?,
+    fcfMarginAssumption _: Double?
+  ) async throws -> StockAnalysisMetrics {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchMarketCompare(symbols _: [String]) async throws -> [StockAnalysisMetrics] {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchBalanceSheetStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [BalanceSheetStatementResponse] {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchCashFlowStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [CashFlowStatementResponse] {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchIncomeStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [IncomeStatementResponse] {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchRatios(symbol _: String, limit _: Int?, period _: String?) async throws -> [RatiosResponse] {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchRatiosTTM(symbol _: String) async throws -> [RatiosTTMResponse] {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchFinancialGrowth(symbol _: String, limit _: Int?, period _: String?) async throws -> [FinancialGrowthResponse] {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchAnalystEstimates(symbol _: String, limit _: Int?, period _: String?) async throws -> [AnalystEstimatesResponse] {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchStockEarnings(symbol _: String, limit _: Int) async throws -> [EarningsEvent] {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchStockEarningsTranscript(symbol _: String, date _: String) async throws -> EarningsTranscript {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchEarningsCalendar(from _: String, to _: String) async throws -> [EarningsEvent] {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchMarketNews(limit _: Int?) async throws -> [StockNews] {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchFinancialStatements(symbol _: String) async throws -> StockFinancialStatements {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchPriceChart(symbol _: String, range _: String) async throws -> financeplan.PriceChartSeries {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
+  func fetchPriceChartComparison(symbols _: [String], range _: String) async throws -> financeplan.PriceChartComparisonResponse {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+}
+
+enum QuoteMarketDataMockError: LocalizedError {
+  case notConfigured
+
+  var errorDescription: String? {
+    "Not configured."
+  }
+}
+
+@MainActor
+private final class PortfolioQuoteMarketDataServiceMock: MarketDataServicing, @unchecked Sendable {
+  var fetchQuoteBatchCalls = 0
+  var requestedSymbolBatches: [[String]] = []
+  var fetchQuoteBatchResult: Result<QuoteBatchResponse, Error> = .failure(QuoteMarketDataMockError.notConfigured)
+
+  func fetchQuoteBatch(symbols: [String]) async throws -> QuoteBatchResponse {
+    fetchQuoteBatchCalls += 1
+    requestedSymbolBatches.append(symbols)
+    return try fetchQuoteBatchResult.get()
+  }
+}
+
 @MainActor
 private final class MockPortfolioLocalStore: PortfolioLocalPersisting {
   var reconcileCalls = 0
@@ -333,6 +541,7 @@ private final class MockPortfolioLocalStore: PortfolioLocalPersisting {
 private final class MockStockService: StockServicing {
   var fetchPortfolioCalls = 0
   var fetchPortfolioSummaryCalls = 0
+  var fetchTargetsCalls = 0
   var createCalls = 0
   var lastCreateRequest: StockRequest?
   var lastCreatePortfolioListId: String?
@@ -375,6 +584,15 @@ private final class MockStockService: StockServicing {
     try await fetchPortfolio()
   }
 
+  func fetchPortfolio(
+    portfolioListId _: String?,
+    cursor _: String?,
+    limit _: Int?
+  ) async throws -> (items: [StockResponse], nextCursor: String?) {
+    fetchPortfolioCalls += 1
+    return (try fetchPortfolioResult.get(), nil)
+  }
+
   func fetchPortfolioSummary() async throws -> PortfolioSummaryResponse {
     fetchPortfolioSummaryCalls += 1
     return try fetchPortfolioSummaryResult.get()
@@ -385,7 +603,8 @@ private final class MockStockService: StockServicing {
   }
 
   func fetchTargets(symbol _: String?) async throws -> [TargetResponse] {
-    try fetchTargetsResult.get()
+    fetchTargetsCalls += 1
+    return try fetchTargetsResult.get()
   }
 
   func fetchPortfolioPerformance(portfolioListId _: String?) async throws -> PortfolioPerformanceResponse {

@@ -108,6 +108,9 @@ final class LoginViewModelTests: XCTestCase {
     var currentUserID = ""
     var currentUsername = ""
     private var importedUserIDs: Set<String> = []
+    private var completedOnboardingUserIDs: Set<String> = []
+    private var requiredOnboardingUserIDs: Set<String> = []
+    private var pendingOnboardingSignupEmails: Set<String> = []
 
     func setAuthToken(_ value: String) async { authToken = value }
     func setRefreshToken(_ value: String) async { refreshToken = value }
@@ -142,6 +145,35 @@ final class LoginViewModelTests: XCTestCase {
     func markInitialStockImportCompleted(for userID: String) {
       importedUserIDs.insert(userID)
     }
+
+    func hasCompletedOnboardingQuestionnaire(for userID: String) -> Bool {
+      completedOnboardingUserIDs.contains(userID)
+    }
+
+    func markOnboardingQuestionnaireCompleted(for userID: String) {
+      completedOnboardingUserIDs.insert(userID)
+      requiredOnboardingUserIDs.remove(userID)
+    }
+
+    func requiresOnboardingQuestionnaire(for userID: String) -> Bool {
+      requiredOnboardingUserIDs.contains(userID) && !completedOnboardingUserIDs.contains(userID)
+    }
+
+    func markOnboardingQuestionnaireRequired(for userID: String) {
+      requiredOnboardingUserIDs.insert(userID)
+    }
+
+    func markPendingOnboardingAfterSignup(email: String) {
+      pendingOnboardingSignupEmails.insert(email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+    }
+
+    func hasPendingOnboardingAfterSignup(email: String) -> Bool {
+      pendingOnboardingSignupEmails.contains(email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+    }
+
+    func clearPendingOnboardingAfterSignup(email: String) {
+      pendingOnboardingSignupEmails.remove(email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+    }
   }
 
   private enum MockError: Error {
@@ -168,10 +200,12 @@ final class LoginViewModelTests: XCTestCase {
     await Task.yield()
 
     viewModel.hideSignup()
+    await Task.yield()
     XCTAssertFalse(viewModel.isSignup)
     XCTAssertFalse(store.loginIsSignup)
 
     viewModel.showSignup()
+    await Task.yield()
     XCTAssertTrue(viewModel.isSignup)
     XCTAssertTrue(store.loginIsSignup)
   }
@@ -288,6 +322,35 @@ final class LoginViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.infoMessage, "Account created. Please sign in.")
     XCTAssertEqual(store.authToken, "")
     XCTAssertEqual(store.refreshToken, "")
+    XCTAssertTrue(store.hasPendingOnboardingAfterSignup(email: " USER@example.com "))
+  }
+
+  func testSubmitLogin_AfterPendingSignup_MarksUserForOnboarding() async throws {
+    let service = AuthServiceMock()
+    let store = AuthSessionStoreMock()
+    store.loginIsSignup = false
+    store.markPendingOnboardingAfterSignup(email: "user@example.com")
+    let viewModel = LoginViewModel(authService: service, sessionStore: store)
+    let userID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+    let expected = AuthResponse(
+      token: "token-abc",
+      userId: userID,
+      expiresIn: 3600,
+      refreshToken: "refresh-abc",
+      refreshExpiresIn: 86_400,
+      username: "valid_user",
+      email: "User@Example.com",
+      dateOfBirth: Date(timeIntervalSince1970: 946684800)
+    )
+    service.loginResult = .success(.authenticated(expected))
+
+    viewModel.username = "user@example.com"
+    viewModel.password = "Password123!"
+
+    await viewModel.submit()
+
+    XCTAssertTrue(store.requiresOnboardingQuestionnaire(for: userID.uuidString))
+    XCTAssertFalse(store.hasPendingOnboardingAfterSignup(email: "user@example.com"))
   }
 
   func testRequestForgotPassword_ForwardsToServiceAndReturnsMessage() async throws {
@@ -392,5 +455,39 @@ final class LoginViewModelTests: XCTestCase {
     XCTAssertEqual(service.lastMFACode, "123456")
     XCTAssertEqual(store.authToken, "token-mfa")
     XCTAssertNil(viewModel.pendingMFAChallenge)
+  }
+
+  func testResendMFA_WhenRequestSucceeds_RefreshesChallengeAndClearsStaleCode() async {
+    let service = AuthServiceMock()
+    let store = AuthSessionStoreMock()
+    let viewModel = LoginViewModel(authService: service, sessionStore: store)
+    let originalChallengeID = UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
+    let refreshedChallengeID = UUID(uuidString: "55555555-5555-5555-5555-555555555555")!
+    let refreshedChallenge = AuthMFAChallengeResponsePayload(
+      challengeId: refreshedChallengeID,
+      channel: .email,
+      maskedDestination: "us***@e***.com",
+      expiresIn: 300,
+      resendAvailableIn: 30
+    )
+    service.resendMFAResult = .success(refreshedChallenge)
+
+    viewModel.pendingMFAChallenge = AuthMFAChallengeResponsePayload(
+      challengeId: originalChallengeID,
+      channel: .email,
+      maskedDestination: "us***@e***.com",
+      expiresIn: 300,
+      resendAvailableIn: 0
+    )
+    viewModel.mfaCode = "123456"
+
+    await viewModel.resendMFA()
+
+    XCTAssertEqual(service.resendMFACalls, 1)
+    XCTAssertEqual(service.lastMFAChallengeId, originalChallengeID)
+    XCTAssertEqual(viewModel.pendingMFAChallenge?.challengeId, refreshedChallengeID)
+    XCTAssertEqual(viewModel.mfaCode, "")
+    XCTAssertEqual(viewModel.mfaInfoMessage, "A new code has been sent.")
+    XCTAssertEqual(viewModel.mfaResendAvailableIn, 30)
   }
 }

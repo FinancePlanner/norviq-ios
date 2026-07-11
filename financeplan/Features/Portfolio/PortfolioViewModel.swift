@@ -57,23 +57,31 @@ final class PortfolioViewModel: ObservableObject {
   @Published private(set) var isShowingAllLists: Bool = false
   @Published private(set) var targetAlertsBySymbol: [String: TargetResponse] = [:]
   @Published private(set) var isSavingTargetAlert = false
+  @Published private(set) var liveQuotes: [String: QuoteResponse] = [:]
 
   private let service: StockServicing
+  private let marketDataService: MarketDataServicing
   private var localStore: (any PortfolioLocalPersisting)?
   private var hasLoadedOnce = false
+  private var isRefreshingLiveQuotes = false
   @Published private(set) var nextCursor: String? = nil
   @Published private(set) var isLoadingMore = false
 
   init(
     service: StockServicing,
+    marketDataService: MarketDataServicing,
     localStore: (any PortfolioLocalPersisting)? = nil
   ) {
     self.service = service
+    self.marketDataService = marketDataService
     self.localStore = localStore
   }
 
   convenience init() {
-    self.init(service: Container.shared.stockService())
+    self.init(
+      service: Container.shared.stockService(),
+      marketDataService: Container.shared.marketDataService()
+    )
   }
 
   func setModelContext(_ context: ModelContext) {
@@ -98,16 +106,59 @@ final class PortfolioViewModel: ObservableObject {
 
       async let stocksTask = service.fetchPortfolio(portfolioListId: selectedPortfolioListId, limit: 50)
       async let summaryTask = service.fetchPortfolioSummary(portfolioListId: selectedPortfolioListId)
-      async let targetsTask = service.fetchTargets(symbol: nil)
-      let (stocksResult, summary, targets) = try await (stocksTask, summaryTask, targetsTask)
-      let (remoteStocks, fetchedNextCursor) = stocksResult
+      let (remoteStocks, fetchedNextCursor) = try await stocksTask
       await syncWithSwiftData(remoteStocks, listId: selectedPortfolioListId)
       nextCursor = fetchedNextCursor
-      cashBalance = extractCashBalance(from: summary)
-      targetAlertsBySymbol = Self.makeTargetAlertsBySymbol(targets)
+
+      // Summary failures must not block holdings sync; keep the last known balance.
+      do {
+        cashBalance = extractCashBalance(from: try await summaryTask)
+      } catch {
+        portfolioViewModelLogger.warning("Portfolio summary failed: \(error.localizedDescription)")
+      }
+
+      do {
+        let targets = try await service.fetchTargets(symbol: nil)
+        targetAlertsBySymbol = Self.makeTargetAlertsBySymbol(targets)
+      } catch {
+        portfolioViewModelLogger.warning("Target alerts failed: \(error.localizedDescription)")
+        targetAlertsBySymbol = [:]
+      }
+
+      // Enrich with live market quotes (price + change) using existing batch endpoint
+      let symbols = remoteStocks.map { $0.symbol }
+      if !symbols.isEmpty {
+        do {
+          let batch = try await marketDataService.fetchQuoteBatch(symbols: symbols)
+          liveQuotes = Dictionary(uniqueKeysWithValues: batch.quotes.map { ($0.symbol.uppercased(), $0) })
+        } catch {
+          portfolioViewModelLogger.warning("Live quote batch failed: \(error.localizedDescription)")
+          liveQuotes = [:]
+        }
+      }
+
       hasLoadedOnce = true
     } catch {
       errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load portfolio."
+    }
+  }
+
+  /// Refresh only the live market quotes for currently known symbols (cheap poll for "live" feel).
+  func refreshLiveQuotes() async {
+    guard !isRefreshingLiveQuotes else { return }
+    let symbols = liveQuotes.keys.isEmpty ? [] : Array(liveQuotes.keys)
+    // If no prior quotes, we can't easily know symbols without full load; caller should load first.
+    guard !symbols.isEmpty else { return }
+    isRefreshingLiveQuotes = true
+    defer { isRefreshingLiveQuotes = false }
+
+    do {
+      let batch = try await marketDataService.fetchQuoteBatch(symbols: symbols)
+      for q in batch.quotes {
+        liveQuotes[q.symbol.uppercased()] = q
+      }
+    } catch {
+      portfolioViewModelLogger.warning("refreshLiveQuotes failed: \(error.localizedDescription)")
     }
   }
 
@@ -120,6 +171,7 @@ final class PortfolioViewModel: ObservableObject {
       portfolioViewModelLogger.error(
         "SwiftData portfolio sync failed: \(error.localizedDescription, privacy: .public)"
       )
+      errorMessage = "Couldn't update your cached portfolio. Pull to refresh to try again."
     }
   }
 
@@ -416,6 +468,17 @@ struct SwiftDataPortfolioLocalStore: PortfolioLocalPersisting {
 
   func reconcile(with remoteStocks: [StockResponse], in portfolioListId: String?) throws {
     guard !ownerUserId.isEmpty else { return }
+    do {
+      try incrementalReconcile(with: remoteStocks, in: portfolioListId)
+    } catch {
+      // A single bad row must not discard the whole remote batch: rebuild the
+      // scope from scratch instead of leaving the stale cache in place.
+      modelContext.rollback()
+      try rebuildScope(with: remoteStocks, in: portfolioListId)
+    }
+  }
+
+  private func incrementalReconcile(with remoteStocks: [StockResponse], in portfolioListId: String?) throws {
     let remoteIds = remoteStocks.map(\.id)
     let listId = portfolioListId ?? ""
 
@@ -463,6 +526,35 @@ struct SwiftDataPortfolioLocalStore: PortfolioLocalPersisting {
         local.portfolioListId = listId
         modelContext.insert(local)
       }
+    }
+
+    if modelContext.hasChanges {
+      try modelContext.save()
+    }
+  }
+
+  /// Recovery path: wipe every row that could conflict with the remote batch
+  /// (same list scope, or same unique id anywhere) and reinsert fresh.
+  private func rebuildScope(with remoteStocks: [StockResponse], in portfolioListId: String?) throws {
+    let remoteIds = remoteStocks.map(\.id)
+    let listId = portfolioListId ?? ""
+
+    try deleteLegacyRows()
+
+    let conflictingDescriptor = FetchDescriptor<SDPortfolioStock>(
+      predicate: #Predicate { local in
+        (local.ownerUserId == ownerUserId && (local.portfolioListId ?? "") == listId)
+          || remoteIds.contains(local.id)
+      }
+    )
+    let conflictingRows = try modelContext.fetch(conflictingDescriptor)
+    conflictingRows.forEach(modelContext.delete)
+
+    for remote in remoteStocks {
+      let local = SDPortfolioStock(from: remote)
+      local.ownerUserId = ownerUserId
+      local.portfolioListId = listId
+      modelContext.insert(local)
     }
 
     if modelContext.hasChanges {

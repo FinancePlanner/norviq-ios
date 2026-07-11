@@ -6,8 +6,8 @@ import StockPlanShared
 @MainActor
 final class CsvImportFlowViewModel: ObservableObject {
   @Published private(set) var connections: [BrokerConnectionResponse] = []
-  @Published private(set) var providerOptions: [String] = []
-  @Published var selectedProvider: String = "ibkr"
+  @Published private(set) var providerOptions: [String] = CsvImportFlowViewModel.fallbackProviders
+  @Published var selectedProvider: String = "generic"
   @Published private(set) var selectedFileName: String?
   @Published private(set) var previewResponse: CsvImportPreviewResponse?
   @Published private(set) var commitResponse: CsvImportCommitResponse?
@@ -24,6 +24,7 @@ final class CsvImportFlowViewModel: ObservableObject {
   private let portfolioListId: String?
   private var csvData: Data?
   private var hasLoadedProviders = false
+  private static let fallbackProviders = ["generic", "ibkr", "trading212", "degiro", "revolut"]
 
   init(
     brokerService: any BrokerServicing = Container.shared.brokerService(),
@@ -34,11 +35,14 @@ final class CsvImportFlowViewModel: ObservableObject {
   }
 
   var availableProviders: [String] {
-    providerOptions.isEmpty ? ["ibkr"] : providerOptions
+    providerOptions
   }
 
   var canImport: Bool {
-    csvData != nil && previewResponse != nil && !isPreviewing && !isImporting
+    csvData != nil &&
+      (previewResponse?.items.isEmpty == false) &&
+      !isPreviewing &&
+      !isImporting
   }
 
   var ibkrConnection: BrokerConnectionResponse? {
@@ -141,6 +145,11 @@ final class CsvImportFlowViewModel: ObservableObject {
       return false
     }
 
+    guard let previewResponse, !previewResponse.items.isEmpty else {
+      errorMessage = "No valid rows to import."
+      return false
+    }
+
     guard !isImporting else { return false }
 
     isImporting = true
@@ -154,6 +163,14 @@ final class CsvImportFlowViewModel: ObservableObject {
         csvData: csvData
       )
       commitResponse = response
+      let importedRowCount = response.inserted.count + response.updated.count + response.importedLotsCount
+      if !response.errors.isEmpty {
+        return false
+      }
+      if importedRowCount == 0 {
+        errorMessage = "No rows were imported."
+        return false
+      }
       return true
     } catch {
       commitResponse = nil
@@ -223,23 +240,21 @@ final class CsvImportFlowViewModel: ObservableObject {
   }
 
   private func applyProviders(_ providers: [String]) {
-    let normalized = Array(
-      Set(
-        providers
-          .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
-          .filter { !$0.isEmpty }
-      )
-    ).sorted()
+    let normalized = providers
+      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+      .filter { !$0.isEmpty }
 
-    providerOptions = normalized
+    providerOptions = mergeProviders(with: normalized)
+    let currentSelection = selectedProvider.lowercased()
+    selectedProvider = providerOptions.contains(currentSelection) ? currentSelection : (providerOptions.first ?? "generic")
+  }
 
-    if let first = normalized.first {
-      if !normalized.contains(selectedProvider.lowercased()) {
-        selectedProvider = first
-      }
-      return
+  private func mergeProviders(with providers: [String]) -> [String] {
+    var merged = [String]()
+    (Self.fallbackProviders + providers).forEach { provider in
+      if merged.contains(provider) { return }
+      merged.append(provider)
     }
-
-    selectedProvider = "ibkr"
+    return merged
   }
 }

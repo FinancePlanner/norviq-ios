@@ -16,7 +16,7 @@ Status snapshot for the current iOS app scope.
 - [x] Pre-login privacy screen (`PrivacyWelcomeScreen`) highlighting data ownership
 - [x] Pre-login paywall screen (`PreLoginPaywallScreen`) allowing anonymous users to start trials
 - [x] RevenueCat SDK integrated via `BillingManager` with full anonymous-to-authenticated aliasing
-- [x] Local StoreKit testing configuration (`Products.storekit`) setup in Xcode with `pro_weekly`, `pro_monthly`, `pro_annual`
+- [x] Local StoreKit testing configuration (`Products.storekit`) setup in Xcode with `pro_weekly`, `pro_monthly`, `pro_yearly`
 - [x] Amplitude unified SDK integrated via DI (`AnalyticsService`) for tracking events
 - [x] Backend RevenueCat webhook setup and event processing
 
@@ -118,8 +118,8 @@ Status snapshot for the current iOS app scope.
 ### App Store Connect Setup (One-Time)
 
 - [ ] Create app record (bundle ID `com.norviqa.app`, name, SKU)
-- [ ] Create subscription group + 3 products: `pro_annual`, `pro_monthly`, `pro_weekly`
-- [ ] Configure 14-day free trial on `pro_annual`
+- [ ] Create subscription group + 3 products: `pro_yearly`, `pro_monthly`, `pro_weekly`
+- [ ] Configure 7-day free trial introductory offer on `pro_yearly` (must match the offer shown in the app's paywall and the ASC product)
 - [ ] Add app screenshots (6.7" iPhone minimum, required)
 - [ ] Write app description, keywords, support URL, privacy policy URL
 - [ ] Set age rating
@@ -129,7 +129,7 @@ Status snapshot for the current iOS app scope.
 
 - [ ] Set `REVENUECAT_IOS_API_KEY` in Xcode build settings
 - [ ] Set `REVENUECAT_API_KEY` + `REVENUECAT_WEBHOOK_SECRET` on backend production
-- [ ] Configure RevenueCat dashboard: link App Store app, create `pro` entitlement, link products
+- [ ] Configure RevenueCat dashboard: link App Store app, create `pro_access` entitlement, link products
 - [ ] APNS configured on backend (`APNS_TEAM_ID`, `APNS_KEY_ID`, `APNS_PRIVATE_KEY_P8`, `APNS_TOPIC`)
 - [x] MFA working end-to-end (Resend configured with verified domain)
 - [ ] Production server stable with passing health checks
@@ -147,7 +147,7 @@ Status snapshot for the current iOS app scope.
 1. Get Apple Developer account
 2. Create App Store Connect app record + bundle ID
 3. Configure APNS + Apple Sign In
-4. Archive with `Norviqa TestFlight Dev` scheme → upload via Xcode Organizer
+4. Archive with the `financeplan` scheme → upload via Xcode Organizer
 5. Add internal testers (your Apple ID) — no review needed, instant
 6. Set up RevenueCat + subscription products
 7. Test purchases via TestFlight sandbox
@@ -156,9 +156,8 @@ Status snapshot for the current iOS app scope.
 
 ### Already Done
 
-- [x] `Norviqa TestFlight Dev` scheme configured with `Beta` build configuration
-- [x] `AppEnvironmentManager` auto-routes TestFlight builds to `dev-norviq.online`
-- [x] `AppEnvironmentManager` auto-routes App Store builds to `prod-norviq.online`
+- [x] `financeplan` scheme archives with production API configuration
+- [x] `AppEnvironmentManager` auto-routes TestFlight and App Store builds to production
 - [x] Pro paywall UI (`PaywallView`) implemented with all 3 plan options
 - [x] Pro gates on stock detail tabs (Statements, Analysis, Compare, Earnings)
 - [x] Pro gates on expense features (Year Overview, Smart Suggestions, Household Partner, Recurring, Reports, Sync)

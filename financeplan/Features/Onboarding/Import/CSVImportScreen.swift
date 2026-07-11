@@ -51,6 +51,9 @@ struct CSVImportScreen: View {
           .padding(.horizontal, 20)
           .padding(.top, 20)
 
+          CSVImportFormatHint()
+            .padding(.horizontal, 20)
+
           // Upload area
           Button {
             isImporterPresented = true
@@ -83,7 +86,7 @@ struct CSVImportScreen: View {
             .frame(maxWidth: .infinity)
             .appGlassEffect(.rect(cornerRadius: 20))
           }
-          .buttonStyle(PressEffectStyle())
+          .buttonStyle(PressableStyle())
           .padding(.horizontal, 20)
 
           if let selectedFileName = viewModel.selectedFileName {
@@ -112,7 +115,7 @@ struct CSVImportScreen: View {
           }
 
           // Preview
-          if let preview = viewModel.previewResponse, !preview.items.isEmpty {
+          if let preview = viewModel.previewResponse {
             VStack(alignment: .leading, spacing: 12) {
               HStack {
                 Text("Preview")
@@ -127,23 +130,38 @@ struct CSVImportScreen: View {
               .padding(.horizontal, 4)
 
               ForEach(preview.items, id: \.line) { row in
-                HStack {
+                VStack(alignment: .leading, spacing: 6) {
                   Text(row.symbol)
                     .typography(.label, weight: .bold)
 
-                  Spacer()
+                  Text("Shares: \(row.shares?.formatted(.number.precision(.fractionLength(0...6))) ?? "-")")
+                    .typography(.small)
 
-                  VStack(alignment: .trailing, spacing: 2) {
-                    Text("Qty: \(row.shares?.formatted(.number.precision(.fractionLength(0...6))) ?? "-")")
+                  Text("Buy price: \(row.buyPrice.map { $0.currency } ?? "-")")
+                    .typography(.small)
+                    .foregroundStyle(.secondary)
+
+                  if let buyDate = row.buyDate, !buyDate.isEmpty {
+                    Text("Buy date: \(buyDate)")
                       .typography(.small)
-                    Text((row.buyPrice ?? 0).currency)
-                      .typography(.nano)
+                      .foregroundStyle(.secondary)
+                  }
+
+                  if let notes = row.notes, !notes.isEmpty {
+                    Text("Notes: \(notes)")
+                      .typography(.small)
                       .foregroundStyle(.secondary)
                   }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .appGlassEffect(.rect(cornerRadius: 14))
+              }
+
+              if preview.items.isEmpty {
+                Text("No valid rows found in this file.")
+                  .typography(.caption)
+                  .foregroundStyle(.secondary)
               }
             }
             .padding(.horizontal, 20)
@@ -172,7 +190,38 @@ struct CSVImportScreen: View {
               }
               .padding(.horizontal, 20)
             }
-          } else if viewModel.errorMessage == nil {
+          }
+
+          if let commitResponse = viewModel.commitResponse {
+            VStack(alignment: .leading, spacing: 12) {
+              Text("Import result")
+                .typography(.small, weight: .semibold)
+
+              Text("Inserted: \(commitResponse.inserted.count) • Updated: \(commitResponse.updated.count) • Imported lots: \(commitResponse.importedLotsCount)")
+                .typography(.caption)
+                .foregroundStyle(.secondary)
+
+              ForEach(commitResponse.errors, id: \.line) { error in
+                VStack(alignment: .leading, spacing: 4) {
+                  Text("Line \(error.line)")
+                    .typography(.caption)
+                    .foregroundStyle(.secondary)
+                  Text(error.message)
+                    .typography(.small)
+                    .foregroundStyle(AppTheme.Colors.danger)
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                  RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(AppTheme.Colors.danger.opacity(0.08))
+                )
+              }
+            }
+            .padding(.horizontal, 20)
+          }
+
+          if viewModel.previewResponse == nil, viewModel.errorMessage == nil {
             VStack(spacing: 8) {
               Image(systemName: "doc.text.magnifyingglass")
                 .font(.title2)

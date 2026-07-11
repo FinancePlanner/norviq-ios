@@ -41,7 +41,7 @@ final class SDWatchlistItem {
         self.note = response.note
         self.status = response.status.rawValue
         self.nextReviewAt = response.nextReviewAt
-        self.watchlistListId = nil
+        self.watchlistListId = response.watchlistListId
         self.lastSyncedAt = Date()
     }
 
@@ -50,7 +50,7 @@ final class SDWatchlistItem {
         self.note = response.note
         self.status = response.status.rawValue
         self.nextReviewAt = response.nextReviewAt
-        self.watchlistListId = nil
+        self.watchlistListId = response.watchlistListId
         self.lastSyncedAt = Date()
     }
 }

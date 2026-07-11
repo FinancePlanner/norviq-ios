@@ -31,6 +31,7 @@ struct DashboardRoot: View {
   @State private var portfolioChartPoints: [ChartDataPoint] = []
   @State private var spendingChartPoints: [ChartDataPoint] = []
   @State private var isQuickAddPresented = false
+  @State private var isChartBuilderPresented = false
   @State private var hasLoadedContent = false
 
   private let dashboardService: any DashboardServicing = Container.shared.dashboardService()
@@ -120,15 +121,22 @@ struct DashboardRoot: View {
             onPortfolioTap: showPortfolioTab,
             onExpensesTap: showExpensesTab,
             onReportsTap: showReportsTab,
+            onChartBuilderTap: presentChartBuilder,
             onQuickAddTap: presentQuickAdd
           )
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 20)
+        // Center the dashboard column on iPad rather than stretching data
+        // edge-to-edge (Guideline 4). Background below still fills the screen.
+        .maxContentWidth(regularSizeClass: ContentWidth.dense)
       }
       .background(MeshGradientBackground())
       .navigationTitle(greetingText)
       .navigationBarTitleDisplayMode(.large)
+      .navigationDestination(isPresented: $isChartBuilderPresented) {
+        ChartBuilderStandaloneScreen()
+      }
       .task {
         await handleInitialTask()
       }
@@ -205,6 +213,10 @@ struct DashboardRoot: View {
 
   private func presentQuickAdd() {
     isQuickAddPresented = true
+  }
+
+  private func presentChartBuilder() {
+    isChartBuilderPresented = true
   }
 
   private func handleSearchQueryChange() {
@@ -362,6 +374,7 @@ private struct DashboardContentSection: View {
   let onPortfolioTap: () -> Void
   let onExpensesTap: () -> Void
   let onReportsTap: () -> Void
+  let onChartBuilderTap: () -> Void
   let onQuickAddTap: () -> Void
 
   @Environment(\.colorScheme) private var colorScheme
@@ -380,6 +393,7 @@ private struct DashboardContentSection: View {
         onReportsTap: onReportsTap
       )
       .redacted(reason: isHomeMetricsRedacted ? .placeholder : [])
+      .appAnimation(AppMotion.state, value: isHomeMetricsRedacted)
 
       if isSearchResultsVisible {
         AssetSearchCard(viewModel: searchViewModel)
@@ -394,6 +408,10 @@ private struct DashboardContentSection: View {
         financialHealthUnavailable: financialHealthUnavailable
       )
 
+      MacroTeaserCard()
+
+      ChartBuilderDashboardCard(onOpen: onChartBuilderTap)
+
       QuickAddEntryButton(action: onQuickAddTap)
 
       DisclosureGroup(LocalizedStringKey("More Insights")) {
@@ -405,6 +423,7 @@ private struct DashboardContentSection: View {
       }
       .tint(AppTheme.Colors.tint(for: colorScheme))
     }
+    .appAnimation(AppMotion.structural, value: isSearchResultsVisible)
   }
 }
 
@@ -500,9 +519,10 @@ private struct DashboardHeroCard: View {
 
         VStack(alignment: .leading, spacing: 8) {
           Text(currentValue.currency)
-            .typography(.display, weight: .bold)
+            .typography(.displayNumber)
             .lineLimit(1)
-            .contentTransition(.numericText())
+            .contentTransition(.numericText(value: currentValue))
+            .appAnimation(AppMotion.state, value: currentValue)
 
           HStack(spacing: 4) {
             Image(systemName: deltaSymbol).accessibilityHidden(true)
@@ -598,6 +618,8 @@ private struct FocusListCard: View {
               ProgressView()
             }
           }
+          .frame(width: 44, height: 44)
+          .contentShape(.rect)
           .buttonStyle(.plain)
           .disabled(viewModel.isSubmitting || viewModel.draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
@@ -708,52 +730,6 @@ private struct AssetSearchCard: View {
         }
       }
     }
-  }
-}
-
-private struct DashboardActionButton: View {
-  let title: String
-  let symbol: String
-  let tint: Color
-  var isDisabled: Bool = false
-  let action: () -> Void
-
-  var body: some View {
-    Group {
-      Button(action: action) {
-        actionContent
-          .padding(.vertical, 12)
-      }
-      .buttonStyle(.bordered)
-      .tint(tint)
-      .opacity(isDisabled ? 0.6 : 1.0)
-      .disabled(isDisabled)
-    }
-  }
-
-  private var actionContent: some View {
-    VStack(spacing: 8) {
-      Image(systemName: symbol)
-        .accessibilityHidden(true)
-        .font(.headline.weight(.semibold))
-        .foregroundStyle(isDisabled ? .secondary.opacity(0.8) : tint)
-
-      HStack(spacing: 4) {
-        Text(title)
-          .typography(.nano, weight: .semibold)
-          .foregroundStyle(isDisabled ? .secondary : tint)
-
-        if isDisabled {
-          Text("Soon")
-            .font(.system(size: 8, weight: .bold, design: .rounded))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 4)
-            .padding(.vertical, 1)
-            .background(Color.red, in: Capsule())
-        }
-      }
-    }
-    .frame(maxWidth: .infinity)
   }
 }
 

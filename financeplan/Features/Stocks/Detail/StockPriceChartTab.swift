@@ -57,7 +57,11 @@ struct StockPriceChartTab: View {
                             .foregroundStyle(AppTheme.Colors.danger)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else if let series, !series.points.isEmpty {
-                        StockPriceChart(series: series)
+                        if hasOHLCData(series.points) {
+                            CandlestickChart(series: series)
+                        } else {
+                            StockPriceChart(series: series)
+                        }
                     } else {
                         Text("No price chart data is available for this symbol yet.")
                             .typography(.small)
@@ -145,5 +149,84 @@ private struct StockPriceChart: View {
                 AxisMarks(values: .automatic(desiredCount: 4))
             }
         }
+    }
+}
+
+// MARK: - Candlestick Chart (OHLC)
+
+private func hasOHLCData(_ points: [PriceChartPoint]) -> Bool {
+    points.contains { $0.open != nil && $0.high != nil && $0.low != nil }
+}
+
+private struct CandlestickChart: View {
+    let series: PriceChartSeries
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var latestPoint: PriceChartPoint? {
+        series.points.last
+    }
+
+    private var change: Double? {
+        guard let first = series.points.first?.close, let latest = latestPoint?.close, first > 0 else { return nil }
+        return (latest - first) / first
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(latestPoint?.close.currency ?? "Pending")
+                        .typography(.title, weight: .bold)
+                        .monospacedDigit()
+
+                    Text("\(series.symbol.uppercased()) · \(series.range) • Candlestick")
+                        .typography(.nano, weight: .semibold)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text(change.map { StockMetricFormatter.signedPercentText($0) } ?? "—")
+                    .typography(.caption, weight: .bold)
+                    .foregroundStyle((change ?? 0) >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.secondary.opacity(0.10), in: Capsule())
+            }
+
+            Chart(series.points, id: \.date) { point in
+                // Wick: high to low
+                RuleMark(
+                    x: .value("Date", point.date),
+                    yStart: .value("Low", point.low ?? point.close),
+                    yEnd: .value("High", point.high ?? point.close)
+                )
+                .lineStyle(.init(lineWidth: 1.5))
+                .foregroundStyle(colorFor(point))
+
+                // Body: open to close
+                BarMark(
+                    x: .value("Date", point.date),
+                    yStart: .value("Open", min(point.open ?? point.close, point.close)),
+                    yEnd: .value("Close", max(point.open ?? point.close, point.close)),
+                    width: .ratio(0.6)
+                )
+                .foregroundStyle(colorFor(point))
+                .cornerRadius(1)
+            }
+            .frame(height: 260)
+            .chartYAxis {
+                AxisMarks(position: .leading)
+            }
+            .chartXAxis {
+                AxisMarks(values: .automatic(desiredCount: 4))
+            }
+        }
+    }
+
+    private func colorFor(_ point: PriceChartPoint) -> Color {
+        let isUp = (point.close >= (point.open ?? point.close))
+        return isUp ? AppTheme.Colors.success : AppTheme.Colors.danger
     }
 }

@@ -3,6 +3,7 @@ import Foundation
 import Observation
 import PostHog
 import RevenueCat
+import StoreKit
 import StockPlanShared
 import UIKit
 
@@ -10,36 +11,51 @@ import UIKit
 @Observable
 final class BillingManager {
   typealias BillingClientFactory = @MainActor @Sendable (URL, String?) -> BillingHTTPClient
+  typealias RevenueCatAPIKeyProvider = @MainActor @Sendable () -> String?
+  typealias SubscriptionURLOpener = @MainActor @Sendable (URL) -> Void
+  typealias AppleSubscriptionManagementOpener = @MainActor @Sendable () async throws -> Bool
 
   private enum Keys {
     static let entitlementLevel = "billing.entitlement_level"
     static let isPro = "billing.is_pro"
     static let generatedAt = "billing.generated_at"
+    static let pendingBackendSync = "billing.pending_backend_sync"
   }
 
   private enum Constants {
-    static let entitlementID = "pro"
-    static let annualProductID = "pro_annual"
+    static let entitlementID = "pro_access"
+    static let annualProductID = "pro_yearly"
+    static let legacyAnnualProductID = "pro_annual"
     static let monthlyProductID = "pro_monthly"
     static let weeklyProductID = "pro_weekly"
   }
 
+  static var revenueCatEntitlementID: String { Constants.entitlementID }
+  static var annualProductID: String { Constants.annualProductID }
+
   var context: BillingContextResponse?
   var packages: [Package] = []
-  var selectedPackage: Package?
+  var selectedProductID = Constants.annualProductID
+  var selectedPackage: Package? {
+    packages.first { $0.storeProduct.productIdentifier == selectedProductID }
+  }
   var isLoading = false
   var isPurchasing = false
   var isRestoring = false
-  var isRedeemingCoupon = false
   var errorMessage: String?
-  var couponRedemptionMessage: String?
+  var restoreStatusMessage: String?
+  var restoreStatusIsSuccess = false
 
   private let environmentManager: AppEnvironmentManager
   private let authSessionManager: AuthSessionManaging
   private let sessionStore: AuthSessionStoring
   private let billingClientFactory: BillingClientFactory
+  private let revenueCatAPIKeyProvider: RevenueCatAPIKeyProvider
+  private let subscriptionURLOpener: SubscriptionURLOpener
+  private let appleSubscriptionManagementOpener: AppleSubscriptionManagementOpener
   private var configuredUserID: String?
   private var didConfigureRevenueCat = false
+  private var hasUserSelectedProduct = false
   private let uiTestBillingTier: String?
 
   init(
@@ -51,27 +67,91 @@ final class BillingManager {
         baseURL: baseURL,
         authTokenProvider: { token }
       )
-    }
+    },
+    revenueCatAPIKeyProvider: @escaping RevenueCatAPIKeyProvider = {
+      Bundle.main.object(forInfoDictionaryKey: "RevenueCatAPIKey") as? String
+    },
+    subscriptionURLOpener: @escaping SubscriptionURLOpener = { url in
+      UIApplication.shared.open(url)
+    },
+    appleSubscriptionManagementOpener: @escaping AppleSubscriptionManagementOpener = BillingManager.defaultAppleSubscriptionManagementOpener
   ) {
     self.environmentManager = environmentManager
     self.authSessionManager = authSessionManager
     self.sessionStore = sessionStore
     self.billingClientFactory = billingClientFactory
+    self.revenueCatAPIKeyProvider = revenueCatAPIKeyProvider
+    self.subscriptionURLOpener = subscriptionURLOpener
+    self.appleSubscriptionManagementOpener = appleSubscriptionManagementOpener
     self.uiTestBillingTier = Self.normalizedUITestBillingTier()
     loadCachedEntitlement()
     applyUITestBillingContextIfNeeded()
   }
 
   var isPro: Bool {
+    #if DEBUG
     if ProcessInfo.processInfo.arguments.contains("-ui_test_pro_user") {
       return true
     }
-    return context.map { $0.isPremium || $0.entitlementLevel == "pro" || $0.entitlementLevel.hasPrefix("pro_") }
+    #endif
+    return context.map(Self.isPremiumContext)
       ?? UserDefaults.standard.bool(forKey: Keys.isPro)
   }
 
   var trialDaysRemaining: Int? {
     context?.trialDaysRemaining
+  }
+
+  /// True when the user's free trial has ended and they are not currently entitled.
+  /// Drives the trial-ended banner on Home. Stays false for never-trialed free users
+  /// and active subscribers, so the banner only shows to expired-trial users.
+  var shouldShowTrialEndedBanner: Bool {
+    guard !isPro else { return false }
+    return context?.trialExpired ?? false
+  }
+
+  var currentPlanID: String {
+    context?.subscription?.plan ?? context?.plan ?? selectedProductID
+  }
+
+  var currentPlanDisplayName: String {
+    Self.planDisplayName(for: currentPlanID)
+  }
+
+  var subscriptionRenewsOrExpiresAt: Date? {
+    context?.subscription?.renewsOrExpiresAt
+  }
+
+  var subscriptionAccessEndsAt: Date? {
+    context?.subscription?.accessEndsAt ?? context?.subscription?.periodEndsAt
+  }
+
+  var isCancelledButActive: Bool {
+    context?.subscription?.isCancelledButActive ?? false
+  }
+
+  var hasBillingIssue: Bool {
+    context?.subscription?.hasBillingIssue ?? false
+  }
+
+  var pendingPlanDisplayName: String? {
+    guard let pendingPlan = context?.subscription?.pendingPlan, !pendingPlan.isEmpty else {
+      return nil
+    }
+    return Self.planDisplayName(for: pendingPlan)
+  }
+
+  var pendingPlanEffectiveAt: Date? {
+    context?.subscription?.pendingPlanEffectiveAt
+  }
+
+  var availableUpgradePlanOptions: [BillingPlanOptionDTO] {
+    let options = context?.planOptions.isEmpty == false
+      ? context?.planOptions ?? []
+      : Self.fallbackPlanOptions(currentPlan: currentPlanID, isPremium: isPro)
+    return options
+      .map(Self.normalizedPlanOption)
+      .filter { $0.changeKind == "upgrade" }
   }
 
   /// Returns whether a named feature is available for the current user.
@@ -98,15 +178,71 @@ final class BillingManager {
     packages.first { $0.storeProduct.productIdentifier == Constants.weeklyProductID }
   }
 
-  var selectedProductID: String {
-    selectedPackage?.storeProduct.productIdentifier ?? Constants.annualProductID
+  /// True when the selected StoreKit product includes a free-trial introductory offer.
+  var selectedPlanHasFreeTrial: Bool {
+    guard let intro = selectedPackage?.storeProduct.introductoryDiscount else { return false }
+    return intro.paymentMode == .freeTrial
+  }
+
+  /// Returns the number of free trial days for the given package (if it advertises a free trial introductory offer).
+  /// This value comes from the App Store product metadata via RevenueCat and will be nil when no
+  /// introductory offer is configured in App Store Connect.
+  func freeTrialDays(for package: Package?) -> Int? {
+    guard let intro = package?.storeProduct.introductoryDiscount,
+          intro.paymentMode == .freeTrial else {
+      return nil
+    }
+    return Self.trialDays(from: intro.subscriptionPeriod)
+  }
+
+  /// Dynamic subtitle for the Annual plan card. Shows the real free trial length when an
+  /// introductory offer exists on the product (from ASC), otherwise a safe value label.
+  /// This prevents the UI from advertising a trial that the sandbox (or production) payment
+  /// sheet will not actually present.
+  var annualPlanSubtitle: String {
+    if let days = freeTrialDays(for: annualPackage) {
+      return days == 1 ? "1-day free trial" : "\(days)-day free trial"
+    }
+    return "Best value"
+  }
+
+  /// Primary paywall button title — trial wording only when StoreKit confirms a free trial.
+  var purchaseCTATitle: String {
+    guard selectedPackage != nil else {
+      return "Subscriptions Unavailable"
+    }
+    guard selectedPlanHasFreeTrial, let trialDays = selectedPlanFreeTrialDays else {
+      return "Subscribe"
+    }
+    return trialDays == 1 ? "Start Free Trial" : "Start \(trialDays)-Day Free Trial"
+  }
+
+  var canPurchaseSelectedPackage: Bool {
+    selectedPackage != nil
+  }
+
+  /// Auto-renew disclosure required near the subscribe button (Guideline 3.1.2).
+  var subscriptionDisclosureText: String {
+    guard let product = selectedPackage?.storeProduct else {
+      return "Subscriptions are currently unavailable. Please try again later."
+    }
+
+    let price = product.localizedPriceString
+    let periodLabel = Self.subscriptionPeriodLabel(for: product)
+
+    if selectedPlanHasFreeTrial, let trialDays = selectedPlanFreeTrialDays {
+      return
+        "After your \(trialDays)-day free trial, you will be charged \(price)\(periodLabel) unless you cancel. \(Self.defaultSubscriptionDisclosure)"
+    }
+
+    return "\(price)\(periodLabel) will be charged to your Apple ID account at confirmation of purchase. \(Self.defaultSubscriptionDisclosure)"
   }
 
   func configureAnonymousIfNeeded() {
     guard uiTestBillingTier == nil else { return }
     guard !didConfigureRevenueCat else { return }
-    guard let apiKey = Bundle.main.object(forInfoDictionaryKey: "RevenueCatAPIKey") as? String,
-          !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+    guard let apiKey = revenueCatAPIKeyProvider()?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !apiKey.isEmpty,
           !apiKey.contains("$(") else {
       errorMessage = "RevenueCat API key is not configured."
       return
@@ -129,25 +265,38 @@ final class BillingManager {
     guard configuredUserID != userID else { return }
     configuredUserID = userID
 
-    guard let apiKey = Bundle.main.object(forInfoDictionaryKey: "RevenueCatAPIKey") as? String,
-          !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+    guard let apiKey = revenueCatAPIKeyProvider()?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !apiKey.isEmpty,
           !apiKey.contains("$(") else {
       errorMessage = "RevenueCat API key is not configured."
       return
     }
 
     if didConfigureRevenueCat {
-      Purchases.shared.logIn(userID) { _, _, error in
-        if let error {
-          Task { @MainActor in
-            self.errorMessage = error.localizedDescription
-          }
-        }
+      Task {
+        await performRevenueCatLogin(userID: userID)
       }
     } else {
       Purchases.configure(withAPIKey: apiKey, appUserID: userID)
       didConfigureRevenueCat = true
     }
+  }
+
+  /// Links RevenueCat identity after sign-in and syncs entitlements with the backend.
+  /// Call after authentication and when reconciling anonymous pre-login purchases.
+  func linkCurrentUserAndSyncEntitlements() async {
+    guard uiTestBillingTier == nil else { return }
+
+    let userID = await sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !userID.isEmpty else { return }
+
+    if configuredUserID != userID {
+      configureRevenueCat(userID: userID)
+    } else if didConfigureRevenueCat, Purchases.shared.isAnonymous {
+      await performRevenueCatLogin(userID: userID)
+    }
+
+    await reconcilePendingBackendSyncIfNeeded()
   }
 
   func refreshBillingContext() async {
@@ -175,20 +324,25 @@ final class BillingManager {
       let offerings = try await Purchases.shared.offerings()
       let availablePackages = offerings.current?.availablePackages ?? []
       packages = availablePackages
-      selectedPackage = availablePackages.first { $0.storeProduct.productIdentifier == Constants.annualProductID }
-        ?? availablePackages.first
+      if !hasUserSelectedProduct {
+        selectedProductID = availablePackages.first { $0.storeProduct.productIdentifier == Constants.annualProductID }
+          .map { $0.storeProduct.productIdentifier }
+          ?? availablePackages.first?.storeProduct.productIdentifier
+          ?? Constants.annualProductID
+      }
     } catch {
       errorMessage = error.localizedDescription
     }
   }
 
   func select(productID: String) {
-    selectedPackage = packages.first { $0.storeProduct.productIdentifier == productID }
+    selectedProductID = productID
+    hasUserSelectedProduct = true
   }
 
   func purchaseSelectedPackage() async -> Bool {
     guard let selectedPackage else {
-      errorMessage = "No Pro plan is available. Please try again later."
+      errorMessage = "\(selectedPlanDisplayName) plan is currently unavailable. Please try again later."
       return false
     }
 
@@ -203,19 +357,21 @@ final class BillingManager {
 
     isPurchasing = true
     errorMessage = nil
+    clearRestoreStatus()
     defer { isPurchasing = false }
 
     do {
       let result = try await Purchases.shared.purchase(package: selectedPackage)
       guard !result.userCancelled else { return false }
-      // PostHog: Track successful subscription purchase
       PostHogSDK.shared.capture("subscription_purchased", properties: [
         "product_id": selectedPackage.storeProduct.productIdentifier,
       ])
-      
-      if !userID.isEmpty {
-        try await restoreBackendEntitlement()
+
+      if result.customerInfo.entitlements[Constants.entitlementID]?.isActive == true {
+        applyOptimisticPro(from: result.customerInfo)
       }
+
+      await syncBackendEntitlement()
       return true
     } catch {
       errorMessage = error.localizedDescription
@@ -226,81 +382,258 @@ final class BillingManager {
   func restorePurchases() async {
     guard uiTestBillingTier == nil else {
       applyUITestBillingContextIfNeeded()
+      recordRestoreResult(foundActiveRevenueCatEntitlement: isPro, syncedContext: context)
       return
     }
-    configureForCurrentUser()
-    guard didConfigureRevenueCat else { return }
+    await configureRevenueCatForCurrentSession()
+    guard didConfigureRevenueCat else {
+      if errorMessage == nil {
+        errorMessage = "Subscriptions are currently unavailable. Please try again later."
+      }
+      return
+    }
 
     isRestoring = true
     errorMessage = nil
+    clearRestoreStatus()
     defer { isRestoring = false }
 
     do {
-      _ = try await Purchases.shared.restorePurchases()
-      try await restoreBackendEntitlement()
-      // PostHog: Track successful subscription restore
-      PostHogSDK.shared.capture("subscription_restored")
+      let customerInfo = try await Purchases.shared.restorePurchases()
+      let foundActiveEntitlement = customerInfo.entitlements[Constants.entitlementID]?.isActive == true
+      if foundActiveEntitlement {
+        applyOptimisticPro(from: customerInfo)
+      }
+      let syncedContext = await syncBackendEntitlement()
+      recordRestoreResult(foundActiveRevenueCatEntitlement: foundActiveEntitlement, syncedContext: syncedContext)
+      if restoreStatusIsSuccess {
+        PostHogSDK.shared.capture("subscription_restored")
+      } else {
+        PostHogSDK.shared.capture("subscription_restore_no_active_purchase")
+      }
     } catch {
       errorMessage = error.localizedDescription
+      clearRestoreStatus()
     }
   }
 
-  func redeemCoupon(code: String) async {
-    let trimmedCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmedCode.isEmpty else {
-      errorMessage = "Enter a coupon code."
-      couponRedemptionMessage = nil
+  private func configureRevenueCatForCurrentSession() async {
+    let userID = await sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+    if userID.isEmpty {
+      configureAnonymousIfNeeded()
+    } else {
+      configureRevenueCat(userID: userID)
+    }
+  }
+
+  func manageSubscription() async {
+    guard uiTestBillingTier == nil else {
+      await openAppleSubscriptionManagementOrSetError()
       return
     }
 
-    isRedeemingCoupon = true
-    errorMessage = nil
-    couponRedemptionMessage = nil
-    defer { isRedeemingCoupon = false }
+    let userID = await sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !userID.isEmpty else {
+      await openAppleSubscriptionManagementOrSetError()
+      return
+    }
 
+    errorMessage = nil
+    clearRestoreStatus()
     do {
-      let response = try await billingClient(forceRefresh: false).redeemCoupon(code: trimmedCode)
-      if let context = response.billingContext {
-        apply(context)
-      }
-      couponRedemptionMessage = isPro
-        ? "Coupon redeemed. Pro is active."
-        : "Coupon redeemed."
+      let response = try await billingClient(forceRefresh: false).createManagementURL()
+      subscriptionURLOpener(response.managementURL)
     } catch let error as BillingHTTPClient.Error where error.isUnauthorized {
       do {
-        let response = try await billingClient(forceRefresh: true).redeemCoupon(code: trimmedCode)
-        if let context = response.billingContext {
-          apply(context)
-        }
-        couponRedemptionMessage = isPro
-          ? "Coupon redeemed. Pro is active."
-          : "Coupon redeemed."
+        let response = try await billingClient(forceRefresh: true).createManagementURL()
+        subscriptionURLOpener(response.managementURL)
       } catch {
-        errorMessage = error.localizedDescription
+        await openAppleSubscriptionManagementOrSetError()
       }
     } catch {
-      errorMessage = error.localizedDescription
+      await openAppleSubscriptionManagementOrSetError()
     }
-  }
-
-  func manageSubscription() {
-    guard let url = URL(string: "https://apps.apple.com/account/subscriptions") else { return }
-    UIApplication.shared.open(url)
   }
 
   func clearCache() {
     context = nil
     packages = []
-    selectedPackage = nil
+    selectedProductID = Constants.annualProductID
+    hasUserSelectedProduct = false
     configuredUserID = nil
+    clearRestoreStatus()
     UserDefaults.standard.removeObject(forKey: Keys.entitlementLevel)
     UserDefaults.standard.removeObject(forKey: Keys.isPro)
     UserDefaults.standard.removeObject(forKey: Keys.generatedAt)
+    UserDefaults.standard.removeObject(forKey: Keys.pendingBackendSync)
   }
 
-  private func restoreBackendEntitlement() async throws {
-    let context = try await billingClient(forceRefresh: false).restorePurchases()
+  func reconcilePendingBackendSyncIfNeeded() async {
+    guard uiTestBillingTier == nil else { return }
+    guard UserDefaults.standard.bool(forKey: Keys.pendingBackendSync) else { return }
+    await syncBackendEntitlement()
+  }
+
+  private func restoreBackendEntitlement(forceRefresh: Bool = false) async throws -> BillingContextResponse {
+    let context = try await billingClient(forceRefresh: forceRefresh).restorePurchases()
     apply(context)
+    return context
+  }
+
+  @discardableResult
+  private func syncBackendEntitlement(maxAttempts: Int = 3) async -> BillingContextResponse? {
+    let userID = await sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !userID.isEmpty else { return nil }
+
+    var delayNanoseconds: UInt64 = 500_000_000
+
+    for attempt in 1...maxAttempts {
+      do {
+        let context = try await restoreBackendEntitlement()
+        clearPendingBackendSync()
+        return context
+      } catch let error as BillingHTTPClient.Error where error.isUnauthorized {
+        do {
+          let context = try await restoreBackendEntitlement(forceRefresh: true)
+          clearPendingBackendSync()
+          return context
+        } catch {
+          if attempt == maxAttempts {
+            markPendingBackendSync()
+            return nil
+          }
+        }
+      } catch {
+        if attempt == maxAttempts {
+          markPendingBackendSync()
+          return nil
+        }
+      }
+
+      try? await Task.sleep(nanoseconds: delayNanoseconds)
+      delayNanoseconds *= 2
+    }
+
+    return nil
+  }
+
+  private func performRevenueCatLogin(userID: String) async {
+    do {
+      let (customerInfo, _) = try await Purchases.shared.logIn(userID)
+      if customerInfo.entitlements[Constants.entitlementID]?.isActive == true {
+        applyOptimisticPro(from: customerInfo)
+      }
+      await syncBackendEntitlement()
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  private func applyOptimisticPro(from customerInfo: CustomerInfo) {
+    guard customerInfo.entitlements[Constants.entitlementID]?.isActive == true else { return }
+
+    let productID = customerInfo.entitlements[Constants.entitlementID]?.productIdentifier
+      ?? selectedProductID
+    let entitlementLevel = productID.hasPrefix("pro_") ? productID : "pro"
+
+    apply(
+      BillingContextResponse(
+        plan: entitlementLevel,
+        entitlementLevel: entitlementLevel,
+        isPremium: true,
+        subscription: nil,
+        features: context?.features ?? [],
+        usage: context?.usage ?? [],
+        trialDaysRemaining: context?.trialDaysRemaining,
+        isTrialActive: context?.isTrialActive ?? false,
+        generatedAt: Date()
+      )
+    )
+  }
+
+  private func markPendingBackendSync() {
+    UserDefaults.standard.set(true, forKey: Keys.pendingBackendSync)
+  }
+
+  private func clearPendingBackendSync() {
+    UserDefaults.standard.removeObject(forKey: Keys.pendingBackendSync)
+  }
+
+  func recordRestoreResult(
+    foundActiveRevenueCatEntitlement: Bool,
+    syncedContext: BillingContextResponse?
+  ) {
+    if let syncedContext {
+      apply(syncedContext)
+    }
+
+    let restoredPremium = foundActiveRevenueCatEntitlement || syncedContext.map(Self.isPremiumContext) == true
+    restoreStatusIsSuccess = restoredPremium
+    restoreStatusMessage = restoredPremium
+      ? "Purchases restored. Pro is active."
+      : "No active purchases found for this account."
+  }
+
+  private func clearRestoreStatus() {
+    restoreStatusMessage = nil
+    restoreStatusIsSuccess = false
+  }
+
+  @MainActor
+  static func defaultAppleSubscriptionManagementOpener() async throws -> Bool {
+    let fallbackURL = URL(string: "https://apps.apple.com/account/subscriptions")!
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    if let scene = scenes.first(where: { $0.activationState == .foregroundActive })
+        ?? scenes.first(where: { $0.activationState == .foregroundInactive }) {
+      do {
+        try await AppStore.showManageSubscriptions(in: scene)
+        return true
+      } catch {
+        return await UIApplication.shared.open(fallbackURL)
+      }
+    }
+    return await UIApplication.shared.open(fallbackURL)
+  }
+
+  private static let defaultSubscriptionDisclosure =
+    "Payment will be charged to your Apple ID account. Subscription automatically renews unless it is canceled at least 24 hours before the end of the current period. Your account will be charged for renewal within 24 hours prior to the end of the current period. You can manage and cancel your subscriptions in your App Store account settings."
+
+  private var selectedPlanFreeTrialDays: Int? {
+    freeTrialDays(for: selectedPackage)
+  }
+
+  private static func trialDays(from period: RevenueCat.SubscriptionPeriod) -> Int {
+    switch period.unit {
+    case .day:
+      return period.value
+    case .week:
+      return period.value * 7
+    case .month:
+      return period.value * 30
+    case .year:
+      return period.value * 365
+    @unknown default:
+      return period.value
+    }
+  }
+
+  private static func subscriptionPeriodLabel(for product: StoreProduct) -> String {
+    guard let period = product.subscriptionPeriod else { return "" }
+
+    switch period.unit {
+    case .day where period.value == 7:
+      return "/wk"
+    case .day:
+      return "/\(period.value)d"
+    case .week:
+      return period.value == 1 ? "/wk" : "/\(period.value)wks"
+    case .month:
+      return period.value == 1 ? "/mo" : "/\(period.value)mo"
+    case .year:
+      return period.value == 1 ? "/yr" : "/\(period.value)yr"
+    @unknown default:
+      return ""
+    }
   }
 
   private func performLoading(_ operation: () async throws -> Void) async {
@@ -329,14 +662,122 @@ final class BillingManager {
     return billingClientFactory(environmentManager.current.apiBaseUrl, token)
   }
 
+  private func openAppleSubscriptionManagementOrSetError() async {
+    do {
+      if try await appleSubscriptionManagementOpener() {
+        return
+      }
+    } catch {}
+    errorMessage = "Could not open subscription management. Please try again."
+  }
+
   private func apply(_ context: BillingContextResponse) {
     self.context = context
     UserDefaults.standard.set(context.entitlementLevel, forKey: Keys.entitlementLevel)
-    UserDefaults.standard.set(
-      context.isPremium || context.entitlementLevel == "pro" || context.entitlementLevel.hasPrefix("pro_"),
-      forKey: Keys.isPro
-    )
+    UserDefaults.standard.set(Self.isPremiumContext(context), forKey: Keys.isPro)
     UserDefaults.standard.set(context.generatedAt, forKey: Keys.generatedAt)
+  }
+
+  private static func isPremiumContext(_ context: BillingContextResponse) -> Bool {
+    context.isPremium || context.entitlementLevel == "pro" || context.entitlementLevel.hasPrefix("pro_")
+  }
+
+  private var selectedPlanDisplayName: String {
+    Self.planDisplayName(for: selectedProductID).replacingOccurrences(of: " Plan", with: "")
+  }
+
+  static func planDisplayName(for productID: String) -> String {
+    switch productID {
+    case Constants.annualProductID, Constants.legacyAnnualProductID:
+      return "Annual Plan"
+    case Constants.monthlyProductID:
+      return "Monthly Plan"
+    case Constants.weeklyProductID:
+      return "Weekly Plan"
+    case "free":
+      return "Free Plan"
+    case "pro":
+      return "Pro"
+    default:
+      return "Pro"
+    }
+  }
+
+  private static func fallbackPlanOptions(currentPlan: String, isPremium: Bool) -> [BillingPlanOptionDTO] {
+    let currentRank = planRank(currentPlan)
+    return [
+      makePlanOption(productID: Constants.weeklyProductID, displayName: "Weekly", interval: "weekly", rank: 1, currentRank: currentRank, isPremium: isPremium, badge: nil),
+      makePlanOption(productID: Constants.monthlyProductID, displayName: "Monthly", interval: "monthly", rank: 2, currentRank: currentRank, isPremium: isPremium, badge: "Better value"),
+      makePlanOption(productID: Constants.annualProductID, displayName: "Annual", interval: "annual", rank: 3, currentRank: currentRank, isPremium: isPremium, badge: "Best value"),
+    ]
+  }
+
+  private static func makePlanOption(
+    productID: String,
+    displayName: String,
+    interval: String,
+    rank: Int,
+    currentRank: Int,
+    isPremium: Bool,
+    badge: String?
+  ) -> BillingPlanOptionDTO {
+    let changeKind: String
+    if rank == currentRank {
+      changeKind = "current"
+    } else if !isPremium {
+      changeKind = "subscribe"
+    } else if currentRank > 0, rank > currentRank {
+      changeKind = "upgrade"
+    } else if currentRank > 0, rank < currentRank {
+      changeKind = "downgrade"
+    } else {
+      changeKind = "subscribe"
+    }
+    return BillingPlanOptionDTO(
+      productId: productID,
+      plan: productID,
+      displayName: displayName,
+      interval: interval,
+      rank: rank,
+      badge: badge,
+      isCurrent: changeKind == "current",
+      changeKind: changeKind
+    )
+  }
+
+  private static func normalizedPlanOption(_ option: BillingPlanOptionDTO) -> BillingPlanOptionDTO {
+    let productID = normalizedProductID(option.productId)
+    let plan = normalizedProductID(option.plan)
+    guard productID != option.productId || plan != option.plan else {
+      return option
+    }
+    return BillingPlanOptionDTO(
+      productId: productID,
+      plan: plan,
+      displayName: option.displayName,
+      interval: option.interval,
+      rank: option.rank,
+      badge: option.badge,
+      isCurrent: option.isCurrent,
+      changeKind: option.changeKind
+    )
+  }
+
+  private static func normalizedProductID(_ productID: String) -> String {
+    productID == Constants.legacyAnnualProductID ? Constants.annualProductID : productID
+  }
+
+  private static func planRank(_ plan: String) -> Int {
+    switch plan {
+    case Constants.weeklyProductID:
+      return 1
+    case Constants.monthlyProductID:
+      return 2
+    case Constants.annualProductID, Constants.legacyAnnualProductID:
+      return 3
+    default:
+      return 0
+    }
   }
 
   private func loadCachedEntitlement() {
@@ -344,6 +785,8 @@ final class BillingManager {
   }
 
   private static func normalizedUITestBillingTier() -> String? {
+    // UI-test billing overrides must never ship in release builds.
+    #if DEBUG
     if ProcessInfo.processInfo.arguments.contains("-ui_test_pro_user") {
       return "pro"
     }
@@ -351,8 +794,11 @@ final class BillingManager {
       return nil
     }
     let normalized = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    guard ["free", "trial", "pro"].contains(normalized) else { return nil }
+    guard ["free", "trial", "trial_expired", "pro"].contains(normalized) else { return nil }
     return normalized
+    #else
+    return nil
+    #endif
   }
 
   private func applyUITestBillingContextIfNeeded() {
@@ -362,7 +808,8 @@ final class BillingManager {
 
   private static func makeUITestBillingContext(tier: String) -> BillingContextResponse {
     let isPaid = tier == "trial" || tier == "pro"
-    let entitlementLevel = tier == "trial" ? "temporary" : tier
+    // A trial_expired tester is a free user who previously had a trial.
+    let entitlementLevel = tier == "trial" ? "temporary" : (tier == "trial_expired" ? "free" : tier)
     return BillingContextResponse(
       plan: entitlementLevel,
       entitlementLevel: entitlementLevel,
@@ -372,6 +819,7 @@ final class BillingManager {
       usage: makeUITestUsage(hasFreeLimits: !isPaid),
       trialDaysRemaining: tier == "trial" ? 7 : nil,
       isTrialActive: tier == "trial",
+      trialExpired: tier == "trial_expired",
       generatedAt: Date()
     )
   }

@@ -5,6 +5,7 @@
 //  Created by Fernando Correia on 10.03.26.
 //
 
+import Combine
 import Factory
 import PostHog
 import SwiftUI
@@ -15,6 +16,8 @@ struct StockDetailScreen: View {
     let initialSymbol: String
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.modelContext) private var modelContext
     @InjectedObservable(\Container.billingManager) private var billingManager
     @StateObject private var viewModel = StockDetailsViewModel()
     @State private var activeSheet: ActiveSheet?
@@ -24,6 +27,7 @@ struct StockDetailScreen: View {
     @State private var selectedStatementPeriod: StockFinancialStatementPeriod = .fy
     @State private var pendingDCFValuation: DCFValuationPreset?
     @State private var isConfirmingDCFValuationApply = false
+    private let quoteRefreshTimer = Timer.publish(every: 20, on: .main, in: .common).autoconnect()
 
     private enum ActiveSheet: String, Identifiable {
         case editValuation
@@ -79,6 +83,37 @@ struct StockDetailScreen: View {
         .task(id: selectedTab) {
             await loadSupplementaryData(for: selectedTab)
         }
+        .onReceive(quoteRefreshTimer) { _ in
+            refreshQuoteIfActive()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                refreshQuoteIfActive()
+            }
+        }
+        .onChange(of: viewModel.isStaleStock) { _, isStale in
+            if isStale {
+                recoverFromStaleStock()
+            }
+        }
+    }
+
+    /// The cached position no longer exists server-side: purge the stale row,
+    /// let the portfolio resync, and pop back instead of dead-ending on
+    /// "Stock not found".
+    private func recoverFromStaleStock() {
+        do {
+            try SwiftDataPortfolioLocalStore(context: modelContext).delete(id: stockId)
+        } catch {
+            // Row purge is best-effort; the reconcile on reload also removes it.
+        }
+        NotificationCenter.default.post(
+            name: .stalePositionPurged,
+            object: nil,
+            userInfo: ["symbol": initialSymbol]
+        )
+        NotificationCenter.default.post(name: .portfolioDataDidChange, object: nil)
+        dismiss()
     }
 
     @ViewBuilder
@@ -187,6 +222,13 @@ struct StockDetailScreen: View {
                         errorMessage: viewModel.chartErrorMessage,
                         onSelectRange: viewModel.switchChartRange
                     )
+                case .builder:
+                    ProGateView(billingManager: billingManager) {
+                        ChartBuilderScreen(
+                            symbol: viewModel.details?.symbol ?? initialSymbol,
+                            companyName: viewModel.companyProfile?.name
+                        )
+                    }
                 case .overview:
                     StockOverviewTab(
                         details: viewModel.details,
@@ -235,20 +277,31 @@ struct StockDetailScreen: View {
                         StockCompareTab(viewModel: viewModel)
                     }
                 case .news:
-                    StockNewsTab(news: viewModel.news)
+                    StockNewsTab(news: viewModel.news, defaultSymbol: viewModel.details?.symbol ?? initialSymbol)
                 case .earnings:
                     ProGateView(billingManager: billingManager) {
                         StockEarningsTab(
                             symbol: viewModel.details?.symbol ?? initialSymbol,
                             earnings: viewModel.stockEarnings,
+                            incomeStatements: viewModel.earningsIncomeStatements,
                             isLoading: viewModel.isEarningsLoading,
-                            errorMessage: viewModel.stockEarningsMessage
+                            errorMessage: viewModel.stockEarningsMessage,
+                            selectedTranscript: viewModel.selectedEarningsTranscript,
+                            isTranscriptLoading: viewModel.isEarningsTranscriptLoading,
+                            transcriptErrorMessage: viewModel.earningsTranscriptMessage,
+                            onSelectTranscript: { event in
+                                Task { await viewModel.loadEarningsTranscript(for: event) }
+                            },
+                            onDismissTranscript: {
+                                viewModel.clearEarningsTranscript()
+                            }
                         )
                     }
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 20)
+            .maxContentWidth(regularSizeClass: ContentWidth.dense)
             .accessibilityIdentifier("stockDetailsScreen")
         }
         .background(MeshGradientBackground().ignoresSafeArea())
@@ -256,9 +309,6 @@ struct StockDetailScreen: View {
             await viewModel.load(stockId: stockId, force: true)
             await viewModel.loadSupplementaryDataIfNeeded(for: selectedTab)
         }
-        .animation(.snappy(duration: 0.24), value: selectedTab)
-        .animation(.snappy(duration: 0.24), value: selectedScenario)
-        .animation(.snappy(duration: 0.24), value: selectedStatementPeriod)
         .tint(AppTheme.Colors.tint(for: colorScheme))
     }
 
@@ -317,6 +367,11 @@ struct StockDetailScreen: View {
 
     private func retryLoad() {
         Task { await viewModel.load(stockId: stockId, force: true) }
+    }
+
+    private func refreshQuoteIfActive() {
+        guard scenePhase == .active else { return }
+        Task { await viewModel.refreshQuote() }
     }
 
     private func dismissActiveSheet() {

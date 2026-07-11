@@ -27,6 +27,10 @@ struct PortfolioCSVImportSheet: View {
 
         csvProviderSection
 
+        Section {
+          CSVImportFormatHint()
+        }
+
         Section("CSV File") {
           Button {
             isImporterPresented = true
@@ -59,7 +63,19 @@ struct PortfolioCSVImportSheet: View {
                   .font(.caption)
                   .foregroundStyle(.secondary)
                 Text("Shares: \(item.shares?.formatted(.number.precision(.fractionLength(0...6))) ?? "-") • Buy price: \(item.buyPrice?.formatted(.number.precision(.fractionLength(0...6))) ?? "-")")
-                  .font(.headline)
+                  .font(.subheadline)
+                  .foregroundStyle(.secondary)
+                if let buyDate = item.buyDate, !buyDate.isEmpty {
+                  Text("Buy date: \(buyDate)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                }
+                if let notes = item.notes, !notes.isEmpty {
+                  Text("Notes: \(notes)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                }
               }
             }
           }
@@ -81,7 +97,7 @@ struct PortfolioCSVImportSheet: View {
 
         if let result = viewModel.commitResponse {
           Section("Import Result") {
-            Text("Inserted: \(result.inserted.count) • Updated: \(result.updated.count) • Errors: \(result.errors.count)")
+            Text("Inserted: \(result.inserted.count) • Updated: \(result.updated.count) • Imported lots: \(result.importedLotsCount) • Errors: \(result.errors.count)")
 
             if !result.errors.isEmpty {
               ForEach(result.errors, id: \.line) { error in
