@@ -45,6 +45,9 @@ final class StockDetailsViewModel: ObservableObject {
     }
 
     @Published var details: StockDetails?
+    /// True when the requested stock id no longer exists on the server (stale
+    /// local cache row); the screen should purge the row and pop back.
+    @Published private(set) var isStaleStock = false
     @Published var history: [StockHistory] = []
     @Published var news: [StockNews] = []
     @Published var valuation: StockValuationRequest?
@@ -284,6 +287,7 @@ final class StockDetailsViewModel: ObservableObject {
         let start = ContinuousClock.now
         isLoading = true
         errorMessage = nil
+        isStaleStock = false
         comparisonRefreshTask?.cancel()
         comparisonRefreshTask = nil
         defer {
@@ -372,9 +376,24 @@ final class StockDetailsViewModel: ObservableObject {
             loadingTabs = []
             loadedStockID = nil
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            isStaleStock = Self.isNotFoundError(error)
             Self.logger.error(
                 "Stock details load failed stock_id=\(stockId, privacy: .public) error=\(error.localizedDescription, privacy: .public)"
             )
+        }
+    }
+
+    /// The gating call is `GET /v1/stocks/id/{stockId}`; a 404 means the local
+    /// cache row points at a position that no longer exists server-side.
+    private static func isNotFoundError(_ error: Error) -> Bool {
+        guard let clientError = error as? StockHTTPClient.Error else { return false }
+        switch clientError {
+        case .invalidStatus(404):
+            return true
+        case let .api(message):
+            return message.localizedCaseInsensitiveContains("not found")
+        default:
+            return false
         }
     }
 

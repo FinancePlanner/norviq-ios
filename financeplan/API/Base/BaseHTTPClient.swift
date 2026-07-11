@@ -249,7 +249,9 @@ public struct BaseHTTPClient: Sendable {
                 return true
             }
             if let httpError = error as? any HTTPClientError, let code = httpError.statusCode {
-                if (500...599).contains(code) || code == 429 {
+                // 429 is deliberately not retried: hammering a rate-limited
+                // upstream amplifies the throttling for every other request.
+                if (500...599).contains(code) {
                     return true
                 }
             }
