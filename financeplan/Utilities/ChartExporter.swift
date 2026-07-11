@@ -46,11 +46,13 @@ struct ShareableChartView<Content: View>: View {
     }
     .sheet(isPresented: $showingShareSheet) {
       if let image = exportedImage {
-        ShareSheet(items: [image])
+        ShareSheet(items: [
+          LPLinkMetadataActivityItemSource(title: title, item: image, icon: image)
+        ])
       }
     }
   }
-  
+
   private func exportChart() {
     let exportView = VStack(spacing: 16) {
       Text(title)
@@ -60,7 +62,7 @@ struct ShareableChartView<Content: View>: View {
     }
     .padding(24)
     .background(Color(uiColor: .systemBackground))
-    
+
     exportedImage = ChartExporter.exportToImage(exportView)
     showingShareSheet = true
   }

@@ -99,9 +99,13 @@ struct PortfolioAllocationScreen: View {
                         totalValue: totalValue
                     )
                     ShareLink(
-                        item: text.body,
+                        item: ShareURLBuilder.app(),
                         subject: Text(text.title),
-                        message: Text(text.body)
+                        message: Text(text.body),
+                        preview: SharePreview(
+                            text.title,
+                            image: Image(systemName: "chart.pie.fill")
+                        )
                     ) {
                         Image(systemName: "square.and.arrow.up")
                     }
