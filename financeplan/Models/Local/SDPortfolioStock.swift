@@ -60,7 +60,6 @@ final class SDPortfolioStock {
         self.buyDate = response.buyDate
         self.notes = response.notes
         self.category = response.category.rawValue
-        self.portfolioListId = nil
         self.lastSyncedAt = Date()
     }
 }

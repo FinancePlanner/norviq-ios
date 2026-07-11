@@ -30,6 +30,7 @@ struct PortfolioScreen: View {
   @State private var chartData: [ChartDataPoint] = []
   @State private var pushNavigationRoute: PushNavigationRoute?
   @State private var pushFallbackToast: ToastData?
+  @State private var refreshErrorToast: ToastData?
   @State private var targetAlertStock: TargetAlertDraftStock?
   @State private var isPaywallPresented = false
   @State private var isEarningsCalendarPresented = false
@@ -231,6 +232,20 @@ struct PortfolioScreen: View {
       StockDetailScreen(stockId: route.stockID, initialSymbol: route.symbol)
     }
     .toastOverlay($pushFallbackToast)
+    .toastOverlay($refreshErrorToast)
+    .onChange(of: viewModel.errorMessage) { _, newValue in
+      // Full-screen error only covers the empty-cache case; when cached rows
+      // are showing, a failed refresh must still be visible.
+      guard let newValue, !scopedStocks.isEmpty else { return }
+      refreshErrorToast = .error(newValue)
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .stalePositionPurged)) { note in
+      let symbol = note.userInfo?["symbol"] as? String
+      refreshErrorToast = .info(
+        symbol.map { "\($0) was updated elsewhere — refreshed your portfolio." }
+          ?? "Position was updated elsewhere — refreshed your portfolio."
+      )
+    }
     .appSensoryFeedback(destructive: destructiveFeedbackTrigger)
   }
 

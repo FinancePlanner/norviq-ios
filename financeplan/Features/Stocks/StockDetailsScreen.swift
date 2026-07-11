@@ -17,6 +17,7 @@ struct StockDetailScreen: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.modelContext) private var modelContext
     @InjectedObservable(\Container.billingManager) private var billingManager
     @StateObject private var viewModel = StockDetailsViewModel()
     @State private var activeSheet: ActiveSheet?
@@ -90,6 +91,29 @@ struct StockDetailScreen: View {
                 refreshQuoteIfActive()
             }
         }
+        .onChange(of: viewModel.isStaleStock) { _, isStale in
+            if isStale {
+                recoverFromStaleStock()
+            }
+        }
+    }
+
+    /// The cached position no longer exists server-side: purge the stale row,
+    /// let the portfolio resync, and pop back instead of dead-ending on
+    /// "Stock not found".
+    private func recoverFromStaleStock() {
+        do {
+            try SwiftDataPortfolioLocalStore(context: modelContext).delete(id: stockId)
+        } catch {
+            // Row purge is best-effort; the reconcile on reload also removes it.
+        }
+        NotificationCenter.default.post(
+            name: .stalePositionPurged,
+            object: nil,
+            userInfo: ["symbol": initialSymbol]
+        )
+        NotificationCenter.default.post(name: .portfolioDataDidChange, object: nil)
+        dismiss()
     }
 
     @ViewBuilder
