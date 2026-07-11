@@ -4,6 +4,7 @@ import Factory
 struct AuthFooter: View {
   @State private var isEnvironmentPresented = false
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.openURL) private var openURL
   @InjectedObservable(\Container.appEnvironment) private var environment
 
   private var showEnvironmentButton: Bool {
@@ -17,9 +18,11 @@ struct AuthFooter: View {
   var body: some View {
     VStack(spacing: 16) {
       HStack(spacing: 24) {
-        Button("Privacy Policy") {}
-          .font(.caption)
-          .foregroundStyle(.secondary)
+        Button("Privacy Policy") {
+          openURL(Constants.Norviq.privacyPolicyUrl)
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
 
         if showEnvironmentButton {
           Button("Environment") {
