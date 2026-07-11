@@ -64,6 +64,11 @@ struct HomeScreen: View {
         ExpensesComparisonScreen()
           .accessibilityIdentifier("tab.reports")
       }
+
+      Tab(HomeTab.tax.title, systemImage: "building.columns", value: .tax) {
+        TaxDashboardScreen()
+          .accessibilityIdentifier("tab.tax")
+      }
     }
     .id(appLanguage.rawValue)
     .tint(AppTheme.Colors.tint(for: colorScheme))
