@@ -6,13 +6,18 @@ struct TaxDashboardScreen: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.colorScheme) private var colorScheme
   @State private var model: TaxDashboardViewModel
+  @State private var isSettingsPresented = false
+  @State private var isReportsPresented = false
+  private let service: TaxServiceProtocol
 
   init() {
     let container = Container.shared
-    _model = State(initialValue: TaxDashboardViewModel(service: TaxService(
+    let service = TaxService(
       environment: container.appEnvironment(),
       auth: container.authSessionManager()
-    )))
+    )
+    self.service = service
+    _model = State(initialValue: TaxDashboardViewModel(service: service))
   }
 
   var body: some View {
@@ -27,6 +32,12 @@ struct TaxDashboardScreen: View {
         .padding()
       }
       .navigationTitle("Tax strategy")
+      .toolbar {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+          Button("Reports", systemImage: "doc.text") { isReportsPresented = true }
+          Button("Settings", systemImage: "gearshape") { isSettingsPresented = true }
+        }
+      }
       .refreshable { await model.load() }
       .task { await model.load() }
       .onChange(of: model.selectedJurisdiction) { _, _ in Task { await model.load() } }
@@ -36,6 +47,8 @@ struct TaxDashboardScreen: View {
       )) { Button("OK", role: .cancel) {} } message: { Text(model.errorMessage ?? "") }
       .sheet(item: $model.scenario) { scenario in scenarioSheet(scenario) }
       .sheet(item: $model.actionPlan) { plan in actionPlanSheet(plan) }
+      .sheet(isPresented: $isSettingsPresented) { TaxSettingsSheet(service: service) }
+      .sheet(isPresented: $isReportsPresented) { TaxReportsSheet(service: service) }
     }
   }
 
