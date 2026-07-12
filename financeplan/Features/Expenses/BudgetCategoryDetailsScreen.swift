@@ -80,7 +80,7 @@ private struct BudgetCategoryCard: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      HStack(alignment: .top) {
+      HStack(alignment: .top, spacing: 12) {
         HStack(alignment: .center, spacing: 12) {
           Image(systemName: pillar.symbol)
             .font(.title2)
@@ -96,17 +96,32 @@ private struct BudgetCategoryCard: View {
           }
         }
         Spacer()
-        Menu {
-          Button("Plan item", systemImage: "plus.rectangle.on.folder", action: onAddPlanItem)
-          Button("Record expense", systemImage: "plus.circle", action: onRecordExpense)
-        } label: {
-          Label("Add", systemImage: "plus")
+        HStack(spacing: 8) {
+          Button(action: onAddPlanItem) {
+            HStack(spacing: 4) {
+              Image(systemName: "plus.rectangle.on.folder")
+              Text("Plan")
+            }
             .font(.subheadline.weight(.semibold))
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(pillar.color(for: colorScheme).opacity(0.15))
+            .cornerRadius(8)
+            .foregroundStyle(pillar.color(for: colorScheme))
+          }
+          
+          Button(action: onRecordExpense) {
+            HStack(spacing: 4) {
+              Image(systemName: "plus.circle")
+              Text("Spend")
+            }
+            .font(.subheadline.weight(.semibold))
+            .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(Color.white.opacity(0.1))
-            .clipShape(.rect(cornerRadius: 8))
-            .foregroundStyle(.white)
+            .cornerRadius(8)
+            .foregroundStyle(.primary)
+          }
         }
       }
       .padding(16)
@@ -114,83 +129,52 @@ private struct BudgetCategoryCard: View {
       Divider()
         .background(Color.white.opacity(0.1))
 
-      VStack(spacing: 16) {
-        HStack(spacing: 0) {
+      VStack(spacing: 12) {
+        HStack(spacing: 12) {
           MetricItem(title: "Goal", value: summary.targetAmount.currency, color: .primary)
-          Divider().background(Color.white.opacity(0.1))
           MetricItem(title: "Planned", value: summary.plannedAmount.currency, color: .primary)
-          Divider().background(Color.white.opacity(0.1))
+        }
+        
+        HStack(spacing: 12) {
           MetricItem(title: "Actual", value: summary.actualAmount.currency, color: .primary)
-          Divider().background(Color.white.opacity(0.1))
           MetricItem(
             title: "Left",
             value: leftAmount.currency,
             color: leftAmount >= 0 ? .green : .red
           )
         }
-        
-        VStack(alignment: .leading, spacing: 8) {
-          HStack {
-            Text("Budget usage")
-              .font(.caption)
-              .foregroundStyle(.secondary)
-            Spacer()
-            Text("\(Int(progressPercentage))%")
-              .font(.caption.weight(.semibold))
-              .foregroundStyle(progressPercentage > 100 ? .red : .primary)
-          }
-          
-          ProgressBar(
-            value: summary.actualAmount,
-            total: summary.targetAmount,
-            color: progressPercentage > 100 ? .red : pillar.color(for: colorScheme),
-            height: 8
-          )
-          
-          HStack(spacing: 4) {
-            Image(systemName: progressPercentage > 90 ? "exclamationmark.triangle.fill" : "checkmark.circle.fill").accessibilityHidden(true)
-              .font(.caption2)
-              .foregroundStyle(progressPercentage > 100 ? .red : progressPercentage > 90 ? .orange : .green)
-            
-            Text(statusMessage)
-              .font(.caption2)
-              .foregroundStyle(.secondary)
-            
-            if let change = monthOverMonthChange {
-              Spacer()
-              HStack(spacing: 2) {
-                Image(systemName: change.amount >= 0 ? "arrow.up.right" : "arrow.down.right")
-                  .accessibilityHidden(true)
-                  .font(.caption2)
-                Text("\(abs(Int(change.percentage)))% vs last month")
-                  .font(.caption2)
-              }
-              .foregroundStyle(change.amount >= 0 ? .orange : .green)
-            }
-          }
-        }
-        .padding(.horizontal, 16)
       }
-      .padding(.vertical, 12)
+      .padding(16)
     }
     .background(Color(uiColor: .secondarySystemGroupedBackground))
     .clipShape(.rect(cornerRadius: 16))
     .overlay {
       RoundedRectangle(cornerRadius: 16)
         .stroke(Color.white.opacity(0.05), lineWidth: 1)
-    }
+    )
   }
-  
-  private var statusMessage: String {
-    if progressPercentage > 100 {
-      return "Over budget by \((summary.actualAmount - summary.targetAmount).currency)"
-    } else if progressPercentage > 90 {
-      return "Approaching limit"
-    } else if summary.actualAmount == 0 {
-      return "No spending yet"
-    } else {
-      return "\(leftAmount.currency) remaining"
+}
+
+private struct MetricItem: View {
+  let title: String
+  let value: String
+  let color: Color
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Text(title)
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+        .textCase(.uppercase)
+        .tracking(0.5)
+      Text(value)
+        .font(.headline.weight(.bold))
+        .foregroundStyle(color)
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(12)
+    .background(Color.white.opacity(0.04))
+    .cornerRadius(10)
   }
 }
 

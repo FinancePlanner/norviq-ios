@@ -22,102 +22,143 @@ struct InteractiveLineChart: View {
     private var maxValue: Double { data.map { $0.value }.max() ?? 1 }
 
     var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .topLeading) {
-                // Line path
-                Path { path in
-                    guard data.count > 1 else { return }
-
-                    let points = data.enumerated().map { index, point -> CGPoint in
-                        let x = geometry.size.width * CGFloat(index) / CGFloat(data.count - 1)
-                        let y = yPosition(for: point.value, in: geometry.size.height)
-                        return CGPoint(x: x, y: y)
-                    }
-
-                    guard let first = points.first else { return }
-                    path.move(to: first)
-                    for point in points.dropFirst() {
-                        path.addLine(to: point)
-                    }
+        VStack(alignment: .leading, spacing: 12) {
+            // Axis labels for Y axis
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .trailing, spacing: 0) {
+                    Text(maxValue.formatted(.currency(code: "USD")))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text((minValue + (maxValue - minValue) / 2).formatted(.currency(code: "USD")))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(minValue.formatted(.currency(code: "USD")))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
-                .stroke(color, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                .frame(height: 180)
+                
+                GeometryReader { geometry in
+                    ZStack(alignment: .topLeading) {
+                        // Line path
+                        Path { path in
+                            guard data.count > 1 else { return }
 
-                // Gradient fill
-                Path { path in
-                    guard data.count > 1 else { return }
+                            let points = data.enumerated().map { index, point -> CGPoint in
+                                let x = geometry.size.width * CGFloat(index) / CGFloat(data.count - 1)
+                                let y = yPosition(for: point.value, in: geometry.size.height)
+                                return CGPoint(x: x, y: y)
+                            }
 
-                    let points = data.enumerated().map { index, point -> CGPoint in
-                        let x = geometry.size.width * CGFloat(index) / CGFloat(data.count - 1)
-                        let y = yPosition(for: point.value, in: geometry.size.height)
-                        return CGPoint(x: x, y: y)
-                    }
+                            guard let first = points.first else { return }
+                            path.move(to: first)
+                            for point in points.dropFirst() {
+                                path.addLine(to: point)
+                            }
+                        }
+                        .stroke(color, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
 
-                    guard let first = points.first else { return }
-                    path.move(to: first)
-                    for point in points.dropFirst() {
-                        path.addLine(to: point)
-                    }
-                    path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height))
-                    path.addLine(to: CGPoint(x: 0, y: geometry.size.height))
-                    path.closeSubpath()
-                }
-                .fill(
-                    LinearGradient(
-                        gradient: Gradient(colors: [color.opacity(0.3), color.opacity(0.0)]),
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
+                        // Gradient fill
+                        Path { path in
+                            guard data.count > 1 else { return }
 
-                // Interactive Drag Line and Label
-                if let selected = selectedDataPoint {
-                    let xPos = geometry.size.width * CGFloat(data.firstIndex(of: selected) ?? 0) / CGFloat(max(1, data.count - 1))
+                            let points = data.enumerated().map { index, point -> CGPoint in
+                                let x = geometry.size.width * CGFloat(index) / CGFloat(data.count - 1)
+                                let y = yPosition(for: point.value, in: geometry.size.height)
+                                return CGPoint(x: x, y: y)
+                            }
 
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.5))
-                        .frame(width: 1)
-                        .offset(x: xPos)
-
-                    Circle()
-                        .fill(color)
-                        .frame(width: 8, height: 8)
-                        .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                        .position(
-                            x: xPos,
-                            y: yPosition(for: selected.value, in: geometry.size.height)
+                            guard let first = points.first else { return }
+                            path.move(to: first)
+                            for point in points.dropFirst() {
+                                path.addLine(to: point)
+                            }
+                            path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height))
+                            path.addLine(to: CGPoint(x: 0, y: geometry.size.height))
+                            path.closeSubpath()
+                        }
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [color.opacity(0.3), color.opacity(0.0)]),
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
                         )
 
-                    VStack(alignment: .center, spacing: 2) {
-                        Text(selected.date.formatted(.dateTime.month().day()))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text(selected.value.formatted(.currency(code: currencyCode)))
-                            .font(.caption.bold())
-                            .foregroundStyle(.primary)
-                    }
-                    .padding(6)
-                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                    .clipShape(.rect(cornerRadius: 8))
-                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-                    .position(
-                        x: max(50, min(geometry.size.width - 50, xPos)),
-                        y: 24
-                    )
-                }
+                        // Grid lines
+                        VStack(spacing: 0) {
+                            ForEach(0..<4, id: \.self) { _ in
+                                Divider()
+                                    .opacity(0.2)
+                                Spacer()
+                            }
+                        }
 
-                Color.clear
-                    .contentShape(Rectangle())
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { value in
-                                updateSelectedPoint(at: value.location.x, in: geometry.size.width)
+                        // Interactive Drag Line and Label
+                        if let selected = selectedDataPoint {
+                            let xPos = geometry.size.width * CGFloat(data.firstIndex(of: selected) ?? 0) / CGFloat(max(1, data.count - 1))
+
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.5))
+                                .frame(width: 1)
+                                .offset(x: xPos)
+
+                            Circle()
+                                .fill(color)
+                                .frame(width: 8, height: 8)
+                                .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                .position(
+                                    x: xPos,
+                                    y: yPosition(for: selected.value, in: geometry.size.height)
+                                )
+
+                            VStack(alignment: .center, spacing: 2) {
+                                Text(selected.date.formatted(.dateTime.month().day()))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                Text(selected.value.formatted(.currency(code: "USD")))
+                                    .font(.caption.bold())
+                                    .foregroundStyle(.primary)
                             }
-                            .onEnded { _ in
-                                selectedDataPoint = nil
-                                lastFeedbackIndex = nil
-                            }
-                    )
+                            .padding(6)
+                            .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                            .cornerRadius(8)
+                            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                            .position(
+                                x: max(50, min(geometry.size.width - 50, xPos)),
+                                y: -20
+                            )
+                        }
+
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .gesture(
+                                DragGesture(minimumDistance: 0)
+                                    .onChanged { value in
+                                        updateSelectedPoint(at: value.location.x, in: geometry.size.width)
+                                    }
+                                    .onEnded { _ in
+                                        selectedDataPoint = nil
+                                    }
+                            )
+                    }
+                }
+                .frame(height: 180)
             }
+            
+            // X axis labels
+            HStack(spacing: 0) {
+                Text(minDate.formatted(.dateTime.month().day()))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(maxDate.formatted(.dateTime.month().day()))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.leading, 50)
         }
         .sensoryFeedback(.selection, trigger: selectionFeedbackTrigger)
     }
