@@ -7,12 +7,9 @@ struct CryptoOverviewSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            // Market Quick Stats
-            HStack(spacing: 16) {
-                MarketSentimentCard(value: viewModel.sentimentValue, label: viewModel.sentimentLabel)
-                GasTrackerCard(gwei: viewModel.ethGasGwei)
-            }
-            .padding(.horizontal)
+            // Market sentiment (derived from live coin movement)
+            MarketSentimentCard(value: viewModel.sentimentValue, label: viewModel.sentimentLabel)
+                .padding(.horizontal)
 
             // Your Balance
             if !viewModel.userHoldings.isEmpty {
@@ -21,8 +18,10 @@ struct CryptoOverviewSection: View {
             }
 
             // Market Dominance
-            MarketDominanceCard(data: viewModel.dominance)
-                .padding(.horizontal)
+            if !viewModel.dominance.isEmpty {
+                MarketDominanceCard(data: viewModel.dominance)
+                    .padding(.horizontal)
+            }
 
             // Featured Card
             if let btc = viewModel.topAssets.first(where: { $0.symbol.contains("BTC") }) {

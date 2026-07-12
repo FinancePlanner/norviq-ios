@@ -179,7 +179,8 @@ public struct ContentView: View {
           await pushNotificationsCoordinator.refreshAuthorizationStatus()
           if isAuthenticated {
             billingManager.configureForCurrentUser()
-            await billingManager.linkCurrentUserAndSyncEntitlements()
+            await billingManager.reconcilePendingBackendSyncIfNeeded()
+
             await billingManager.refreshBillingContext()
           }
           await enforceAppLockIfNeeded()
@@ -292,7 +293,8 @@ public struct ContentView: View {
       sessionManager.updateUsername(username)
       
       billingManager.configureForCurrentUser()
-      await billingManager.linkCurrentUserAndSyncEntitlements()
+      await billingManager.reconcilePendingBackendSyncIfNeeded()
+
       await billingManager.refreshBillingContext()
       pushNotificationsCoordinator.handleAuthenticatedSessionBecameActive()
       await enforceAppLockIfNeeded()

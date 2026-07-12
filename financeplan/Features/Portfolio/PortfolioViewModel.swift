@@ -52,6 +52,7 @@ final class PortfolioViewModel: ObservableObject {
   @Published var isSaving = false
   @Published var isDeletingStock = false
   @Published private(set) var cashBalance: Double = 0
+  @Published private(set) var sectorExposure: PortfolioSectorExposureResponse?
   @Published private(set) var portfolioLists: [PortfolioListDTOResponse] = []
   @Published var selectedPortfolioListId: String?
   @Published private(set) var isShowingAllLists: Bool = false
@@ -106,36 +107,20 @@ final class PortfolioViewModel: ObservableObject {
 
       async let stocksTask = service.fetchPortfolio(portfolioListId: selectedPortfolioListId, limit: 50)
       async let summaryTask = service.fetchPortfolioSummary(portfolioListId: selectedPortfolioListId)
-      let (remoteStocks, fetchedNextCursor) = try await stocksTask
+      async let sectorExposureTask = service.fetchPortfolioSectorExposure(portfolioListId: selectedPortfolioListId)
+      async let targetsTask = service.fetchTargets(symbol: nil)
+      let (stocksResult, summary, sectorExposure, targets) = try await (
+        stocksTask,
+        summaryTask,
+        sectorExposureTask,
+        targetsTask
+      )
+      let (remoteStocks, fetchedNextCursor) = stocksResult
       await syncWithSwiftData(remoteStocks, listId: selectedPortfolioListId)
       nextCursor = fetchedNextCursor
-
-      // Summary failures must not block holdings sync; keep the last known balance.
-      do {
-        cashBalance = extractCashBalance(from: try await summaryTask)
-      } catch {
-        portfolioViewModelLogger.warning("Portfolio summary failed: \(error.localizedDescription)")
-      }
-
-      do {
-        let targets = try await service.fetchTargets(symbol: nil)
-        targetAlertsBySymbol = Self.makeTargetAlertsBySymbol(targets)
-      } catch {
-        portfolioViewModelLogger.warning("Target alerts failed: \(error.localizedDescription)")
-        targetAlertsBySymbol = [:]
-      }
-
-      // Enrich with live market quotes (price + change) using existing batch endpoint
-      let symbols = remoteStocks.map { $0.symbol }
-      if !symbols.isEmpty {
-        do {
-          let batch = try await marketDataService.fetchQuoteBatch(symbols: symbols)
-          liveQuotes = Dictionary(uniqueKeysWithValues: batch.quotes.map { ($0.symbol.uppercased(), $0) })
-        } catch {
-          portfolioViewModelLogger.warning("Live quote batch failed: \(error.localizedDescription)")
-          liveQuotes = [:]
-        }
-      }
+      cashBalance = extractCashBalance(from: summary)
+      self.sectorExposure = sectorExposure
+      targetAlertsBySymbol = Self.makeTargetAlertsBySymbol(targets)
 
       hasLoadedOnce = true
     } catch {
@@ -348,8 +333,11 @@ final class PortfolioViewModel: ObservableObject {
 
   private func refreshPortfolioSummary() async {
     do {
-      let summary = try await service.fetchPortfolioSummary(portfolioListId: selectedPortfolioListId)
+      async let summaryTask = service.fetchPortfolioSummary(portfolioListId: selectedPortfolioListId)
+      async let sectorExposureTask = service.fetchPortfolioSectorExposure(portfolioListId: selectedPortfolioListId)
+      let (summary, sectorExposure) = try await (summaryTask, sectorExposureTask)
       cashBalance = extractCashBalance(from: summary)
+      self.sectorExposure = sectorExposure
     } catch {
       portfolioViewModelLogger.error("Failed to refresh portfolio summary: \(error.localizedDescription, privacy: .public)")
     }

@@ -66,6 +66,15 @@ private final class CryptoServiceMock: CryptoServicing, @unchecked Sendable {
     return []
   }
 
+  func fetchHistory(
+    symbol _: String,
+    resolution _: CryptoChartResolution,
+    from _: String?,
+    to _: String?
+  ) async throws -> [CryptoHistoricalPoint] {
+    return []
+  }
+
   func addToPortfolio(
     payload _: CryptoPortfolioItemRequest
   ) async throws -> CryptoPortfolioItemResponse {
@@ -80,6 +89,27 @@ private final class CryptoServiceMock: CryptoServicing, @unchecked Sendable {
   }
 
   func removeFromPortfolio(itemId _: String) async throws {
+    throw CryptoMockError.notConfigured
+  }
+
+  func fetchWatchlist() async throws -> [CryptoWatchlistItemResponse] {
+    return []
+  }
+
+  func addToWatchlist(
+    payload _: CryptoWatchlistItemRequest
+  ) async throws -> CryptoWatchlistItemResponse {
+    throw CryptoMockError.notConfigured
+  }
+
+  func updateWatchlistItem(
+    itemId _: String,
+    payload _: CryptoWatchlistItemRequest
+  ) async throws -> CryptoWatchlistItemResponse {
+    throw CryptoMockError.notConfigured
+  }
+
+  func removeFromWatchlist(itemId _: String) async throws {
     throw CryptoMockError.notConfigured
   }
 }

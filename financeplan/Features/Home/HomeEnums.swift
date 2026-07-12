@@ -3,6 +3,7 @@ import SwiftUI
 enum HomeTab: Hashable {
   case dashboard
   case portfolio
+  case crypto
   case expenses
   case reports
   case tax
@@ -13,6 +14,8 @@ enum HomeTab: Hashable {
       return String(localized: "Home")
     case .portfolio:
       return String(localized: "Portfolio")
+    case .crypto:
+      return String(localized: "Crypto")
     case .expenses:
       return String(localized: "Expenses")
     case .reports:

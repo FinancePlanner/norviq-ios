@@ -934,6 +934,7 @@
 			requirement = {
 				kind = exactVersion;
 				version = 3.7.0;
+
 			};
 		};
 		70B002A53C5E11AA00F02001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {

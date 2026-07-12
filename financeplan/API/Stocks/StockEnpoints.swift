@@ -182,6 +182,23 @@ struct GetPortfolioSummaryEndpoint: Endpoint {
   }
 }
 
+struct GetPortfolioSectorExposureEndpoint: Endpoint {
+  typealias Response = PortfolioSectorExposureResponse
+  let portfolioListId: String?
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/portfolio/sector-exposure" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [:]
+    if let portfolioListId, !portfolioListId.isEmpty {
+      params["portfolioListId"] = portfolioListId
+    }
+    return params
+  }
+}
+
 struct GetStockHistoryEndpoint: Endpoint {
   typealias Response = [StockHistory]
   let symbol: String

@@ -7,6 +7,33 @@ private let stockServiceLogger = Logger(
   category: "StockService"
 )
 
+nonisolated struct PortfolioSectorHoldingContribution: Codable, Sendable, Equatable, Identifiable {
+  var id: String { symbol }
+  let symbol: String
+  let value: Double
+  let weightPercent: Double
+}
+
+nonisolated struct PortfolioSectorExposureItem: Codable, Sendable, Equatable, Identifiable {
+  var id: String { sector }
+  let sector: String
+  let value: Double
+  let weightPercent: Double
+  let benchmarkWeightPercent: Double?
+  let overweightPercent: Double?
+  let holdings: [PortfolioSectorHoldingContribution]
+}
+
+nonisolated struct PortfolioSectorExposureResponse: Codable, Sendable, Equatable {
+  let baseCurrency: String
+  let totalValue: Double
+  let investedValue: Double
+  let cashBalance: Double
+  let benchmarkName: String
+  let benchmarkAsOf: String
+  let sectors: [PortfolioSectorExposureItem]
+}
+
 @MainActor
 protocol StockServicing: Sendable {
   @discardableResult
@@ -20,6 +47,7 @@ protocol StockServicing: Sendable {
   func fetchPortfolioSummary() async throws -> PortfolioSummaryResponse
   func fetchPortfolioPerformance(portfolioListId: String?) async throws -> PortfolioPerformanceResponse
   func fetchPortfolioSummary(portfolioListId: String?) async throws -> PortfolioSummaryResponse
+  func fetchPortfolioSectorExposure(portfolioListId: String?) async throws -> PortfolioSectorExposureResponse
   func fetchStockHistory(symbol: String) async throws -> [StockHistory]
   func fetchStockNews(symbol: String) async throws -> [StockNews]
   func updateStock(_ stock: StockResponse, portfolioListId: String?) async throws -> StockResponse
@@ -102,6 +130,10 @@ extension StockServicing {
 
   func fetchPortfolioSummary() async throws -> PortfolioSummaryResponse {
     try await fetchPortfolioSummary(portfolioListId: nil)
+  }
+
+  func fetchPortfolioSectorExposure(portfolioListId _: String? = nil) async throws -> PortfolioSectorExposureResponse {
+    throw StockHTTPClient.Error.api("Portfolio sector exposure endpoint is unavailable.")
   }
 
   func fetchPortfolio(portfolioListId: String? = nil, cursor: String? = nil, limit: Int? = nil) async throws -> (items: [StockResponse], nextCursor: String?) {
@@ -269,6 +301,12 @@ final class StockService: StockServicing {
   func fetchPortfolioSummary(portfolioListId: String? = nil) async throws -> PortfolioSummaryResponse {
     try await performAuthenticated { client in
       return try await client.call(GetPortfolioSummaryEndpoint(portfolioListId: portfolioListId))
+    }
+  }
+
+  func fetchPortfolioSectorExposure(portfolioListId: String? = nil) async throws -> PortfolioSectorExposureResponse {
+    try await performAuthenticated { client in
+      try await client.call(GetPortfolioSectorExposureEndpoint(portfolioListId: portfolioListId))
     }
   }
 

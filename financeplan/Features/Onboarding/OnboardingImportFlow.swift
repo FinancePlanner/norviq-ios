@@ -19,6 +19,7 @@ struct OnboardingImportFlow: View {
       case .mainMenu:
         OnboardingMainMenu(
           onSelectStocks: { viewModel.startStockImport() },
+          onSelectCrypto: { viewModel.startCryptoImport() },
           onSelectExpenses: { viewModel.startExpenseImport() },
           onSignOut: {
             Task { await onSignOut() }
@@ -45,6 +46,12 @@ struct OnboardingImportFlow: View {
           headerNamespace: headerNS,
           onBack: { viewModel.backToChooseStock() },
           onDone: { _ in viewModel.finish(completedFlow: .stocks) }
+        )
+      case .crypto:
+        InitialCryptoImportScreen(
+          onDone: { viewModel.finish(completedFlow: .crypto) },
+          onBack: { viewModel.backToMain() },
+          headerNamespace: headerNS
         )
       case .expenseBudgetSetup:
         ExpenseBudgetSetupScreen(

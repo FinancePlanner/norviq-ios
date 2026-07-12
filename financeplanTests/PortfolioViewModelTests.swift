@@ -149,6 +149,40 @@ final class PortfolioViewModelTests: XCTestCase {
     XCTAssertEqual(service.fetchPortfolioSummaryCalls, 1)
   }
 
+  func testLoadStoresSectorExposure() async {
+    let service = MockStockService()
+    service.fetchPortfolioResult = .success([makeStock(id: "aapl", symbol: "AAPL", shares: 1, buyPrice: 100)])
+    service.fetchPortfolioSectorExposureResult = .success(
+      PortfolioSectorExposureResponse(
+        baseCurrency: "USD",
+        totalValue: 100,
+        investedValue: 100,
+        cashBalance: 0,
+        benchmarkName: "S&P 500",
+        benchmarkAsOf: "2026-05-29",
+        sectors: [
+          PortfolioSectorExposureItem(
+            sector: "Information Technology",
+            value: 100,
+            weightPercent: 100,
+            benchmarkWeightPercent: 38.6,
+            overweightPercent: 61.4,
+            holdings: [
+              PortfolioSectorHoldingContribution(symbol: "AAPL", value: 100, weightPercent: 100)
+            ]
+          )
+        ]
+      )
+    )
+
+    let viewModel = PortfolioViewModel(service: service)
+    await viewModel.load()
+
+    XCTAssertEqual(service.fetchPortfolioSectorExposureCalls, 1)
+    XCTAssertEqual(viewModel.sectorExposure?.sectors.first?.sector, "Information Technology")
+    XCTAssertEqual(viewModel.sectorExposure?.sectors.first?.overweightPercent, 61.4)
+  }
+
   func testLoadWithNoCashAllocationSetsCashBalanceToZero() async {
     let service = MockStockService()
     service.fetchPortfolioResult = .success([makeStock(id: "aapl", symbol: "AAPL", shares: 1, buyPrice: 100)])
@@ -541,7 +575,8 @@ private final class MockPortfolioLocalStore: PortfolioLocalPersisting {
 private final class MockStockService: StockServicing {
   var fetchPortfolioCalls = 0
   var fetchPortfolioSummaryCalls = 0
-  var fetchTargetsCalls = 0
+  var fetchPortfolioSectorExposureCalls = 0
+
   var createCalls = 0
   var lastCreateRequest: StockRequest?
   var lastCreatePortfolioListId: String?
@@ -557,6 +592,17 @@ private final class MockStockService: StockServicing {
       unrealizedPnl: 0,
       realizedPnl: 0,
       allocation: []
+    )
+  )
+  var fetchPortfolioSectorExposureResult: Result<PortfolioSectorExposureResponse, Error> = .success(
+    PortfolioSectorExposureResponse(
+      baseCurrency: "USD",
+      totalValue: 0,
+      investedValue: 0,
+      cashBalance: 0,
+      benchmarkName: "S&P 500",
+      benchmarkAsOf: "2026-05-29",
+      sectors: []
     )
   )
   var fetchTargetsResult: Result<[TargetResponse], Error> = .success([])
@@ -584,11 +630,8 @@ private final class MockStockService: StockServicing {
     try await fetchPortfolio()
   }
 
-  func fetchPortfolio(
-    portfolioListId _: String?,
-    cursor _: String?,
-    limit _: Int?
-  ) async throws -> (items: [StockResponse], nextCursor: String?) {
+  func fetchPortfolio(portfolioListId _: String?, cursor _: String?, limit _: Int?) async throws -> (items: [StockResponse], nextCursor: String?) {
+
     fetchPortfolioCalls += 1
     return (try fetchPortfolioResult.get(), nil)
   }
@@ -600,6 +643,11 @@ private final class MockStockService: StockServicing {
 
   func fetchPortfolioSummary(portfolioListId _: String?) async throws -> PortfolioSummaryResponse {
     try await fetchPortfolioSummary()
+  }
+
+  func fetchPortfolioSectorExposure(portfolioListId _: String?) async throws -> PortfolioSectorExposureResponse {
+    fetchPortfolioSectorExposureCalls += 1
+    return try fetchPortfolioSectorExposureResult.get()
   }
 
   func fetchTargets(symbol _: String?) async throws -> [TargetResponse] {
