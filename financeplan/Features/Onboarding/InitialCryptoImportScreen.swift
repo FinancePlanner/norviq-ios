@@ -125,7 +125,7 @@ struct InitialCryptoImportScreen: View {
                     .stroke(isSelected ? AppTheme.Colors.success : .clear, lineWidth: 2)
             )
         }
-        .buttonStyle(PressEffectStyle())
+        .buttonStyle(PressableStyle())
     }
 
     private func displaySymbol(_ symbol: String) -> String {

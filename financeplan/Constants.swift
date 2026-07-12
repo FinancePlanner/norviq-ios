@@ -7,6 +7,8 @@ enum Constants {
   enum Norviq {
     static let filesBaseUrl = URL(string: "https://files.norviqa.io")!
 
+    static let shareBaseUrl = URL(string: "https://share.norviqa.io")!
+
     static let appStoreUrl = URL(string: "https://apps.apple.com/us/app/norviqa/id6745227236")!
 
     static let webAppBaseUrl = URL(string: "https://www.norviqaapp.com")!

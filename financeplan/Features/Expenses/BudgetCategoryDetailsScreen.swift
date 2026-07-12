@@ -151,7 +151,7 @@ private struct BudgetCategoryCard: View {
     .overlay {
       RoundedRectangle(cornerRadius: 16)
         .stroke(Color.white.opacity(0.05), lineWidth: 1)
-    )
+    }
   }
 }
 

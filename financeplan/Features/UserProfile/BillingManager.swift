@@ -387,7 +387,7 @@ final class BillingManager {
 
       }
 
-      await syncBackendEntitlement()
+      try await syncBackendEntitlement()
       return true
     } catch {
       errorMessage = error.localizedDescription
@@ -478,53 +478,10 @@ final class BillingManager {
     UserDefaults.standard.removeObject(forKey: Keys.pendingBackendSync)
   }
 
-  func reconcilePendingBackendSyncIfNeeded() async {
-    guard uiTestBillingTier == nil else { return }
-    guard UserDefaults.standard.bool(forKey: Keys.pendingBackendSync) else { return }
-    await syncBackendEntitlement()
-  }
-
   private func restoreBackendEntitlement(forceRefresh: Bool = false) async throws -> BillingContextResponse {
     let context = try await billingClient(forceRefresh: forceRefresh).restorePurchases()
     apply(context)
     return context
-  }
-
-  @discardableResult
-  private func syncBackendEntitlement(maxAttempts: Int = 3) async -> BillingContextResponse? {
-    let userID = await sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !userID.isEmpty else { return nil }
-
-    var delayNanoseconds: UInt64 = 500_000_000
-
-    for attempt in 1...maxAttempts {
-      do {
-        let context = try await restoreBackendEntitlement()
-        clearPendingBackendSync()
-        return context
-      } catch let error as BillingHTTPClient.Error where error.isUnauthorized {
-        do {
-          let context = try await restoreBackendEntitlement(forceRefresh: true)
-          clearPendingBackendSync()
-          return context
-        } catch {
-          if attempt == maxAttempts {
-            markPendingBackendSync()
-            return nil
-          }
-        }
-      } catch {
-        if attempt == maxAttempts {
-          markPendingBackendSync()
-          return nil
-        }
-      }
-
-      try? await Task.sleep(nanoseconds: delayNanoseconds)
-      delayNanoseconds *= 2
-    }
-
-    return nil
   }
 
   private func performRevenueCatLogin(userID: String) async {
@@ -533,7 +490,7 @@ final class BillingManager {
       if customerInfo.entitlements[Constants.entitlementID]?.isActive == true {
         applyOptimisticPro(from: customerInfo)
       }
-      await syncBackendEntitlement()
+      try await syncBackendEntitlement()
     } catch {
       errorMessage = error.localizedDescription
     }
@@ -559,14 +516,6 @@ final class BillingManager {
         generatedAt: Date()
       )
     )
-  }
-
-  private func markPendingBackendSync() {
-    UserDefaults.standard.set(true, forKey: Keys.pendingBackendSync)
-  }
-
-  private func clearPendingBackendSync() {
-    UserDefaults.standard.removeObject(forKey: Keys.pendingBackendSync)
   }
 
   func recordRestoreResult(
