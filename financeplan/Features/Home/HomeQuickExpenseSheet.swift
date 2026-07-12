@@ -22,6 +22,7 @@ struct HomeQuickExpenseSheet: View {
   @State private var userSharePercent: Double = 100
   @State private var isSaving = false
   @State private var errorMessage: String?
+  @State private var isScannerPresented = false
 
   private var canSave: Bool {
     !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -37,6 +38,15 @@ struct HomeQuickExpenseSheet: View {
   var body: some View {
     NavigationStack {
       Form {
+        Section {
+          Button {
+            isScannerPresented = true
+          } label: {
+            Label("Scan Receipt", systemImage: "qrcode.viewfinder")
+          }
+          .accessibilityIdentifier("quickExpense.scanReceipt")
+        }
+
         Section("Record Spend") {
           TextField("Title", text: $title)
             .textInputAutocapitalization(.words)
@@ -122,8 +132,36 @@ struct HomeQuickExpenseSheet: View {
           }
         }
       }
+      .sheet(isPresented: $isScannerPresented) {
+        ReceiptScannerView(onDraft: applyReceiptDraft)
+      }
     }
   }
+
+  private func applyReceiptDraft(_ draft: ReceiptDraft) {
+    if let total = draft.total {
+      amountText = String(format: "%.2f", total)
+    }
+    if let merchant = draft.merchant, !merchant.isEmpty {
+      title = merchant
+    } else if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      // Fiscal QR codes carry only a tax id, not a name — seed a label the user can edit.
+      title = draft.taxId.map { "Receipt · \($0)" } ?? "Receipt"
+    }
+    if let date = draft.date, let parsed = Self.receiptDateFormatter.date(from: date) {
+      occurredOn = parsed
+    }
+    errorMessage = nil
+  }
+
+  private static let receiptDateFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.calendar = Calendar(identifier: .gregorian)
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(identifier: "UTC")
+    formatter.dateFormat = "yyyy-MM-dd"
+    return formatter
+  }()
 
   private func submit() async {
     guard let amount = parsedAmount, amount > 0 else {
