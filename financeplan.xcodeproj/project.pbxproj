@@ -933,7 +933,7 @@
 			repositoryURL = "https://github.com/FinancePlanner/norviq-shared.git";
 			requirement = {
 				kind = exactVersion;
-				version = 3.7.0;
+				version = 3.10.0;
 
 			};
 		};
