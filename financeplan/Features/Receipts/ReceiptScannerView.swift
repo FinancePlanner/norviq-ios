@@ -1,5 +1,6 @@
 import StockPlanShared
 import SwiftUI
+import Vision
 import VisionKit
 
 /// Camera sheet that scans a fiscal receipt QR code and returns a parsed
