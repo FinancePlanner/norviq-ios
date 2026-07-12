@@ -73,6 +73,9 @@ struct HomeScreen: View {
       Tab(HomeTab.tax.title, systemImage: "building.columns", value: .tax) {
         TaxDashboardScreen()
           .accessibilityIdentifier("tab.tax")
+      Tab(HomeTab.insights.title, systemImage: "sparkles", value: .insights) {
+        InsightsScreen()
+          .accessibilityIdentifier("tab.insights")
       }
     }
     .id(appLanguage.rawValue)
@@ -86,7 +89,7 @@ struct HomeScreen: View {
       PaywallView(billingManager: billingManager)
     }
     .onChange(of: selectedTab) { _, newValue in
-      guard newValue == .reports || newValue == .crypto, !billingManager.isPro else { return }
+      guard newValue == .reports || newValue == .insights, !billingManager.isPro else { return }
       selectedTab = .dashboard
       isPaywallPresented = true
     }

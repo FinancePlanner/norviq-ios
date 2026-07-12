@@ -7,6 +7,7 @@ enum HomeTab: Hashable {
   case expenses
   case reports
   case tax
+  case insights
 
   var title: String {
     switch self {
@@ -22,6 +23,8 @@ enum HomeTab: Hashable {
       return String(localized: "Reports")
     case .tax:
       return String(localized: "Tax")
+    case .insights:
+      return String(localized: "Insights")
     }
   }
 }
