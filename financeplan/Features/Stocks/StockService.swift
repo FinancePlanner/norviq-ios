@@ -7,33 +7,6 @@ private let stockServiceLogger = Logger(
   category: "StockService"
 )
 
-nonisolated struct PortfolioSectorHoldingContribution: Codable, Sendable, Equatable, Identifiable {
-  var id: String { symbol }
-  let symbol: String
-  let value: Double
-  let weightPercent: Double
-}
-
-nonisolated struct PortfolioSectorExposureItem: Codable, Sendable, Equatable, Identifiable {
-  var id: String { sector }
-  let sector: String
-  let value: Double
-  let weightPercent: Double
-  let benchmarkWeightPercent: Double?
-  let overweightPercent: Double?
-  let holdings: [PortfolioSectorHoldingContribution]
-}
-
-nonisolated struct PortfolioSectorExposureResponse: Codable, Sendable, Equatable {
-  let baseCurrency: String
-  let totalValue: Double
-  let investedValue: Double
-  let cashBalance: Double
-  let benchmarkName: String
-  let benchmarkAsOf: String
-  let sectors: [PortfolioSectorExposureItem]
-}
-
 @MainActor
 protocol StockServicing: Sendable {
   @discardableResult

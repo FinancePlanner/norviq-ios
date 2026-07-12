@@ -183,6 +183,20 @@ final class PortfolioViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.sectorExposure?.sectors.first?.overweightPercent, 61.4)
   }
 
+  func testLoadIgnoresSectorExposureNotFoundAndKeepsPortfolioVisible() async {
+    let service = MockStockService()
+    service.fetchPortfolioResult = .success([makeStock(id: "aapl", symbol: "AAPL", shares: 1, buyPrice: 100)])
+    service.fetchPortfolioSectorExposureResult = .failure(StockHTTPClient.Error.invalidStatus(404))
+    service.fetchPortfolioSummaryResult = .success(makeSummary(allocation: [AllocationItem(symbol: "AAPL", value: 100, currency: "USD")]))
+
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
+    await viewModel.load()
+
+    XCTAssertEqual(service.fetchPortfolioSectorExposureCalls, 1)
+    XCTAssertNil(viewModel.sectorExposure)
+    XCTAssertNil(viewModel.errorMessage)
+  }
+
   func testLoadWithNoCashAllocationSetsCashBalanceToZero() async {
     let service = MockStockService()
     service.fetchPortfolioResult = .success([makeStock(id: "aapl", symbol: "AAPL", shares: 1, buyPrice: 100)])
@@ -576,6 +590,7 @@ private final class MockStockService: StockServicing {
   var fetchPortfolioCalls = 0
   var fetchPortfolioSummaryCalls = 0
   var fetchPortfolioSectorExposureCalls = 0
+  var fetchTargetsCalls = 0
 
   var createCalls = 0
   var lastCreateRequest: StockRequest?

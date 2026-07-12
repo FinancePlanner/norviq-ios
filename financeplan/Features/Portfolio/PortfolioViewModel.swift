@@ -85,6 +85,10 @@ final class PortfolioViewModel: ObservableObject {
     )
   }
 
+  convenience init(service: StockServicing, localStore: (any PortfolioLocalPersisting)? = nil) {
+    self.init(service: service, marketDataService: Container.shared.marketDataService(), localStore: localStore)
+  }
+
   func setModelContext(_ context: ModelContext) {
     self.localStore = SwiftDataPortfolioLocalStore(context: context)
   }
@@ -107,19 +111,20 @@ final class PortfolioViewModel: ObservableObject {
 
       async let stocksTask = service.fetchPortfolio(portfolioListId: selectedPortfolioListId, limit: 50)
       async let summaryTask = service.fetchPortfolioSummary(portfolioListId: selectedPortfolioListId)
-      async let sectorExposureTask = service.fetchPortfolioSectorExposure(portfolioListId: selectedPortfolioListId)
       async let targetsTask = service.fetchTargets(symbol: nil)
-      let (stocksResult, summary, sectorExposure, targets) = try await (
+      let sectorExposureTask = Task {
+        await self.fetchPortfolioSectorExposureSafely(portfolioListId: selectedPortfolioListId)
+      }
+      let (stocksResult, summary, targets) = try await (
         stocksTask,
         summaryTask,
-        sectorExposureTask,
         targetsTask
       )
       let (remoteStocks, fetchedNextCursor) = stocksResult
       await syncWithSwiftData(remoteStocks, listId: selectedPortfolioListId)
       nextCursor = fetchedNextCursor
       cashBalance = extractCashBalance(from: summary)
-      self.sectorExposure = sectorExposure
+      self.sectorExposure = await sectorExposureTask.value
       targetAlertsBySymbol = Self.makeTargetAlertsBySymbol(targets)
 
       hasLoadedOnce = true
@@ -334,8 +339,9 @@ final class PortfolioViewModel: ObservableObject {
   private func refreshPortfolioSummary() async {
     do {
       async let summaryTask = service.fetchPortfolioSummary(portfolioListId: selectedPortfolioListId)
-      async let sectorExposureTask = service.fetchPortfolioSectorExposure(portfolioListId: selectedPortfolioListId)
-      let (summary, sectorExposure) = try await (summaryTask, sectorExposureTask)
+      let sectorExposureTask = Task { await fetchPortfolioSectorExposureSafely(portfolioListId: selectedPortfolioListId) }
+      let summary = try await summaryTask
+      let sectorExposure = await sectorExposureTask.value
       cashBalance = extractCashBalance(from: summary)
       self.sectorExposure = sectorExposure
     } catch {
@@ -434,6 +440,30 @@ final class PortfolioViewModel: ObservableObject {
       mapped[symbol] = target
     }
     return mapped
+  }
+
+  private func fetchPortfolioSectorExposureSafely(portfolioListId: String?) async -> PortfolioSectorExposureResponse? {
+    do {
+      return try await service.fetchPortfolioSectorExposure(portfolioListId: portfolioListId)
+    } catch {
+      if Self.isSectorExposureNotFound(error) {
+        portfolioViewModelLogger.warning("Sector exposure endpoint is unavailable (\(error.localizedDescription, privacy: .public))")
+      } else {
+        portfolioViewModelLogger.warning("Failed to fetch sector exposure: \(error.localizedDescription, privacy: .public)")
+      }
+      return nil
+    }
+  }
+
+  private static func isSectorExposureNotFound(_ error: Error) -> Bool {
+    if let stockError = error as? StockHTTPClient.Error,
+       case .invalidStatus(404) = stockError {
+      return true
+    }
+    if let httpError = error as? any HTTPClientError, httpError.statusCode == 404 {
+      return true
+    }
+    return false
   }
 }
 
