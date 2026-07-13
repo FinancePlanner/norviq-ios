@@ -5,6 +5,7 @@ import StockPlanShared
 @MainActor @Observable
 final class TaxDashboardViewModel {
   var dashboard: TaxDashboardResponse?
+  var profileContext: TaxProfileContextResponse?
   var scenario: TaxScenarioResponse?
   var actionPlan: TaxActionPlanResponse?
   var isLoading = false
@@ -19,13 +20,27 @@ final class TaxDashboardViewModel {
     errorMessage = nil
     defer { isLoading = false }
     do {
+      async let context = service.profileContext(
+        jurisdiction: selectedJurisdiction,
+        taxYear: Calendar.current.component(.year, from: Date())
+      )
       dashboard = try await service.dashboard(
         jurisdiction: selectedJurisdiction,
         taxYear: Calendar.current.component(.year, from: Date())
       )
+      profileContext = try await context
     } catch {
       errorMessage = "We couldn't refresh your tax estimate. Try again shortly."
     }
+  }
+
+  func reloadProfileContext() async {
+    do {
+      profileContext = try await service.profileContext(
+        jurisdiction: selectedJurisdiction,
+        taxYear: Calendar.current.component(.year, from: Date())
+      )
+    } catch { errorMessage = "Market classifications could not be refreshed." }
   }
 
   func simulate(_ opportunity: TaxOpportunityResponse) async {

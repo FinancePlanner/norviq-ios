@@ -17,6 +17,7 @@ struct DashboardRoot: View {
   @Binding var selectedTab: HomeTab
   @Binding var isSettingsPresented: Bool
   @Bindable var budgetStore: BudgetPlannerViewModel
+  @InjectedObservable(\Container.billingManager) private var billingManager
   @State private var searchViewModel = AssetSearchViewModel()
   @State private var activityViewModel = ActivityViewModel()
   @State private var focusPointsViewModel = FocusPointsViewModel()
@@ -32,6 +33,7 @@ struct DashboardRoot: View {
   @State private var spendingChartPoints: [ChartDataPoint] = []
   @State private var isQuickAddPresented = false
   @State private var isChartBuilderPresented = false
+  @State private var isScenarioPlanningPresented = false
   @State private var hasLoadedContent = false
 
   private let dashboardService: any DashboardServicing = Container.shared.dashboardService()
@@ -137,6 +139,11 @@ struct DashboardRoot: View {
       .navigationDestination(isPresented: $isChartBuilderPresented) {
         ChartBuilderStandaloneScreen()
       }
+      .navigationDestination(isPresented: $isScenarioPlanningPresented) {
+        ProGateView(billingManager: billingManager) {
+          ScenarioPlanningScreen()
+        }
+      }
       .task {
         await handleInitialTask()
       }
@@ -151,6 +158,14 @@ struct DashboardRoot: View {
       }
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
+          Button("Scenario planning", systemImage: "chart.xyaxis.line") {
+            isScenarioPlanningPresented = true
+          }
+          .labelStyle(.iconOnly)
+          .buttonStyle(.bordered)
+          .tint(AppTheme.Colors.tint(for: colorScheme))
+          .accessibilityLabel(LocalizedStringKey("Open scenario planning"))
+
           Button("Settings", systemImage: "gearshape") {
             openSettings()
           }

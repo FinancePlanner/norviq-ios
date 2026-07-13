@@ -8,6 +8,7 @@ struct TaxDashboardScreen: View {
   @State private var model: TaxDashboardViewModel
   @State private var isSettingsPresented = false
   @State private var isReportsPresented = false
+  @State private var isMarketAdmissionPresented = false
   private let service: TaxServiceProtocol
 
   init() {
@@ -34,6 +35,9 @@ struct TaxDashboardScreen: View {
       .navigationTitle("Tax strategy")
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
+          if model.selectedJurisdiction == .spain {
+            Button("Markets", systemImage: "building.columns") { isMarketAdmissionPresented = true }
+          }
           Button("Reports", systemImage: "doc.text") { isReportsPresented = true }
           Button("Settings", systemImage: "gearshape") { isSettingsPresented = true }
         }
@@ -49,6 +53,12 @@ struct TaxDashboardScreen: View {
       .sheet(item: $model.actionPlan) { plan in actionPlanSheet(plan) }
       .sheet(isPresented: $isSettingsPresented) { TaxSettingsSheet(service: service) }
       .sheet(isPresented: $isReportsPresented) { TaxReportsSheet(service: service) }
+      .sheet(isPresented: $isMarketAdmissionPresented) {
+        TaxMarketAdmissionSheet(
+          service: service,
+          instruments: model.profileContext?.instruments ?? []
+        ) { Task { await model.reloadProfileContext() } }
+      }
     }
   }
 

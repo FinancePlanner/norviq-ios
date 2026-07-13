@@ -3,6 +3,8 @@ import StockPlanShared
 
 protocol TaxServiceProtocol: Sendable {
   func dashboard(jurisdiction: TaxJurisdiction, taxYear: Int) async throws -> TaxDashboardResponse
+  func profileContext(jurisdiction: TaxJurisdiction, taxYear: Int) async throws -> TaxProfileContextResponse
+  func saveMarketAdmission(instrumentId: String, status: TaxMarketAdmissionStatus) async throws -> TaxInstrumentMarketOption
   func createScenario(_ request: TaxScenarioRequest) async throws -> TaxScenarioResponse
   func createActionPlan(_ request: TaxActionPlanRequest) async throws -> TaxActionPlanResponse
   func notificationPreferences() async throws -> TaxNotificationPreferences
@@ -33,6 +35,29 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     ]
     guard let url = components?.url else { throw URLError(.badURL) }
     return try await send(url: url, method: "GET", body: Optional<Data>.none)
+  }
+
+  func profileContext(jurisdiction: TaxJurisdiction, taxYear: Int) async throws -> TaxProfileContextResponse {
+    var components = URLComponents(
+      url: environment.current.apiBaseUrl.appending(path: "v1/tax/profile/context"),
+      resolvingAgainstBaseURL: false
+    )
+    components?.queryItems = [
+      URLQueryItem(name: "jurisdiction", value: jurisdiction.rawValue),
+      URLQueryItem(name: "taxYear", value: String(taxYear))
+    ]
+    guard let url = components?.url else { throw URLError(.badURL) }
+    return try await send(url: url, method: "GET", body: Optional<Data>.none)
+  }
+
+  func saveMarketAdmission(
+    instrumentId: String,
+    status: TaxMarketAdmissionStatus
+  ) async throws -> TaxInstrumentMarketOption {
+    struct Request: Encodable { let status: TaxMarketAdmissionStatus }
+    let url = environment.current.apiBaseUrl
+      .appending(path: "v1/tax/instruments/\(instrumentId)/market-admission")
+    return try await send(url: url, method: "PUT", body: JSONEncoder().encode(Request(status: status)))
   }
 
   func createScenario(_ request: TaxScenarioRequest) async throws -> TaxScenarioResponse {

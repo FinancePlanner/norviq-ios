@@ -8,7 +8,6 @@ struct PortfolioRoot: View {
   @Binding var isSettingsPresented: Bool
   @Binding var pendingOpenSymbol: String?
   @InjectedObservable(\Container.billingManager) private var billingManager
-  @State private var isPaywallPresented = false
   @StateObject private var portfolioViewModel = PortfolioViewModel()
 
   var body: some View {
@@ -30,15 +29,12 @@ struct PortfolioRoot: View {
           .accessibilityLabel(LocalizedStringKey("Open settings"))
         }
         ToolbarItem(placement: .topBarTrailing) {
-          NavigationLink(destination: ScenarioPlanningScreen()) {
+          NavigationLink(destination: ProGateView(billingManager: billingManager) { ScenarioPlanningScreen() }) {
             Label("Scenario planning", systemImage: "chart.xyaxis.line")
           }
             .labelStyle(.iconOnly)
             .accessibilityLabel("Open scenario planning")
         }
-      }
-      .sheet(isPresented: $isPaywallPresented) {
-        PaywallView(billingManager: billingManager)
       }
     }
   }
