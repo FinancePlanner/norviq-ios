@@ -10,6 +10,7 @@ struct TaxDashboardScreen: View {
   @State private var isReportsPresented = false
   @State private var isMarketAdmissionPresented = false
   @State private var isProfilePresented = false
+  @State private var isCarryforwardPresented = false
   private let service: TaxServiceProtocol
 
   init() {
@@ -40,6 +41,9 @@ struct TaxDashboardScreen: View {
           if model.selectedJurisdiction == .spain {
             Button("Markets", systemImage: "building.columns") { isMarketAdmissionPresented = true }
           }
+          if model.selectedJurisdiction == .portugal {
+            Button("Losses", systemImage: "calendar.badge.clock") { isCarryforwardPresented = true }
+          }
           Button("Profile", systemImage: "person.crop.circle") { isProfilePresented = true }
           Button("Reports", systemImage: "doc.text") { isReportsPresented = true }
           Button("Settings", systemImage: "gearshape") { isSettingsPresented = true }
@@ -62,6 +66,13 @@ struct TaxDashboardScreen: View {
             Task { await model.load() }
           }
         }
+      }
+      .sheet(isPresented: $isCarryforwardPresented) {
+        TaxLossCarryforwardSheet(
+          service: service,
+          jurisdiction: model.selectedJurisdiction,
+          taxYear: Calendar.current.component(.year, from: Date())
+        )
       }
       .sheet(isPresented: $isMarketAdmissionPresented) {
         TaxMarketAdmissionSheet(

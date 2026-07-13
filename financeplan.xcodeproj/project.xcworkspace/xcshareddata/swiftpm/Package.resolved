@@ -177,8 +177,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FinancePlanner/norviq-shared.git",
       "state" : {
-        "revision" : "ec266bd37270e4ab5fdda79156b2e78c21079139",
-        "version" : "3.13.0"
+        "revision" : "f11243de2012f7e2fc2b063312964e631eb5b1b1",
+        "version" : "3.14.0"
       }
     },
     {

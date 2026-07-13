@@ -15,6 +15,7 @@ struct ExpensesPlannerScreen: View {
   @State private var isPartnerEditorPresented = false
   @State private var isRecurringManagerPresented = false
   @State private var recurringTemplateToLog: RecurringTemplateResponse?
+  @State private var isShowingFinancingPlanner = false
   @State private var itemDraft: BudgetPlanItemDraft?
   @State private var presentedPlanItemDraft: BudgetPlanItemDraft?
   @State private var didSavePresentedPlanItemDraft = false
@@ -100,6 +101,9 @@ struct ExpensesPlannerScreen: View {
             )
             .padding(.horizontal, 16)
 
+            FinancingCommitmentsCard { isShowingFinancingPlanner = true }
+              .padding(.horizontal, 16)
+
           if (viewModel.selectedMonthSnapshot?.netSalary ?? 0) <= 0 {
             GlassCard(cornerRadius: 18) {
               HStack(alignment: .top, spacing: 12) {
@@ -130,6 +134,9 @@ struct ExpensesPlannerScreen: View {
         }
       }
       .toolbar {
+        ToolbarItem(placement: .topBarLeading) {
+          financingPlannerButton
+        }
         ToolbarItem(placement: .topBarTrailing) {
           toolbarActions
         }
@@ -146,6 +153,9 @@ struct ExpensesPlannerScreen: View {
       .sheet(isPresented: $isPartnerEditorPresented, content: householdPartnerSheet)
       .sheet(item: $recurringTemplateToLog) { template in
         recurringTemplateSheet(for: template)
+      }
+      .sheet(isPresented: $isShowingFinancingPlanner) {
+        FinancingPlannerScreen()
       }
       .sheet(isPresented: $isRecurringManagerPresented, content: recurringManagerSheet)
       .sheet(isPresented: $isPaywallPresented) {
@@ -339,12 +349,24 @@ struct ExpensesPlannerScreen: View {
     }
     .task { await viewModel.load() }
     .toolbar {
+      ToolbarItem(placement: .topBarLeading) {
+        financingPlannerButton
+      }
       ToolbarItem(placement: .topBarTrailing) {
         toolbarActions
       }
     }
     .padding(.vertical, 10)
     .maxContentWidth(regularSizeClass: ContentWidth.dense)
+  }
+
+  private var financingPlannerButton: some View {
+    Button {
+      isShowingFinancingPlanner = true
+    } label: {
+      Label("Plan a purchase", systemImage: "calendar.badge.plus")
+    }
+    .accessibilityIdentifier("expenses.planFinancing")
   }
 
   private func errorBanner(_ message: String) -> some View {
@@ -418,6 +440,9 @@ struct ExpensesPlannerScreen: View {
         }
       )
       .padding(.horizontal, 16)
+
+      FinancingCommitmentsCard { isShowingFinancingPlanner = true }
+        .padding(.horizontal, 16)
 
       ProGateView(billingManager: billingManager) {
         ExpensesYearOverviewCard(

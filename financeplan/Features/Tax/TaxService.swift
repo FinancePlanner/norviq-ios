@@ -13,6 +13,7 @@ protocol TaxServiceProtocol: Sendable {
   func reports() async throws -> [TaxReportResponse]
   func createReport(_ request: TaxReportRequest) async throws -> TaxReportResponse
   func downloadReport(_ report: TaxReportResponse) async throws -> URL
+  func lossCarryforwards(jurisdiction: TaxJurisdiction, taxYear: Int) async throws -> TaxLossCarryforwardLedgerResponse
 }
 
 final class TaxService: TaxServiceProtocol, @unchecked Sendable {
@@ -111,6 +112,22 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
       .appending(path: "norviq-tax-\(report.taxYear)-\(report.id).\(report.format.rawValue)")
     try data.write(to: destination, options: .atomic)
     return destination
+  }
+
+  func lossCarryforwards(
+    jurisdiction: TaxJurisdiction,
+    taxYear: Int
+  ) async throws -> TaxLossCarryforwardLedgerResponse {
+    var components = URLComponents(
+      url: environment.current.apiBaseUrl.appending(path: "v1/tax/loss-carryforwards"),
+      resolvingAgainstBaseURL: false
+    )
+    components?.queryItems = [
+      URLQueryItem(name: "jurisdiction", value: jurisdiction.rawValue),
+      URLQueryItem(name: "taxYear", value: String(taxYear))
+    ]
+    guard let url = components?.url else { throw URLError(.badURL) }
+    return try await send(url: url, method: "GET", body: nil)
   }
 
   private func send<Response: Decodable>(path: String, body: Data) async throws -> Response {

@@ -37,6 +37,9 @@ struct ScenarioGoal: Decodable, Identifiable, Sendable {
   let monthlyContribution: Double?; let annualContributionGrowth: Double?; let inflationAssumption: Double?
 }
 struct ScenarioHolding: Decodable, Identifiable, Sendable { let id: UUID; let symbol: String; let category: String }
+struct ScenarioCryptoHolding: Decodable, Identifiable, Sendable {
+  let id: UUID; let symbol: String; let name: String; let quantity: Double
+}
 struct ScenarioRiskProfile: Decodable, Identifiable, Sendable {
   let id: UUID; let holdingId: UUID; let assetCategory: String; let sector: String?; let region: String?; let benchmarkProxy: String?
   let manualValue: Double?; let duration: Double?; let convexity: Double?
@@ -174,7 +177,8 @@ protocol ScenarioPlanningServiceProtocol: Sendable {
   func catalog() async throws -> ScenarioCatalogPayload; func runs() async throws -> [ScenarioRunSummary]
   func scenarios() async throws -> [ScenarioDefinitionSummary]
   func portfolios() async throws -> [ScenarioPortfolio]; func goals() async throws -> [ScenarioGoal]
-  func captureSnapshot(portfolioID: UUID) async throws -> ScenarioSnapshotPreview
+  func cryptoHoldings() async throws -> [ScenarioCryptoHolding]
+  func captureSnapshot(portfolioID: UUID, baseCurrency: String, cryptoHoldingIDs: [UUID]) async throws -> ScenarioSnapshotPreview
   func holdings(portfolioIDs: [UUID]) async throws -> [ScenarioHolding]; func riskProfiles() async throws -> [ScenarioRiskProfile]
   func createGoal(name: String, portfolioID: UUID, targetAmount: Double, targetDate: Date, currency: String,
                   monthlyContribution: Double, contributionGrowth: Double, inflation: Double) async throws -> ScenarioGoal
@@ -197,6 +201,7 @@ final class ScenarioPlanningService: ScenarioPlanningServiceProtocol, @unchecked
   func scenarios() async throws -> [ScenarioDefinitionSummary] { try await send("v1/scenarios") }
   func portfolios() async throws -> [ScenarioPortfolio] { try await send("v1/portfolio-lists") }
   func goals() async throws -> [ScenarioGoal] { try await send("v1/financial-goals") }
+  func cryptoHoldings() async throws -> [ScenarioCryptoHolding] { try await send("v1/crypto/portfolio") }
   func holdings(portfolioIDs: [UUID]) async throws -> [ScenarioHolding] {
     var output: [ScenarioHolding] = []
     for id in portfolioIDs { output += try await send("v1/stocks?portfolioListId=\(id.uuidString)") }
@@ -234,8 +239,12 @@ final class ScenarioPlanningService: ScenarioPlanningServiceProtocol, @unchecked
   func run(id: UUID) async throws -> ScenarioRunSummary { try await send("v1/scenario-runs/\(id)") }
   func cancel(runID: UUID) async throws { let _: EmptyResponse = try await send("v1/scenario-runs/\(runID)", method: "DELETE") }
 
-  func captureSnapshot(portfolioID: UUID) async throws -> ScenarioSnapshotPreview {
-    try await send("v1/portfolio/scenario-snapshots", method: "POST", body: ["portfolioListId": portfolioID.uuidString, "baseCurrency": "USD"])
+  func captureSnapshot(portfolioID: UUID, baseCurrency: String, cryptoHoldingIDs: [UUID]) async throws -> ScenarioSnapshotPreview {
+    try await send("v1/portfolio/scenario-snapshots", method: "POST", body: [
+      "portfolioListId": portfolioID.uuidString,
+      "baseCurrency": baseCurrency.uppercased(),
+      "cryptoHoldingIds": cryptoHoldingIDs.map(\.uuidString),
+    ])
   }
 
   func createRun(_ input: ScenarioRunRequest, snapshotID: UUID) async throws -> ScenarioRunSummary {

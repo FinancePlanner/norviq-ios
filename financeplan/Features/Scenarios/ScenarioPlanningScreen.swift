@@ -12,6 +12,7 @@ import SwiftUI
   var portfolios: [ScenarioPortfolio] = []
   var goals: [ScenarioGoal] = []
   var holdings: [ScenarioHolding] = []
+  var cryptoHoldings: [ScenarioCryptoHolding] = []
   var riskProfiles: [ScenarioRiskProfile] = []
   var isLoading = false
   var isSubmitting = false
@@ -36,23 +37,34 @@ import SwiftUI
       async let p = service.portfolios()
       async let g = service.goals()
       async let rp = service.riskProfiles()
+      async let ch = service.cryptoHoldings()
       catalog = try await c
       runs = try await r
       scenarios = try await s
       portfolios = try await p
       goals = try await g
       riskProfiles = try await rp
+      cryptoHoldings = try await ch
       holdings = try await service.holdings(portfolioIDs: portfolios.map(\.id))
     } catch {
       errorMessage = "Scenario planning is temporarily unavailable."
     }
   }
 
-  func capture(_ request: ScenarioRunRequest) async {
+  func capture(_ request: ScenarioRunRequest, baseCurrency: String, cryptoHoldingIDs: [UUID]) async {
     isSubmitting = true
     defer { isSubmitting = false }
+    let currency = baseCurrency.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    guard currency.count == 3 else {
+      errorMessage = "Enter a valid three-letter snapshot currency."
+      return
+    }
     do {
-      snapshotPreview = try await service.captureSnapshot(portfolioID: request.portfolioID)
+      snapshotPreview = try await service.captureSnapshot(
+        portfolioID: request.portfolioID,
+        baseCurrency: currency,
+        cryptoHoldingIDs: cryptoHoldingIDs
+      )
       pendingRequest = request
       pendingSavedScenario = nil
     } catch {
@@ -60,11 +72,20 @@ import SwiftUI
     }
   }
 
-  func capture(_ scenario: ScenarioDefinitionSummary, seed: Int64?) async {
+  func capture(_ scenario: ScenarioDefinitionSummary, seed: Int64?, baseCurrency: String, cryptoHoldingIDs: [UUID]) async {
     isSubmitting = true
     defer { isSubmitting = false }
+    let currency = baseCurrency.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    guard currency.count == 3 else {
+      errorMessage = "Enter a valid three-letter snapshot currency."
+      return
+    }
     do {
-      snapshotPreview = try await service.captureSnapshot(portfolioID: scenario.portfolioListId)
+      snapshotPreview = try await service.captureSnapshot(
+        portfolioID: scenario.portfolioListId,
+        baseCurrency: currency,
+        cryptoHoldingIDs: cryptoHoldingIDs
+      )
       pendingSavedScenario = (scenario.id, seed)
       pendingRequest = nil
     } catch { errorMessage = "The portfolio snapshot could not be captured." }
@@ -166,6 +187,8 @@ struct ScenarioPlanningScreen: View {
   @State private var kind = ScenarioBuilderKind.historical
   @State private var name = "Portfolio stress test"
   @State private var portfolioID: UUID?
+  @State private var baseCurrency = "USD"
+  @State private var selectedCryptoHoldingIDs: Set<UUID> = []
   @State private var goalID: UUID?
   @State private var preset = "covid_crash"
   @State private var shock = -0.2
@@ -294,6 +317,13 @@ struct ScenarioPlanningScreen: View {
           }
         }
 
+        TextField("Snapshot base currency", text: $baseCurrency)
+          .textInputAutocapitalization(.characters)
+          .autocorrectionDisabled()
+          .textFieldStyle(.roundedBorder)
+
+        cryptoHoldingSelection
+
         Picker("Type", selection: $kind) {
           ForEach(ScenarioBuilderKind.allCases) {
             Text($0.title).tag($0)
@@ -399,6 +429,11 @@ struct ScenarioPlanningScreen: View {
         VStack(spacing: 12) {
           TextField("Random seed (optional)", text: $savedScenarioSeed)
             .keyboardType(.numberPad).textFieldStyle(.roundedBorder)
+          TextField("Snapshot base currency", text: $baseCurrency)
+            .textInputAutocapitalization(.characters)
+            .autocorrectionDisabled()
+            .textFieldStyle(.roundedBorder)
+          cryptoHoldingSelection
           ForEach(model.scenarios.filter { $0.isSaved ?? true }) { scenario in
             VStack(alignment: .leading, spacing: 8) {
               HStack {
@@ -411,7 +446,14 @@ struct ScenarioPlanningScreen: View {
                 Button("Delete", role: .destructive) { Task { await model.deleteScenario(scenario) } }
               }
               Button("Review snapshot and run") {
-                Task { await model.capture(scenario, seed: Int64(savedScenarioSeed)) }
+                Task {
+                  await model.capture(
+                    scenario,
+                    seed: Int64(savedScenarioSeed),
+                    baseCurrency: baseCurrency,
+                    cryptoHoldingIDs: Array(selectedCryptoHoldingIDs)
+                  )
+                }
               }.buttonStyle(.bordered)
             }
             .padding(12)
@@ -624,6 +666,11 @@ struct ScenarioPlanningScreen: View {
   // MARK: - Helpers
 
   private func submit() async {
+    let normalizedCurrency = baseCurrency.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    guard normalizedCurrency.count == 3 else {
+      model.errorMessage = "Enter a valid three-letter snapshot currency."
+      return
+    }
     guard let portfolioID else { return }
     let assumptions: (weights: [Double], annualReturns: [Double], covariance: [[Double]])
     do {
@@ -674,7 +721,36 @@ struct ScenarioPlanningScreen: View {
       regionShockTarget: scoped[2].0, regionShock: scoped[2].1,
       currencyShockTarget: scoped[3].0, currencyShock: scoped[3].1,
       parallelRateShiftBps: rateShift, volatilityMultiplier: volatility, recovery: recovery
-    ))
+    ), baseCurrency: normalizedCurrency, cryptoHoldingIDs: Array(selectedCryptoHoldingIDs))
+  }
+
+  @ViewBuilder
+  private var cryptoHoldingSelection: some View {
+    if !model.cryptoHoldings.isEmpty {
+      DisclosureGroup("Include crypto holdings") {
+        VStack(alignment: .leading, spacing: 10) {
+          ForEach(model.cryptoHoldings) { holding in
+            Toggle(isOn: Binding(
+              get: { selectedCryptoHoldingIDs.contains(holding.id) },
+              set: { selected in
+                if selected { selectedCryptoHoldingIDs.insert(holding.id) }
+                else { selectedCryptoHoldingIDs.remove(holding.id) }
+              }
+            )) {
+              HStack {
+                Text(holding.symbol).fontWeight(.medium)
+                Text(holding.quantity, format: .number.precision(.significantDigits(1...8)))
+                  .foregroundStyle(.secondary)
+              }
+            }
+          }
+          Text("Only selected crypto holdings are frozen into the snapshot.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .padding(.top, 8)
+      }
+    }
   }
 
   private func scopedShockEditor(_ label: String, target: Binding<String>, percentage: Binding<String>) -> some View {

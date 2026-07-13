@@ -11,6 +11,7 @@ final class ScenarioPlanningTests: XCTestCase {
     var goalsValue: [ScenarioGoal] = []
     var scenariosValue: [ScenarioDefinitionSummary] = []
     var holdingsValue: [ScenarioHolding] = []
+    var cryptoHoldingsValue: [ScenarioCryptoHolding] = []
     var riskProfilesValue: [ScenarioRiskProfile] = []
     var createdRun: ScenarioRunSummary?
     var snapshot = ScenarioSnapshotPreview(id: UUID(), payload: .object([:]), warnings: .array([]))
@@ -18,12 +19,15 @@ final class ScenarioPlanningTests: XCTestCase {
     var cancelledID: UUID?
     var createdScenarioID: UUID?
     var deletedScenarioID: UUID?
+    var capturedBaseCurrency: String?
+    var capturedCryptoHoldingIDs: [UUID] = []
 
     func catalog() async throws -> ScenarioCatalogPayload { catalogValue }
     func runs() async throws -> [ScenarioRunSummary] { runsValue }
     func scenarios() async throws -> [ScenarioDefinitionSummary] { scenariosValue }
     func portfolios() async throws -> [ScenarioPortfolio] { portfoliosValue }
     func goals() async throws -> [ScenarioGoal] { goalsValue }
+    func cryptoHoldings() async throws -> [ScenarioCryptoHolding] { cryptoHoldingsValue }
     func holdings(portfolioIDs: [UUID]) async throws -> [ScenarioHolding] { holdingsValue }
     func riskProfiles() async throws -> [ScenarioRiskProfile] { riskProfilesValue }
     func createGoal(name: String, portfolioID: UUID, targetAmount: Double, targetDate: Date, currency: String, monthlyContribution: Double, contributionGrowth: Double, inflation: Double) async throws -> ScenarioGoal { .init(id: UUID(), name: name, portfolioListId: portfolioID, targetAmount: targetAmount, targetDate: targetDate, baseCurrency: currency, monthlyContribution: monthlyContribution, annualContributionGrowth: contributionGrowth, inflationAssumption: inflation) }
@@ -31,7 +35,11 @@ final class ScenarioPlanningTests: XCTestCase {
     func deleteGoal(id: UUID) async throws {}
     func saveRiskProfile(holdingID: UUID, assetCategory: String, sector: String?, region: String?, benchmarkProxy: String?, manualValue: Double?, duration: Double?, convexity: Double?) async throws -> ScenarioRiskProfile { .init(id: UUID(), holdingId: holdingID, assetCategory: assetCategory, sector: sector, region: region, benchmarkProxy: benchmarkProxy, manualValue: manualValue, duration: duration, convexity: convexity) }
     func deleteRiskProfile(id: UUID) async throws {}
-    func captureSnapshot(portfolioID: UUID) async throws -> ScenarioSnapshotPreview { snapshot }
+    func captureSnapshot(portfolioID: UUID, baseCurrency: String, cryptoHoldingIDs: [UUID]) async throws -> ScenarioSnapshotPreview {
+      capturedBaseCurrency = baseCurrency
+      capturedCryptoHoldingIDs = cryptoHoldingIDs
+      return snapshot
+    }
     func createRun(_ input: ScenarioRunRequest, snapshotID: UUID) async throws -> ScenarioRunSummary { try XCTUnwrap(createdRun) }
     func createRun(scenarioID: UUID, snapshotID: UUID, seed: Int64?) async throws -> ScenarioRunSummary { createdScenarioID = scenarioID; return try XCTUnwrap(createdRun) }
     func deleteScenario(id: UUID) async throws { deletedScenarioID = id }
@@ -75,8 +83,11 @@ final class ScenarioPlanningTests: XCTestCase {
     let run = ScenarioRunSummary(id: UUID(), state: "queued", progress: 0, engineVersion: "v1", errorMessage: nil, result: nil)
     service.createdRun = run
     let model = ScenarioPlanningViewModel(service: service)
-    await model.capture(.init(name: "Test", portfolioID: UUID(), goalID: nil, kind: .monteCarlo, catalogID: "", shock: 0, horizonMonths: 360, pathCount: 10_000, distribution: "normal", seed: 42, save: true))
+    let cryptoID = UUID()
+    await model.capture(.init(name: "Test", portfolioID: UUID(), goalID: nil, kind: .monteCarlo, catalogID: "", shock: 0, horizonMonths: 360, pathCount: 10_000, distribution: "normal", seed: 42, save: true), baseCurrency: "EUR", cryptoHoldingIDs: [cryptoID])
     XCTAssertEqual(model.snapshotPreview?.id, service.snapshot.id)
+    XCTAssertEqual(service.capturedBaseCurrency, "EUR")
+    XCTAssertEqual(service.capturedCryptoHoldingIDs, [cryptoID])
     await model.runReviewedSnapshot()
     XCTAssertEqual(model.runs.first?.id, run.id)
     XCTAssertFalse(model.isSubmitting)
@@ -91,8 +102,9 @@ final class ScenarioPlanningTests: XCTestCase {
     let run = ScenarioRunSummary(id: UUID(), state: "queued", progress: 0, engineVersion: "v1", errorMessage: nil, result: nil)
     service.createdRun = run
     let model = ScenarioPlanningViewModel(service: service)
-    await model.capture(scenario, seed: 99)
+    await model.capture(scenario, seed: 99, baseCurrency: "GBP", cryptoHoldingIDs: [])
     XCTAssertEqual(model.snapshotPreview?.id, service.snapshot.id)
+    XCTAssertEqual(service.capturedBaseCurrency, "GBP")
     await model.runReviewedSnapshot()
     XCTAssertEqual(service.createdScenarioID, scenario.id)
     XCTAssertEqual(model.runs.first?.id, run.id)

@@ -933,7 +933,7 @@
 			repositoryURL = "https://github.com/FinancePlanner/norviq-shared.git";
 			requirement = {
 				kind = exactVersion;
-				version = 3.13.0;
+				version = 3.14.0;
 			};
 		};
 		70B002A53C5E11AA00F02001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {

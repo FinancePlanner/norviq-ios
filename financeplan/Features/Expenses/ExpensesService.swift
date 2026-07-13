@@ -41,6 +41,12 @@ protocol ExpensesServicing: ExpenseBudgetSetupServicing, Sendable {
     func updateRecurringTemplate(templateId: String, payload: RecurringTemplateRequest) async throws -> RecurringTemplateResponse
     func deleteRecurringTemplate(templateId: String) async throws
 
+    // Financing planner
+    func simulateFinancing(payload: FinancingSimulationRequest) async throws -> FinancingSimulationResponse
+    func getFinancingPlans() async throws -> [FinancingPlanResponse]
+    func createFinancingPlan(payload: FinancingPlanRequest) async throws -> FinancingPlanResponse
+    func getFinancingProjections(from: String?, to: String?) async throws -> [FinancingProjectionResponse]
+
     // Reports
     func getReportsOverview(from: String?, to: String?) async throws -> ReportsOverviewResponse
     func getMonthlyExpenseReports(from: String?, to: String?) async throws -> [BudgetMonthSummaryResponse]
@@ -160,6 +166,22 @@ struct ExpensesHTTPService: ExpensesServicing {
         try await client.deleteRecurringTemplate(templateId: templateId)
     }
 
+    func simulateFinancing(payload: FinancingSimulationRequest) async throws -> FinancingSimulationResponse {
+        try await client.simulateFinancing(payload: payload)
+    }
+
+    func getFinancingPlans() async throws -> [FinancingPlanResponse] {
+        try await client.getFinancingPlans()
+    }
+
+    func createFinancingPlan(payload: FinancingPlanRequest) async throws -> FinancingPlanResponse {
+        try await client.createFinancingPlan(payload: payload)
+    }
+
+    func getFinancingProjections(from: String? = nil, to: String? = nil) async throws -> [FinancingProjectionResponse] {
+        try await client.getFinancingProjections(from: from, to: to)
+    }
+
     func getMonthlyExpenseReports(from: String? = nil, to: String? = nil) async throws -> [BudgetMonthSummaryResponse] {
         try await client.getMonthlyExpenseReports(from: from, to: to)
     }
@@ -180,5 +202,4 @@ struct ExpensesHTTPService: ExpensesServicing {
         _ = try await client.dismissReportSuggestion(id: id)
     }
 }
-
 

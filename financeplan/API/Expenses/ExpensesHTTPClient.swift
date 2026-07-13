@@ -201,3 +201,21 @@ struct ExpensesHTTPClient: Sendable {
         }
     }
 }
+
+extension ExpensesHTTPClient {
+  func simulateFinancing(payload: FinancingSimulationRequest) async throws -> FinancingSimulationResponse {
+    try await client.call(SimulateFinancingEndpoint(payload: payload), errorType: Error.self)
+  }
+
+  func getFinancingPlans() async throws -> [FinancingPlanResponse] {
+    try await client.call(GetFinancingPlansEndpoint(), errorType: Error.self)
+  }
+
+  func createFinancingPlan(payload: FinancingPlanRequest) async throws -> FinancingPlanResponse {
+    try await client.call(CreateFinancingPlanEndpoint(payload: payload), errorType: Error.self)
+  }
+
+  func getFinancingProjections(from: String?, to: String?) async throws -> [FinancingProjectionResponse] {
+    try await client.call(GetFinancingProjectionsEndpoint(from: from, to: to), errorType: Error.self)
+  }
+}
