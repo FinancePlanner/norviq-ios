@@ -10,6 +10,7 @@ struct TaxDashboardScreen: View {
   @State private var isReportsPresented = false
   @State private var isMarketAdmissionPresented = false
   @State private var isFundClassificationPresented = false
+  @State private var isFundAnnualInputPresented = false
   @State private var isProfilePresented = false
   @State private var isCarryforwardPresented = false
   private let service: TaxServiceProtocol
@@ -44,6 +45,7 @@ struct TaxDashboardScreen: View {
           }
           if model.selectedJurisdiction == .germany {
             Button("Funds", systemImage: "chart.pie") { isFundClassificationPresented = true }
+            Button("Fund values", systemImage: "calendar.badge.plus") { isFundAnnualInputPresented = true }
           }
           if model.selectedJurisdiction == .portugal || model.selectedJurisdiction == .germany {
             Button("Losses", systemImage: "calendar.badge.clock") { isCarryforwardPresented = true }
@@ -89,6 +91,12 @@ struct TaxDashboardScreen: View {
           service: service,
           instruments: model.profileContext?.instruments ?? []
         ) { Task { await model.reloadProfileContext() } }
+      }
+      .sheet(isPresented: $isFundAnnualInputPresented) {
+        TaxFundAnnualInputSheet(
+          service: service,
+          context: model.profileContext
+        )
       }
     }
   }

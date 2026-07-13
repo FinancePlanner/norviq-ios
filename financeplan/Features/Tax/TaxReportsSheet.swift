@@ -12,6 +12,8 @@ struct TaxReportsSheet: View {
   @InjectedObservable(\Container.billingManager) private var billingManager
   let service: TaxServiceProtocol
   @State private var reports = [TaxReportResponse]()
+  @State private var reportTaxYear = Calendar.current.component(.year, from: Date())
+  @State private var reportFormat: TaxReportFormat = .pdf
   @State private var isLoading = true
   @State private var isCreating = false
   @State private var downloadingReportID: String?
@@ -37,11 +39,25 @@ struct TaxReportsSheet: View {
           }
         }
         Section {
+          Picker("Tax year", selection: $reportTaxYear) {
+            ForEach(reportYears, id: \.self) { year in
+              Text(String(year)).tag(year)
+            }
+          }
+          Picker("Format", selection: $reportFormat) {
+            Text("PDF").tag(TaxReportFormat.pdf)
+            Text("CSV").tag(TaxReportFormat.csv)
+          }
+          .pickerStyle(.segmented)
+
           Button {
             if billingManager.isPro { Task { await createReport() } }
             else { isPaywallPresented = true }
           } label: {
-            Label("Generate transaction workpaper", systemImage: "doc.badge.plus")
+            Label(
+              "Generate \(reportFormat.rawValue.uppercased()) workpaper",
+              systemImage: "doc.badge.plus"
+            )
           }
           .disabled(isCreating)
         } footer: {
@@ -119,12 +135,43 @@ struct TaxReportsSheet: View {
     defer { isCreating = false }
     do {
       let report = try await service.createReport(.init(
-        taxYear: Calendar.current.component(.year, from: Date()),
+        taxYear: reportTaxYear,
         kind: .transactionWorkpaper,
-        format: .pdf
+        format: reportFormat
       ))
       reports.insert(report, at: 0)
+      if report.status != "ready" {
+        Task { await pollReport(id: report.id) }
+      }
     } catch { errorMessage = "The report could not be generated." }
+  }
+
+  private func pollReport(id: String) async {
+    for attempt in 0 ..< 8 {
+      if attempt > 0 {
+        let delaySeconds = min(8, 1 << min(attempt - 1, 3))
+        do {
+          try await Task.sleep(nanoseconds: UInt64(delaySeconds) * 1_000_000_000)
+        } catch {
+          return
+        }
+      }
+
+      guard let refreshed = try? await service.reports(),
+            let report = refreshed.first(where: { $0.id == id })
+      else { continue }
+      if let index = reports.firstIndex(where: { $0.id == id }) {
+        reports[index] = report
+      } else {
+        reports.insert(report, at: 0)
+      }
+      if ["ready", "failed", "expired"].contains(report.status) { return }
+    }
+  }
+
+  private var reportYears: [Int] {
+    let currentYear = Calendar.current.component(.year, from: Date())
+    return Array((currentYear - 6 ... currentYear).reversed())
   }
 
   private func download(_ report: TaxReportResponse) async {

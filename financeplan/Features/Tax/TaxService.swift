@@ -7,6 +7,8 @@ protocol TaxServiceProtocol: Sendable {
   func saveProfile(_ request: TaxProfileRequest) async throws -> TaxProfileResponse
   func saveMarketAdmission(instrumentId: String, status: TaxMarketAdmissionStatus) async throws -> TaxInstrumentMarketOption
   func saveFundClassification(instrumentId: String, classification: TaxFundClassification) async throws -> TaxInstrumentMarketOption
+  func saveFundAnnualInput(_ request: TaxFundAnnualInputRequest) async throws -> TaxFundAdvanceLumpSumResponse
+  func fundAnnualInput(accountId: String, instrumentId: String, calculationYear: Int) async throws -> TaxFundAdvanceLumpSumResponse
   func createScenario(_ request: TaxScenarioRequest) async throws -> TaxScenarioResponse
   func createActionPlan(_ request: TaxActionPlanRequest) async throws -> TaxActionPlanResponse
   func notificationPreferences() async throws -> TaxNotificationPreferences
@@ -83,6 +85,32 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
       method: "PUT",
       body: JSONEncoder().encode(TaxFundClassificationRequest(classification: classification))
     )
+  }
+
+  func saveFundAnnualInput(_ request: TaxFundAnnualInputRequest) async throws -> TaxFundAdvanceLumpSumResponse {
+    try await send(
+      url: environment.current.apiBaseUrl.appending(path: "v1/tax/funds/annual-inputs"),
+      method: "PUT",
+      body: JSONEncoder().encode(request)
+    )
+  }
+
+  func fundAnnualInput(
+    accountId: String,
+    instrumentId: String,
+    calculationYear: Int
+  ) async throws -> TaxFundAdvanceLumpSumResponse {
+    var components = URLComponents(
+      url: environment.current.apiBaseUrl.appending(path: "v1/tax/funds/annual-inputs"),
+      resolvingAgainstBaseURL: false
+    )
+    components?.queryItems = [
+      URLQueryItem(name: "accountId", value: accountId),
+      URLQueryItem(name: "instrumentId", value: instrumentId),
+      URLQueryItem(name: "calculationYear", value: String(calculationYear))
+    ]
+    guard let url = components?.url else { throw URLError(.badURL) }
+    return try await send(url: url, method: "GET", body: Optional<Data>.none)
   }
 
   func createScenario(_ request: TaxScenarioRequest) async throws -> TaxScenarioResponse {

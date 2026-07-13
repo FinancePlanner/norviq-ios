@@ -6,6 +6,7 @@ struct TaxMarketAdmissionSheet: View {
   let service: TaxServiceProtocol
   let onChange: () -> Void
   @State private var instruments: [TaxInstrumentMarketOption]
+  @State private var verifiedInstrumentIDs: Set<String>
   @State private var savingID: String?
   @State private var errorMessage: String?
 
@@ -17,6 +18,9 @@ struct TaxMarketAdmissionSheet: View {
     self.service = service
     self.onChange = onChange
     _instruments = State(initialValue: instruments)
+    _verifiedInstrumentIDs = State(initialValue: Set(
+      instruments.filter { $0.marketAdmissionStatus != .unknown }.map(\.id)
+    ))
   }
 
   var body: some View {
@@ -48,7 +52,10 @@ struct TaxMarketAdmissionSheet: View {
                 Text("Unlisted").tag(TaxMarketAdmissionStatus.unlisted)
               }
               .pickerStyle(.menu)
-              .disabled(savingID != nil)
+              .disabled(savingID != nil || !verifiedInstrumentIDs.contains(instrument.id))
+              Toggle("Verified against a broker statement or official listing", isOn: verificationBinding(for: instrument))
+                .font(.footnote)
+                .disabled(savingID != nil)
             }
             .padding(.vertical, 4)
           }
@@ -65,6 +72,20 @@ struct TaxMarketAdmissionSheet: View {
     Binding(
       get: { instruments.first(where: { $0.id == instrument.id })?.marketAdmissionStatus ?? .unknown },
       set: { status in Task { await save(instrument: instrument, status: status) } }
+    )
+  }
+
+  private func verificationBinding(for instrument: TaxInstrumentMarketOption) -> Binding<Bool> {
+    Binding(
+      get: { verifiedInstrumentIDs.contains(instrument.id) },
+      set: { verified in
+        if verified {
+          verifiedInstrumentIDs.insert(instrument.id)
+        } else {
+          verifiedInstrumentIDs.remove(instrument.id)
+          Task { await save(instrument: instrument, status: .unknown) }
+        }
+      }
     )
   }
 
