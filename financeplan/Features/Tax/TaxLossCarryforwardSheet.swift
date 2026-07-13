@@ -24,7 +24,7 @@ struct TaxLossCarryforwardSheet: View {
             }
             .padding(.vertical, 8)
           } footer: {
-            Text("Only losses eligible under your aggregation treatment are included. Confirm imported history with a tax professional.")
+            Text(ledgerFooter)
           }
 
           Section("Source years") {
@@ -46,11 +46,15 @@ struct TaxLossCarryforwardSheet: View {
                 VStack(alignment: .leading, spacing: 3) {
                   HStack {
                     Text(String(balance.sourceTaxYear)).font(.headline)
+                    Text(balance.category?.displayName ?? "Tax loss")
+                      .font(.caption2.bold())
+                      .padding(.horizontal, 7).padding(.vertical, 3)
+                      .background(.secondary.opacity(0.12), in: Capsule())
                     if balance.expiresAfterTaxYear < taxYear {
                       Text("Expired").font(.caption2.bold()).foregroundStyle(.red)
                     }
                   }
-                  Text("\(money(balance.remainingAmount)) remaining · expires after \(balance.expiresAfterTaxYear)")
+                  Text("\(money(balance.remainingAmount)) remaining · \(expiryText(balance))")
                     .font(.caption).foregroundStyle(.secondary)
                 }
               }
@@ -81,5 +85,30 @@ struct TaxLossCarryforwardSheet: View {
 
   private func money(_ value: TaxMoney) -> String {
     value.amount.formatted(.currency(code: value.currency))
+  }
+
+  private var ledgerFooter: String {
+    jurisdiction == .germany
+      ? "Stock and general capital losses are tracked separately. The estimate includes classified imported disposals only."
+      : "Only losses eligible under your aggregation treatment are included. Confirm imported history with a tax professional."
+  }
+
+  private func expiryText(_ balance: TaxLossCarryforwardBalanceResponse) -> String {
+    balance.expiresAfterTaxYear >= 9999
+      ? "no statutory expiry"
+      : "expires after \(balance.expiresAfterTaxYear)"
+  }
+}
+
+private extension TaxLossCarryforwardCategory {
+  var displayName: String {
+    switch self {
+    case .stock: "Stock loss"
+    case .generalCapital: "General capital loss"
+    case .securities: "Securities loss"
+    case .shortTerm: "Short-term loss"
+    case .longTerm: "Long-term loss"
+    case .unspecified: "Tax loss"
+    }
   }
 }

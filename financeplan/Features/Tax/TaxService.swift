@@ -6,6 +6,7 @@ protocol TaxServiceProtocol: Sendable {
   func profileContext(jurisdiction: TaxJurisdiction, taxYear: Int) async throws -> TaxProfileContextResponse
   func saveProfile(_ request: TaxProfileRequest) async throws -> TaxProfileResponse
   func saveMarketAdmission(instrumentId: String, status: TaxMarketAdmissionStatus) async throws -> TaxInstrumentMarketOption
+  func saveFundClassification(instrumentId: String, classification: TaxFundClassification) async throws -> TaxInstrumentMarketOption
   func createScenario(_ request: TaxScenarioRequest) async throws -> TaxScenarioResponse
   func createActionPlan(_ request: TaxActionPlanRequest) async throws -> TaxActionPlanResponse
   func notificationPreferences() async throws -> TaxNotificationPreferences
@@ -69,6 +70,19 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     let url = environment.current.apiBaseUrl
       .appending(path: "v1/tax/instruments/\(instrumentId)/market-admission")
     return try await send(url: url, method: "PUT", body: JSONEncoder().encode(Request(status: status)))
+  }
+
+  func saveFundClassification(
+    instrumentId: String,
+    classification: TaxFundClassification
+  ) async throws -> TaxInstrumentMarketOption {
+    let url = environment.current.apiBaseUrl
+      .appending(path: "v1/tax/instruments/\(instrumentId)/fund-classification")
+    return try await send(
+      url: url,
+      method: "PUT",
+      body: JSONEncoder().encode(TaxFundClassificationRequest(classification: classification))
+    )
   }
 
   func createScenario(_ request: TaxScenarioRequest) async throws -> TaxScenarioResponse {

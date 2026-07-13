@@ -21,6 +21,8 @@ struct TaxProfileSetupSheet: View {
   @State private var shortTermRate: String
   @State private var longTermRate: String
   @State private var capitalGainsTaxationMode: TaxCapitalGainsTaxationMode
+  @State private var remainingCapitalIncomeAllowance: String
+  @State private var churchTaxRate: Decimal
   @State private var shortLossCarryover: String
   @State private var longLossCarryover: String
   @State private var accounts: [AccountDraft]
@@ -42,6 +44,8 @@ struct TaxProfileSetupSheet: View {
     _shortTermRate = State(initialValue: Self.percentText(profile?.shortTermCapitalGainsRate))
     _longTermRate = State(initialValue: Self.percentText(profile?.longTermCapitalGainsRate))
     _capitalGainsTaxationMode = State(initialValue: profile?.capitalGainsTaxationMode ?? .jurisdictionDefault)
+    _remainingCapitalIncomeAllowance = State(initialValue: Self.decimalText(profile?.remainingCapitalIncomeAllowance))
+    _churchTaxRate = State(initialValue: profile?.churchTaxRate ?? 0)
     _shortLossCarryover = State(initialValue: Self.decimalText(profile?.priorShortTermLossCarryover))
     _longLossCarryover = State(initialValue: Self.decimalText(profile?.priorLongTermLossCarryover))
     _accounts = State(initialValue: context.accounts.map {
@@ -79,7 +83,7 @@ struct TaxProfileSetupSheet: View {
           if context.jurisdiction == .unitedStates {
             percentageField("Short-term capital gains", text: $shortTermRate)
             percentageField("Long-term capital gains", text: $longTermRate)
-          } else {
+          } else if context.jurisdiction != .germany {
             percentageField("Marginal income tax rate", text: $primaryRate)
           }
           if context.jurisdiction == .portugal {
@@ -88,6 +92,22 @@ struct TaxProfileSetupSheet: View {
               Text("28% autonomous taxation").tag(TaxCapitalGainsTaxationMode.autonomous)
               Text("Aggregate with income").tag(TaxCapitalGainsTaxationMode.aggregateWithIncome)
             }
+          }
+        }
+
+        if context.jurisdiction == .germany {
+          Section {
+            TextField("Remaining saver allowance", text: $remainingCapitalIncomeAllowance)
+              .keyboardType(.decimalPad)
+            Picker("Church tax", selection: $churchTaxRate) {
+              Text("None").tag(Decimal.zero)
+              Text("8%").tag(Decimal(string: "0.08")!)
+              Text("9%").tag(Decimal(string: "0.09")!)
+            }
+          } header: {
+            Text("German capital income")
+          } footer: {
+            Text("Enter only the saver allowance still unused across all banks and brokers. Leave it blank if unknown. Church tax varies by federal state and denomination.")
           }
         }
 
@@ -111,9 +131,13 @@ struct TaxProfileSetupSheet: View {
                   Text(wrapper.displayName).tag(wrapper)
                 }
               }
-              Picker("Lot selection", selection: $account.lotSelectionMethod) {
-                ForEach(TaxLotSelectionMethod.allCases, id: \.self) { method in
-                  Text(method.displayName).tag(method)
+              if context.jurisdiction == .germany {
+                LabeledContent("Lot selection", value: "FIFO per depot")
+              } else {
+                Picker("Lot selection", selection: $account.lotSelectionMethod) {
+                  ForEach(TaxLotSelectionMethod.allCases, id: \.self) { method in
+                    Text(method.displayName).tag(method)
+                  }
                 }
               }
             }
@@ -146,9 +170,19 @@ struct TaxProfileSetupSheet: View {
     decimal(estimatedIncome) != nil
       && !accounts.isEmpty
       && accounts.allSatisfy { $0.wrapper != .unknown }
-      && (context.jurisdiction == .unitedStates
-          ? percent(shortTermRate) != nil && percent(longTermRate) != nil
-          : percent(primaryRate) != nil)
+      && validRates
+      && (remainingCapitalIncomeAllowance.isEmpty || decimal(remainingCapitalIncomeAllowance).map { $0 >= 0 } == true)
+  }
+
+  private var validRates: Bool {
+    switch context.jurisdiction {
+    case .unitedStates:
+      return percent(shortTermRate) != nil && percent(longTermRate) != nil
+    case .germany:
+      return true
+    default:
+      return percent(primaryRate) != nil
+    }
   }
 
   private func percentageField(_ title: String, text: Binding<String>) -> some View {
@@ -178,7 +212,7 @@ struct TaxProfileSetupSheet: View {
         ownerMemberId: existing?.ownerMemberId ?? ownerID,
         wrapper: account.wrapper,
         countryWrapperCode: existing?.countryWrapperCode,
-        lotSelectionMethod: account.lotSelectionMethod
+        lotSelectionMethod: context.jurisdiction == .germany ? .fifo : account.lotSelectionMethod
       )
     }
     let request = TaxProfileRequest(
@@ -191,6 +225,10 @@ struct TaxProfileSetupSheet: View {
       shortTermCapitalGainsRate: context.jurisdiction == .unitedStates ? percent(shortTermRate) : nil,
       longTermCapitalGainsRate: context.jurisdiction == .unitedStates ? percent(longTermRate) : nil,
       capitalGainsTaxationMode: context.jurisdiction == .portugal ? capitalGainsTaxationMode : nil,
+      remainingCapitalIncomeAllowance: context.jurisdiction == .germany
+        ? decimal(remainingCapitalIncomeAllowance)
+        : nil,
+      churchTaxRate: context.jurisdiction == .germany && churchTaxRate > 0 ? churchTaxRate : nil,
       priorShortTermLossCarryover: decimal(shortLossCarryover) ?? 0,
       priorLongTermLossCarryover: decimal(longLossCarryover) ?? 0,
       members: members,
