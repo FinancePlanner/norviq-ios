@@ -5,6 +5,7 @@ import Factory
 struct TaxDashboardScreen: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.colorScheme) private var colorScheme
+  @InjectedObservable(\Container.billingManager) private var billingManager
   @State private var model: TaxDashboardViewModel
   @State private var isSettingsPresented = false
   @State private var isReportsPresented = false
@@ -13,6 +14,7 @@ struct TaxDashboardScreen: View {
   @State private var isFundAnnualInputPresented = false
   @State private var isProfilePresented = false
   @State private var isCarryforwardPresented = false
+  @State private var isPaywallPresented = false
   private let service: TaxServiceProtocol
 
   init() {
@@ -45,14 +47,22 @@ struct TaxDashboardScreen: View {
           }
           if model.selectedJurisdiction == .germany {
             Button("Funds", systemImage: "chart.pie") { isFundClassificationPresented = true }
-            Button("Fund values", systemImage: "calendar.badge.plus") { isFundAnnualInputPresented = true }
+            Button("Fund values", systemImage: "calendar.badge.plus") {
+              presentPro { isFundAnnualInputPresented = true }
+            }
           }
           if model.selectedJurisdiction == .portugal || model.selectedJurisdiction == .germany {
-            Button("Losses", systemImage: "calendar.badge.clock") { isCarryforwardPresented = true }
+            Button("Losses", systemImage: "calendar.badge.clock") {
+              presentPro { isCarryforwardPresented = true }
+            }
           }
-          Button("Profile", systemImage: "person.crop.circle") { isProfilePresented = true }
+          Button("Profile", systemImage: "person.crop.circle") {
+            presentPro { isProfilePresented = true }
+          }
           Button("Reports", systemImage: "doc.text") { isReportsPresented = true }
-          Button("Settings", systemImage: "gearshape") { isSettingsPresented = true }
+          Button("Settings", systemImage: "gearshape") {
+            presentPro { isSettingsPresented = true }
+          }
         }
       }
       .refreshable { await model.load() }
@@ -66,6 +76,7 @@ struct TaxDashboardScreen: View {
       .sheet(item: $model.actionPlan) { plan in actionPlanSheet(plan) }
       .sheet(isPresented: $isSettingsPresented) { TaxSettingsSheet(service: service) }
       .sheet(isPresented: $isReportsPresented) { TaxReportsSheet(service: service) }
+      .sheet(isPresented: $isPaywallPresented) { PaywallView(billingManager: billingManager) }
       .sheet(isPresented: $isProfilePresented) {
         if let context = model.profileContext {
           TaxProfileSetupSheet(service: service, context: context) {
@@ -110,7 +121,7 @@ struct TaxDashboardScreen: View {
   }
 
   private var profileStatus: some View {
-    Button { isProfilePresented = true } label: {
+    Button { presentPro { isProfilePresented = true } } label: {
       HStack(spacing: 14) {
         Image(systemName: model.profileContext?.profile?.isComplete == true ? "checkmark.seal.fill" : "person.text.rectangle")
           .font(.title2)
@@ -132,6 +143,14 @@ struct TaxDashboardScreen: View {
     }
     .buttonStyle(.plain)
     .disabled(model.profileContext == nil)
+  }
+
+  private func presentPro(_ action: () -> Void) {
+    if billingManager.isPro {
+      action()
+    } else {
+      isPaywallPresented = true
+    }
   }
 
   private var loadingState: some View {

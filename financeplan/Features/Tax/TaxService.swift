@@ -71,7 +71,12 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     struct Request: Encodable { let status: TaxMarketAdmissionStatus }
     let url = environment.current.apiBaseUrl
       .appending(path: "v1/tax/instruments/\(instrumentId)/market-admission")
-    return try await send(url: url, method: "PUT", body: JSONEncoder().encode(Request(status: status)))
+    return try await send(
+      url: url,
+      method: "PUT",
+      body: JSONEncoder().encode(Request(status: status)),
+      additionalHeaders: status == .unknown ? [:] : ["X-Tax-Evidence-Attested": "true"]
+    )
   }
 
   func saveFundClassification(
@@ -176,7 +181,12 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     try await send(url: environment.current.apiBaseUrl.appending(path: path), method: "POST", body: body)
   }
 
-  private func send<Response: Decodable>(url: URL, method: String, body: Data?) async throws -> Response {
+  private func send<Response: Decodable>(
+    url: URL,
+    method: String,
+    body: Data?,
+    additionalHeaders: [String: String] = [:]
+  ) async throws -> Response {
     guard let token = try await auth.validAccessToken() else { throw AuthSessionError.notAuthenticated }
     var request = URLRequest(url: url)
     request.httpMethod = method
@@ -184,6 +194,9 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     request.setValue("application/json", forHTTPHeaderField: "Accept")
     if body != nil { request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
+    for (name, value) in additionalHeaders {
+      request.setValue(value, forHTTPHeaderField: name)
+    }
     let (data, response) = try await session.data(for: request)
     guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
       throw URLError(.badServerResponse)
