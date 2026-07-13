@@ -4,6 +4,7 @@ import StockPlanShared
 protocol TaxServiceProtocol: Sendable {
   func dashboard(jurisdiction: TaxJurisdiction, taxYear: Int) async throws -> TaxDashboardResponse
   func profileContext(jurisdiction: TaxJurisdiction, taxYear: Int) async throws -> TaxProfileContextResponse
+  func saveProfile(_ request: TaxProfileRequest) async throws -> TaxProfileResponse
   func saveMarketAdmission(instrumentId: String, status: TaxMarketAdmissionStatus) async throws -> TaxInstrumentMarketOption
   func createScenario(_ request: TaxScenarioRequest) async throws -> TaxScenarioResponse
   func createActionPlan(_ request: TaxActionPlanRequest) async throws -> TaxActionPlanResponse
@@ -11,6 +12,7 @@ protocol TaxServiceProtocol: Sendable {
   func saveNotificationPreferences(_ request: TaxNotificationPreferences) async throws -> TaxNotificationPreferences
   func reports() async throws -> [TaxReportResponse]
   func createReport(_ request: TaxReportRequest) async throws -> TaxReportResponse
+  func downloadReport(_ report: TaxReportResponse) async throws -> URL
 }
 
 final class TaxService: TaxServiceProtocol, @unchecked Sendable {
@@ -50,6 +52,14 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     return try await send(url: url, method: "GET", body: Optional<Data>.none)
   }
 
+  func saveProfile(_ request: TaxProfileRequest) async throws -> TaxProfileResponse {
+    try await send(
+      url: environment.current.apiBaseUrl.appending(path: "v1/tax/profile"),
+      method: "PUT",
+      body: JSONEncoder().encode(request)
+    )
+  }
+
   func saveMarketAdmission(
     instrumentId: String,
     status: TaxMarketAdmissionStatus
@@ -82,6 +92,25 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
 
   func createReport(_ request: TaxReportRequest) async throws -> TaxReportResponse {
     try await send(path: "v1/tax/reports", body: JSONEncoder().encode(request))
+  }
+
+  func downloadReport(_ report: TaxReportResponse) async throws -> URL {
+    guard report.status == "ready", report.downloadPath != nil else {
+      throw URLError(.resourceUnavailable)
+    }
+    guard let token = try await auth.validAccessToken() else { throw AuthSessionError.notAuthenticated }
+    let url = environment.current.apiBaseUrl.appending(path: "v1/tax/reports/\(report.id)/download")
+    var request = URLRequest(url: url)
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    request.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
+    let (data, response) = try await session.data(for: request)
+    guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+      throw URLError(.badServerResponse)
+    }
+    let destination = FileManager.default.temporaryDirectory
+      .appending(path: "norviq-tax-\(report.taxYear)-\(report.id).\(report.format.rawValue)")
+    try data.write(to: destination, options: .atomic)
+    return destination
   }
 
   private func send<Response: Decodable>(path: String, body: Data) async throws -> Response {

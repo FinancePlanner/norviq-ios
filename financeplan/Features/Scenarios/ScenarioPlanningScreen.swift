@@ -8,6 +8,7 @@ import SwiftUI
 @MainActor @Observable final class ScenarioPlanningViewModel {
   var catalog: ScenarioCatalogPayload?
   var runs: [ScenarioRunSummary] = []
+  var scenarios: [ScenarioDefinitionSummary] = []
   var portfolios: [ScenarioPortfolio] = []
   var goals: [ScenarioGoal] = []
   var holdings: [ScenarioHolding] = []
@@ -17,6 +18,7 @@ import SwiftUI
   var errorMessage: String?
   var snapshotPreview: ScenarioSnapshotPreview?
   private var pendingRequest: ScenarioRunRequest?
+  private var pendingSavedScenario: (id: UUID, seed: Int64?)?
 
   private let service: ScenarioPlanningServiceProtocol
 
@@ -30,11 +32,13 @@ import SwiftUI
     do {
       async let c = service.catalog()
       async let r = service.runs()
+      async let s = service.scenarios()
       async let p = service.portfolios()
       async let g = service.goals()
       async let rp = service.riskProfiles()
       catalog = try await c
       runs = try await r
+      scenarios = try await s
       portfolios = try await p
       goals = try await g
       riskProfiles = try await rp
@@ -50,22 +54,43 @@ import SwiftUI
     do {
       snapshotPreview = try await service.captureSnapshot(portfolioID: request.portfolioID)
       pendingRequest = request
+      pendingSavedScenario = nil
     } catch {
       errorMessage = "The portfolio snapshot could not be captured."
     }
   }
 
-  func runReviewedSnapshot() async {
-    guard let request = pendingRequest, let snapshot = snapshotPreview else { return }
+  func capture(_ scenario: ScenarioDefinitionSummary, seed: Int64?) async {
     isSubmitting = true
     defer { isSubmitting = false }
     do {
-      runs.insert(try await service.createRun(request, snapshotID: snapshot.id), at: 0)
+      snapshotPreview = try await service.captureSnapshot(portfolioID: scenario.portfolioListId)
+      pendingSavedScenario = (scenario.id, seed)
+      pendingRequest = nil
+    } catch { errorMessage = "The portfolio snapshot could not be captured." }
+  }
+
+  func runReviewedSnapshot() async {
+    guard let snapshot = snapshotPreview else { return }
+    isSubmitting = true
+    defer { isSubmitting = false }
+    do {
+      if let saved = pendingSavedScenario {
+        runs.insert(try await service.createRun(scenarioID: saved.id, snapshotID: snapshot.id, seed: saved.seed), at: 0)
+      } else if let request = pendingRequest {
+        runs.insert(try await service.createRun(request, snapshotID: snapshot.id), at: 0)
+      } else { return }
       snapshotPreview = nil; pendingRequest = nil
+      pendingSavedScenario = nil
     } catch { errorMessage = "The scenario could not be queued." }
   }
 
-  func discardSnapshot() { snapshotPreview = nil; pendingRequest = nil }
+  func discardSnapshot() { snapshotPreview = nil; pendingRequest = nil; pendingSavedScenario = nil }
+
+  func deleteScenario(_ scenario: ScenarioDefinitionSummary) async {
+    do { try await service.deleteScenario(id: scenario.id); scenarios.removeAll { $0.id == scenario.id } }
+    catch { errorMessage = "The saved scenario could not be deleted." }
+  }
 
   func createGoal(name: String, portfolioID: UUID?, targetAmount: Double?, targetDate: Date, currency: String,
                   monthlyContribution: Double?, contributionGrowth: Double?, inflation: Double?) async {
@@ -144,6 +169,18 @@ struct ScenarioPlanningScreen: View {
   @State private var goalID: UUID?
   @State private var preset = "covid_crash"
   @State private var shock = -0.2
+  @State private var assetClassTarget = "stock"
+  @State private var holdingShockTarget = ""
+  @State private var holdingShock = ""
+  @State private var sectorShockTarget = ""
+  @State private var sectorShock = ""
+  @State private var regionShockTarget = ""
+  @State private var regionShock = ""
+  @State private var currencyShockTarget = ""
+  @State private var currencyShock = ""
+  @State private var rateShiftBps = "0"
+  @State private var volatilityMultiplier = "1"
+  @State private var recovery = "linear"
   @State private var horizon = 360
   @State private var paths = 10_000
   @State private var distribution = "block_bootstrap"
@@ -151,6 +188,8 @@ struct ScenarioPlanningScreen: View {
   @State private var assetWeights = ""
   @State private var assetAnnualReturns = ""
   @State private var annualCovariance = ""
+  @State private var saveConfiguration = true
+  @State private var savedScenarioSeed = ""
   @State private var selected: Set<UUID> = []
   @State private var comparisonMode = ScenarioComparisonMode.value
   @State private var reports: [UUID: URL] = [:]
@@ -275,6 +314,8 @@ struct ScenarioPlanningScreen: View {
           .keyboardType(.numberPad)
           .textFieldStyle(.roundedBorder)
 
+        Toggle("Save configuration", isOn: $saveConfiguration)
+
         Button {
           Task { await submit() }
         } label: {
@@ -303,9 +344,31 @@ struct ScenarioPlanningScreen: View {
         }
       }
     } else if kind == .custom {
-      Text("Stock shock: \(shock, format: .percent.precision(.fractionLength(0)))")
+      Picker("Asset class", selection: $assetClassTarget) {
+        ForEach(["stock", "etf", "mutual_fund", "crypto", "cash", "bond", "real_estate", "commodity"], id: \.self) {
+          Text($0.replacingOccurrences(of: "_", with: " ").capitalized).tag($0)
+        }
+      }
+      Text("Asset-class shock: \(shock, format: .percent.precision(.fractionLength(0)))")
       Slider(value: $shock, in: -1...1, step: 0.01)
       Stepper("Horizon: \(min(horizon, 120)) months", value: $horizon, in: 1...120)
+      Picker("Recovery", selection: $recovery) {
+        Text("None").tag("none"); Text("Linear").tag("linear"); Text("Mean reverting").tag("mean_reverting")
+      }
+      HStack {
+        TextField("Rate shift (bps)", text: $rateShiftBps).keyboardType(.numbersAndPunctuation).textFieldStyle(.roundedBorder)
+        TextField("Volatility multiplier", text: $volatilityMultiplier).keyboardType(.decimalPad).textFieldStyle(.roundedBorder)
+      }
+      DisclosureGroup("Scoped shocks") {
+        VStack(spacing: 10) {
+          scopedShockEditor("Holding ID", target: $holdingShockTarget, percentage: $holdingShock)
+          scopedShockEditor("Sector", target: $sectorShockTarget, percentage: $sectorShock)
+          scopedShockEditor("Region", target: $regionShockTarget, percentage: $regionShock)
+          scopedShockEditor("Currency", target: $currencyShockTarget, percentage: $currencyShock)
+          Text("Applicable shocks compound. A holding shock overrides broader percentage shocks.")
+            .font(.caption).foregroundStyle(.secondary)
+        }.padding(.top, 8)
+      }
     } else {
       Picker("Distribution", selection: $distribution) {
         Text("Block bootstrap").tag("block_bootstrap")
@@ -332,6 +395,35 @@ struct ScenarioPlanningScreen: View {
   private var management: some View {
     VStack(alignment: .leading, spacing: 12) {
       sectionLabel("REUSABLE INPUTS")
+      DisclosureGroup("Saved scenarios") {
+        VStack(spacing: 12) {
+          TextField("Random seed (optional)", text: $savedScenarioSeed)
+            .keyboardType(.numberPad).textFieldStyle(.roundedBorder)
+          ForEach(model.scenarios.filter { $0.isSaved ?? true }) { scenario in
+            VStack(alignment: .leading, spacing: 8) {
+              HStack {
+                VStack(alignment: .leading) {
+                  Text(scenario.name).font(.headline)
+                  Text(scenario.kind.replacingOccurrences(of: "_", with: " ").capitalized)
+                    .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("Delete", role: .destructive) { Task { await model.deleteScenario(scenario) } }
+              }
+              Button("Review snapshot and run") {
+                Task { await model.capture(scenario, seed: Int64(savedScenarioSeed)) }
+              }.buttonStyle(.bordered)
+            }
+            .padding(12)
+            .background(Color(.tertiarySystemBackground))
+            .clipShape(.rect(cornerRadius: 10))
+          }
+          if model.scenarios.allSatisfy({ !($0.isSaved ?? true) }) {
+            Text("Save a configuration to reuse it here.").font(.subheadline).foregroundStyle(.secondary)
+          }
+        }.padding(.top, 12)
+      }
+      Divider()
       DisclosureGroup("Financial goals") {
         VStack(spacing: 12) {
           TextField("Goal name", text: $goalName).textFieldStyle(.roundedBorder)
@@ -544,6 +636,23 @@ struct ScenarioPlanningScreen: View {
       model.errorMessage = error.localizedDescription
       return
     }
+    let scoped: [(String?, Double?)]
+    do {
+      scoped = try [
+        parseScenarioScopedShock(target: holdingShockTarget, percentage: holdingShock),
+        parseScenarioScopedShock(target: sectorShockTarget, percentage: sectorShock),
+        parseScenarioScopedShock(target: regionShockTarget, percentage: regionShock),
+        parseScenarioScopedShock(target: currencyShockTarget, percentage: currencyShock),
+      ]
+    } catch {
+      model.errorMessage = error.localizedDescription
+      return
+    }
+    guard let rateShift = Double(rateShiftBps), (-5000...5000).contains(rateShift),
+          let volatility = Double(volatilityMultiplier), (0...10).contains(volatility) else {
+      model.errorMessage = "Rate shift or volatility multiplier is outside the supported range."
+      return
+    }
     await model.capture(.init(
       name: name,
       portfolioID: portfolioID,
@@ -555,11 +664,24 @@ struct ScenarioPlanningScreen: View {
       pathCount: paths,
       distribution: distribution,
       seed: Int64(seed),
-      save: true,
+      save: saveConfiguration,
       assetWeights: assumptions.weights,
       assetAnnualReturns: assumptions.annualReturns,
-      annualCovariance: assumptions.covariance
+      annualCovariance: assumptions.covariance,
+      assetClassTarget: assetClassTarget,
+      holdingShockTarget: scoped[0].0, holdingShock: scoped[0].1,
+      sectorShockTarget: scoped[1].0, sectorShock: scoped[1].1,
+      regionShockTarget: scoped[2].0, regionShock: scoped[2].1,
+      currencyShockTarget: scoped[3].0, currencyShock: scoped[3].1,
+      parallelRateShiftBps: rateShift, volatilityMultiplier: volatility, recovery: recovery
     ))
+  }
+
+  private func scopedShockEditor(_ label: String, target: Binding<String>, percentage: Binding<String>) -> some View {
+    HStack {
+      TextField(label, text: target).textFieldStyle(.roundedBorder)
+      TextField("Shock %", text: percentage).keyboardType(.numbersAndPunctuation).textFieldStyle(.roundedBorder)
+    }
   }
 
   private func assumptionEditor(
@@ -627,4 +749,23 @@ private extension String {
     let value = trimmingCharacters(in: .whitespacesAndNewlines)
     return value.isEmpty ? nil : value
   }
+}
+
+private enum ScenarioScopedShockError: LocalizedError {
+  case incomplete, invalidPercentage
+  var errorDescription: String? {
+    switch self {
+    case .incomplete: "Provide both a scoped shock target and percentage."
+    case .invalidPercentage: "Scoped shock percentages must be between -100% and 100%."
+    }
+  }
+}
+
+private func parseScenarioScopedShock(target: String, percentage: String) throws -> (String?, Double?) {
+  let target = target.trimmingCharacters(in: .whitespacesAndNewlines)
+  let percentage = percentage.trimmingCharacters(in: .whitespacesAndNewlines)
+  if target.isEmpty, percentage.isEmpty { return (nil, nil) }
+  guard !target.isEmpty, !percentage.isEmpty else { throw ScenarioScopedShockError.incomplete }
+  guard let value = Double(percentage), (-100...100).contains(value) else { throw ScenarioScopedShockError.invalidPercentage }
+  return (target, value / 100)
 }

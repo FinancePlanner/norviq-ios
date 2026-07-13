@@ -548,7 +548,6 @@ private struct DashboardHeroCard: View {
         }
 
         InteractiveLineChart(data: currentPoints, color: currentColor)
-          .frame(height: 140)
           .padding(.horizontal, -12)
 
         Picker("View", selection: $showingPortfolio) {

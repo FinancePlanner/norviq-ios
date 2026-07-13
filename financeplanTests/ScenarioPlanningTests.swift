@@ -9,15 +9,19 @@ final class ScenarioPlanningTests: XCTestCase {
     var runsValue: [ScenarioRunSummary] = []
     var portfoliosValue: [ScenarioPortfolio] = []
     var goalsValue: [ScenarioGoal] = []
+    var scenariosValue: [ScenarioDefinitionSummary] = []
     var holdingsValue: [ScenarioHolding] = []
     var riskProfilesValue: [ScenarioRiskProfile] = []
     var createdRun: ScenarioRunSummary?
     var snapshot = ScenarioSnapshotPreview(id: UUID(), payload: .object([:]), warnings: .array([]))
     var polledRun: ScenarioRunSummary?
     var cancelledID: UUID?
+    var createdScenarioID: UUID?
+    var deletedScenarioID: UUID?
 
     func catalog() async throws -> ScenarioCatalogPayload { catalogValue }
     func runs() async throws -> [ScenarioRunSummary] { runsValue }
+    func scenarios() async throws -> [ScenarioDefinitionSummary] { scenariosValue }
     func portfolios() async throws -> [ScenarioPortfolio] { portfoliosValue }
     func goals() async throws -> [ScenarioGoal] { goalsValue }
     func holdings(portfolioIDs: [UUID]) async throws -> [ScenarioHolding] { holdingsValue }
@@ -29,6 +33,8 @@ final class ScenarioPlanningTests: XCTestCase {
     func deleteRiskProfile(id: UUID) async throws {}
     func captureSnapshot(portfolioID: UUID) async throws -> ScenarioSnapshotPreview { snapshot }
     func createRun(_ input: ScenarioRunRequest, snapshotID: UUID) async throws -> ScenarioRunSummary { try XCTUnwrap(createdRun) }
+    func createRun(scenarioID: UUID, snapshotID: UUID, seed: Int64?) async throws -> ScenarioRunSummary { createdScenarioID = scenarioID; return try XCTUnwrap(createdRun) }
+    func deleteScenario(id: UUID) async throws { deletedScenarioID = id }
     func run(id: UUID) async throws -> ScenarioRunSummary { try XCTUnwrap(polledRun) }
     func cancel(runID: UUID) async throws { cancelledID = runID }
   }
@@ -74,6 +80,43 @@ final class ScenarioPlanningTests: XCTestCase {
     await model.runReviewedSnapshot()
     XCTAssertEqual(model.runs.first?.id, run.id)
     XCTAssertFalse(model.isSubmitting)
+  }
+
+  func testSavedScenarioRequiresSnapshotReviewAndCanRunAgain() async throws {
+    let service = ServiceMock()
+    let scenario = ScenarioDefinitionSummary(
+      id: UUID(), portfolioListId: UUID(), financialGoalId: nil, name: "Saved",
+      kind: "monte_carlo", configuration: .object([:]), isSaved: true
+    )
+    let run = ScenarioRunSummary(id: UUID(), state: "queued", progress: 0, engineVersion: "v1", errorMessage: nil, result: nil)
+    service.createdRun = run
+    let model = ScenarioPlanningViewModel(service: service)
+    await model.capture(scenario, seed: 99)
+    XCTAssertEqual(model.snapshotPreview?.id, service.snapshot.id)
+    await model.runReviewedSnapshot()
+    XCTAssertEqual(service.createdScenarioID, scenario.id)
+    XCTAssertEqual(model.runs.first?.id, run.id)
+  }
+
+  func testPrivatePDFReportIsReadable() throws {
+    let result = ScenarioResultPayload(
+      timeline: [
+        .init(elapsedMonths: 0, value: 100_000),
+        .init(elapsedMonths: 12, value: 112_000),
+      ],
+      percentileBands: nil, maximumDrawdown: 0.12, goalProbability: 0.74,
+      expectedShortfall: 8_000,
+      assumptions: .object(["distribution": .string("normal")]),
+      warnings: .array([.object(["message": .string("Used benchmark proxy SPY.")])])
+    )
+    let run = ScenarioRunSummary(
+      id: UUID(), state: "completed", progress: 1, engineVersion: "scenario-engine-v1",
+      errorMessage: nil, result: result
+    )
+    let url = try ScenarioPDFReport.render(run: run, result: result)
+    let data = try Data(contentsOf: url)
+    XCTAssertTrue(data.starts(with: Data("%PDF".utf8)))
+    XCTAssertGreaterThan(data.count, 1_000)
   }
 
   func testMultiAssetAssumptionsDecodeAndValidate() throws {

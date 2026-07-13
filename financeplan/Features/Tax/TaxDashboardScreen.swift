@@ -9,6 +9,7 @@ struct TaxDashboardScreen: View {
   @State private var isSettingsPresented = false
   @State private var isReportsPresented = false
   @State private var isMarketAdmissionPresented = false
+  @State private var isProfilePresented = false
   private let service: TaxServiceProtocol
 
   init() {
@@ -26,6 +27,7 @@ struct TaxDashboardScreen: View {
       ScrollView {
         LazyVStack(alignment: .leading, spacing: 16) {
           jurisdictionPicker
+          profileStatus
           if model.isLoading && model.dashboard == nil { loadingState }
           else if let dashboard = model.dashboard { summary(dashboard); opportunities(dashboard) }
           else { ContentUnavailableView("Tax estimate unavailable", systemImage: "building.columns") }
@@ -38,6 +40,7 @@ struct TaxDashboardScreen: View {
           if model.selectedJurisdiction == .spain {
             Button("Markets", systemImage: "building.columns") { isMarketAdmissionPresented = true }
           }
+          Button("Profile", systemImage: "person.crop.circle") { isProfilePresented = true }
           Button("Reports", systemImage: "doc.text") { isReportsPresented = true }
           Button("Settings", systemImage: "gearshape") { isSettingsPresented = true }
         }
@@ -53,6 +56,13 @@ struct TaxDashboardScreen: View {
       .sheet(item: $model.actionPlan) { plan in actionPlanSheet(plan) }
       .sheet(isPresented: $isSettingsPresented) { TaxSettingsSheet(service: service) }
       .sheet(isPresented: $isReportsPresented) { TaxReportsSheet(service: service) }
+      .sheet(isPresented: $isProfilePresented) {
+        if let context = model.profileContext {
+          TaxProfileSetupSheet(service: service, context: context) {
+            Task { await model.load() }
+          }
+        }
+      }
       .sheet(isPresented: $isMarketAdmissionPresented) {
         TaxMarketAdmissionSheet(
           service: service,
@@ -68,6 +78,31 @@ struct TaxDashboardScreen: View {
     }
     .pickerStyle(.menu)
     .accessibilityHint("Changes the rules used for estimates")
+  }
+
+  private var profileStatus: some View {
+    Button { isProfilePresented = true } label: {
+      HStack(spacing: 14) {
+        Image(systemName: model.profileContext?.profile?.isComplete == true ? "checkmark.seal.fill" : "person.text.rectangle")
+          .font(.title2)
+          .foregroundStyle(model.profileContext?.profile?.isComplete == true ? .green : .orange)
+        VStack(alignment: .leading, spacing: 3) {
+          Text(model.profileContext?.profile?.isComplete == true ? "Tax profile complete" : "Complete your tax profile")
+            .font(.headline)
+          Text(model.profileContext?.profile?.isComplete == true
+               ? "Review income, rates, and account classifications"
+               : "Required before opportunities can become actionable")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        Spacer()
+        Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+      }
+      .padding(16)
+      .background(AppTheme.Colors.cardBackground(for: colorScheme), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+    .buttonStyle(.plain)
+    .disabled(model.profileContext == nil)
   }
 
   private var loadingState: some View {

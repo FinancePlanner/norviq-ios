@@ -16,14 +16,20 @@ struct ScenarioResultPayload: Decodable, Sendable {
     enum CodingKeys: String, CodingKey { case elapsedMonths = "elapsed_months"; case p10, p25, p50, p75, p90 }
   }
   let timeline: [Point]?; let percentileBands: [Band]?; let maximumDrawdown: Double?; let goalProbability: Double?; let expectedShortfall: Double?
+  let assumptions: ScenarioJSONValue?; let warnings: ScenarioJSONValue?
   enum CodingKeys: String, CodingKey {
     case timeline; case percentileBands = "percentile_bands"; case maximumDrawdown = "maximum_drawdown"
     case goalProbability = "goal_probability"; case expectedShortfall = "expected_shortfall"
+    case assumptions, warnings
   }
 }
 
 struct ScenarioRunSummary: Decodable, Identifiable, Sendable {
   let id: UUID; let state: String; let progress: Double; let engineVersion: String; let errorMessage: String?; let result: ScenarioResultPayload?
+}
+struct ScenarioDefinitionSummary: Decodable, Identifiable, Sendable {
+  let id: UUID; let portfolioListId: UUID; let financialGoalId: UUID?; let name: String; let kind: String
+  let configuration: ScenarioJSONValue; let isSaved: Bool?
 }
 struct ScenarioPortfolio: Decodable, Identifiable, Sendable { let id: UUID; let name: String; let isDefault: Bool }
 struct ScenarioGoal: Decodable, Identifiable, Sendable {
@@ -123,6 +129,12 @@ struct ScenarioRunRequest: Sendable {
   let name: String; let portfolioID: UUID; let goalID: UUID?; let kind: ScenarioBuilderKind; let catalogID: String
   let shock: Double; let horizonMonths: Int; let pathCount: Int; let distribution: String; let seed: Int64?; let save: Bool
   let assetWeights: [Double]; let assetAnnualReturns: [Double]; let annualCovariance: [[Double]]
+  let assetClassTarget: String
+  let holdingShockTarget: String?; let holdingShock: Double?
+  let sectorShockTarget: String?; let sectorShock: Double?
+  let regionShockTarget: String?; let regionShock: Double?
+  let currencyShockTarget: String?; let currencyShock: Double?
+  let parallelRateShiftBps: Double; let volatilityMultiplier: Double; let recovery: String
   init(name: String, portfolioID: UUID, goalID: UUID?, kind: ScenarioBuilderKind, catalogID: String, shock: Double,
        horizonMonths: Int, pathCount: Int, distribution: String, seed: Int64?, save: Bool,
        assetWeights: [Double] = [], assetAnnualReturns: [Double] = [], annualCovariance: [[Double]] = []) {
@@ -130,11 +142,37 @@ struct ScenarioRunRequest: Sendable {
     self.shock = shock; self.horizonMonths = horizonMonths; self.pathCount = pathCount; self.distribution = distribution
     self.seed = seed; self.save = save; self.assetWeights = assetWeights; self.assetAnnualReturns = assetAnnualReturns
     self.annualCovariance = annualCovariance
+    self.assetClassTarget = "stock"
+    self.holdingShockTarget = nil; self.holdingShock = nil
+    self.sectorShockTarget = nil; self.sectorShock = nil
+    self.regionShockTarget = nil; self.regionShock = nil
+    self.currencyShockTarget = nil; self.currencyShock = nil
+    self.parallelRateShiftBps = 0; self.volatilityMultiplier = 1; self.recovery = "linear"
+  }
+
+  init(name: String, portfolioID: UUID, goalID: UUID?, kind: ScenarioBuilderKind, catalogID: String, shock: Double,
+       horizonMonths: Int, pathCount: Int, distribution: String, seed: Int64?, save: Bool,
+       assetWeights: [Double], assetAnnualReturns: [Double], annualCovariance: [[Double]],
+       assetClassTarget: String, holdingShockTarget: String?, holdingShock: Double?,
+       sectorShockTarget: String?, sectorShock: Double?, regionShockTarget: String?, regionShock: Double?,
+       currencyShockTarget: String?, currencyShock: Double?, parallelRateShiftBps: Double,
+       volatilityMultiplier: Double, recovery: String) {
+    self.name = name; self.portfolioID = portfolioID; self.goalID = goalID; self.kind = kind; self.catalogID = catalogID
+    self.shock = shock; self.horizonMonths = horizonMonths; self.pathCount = pathCount; self.distribution = distribution
+    self.seed = seed; self.save = save; self.assetWeights = assetWeights; self.assetAnnualReturns = assetAnnualReturns
+    self.annualCovariance = annualCovariance; self.assetClassTarget = assetClassTarget
+    self.holdingShockTarget = holdingShockTarget; self.holdingShock = holdingShock
+    self.sectorShockTarget = sectorShockTarget; self.sectorShock = sectorShock
+    self.regionShockTarget = regionShockTarget; self.regionShock = regionShock
+    self.currencyShockTarget = currencyShockTarget; self.currencyShock = currencyShock
+    self.parallelRateShiftBps = parallelRateShiftBps; self.volatilityMultiplier = volatilityMultiplier
+    self.recovery = recovery
   }
 }
 
 protocol ScenarioPlanningServiceProtocol: Sendable {
   func catalog() async throws -> ScenarioCatalogPayload; func runs() async throws -> [ScenarioRunSummary]
+  func scenarios() async throws -> [ScenarioDefinitionSummary]
   func portfolios() async throws -> [ScenarioPortfolio]; func goals() async throws -> [ScenarioGoal]
   func captureSnapshot(portfolioID: UUID) async throws -> ScenarioSnapshotPreview
   func holdings(portfolioIDs: [UUID]) async throws -> [ScenarioHolding]; func riskProfiles() async throws -> [ScenarioRiskProfile]
@@ -146,6 +184,8 @@ protocol ScenarioPlanningServiceProtocol: Sendable {
                                                                benchmarkProxy: String?, manualValue: Double?, duration: Double?, convexity: Double?) async throws -> ScenarioRiskProfile
   func deleteRiskProfile(id: UUID) async throws
   func createRun(_ input: ScenarioRunRequest, snapshotID: UUID) async throws -> ScenarioRunSummary
+  func createRun(scenarioID: UUID, snapshotID: UUID, seed: Int64?) async throws -> ScenarioRunSummary
+  func deleteScenario(id: UUID) async throws
   func run(id: UUID) async throws -> ScenarioRunSummary; func cancel(runID: UUID) async throws
 }
 
@@ -154,6 +194,7 @@ final class ScenarioPlanningService: ScenarioPlanningServiceProtocol, @unchecked
   init(environment: AppEnvironmentManager, auth: AuthSessionManaging, session: URLSession = .shared) { self.environment = environment; self.auth = auth; self.session = session }
   func catalog() async throws -> ScenarioCatalogPayload { try await send("v1/scenarios/catalog") }
   func runs() async throws -> [ScenarioRunSummary] { try await send("v1/scenario-runs") }
+  func scenarios() async throws -> [ScenarioDefinitionSummary] { try await send("v1/scenarios") }
   func portfolios() async throws -> [ScenarioPortfolio] { try await send("v1/portfolio-lists") }
   func goals() async throws -> [ScenarioGoal] { try await send("v1/financial-goals") }
   func holdings(portfolioIDs: [UUID]) async throws -> [ScenarioHolding] {
@@ -201,7 +242,21 @@ final class ScenarioPlanningService: ScenarioPlanningServiceProtocol, @unchecked
     let configuration: [String: Any]
     switch input.kind {
     case .historical: configuration = ["catalogId": input.catalogID]
-    case .custom: configuration = ["asset_class_shocks": [["target": "stock", "percentage": input.shock]], "horizon_months": min(input.horizonMonths, 120), "recovery": "linear"]
+    case .custom:
+      var holdingShocks: [[String: Any]] = []; var sectorShocks: [[String: Any]] = []
+      var regionShocks: [[String: Any]] = []; var currencyShocks: [[String: Any]] = []
+      if let target = input.holdingShockTarget, let shock = input.holdingShock { holdingShocks = [["target": target, "percentage": shock]] }
+      if let target = input.sectorShockTarget, let shock = input.sectorShock { sectorShocks = [["target": target, "percentage": shock]] }
+      if let target = input.regionShockTarget, let shock = input.regionShock { regionShocks = [["target": target, "percentage": shock]] }
+      if let target = input.currencyShockTarget, let shock = input.currencyShock { currencyShocks = [["target": target.uppercased(), "percentage": shock]] }
+      configuration = [
+        "holding_shocks": holdingShocks, "sector_shocks": sectorShocks,
+        "region_shocks": regionShocks, "currency_shocks": currencyShocks,
+        "asset_class_shocks": [["target": input.assetClassTarget, "percentage": input.shock]],
+        "parallel_rate_shift_bps": input.parallelRateShiftBps,
+        "volatility_multiplier": input.volatilityMultiplier,
+        "horizon_months": min(input.horizonMonths, 120), "recovery": input.recovery,
+      ]
     case .monteCarlo:
       var values: [String: Any] = ["path_count": min(input.pathCount, 50_000), "horizon_months": min(input.horizonMonths, 600), "distribution": input.distribution]
       if !input.assetWeights.isEmpty { values["asset_weights"] = input.assetWeights; values["asset_annual_returns"] = input.assetAnnualReturns; values["annual_covariance"] = input.annualCovariance }
@@ -212,6 +267,16 @@ final class ScenarioPlanningService: ScenarioPlanningServiceProtocol, @unchecked
     let scenario: ScenarioResource = try await send("v1/scenarios", method: "POST", body: body)
     var runBody: [String: Any] = ["snapshotId": snapshotID.uuidString]; if let seed = input.seed { runBody["seed"] = seed }
     return try await send("v1/scenarios/\(scenario.id)/runs", method: "POST", body: runBody)
+  }
+
+  func createRun(scenarioID: UUID, snapshotID: UUID, seed: Int64?) async throws -> ScenarioRunSummary {
+    var body: [String: Any] = ["snapshotId": snapshotID.uuidString]
+    if let seed { body["seed"] = seed }
+    return try await send("v1/scenarios/\(scenarioID)/runs", method: "POST", body: body)
+  }
+
+  func deleteScenario(id: UUID) async throws {
+    let _: EmptyResponse = try await send("v1/scenarios/\(id)", method: "DELETE")
   }
 
   private func send<Response: Decodable>(_ path: String, method: String = "GET", body: [String: Any]? = nil) async throws -> Response {
