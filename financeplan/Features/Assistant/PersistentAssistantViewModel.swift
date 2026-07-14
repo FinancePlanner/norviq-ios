@@ -13,6 +13,7 @@ final class PersistentAssistantViewModel {
     private(set) var pendingActions: [AIPendingActionResponse] = []
     private(set) var isLoading = false
     private(set) var isSending = false
+    private(set) var activityLabel: String?
     private(set) var activeActionID: String?
     private(set) var errorMessage: String?
     var draft = ""
@@ -85,13 +86,31 @@ final class PersistentAssistantViewModel {
             createdAt: ISO8601DateFormatter().string(from: Date())
         )
         activeConversation = replacingMessages(in: conversation, with: conversation.messages + [optimistic])
-        defer { isSending = false }
+        defer {
+            isSending = false
+            activityLabel = nil
+        }
         do {
-            let turn = try await service.turn(conversationID: conversation.id, content: content)
-            if let current = activeConversation {
-                activeConversation = replacingMessages(in: current, with: current.messages + [turn.message])
+            var receivedTurn = false
+            for try await event in service.streamTurn(conversationID: conversation.id, content: content) {
+                switch event {
+                case .started:
+                    activityLabel = "Reviewing your finances…"
+                case let .turn(turn):
+                    receivedTurn = true
+                    if let current = activeConversation {
+                        activeConversation = replacingMessages(in: current, with: current.messages + [turn.message])
+                    }
+                    if let action = turn.pendingAction { pendingActions.insert(action, at: 0) }
+                case let .error(message):
+                    throw PersistentAssistantStreamFailure(message: message)
+                case .done:
+                    break
+                }
             }
-            if let action = turn.pendingAction { pendingActions.insert(action, at: 0) }
+            guard receivedTurn else {
+                throw PersistentAssistantStreamFailure(message: "The assistant returned no response.")
+            }
             async let usageRequest = service.usage()
             async let conversationsRequest = service.conversations()
             usage = try await usageRequest
@@ -166,4 +185,9 @@ final class PersistentAssistantViewModel {
         let value = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         return value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? fallback : value
     }
+}
+
+private struct PersistentAssistantStreamFailure: LocalizedError {
+    let message: String
+    var errorDescription: String? { message }
 }

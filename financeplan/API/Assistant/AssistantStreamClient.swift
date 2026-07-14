@@ -9,6 +9,7 @@
 //
 
 import Foundation
+import StockPlanShared
 
 /// An event emitted by the assistant during a turn.
 enum AssistantStreamEvent: Sendable, Equatable {
@@ -27,6 +28,17 @@ struct AssistantChatMessageDTO: Codable, Sendable {
 
 struct AssistantChatRequestDTO: Codable, Sendable {
     let messages: [AssistantChatMessageDTO]
+}
+
+private struct PersistentAssistantTurnRequestDTO: Codable, Sendable {
+    let content: String
+}
+
+enum PersistentAssistantStreamEvent: Sendable {
+    case started
+    case turn(AIAssistantTurnResponse)
+    case error(String)
+    case done
 }
 
 struct AssistantStreamClient: Sendable {
@@ -101,6 +113,72 @@ struct AssistantStreamClient: Sendable {
                         }
                     }
                     continuation.yield(.done)
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    /// Streams a persisted assistant turn. The backend writes the user and
+    /// assistant messages before emitting the final turn event.
+    func streamTurn(
+        conversationID: String,
+        content: String
+    ) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    let path = "v1/ai/assistant/conversations/\(conversationID)/stream"
+                    var request = URLRequest(url: baseURL.appendingPathComponent(path))
+                    request.httpMethod = "POST"
+                    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                    request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+                    if let token = await authTokenProvider() {
+                        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                    }
+                    request.httpBody = try JSONEncoder().encode(PersistentAssistantTurnRequestDTO(content: content))
+
+                    let (bytes, response) = try await session.bytes(for: request)
+                    guard let http = response as? HTTPURLResponse else {
+                        throw Failure.invalidResponse
+                    }
+                    switch http.statusCode {
+                    case 200: break
+                    case 401: throw Failure.unauthorized
+                    case 402, 403: throw Failure.upgradeRequired
+                    case 429: throw Failure.rateLimited
+                    default: throw Failure.server(http.statusCode)
+                    }
+
+                    var event = "message"
+                    for try await line in bytes.lines {
+                        if line.isEmpty {
+                            event = "message"
+                            continue
+                        }
+                        if line.hasPrefix("event:") {
+                            event = line.dropFirst(6).trimmingCharacters(in: .whitespaces)
+                            continue
+                        }
+                        guard line.hasPrefix("data:") else { continue }
+                        let json = String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces)
+                        switch event {
+                        case "started":
+                            continuation.yield(.started)
+                        case "turn":
+                            guard let data = json.data(using: .utf8) else { throw Failure.invalidResponse }
+                            continuation.yield(.turn(try JSONDecoder().decode(AIAssistantTurnResponse.self, from: data)))
+                        case "error":
+                            continuation.yield(.error(Self.field("message", in: json) ?? "The assistant could not complete this turn."))
+                        case "done":
+                            continuation.yield(.done)
+                        default:
+                            break
+                        }
+                    }
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)
