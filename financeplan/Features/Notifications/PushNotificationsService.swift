@@ -1,13 +1,13 @@
 import Foundation
 import StockPlanShared
-import StockPlanShared
 
 protocol PushNotificationsServicing: Sendable {
   func registerDevice(
     deviceToken: String,
     apnsEnvironment: PushAPNSEnvironment,
     authorizationStatus: PushAuthorizationStatus
-  ) async throws -> PushDeviceRegistrationResponse
+  )
+    async throws -> PushDeviceRegistrationResponse
   func deactivateDevice(deviceToken: String) async throws
   func fetchEarningsPreferences() async throws -> EarningsNotificationPreferencesResponse
   func updateEarningsPreferences(enabled: Bool) async throws -> EarningsNotificationPreferencesResponse
@@ -32,12 +32,15 @@ struct PushNotificationsService: PushNotificationsServicing, @unchecked Sendable
     deviceToken: String,
     apnsEnvironment: PushAPNSEnvironment,
     authorizationStatus: PushAuthorizationStatus
-  ) async throws -> PushDeviceRegistrationResponse {
+  )
+    async throws -> PushDeviceRegistrationResponse
+  {
     let payload = PushDeviceRegistrationRequest(
       deviceToken: deviceToken,
       platform: .ios,
       apnsEnvironment: apnsEnvironment,
-      authorizationStatus: authorizationStatus
+      authorizationStatus: authorizationStatus,
+      capabilities: ["rebalance_drift_v1"]
     )
 
     return try await performAuthenticated { client in
@@ -68,7 +71,9 @@ struct PushNotificationsService: PushNotificationsServicing, @unchecked Sendable
 
   private func performAuthenticated<T: Sendable>(
     _ operation: (PushNotificationsHTTPClient) async throws -> T
-  ) async throws -> T {
+  )
+    async throws -> T
+  {
     do {
       let client = try await makeClient(forceRefresh: false)
       return try await operation(client)
@@ -97,8 +102,10 @@ struct PushNotificationsService: PushNotificationsServicing, @unchecked Sendable
       ? try await authSessionManager.refreshAccessToken()
       : try await authSessionManager.validAccessToken()
 
-    guard let token,
-          !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+    guard
+      let token,
+      !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    else {
       throw AuthSessionError.notAuthenticated
     }
 

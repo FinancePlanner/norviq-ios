@@ -27,6 +27,14 @@ struct PortfolioDetailScreen: View {
         }
       }
 
+      Section("Allocation") {
+        NavigationLink {
+          RebalancingScreen(portfolio: portfolio)
+        } label: {
+          Label("Targets & rebalancing", systemImage: "scope")
+        }
+      }
+
       Section("Cash") {
         ForEach(model.cashPositions) { cash in
           LabeledContent(cash.label, value: cash.balance.formatted(.currency(code: cash.currency)))
