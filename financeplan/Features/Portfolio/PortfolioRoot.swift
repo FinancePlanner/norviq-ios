@@ -28,7 +28,12 @@ struct PortfolioRoot: View {
           .tint(AppTheme.Colors.tint(for: colorScheme))
           .accessibilityLabel(LocalizedStringKey("Open settings"))
         }
-        ToolbarItem(placement: .topBarTrailing) {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+          NavigationLink(destination: PortfolioWorkspaceScreen()) {
+            Label("Manage portfolios", systemImage: "rectangle.stack")
+          }
+          .labelStyle(.iconOnly)
+          .accessibilityLabel("Manage portfolios")
           NavigationLink(destination: ProGateView(billingManager: billingManager) { ScenarioPlanningScreen() }) {
             Label("Scenario planning", systemImage: "chart.xyaxis.line")
           }
