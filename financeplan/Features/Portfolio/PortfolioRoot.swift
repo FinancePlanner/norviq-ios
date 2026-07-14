@@ -37,8 +37,33 @@ struct PortfolioRoot: View {
           NavigationLink(destination: ProGateView(billingManager: billingManager) { ScenarioPlanningScreen() }) {
             Label("Scenario planning", systemImage: "chart.xyaxis.line")
           }
-            .labelStyle(.iconOnly)
-            .accessibilityLabel("Open scenario planning")
+          .labelStyle(.iconOnly)
+          .accessibilityLabel("Open scenario planning")
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+          Menu("Automation", systemImage: "wand.and.stars") {
+            NavigationLink {
+              ProGateView(billingManager: billingManager) { NetWorthForecastScreen() }
+            } label: {
+              Label("Net worth forecast", systemImage: "chart.xyaxis.line")
+            }
+            NavigationLink {
+              ProGateView(billingManager: billingManager) { SmartScreeningScreen() }
+            } label: {
+              Label("Smart screens", systemImage: "line.3.horizontal.decrease.circle")
+            }
+            NavigationLink {
+              ProGateView(billingManager: billingManager) { RebalancingRulesScreen() }
+            } label: {
+              Label("Rebalancing rules", systemImage: "scale.3d")
+            }
+            NavigationLink {
+              NotificationInboxScreen()
+            } label: {
+              Label("Notifications", systemImage: "bell")
+            }
+          }
+          .accessibilityLabel("Open wealth automation")
         }
       }
     }

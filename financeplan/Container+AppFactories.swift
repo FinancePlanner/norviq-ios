@@ -71,6 +71,15 @@ extension Container {
     }.singleton
   }
 
+  var wealthAutomationService: Factory<WealthAutomationServicing> {
+    self { @MainActor in
+      WealthAutomationService(
+        environmentManager: self.appEnvironment(),
+        authSessionManager: self.authSessionManager()
+      )
+    }.singleton
+  }
+
   var feedbackService: Factory<FeedbackService> {
     self { @MainActor in
       FeedbackService(
