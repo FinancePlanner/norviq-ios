@@ -119,7 +119,7 @@ public struct UserProfileView: View {
                     editProfileSheet
                 }
                 .sheet(isPresented: $isAssistantPresented) {
-                    AssistantView()
+                    PersistentAssistantView()
                 }
                 .sheet(isPresented: $isPaywallPresented) {
                     PaywallView(billingManager: billingManager)
