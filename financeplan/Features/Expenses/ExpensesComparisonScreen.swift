@@ -1,13 +1,11 @@
 import Charts
 import SwiftUI
 import StockPlanShared
-import Factory
 
 struct ExpensesComparisonScreen: View {
   @State private var reportsViewModel = ReportsViewModel()
   @State private var dashboardPrefs = ReportsDashboardPreferences()
   @Environment(\.colorScheme) private var colorScheme
-  @InjectedObservable(\Container.billingManager) private var billingManager
   @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
   @State private var selectedTab: ReportTab = .overview
   @State private var showingCustomize = false
@@ -61,8 +59,7 @@ struct ExpensesComparisonScreen: View {
   }
 
   var body: some View {
-    ProGateView(billingManager: billingManager) {
-      NavigationStack {
+    NavigationStack {
         ZStack {
           MeshGradientBackground()
             .ignoresSafeArea()
@@ -90,7 +87,14 @@ struct ExpensesComparisonScreen: View {
         .navigationTitle(LocalizedStringKey("Reports"))
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-          ToolbarItem(placement: .topBarTrailing) {
+          ToolbarItemGroup(placement: .topBarTrailing) {
+            NavigationLink {
+              AdvancedReportingScreen()
+            } label: {
+              Label("Reporting Center", systemImage: "doc.richtext")
+            }
+            .labelStyle(.iconOnly)
+            .accessibilityLabel("Open Reporting Center")
             Button {
               showingCustomize = true
             } label: {
@@ -112,7 +116,6 @@ struct ExpensesComparisonScreen: View {
         .sheet(isPresented: $showingCustomize) {
           CustomizeDashboardSheet(preferences: dashboardPrefs)
         }
-      }
     }
   }
 

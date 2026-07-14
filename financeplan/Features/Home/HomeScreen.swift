@@ -91,7 +91,7 @@ struct HomeScreen: View {
             PaywallView(billingManager: billingManager)
         }
         .onChange(of: selectedTab) { _, newValue in
-            guard newValue == .reports || newValue == .insights, !billingManager.isPro else { return }
+            guard newValue == .insights, !billingManager.isPro else { return }
             selectedTab = .dashboard
             isPaywallPresented = true
         }
