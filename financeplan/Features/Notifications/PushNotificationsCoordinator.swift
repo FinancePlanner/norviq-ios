@@ -5,12 +5,14 @@ import StockPlanShared
 import UIKit
 import UserNotifications
 
-struct PushNotificationRoute: Equatable, Sendable {
-  enum Kind: String, Equatable, Sendable {
+nonisolated struct PushNotificationRoute: Equatable, Sendable {
+  nonisolated enum Kind: String, Equatable, Sendable {
     case targetHit = "target_hit"
     case earningsReminder = "earnings_reminder"
     case openPortfolio = "open_portfolio"
     case taxOpportunity = "tax_harvest_opportunity"
+    case watchlistScreen = "watchlist_screen"
+    case rebalancing
   }
 
   let kind: Kind
@@ -21,6 +23,9 @@ struct PushNotificationRoute: Equatable, Sendable {
   let leadDays: Int?
   let deepLink: String?
   let opportunityID: String?
+  let screenID: String?
+  let portfolioListID: String?
+  let eventID: String?
 
   nonisolated init(
     kind: Kind,
@@ -30,7 +35,10 @@ struct PushNotificationRoute: Equatable, Sendable {
     earningsDate: String? = nil,
     leadDays: Int? = nil,
     deepLink: String? = nil,
-    opportunityID: String? = nil
+    opportunityID: String? = nil,
+    screenID: String? = nil,
+    portfolioListID: String? = nil,
+    eventID: String? = nil
   ) {
     self.kind = kind
     self.symbol = symbol
@@ -40,6 +48,9 @@ struct PushNotificationRoute: Equatable, Sendable {
     self.leadDays = leadDays
     self.deepLink = deepLink
     self.opportunityID = opportunityID
+    self.screenID = screenID
+    self.portfolioListID = portfolioListID
+    self.eventID = eventID
   }
 }
 
@@ -47,21 +58,26 @@ enum PushNotificationPayloadParser {
   nonisolated static func parse(userInfo: [AnyHashable: Any]) -> PushNotificationRoute? {
     let root = normalizeDictionary(userInfo)
     let payload = (root["payload"] as? [String: Any]) ?? root
+    let data = (payload["data"] as? [String: Any]) ?? (root["data"] as? [String: Any]) ?? [:]
+    let dictionaries = [data, payload, root]
 
-    let rawType = stringValue(for: ["type", "notificationType"], in: payload) ?? PushNotificationRoute.Kind.targetHit.rawValue
+    let rawType = stringValue(for: ["type", "notificationType"], in: dictionaries) ?? PushNotificationRoute.Kind.targetHit.rawValue
     let kind = PushNotificationRoute.Kind(rawValue: rawType) ?? .targetHit
-    let normalizedSymbol = normalize(stringValue(for: ["symbol"], in: payload) ?? stringValue(for: ["symbol"], in: root))
+    let normalizedSymbol = normalize(stringValue(for: ["symbol"], in: dictionaries))
 
     if (kind == .targetHit || kind == .earningsReminder), normalizedSymbol == nil {
       return nil
     }
 
-    let scenario = normalize(stringValue(for: ["scenario"], in: payload))
-    let targetID = normalize(stringValue(for: ["targetId", "target_id"], in: payload))
-    let earningsDate = normalize(stringValue(for: ["earningsDate", "earnings_date"], in: payload))
+    let scenario = normalize(stringValue(for: ["scenario"], in: dictionaries))
+    let targetID = normalize(stringValue(for: ["targetId", "target_id"], in: dictionaries))
+    let earningsDate = normalize(stringValue(for: ["earningsDate", "earnings_date"], in: dictionaries))
     let leadDays = intValue(for: ["leadDays", "lead_days"], in: payload)
-    let deepLink = normalize(stringValue(for: ["deepLink", "deep_link"], in: payload))
-    let opportunityID = normalize(stringValue(for: ["opportunityId", "opportunity_id"], in: payload))
+    let deepLink = normalize(stringValue(for: ["deepLink", "deep_link"], in: dictionaries))
+    let opportunityID = normalize(stringValue(for: ["opportunityId", "opportunity_id"], in: dictionaries))
+    let screenID = normalize(stringValue(for: ["screenId", "screen_id"], in: dictionaries))
+    let portfolioListID = normalize(stringValue(for: ["portfolioListId", "portfolio_list_id"], in: dictionaries))
+    let eventID = normalize(stringValue(for: ["eventId", "event_id"], in: dictionaries))
 
     return PushNotificationRoute(
       kind: kind,
@@ -71,18 +87,21 @@ enum PushNotificationPayloadParser {
       earningsDate: earningsDate,
       leadDays: leadDays,
       deepLink: deepLink,
-      opportunityID: opportunityID
+      opportunityID: opportunityID,
+      screenID: screenID,
+      portfolioListID: portfolioListID,
+      eventID: eventID
     )
   }
 
-  nonisolated private static func normalizeDictionary(_ dictionary: [AnyHashable: Any]) -> [String: Any] {
+  private nonisolated static func normalizeDictionary(_ dictionary: [AnyHashable: Any]) -> [String: Any] {
     Dictionary(uniqueKeysWithValues: dictionary.compactMap { key, value in
       guard let key = key as? String else { return nil }
       return (key, value)
     })
   }
 
-  nonisolated private static func stringValue(for keys: [String], in dictionary: [String: Any]) -> String? {
+  private nonisolated static func stringValue(for keys: [String], in dictionary: [String: Any]) -> String? {
     for key in keys {
       if let string = dictionary[key] as? String {
         return string
@@ -91,7 +110,16 @@ enum PushNotificationPayloadParser {
     return nil
   }
 
-  nonisolated private static func intValue(for keys: [String], in dictionary: [String: Any]) -> Int? {
+  private nonisolated static func stringValue(for keys: [String], in dictionaries: [[String: Any]]) -> String? {
+    for dictionary in dictionaries {
+      if let value = stringValue(for: keys, in: dictionary) {
+        return value
+      }
+    }
+    return nil
+  }
+
+  private nonisolated static func intValue(for keys: [String], in dictionary: [String: Any]) -> Int? {
     for key in keys {
       if let int = dictionary[key] as? Int {
         return int
@@ -103,7 +131,7 @@ enum PushNotificationPayloadParser {
     return nil
   }
 
-  nonisolated private static func normalize(_ value: String?) -> String? {
+  private nonisolated static func normalize(_ value: String?) -> String? {
     guard let value else { return nil }
     let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
     return trimmed.isEmpty ? nil : trimmed
@@ -136,7 +164,7 @@ struct SystemPushPermissionProvider: PushPermissionProviding, @unchecked Sendabl
     switch settings.authorizationStatus {
     case .authorized:
       return .authorized
-    case .provisional, .ephemeral:
+    case .ephemeral, .provisional:
       return .provisional
     case .denied:
       return .denied
@@ -149,12 +177,14 @@ struct SystemPushPermissionProvider: PushPermissionProviding, @unchecked Sendabl
 }
 
 protocol PushRemoteNotificationsRegistering: Sendable {
-  @MainActor func registerForRemoteNotifications()
+  @MainActor
+  func registerForRemoteNotifications()
   func openSystemSettings()
 }
 
 struct SystemPushRemoteNotificationsRegistrar: PushRemoteNotificationsRegistering, Sendable {
-  @MainActor func registerForRemoteNotifications() {
+  @MainActor
+  func registerForRemoteNotifications() {
     UIApplication.shared.registerForRemoteNotifications()
   }
 
@@ -213,7 +243,7 @@ final class PushNotificationsCoordinator: ObservableObject {
 
   func handleAuthenticatedSessionBecameActive() {
     Task {
-      currentUserID = normalized(await sessionStore.currentUserID)
+      currentUserID = await normalized(sessionStore.currentUserID)
       guard !currentUserID.isEmpty else {
         return
       }
@@ -223,7 +253,7 @@ final class PushNotificationsCoordinator: ObservableObject {
       await refreshAuthorizationStatus()
       await loadEarningsPreferencesIfPossible()
 
-      if authorizationStatus == .notDetermined && !hasSeenExplainer(for: currentUserID) {
+      if authorizationStatus == .notDetermined, !hasSeenExplainer(for: currentUserID) {
         showPostLoginExplainer = true
         return
       }
@@ -284,19 +314,21 @@ final class PushNotificationsCoordinator: ObservableObject {
     _ parsedRoute: PushNotificationRoute,
     userAction: PushNotificationUserAction = .openStock
   ) {
-    let route: PushNotificationRoute
-    switch userAction {
+    let route: PushNotificationRoute = switch userAction {
     case .openStock:
-      route = parsedRoute
+      parsedRoute
     case .openPortfolio:
-      route = PushNotificationRoute(
+      PushNotificationRoute(
         kind: .openPortfolio,
         symbol: parsedRoute.symbol,
         scenario: parsedRoute.scenario,
         targetID: parsedRoute.targetID,
         earningsDate: parsedRoute.earningsDate,
         leadDays: parsedRoute.leadDays,
-        deepLink: parsedRoute.deepLink
+        deepLink: parsedRoute.deepLink,
+        screenID: parsedRoute.screenID,
+        portfolioListID: parsedRoute.portfolioListID,
+        eventID: parsedRoute.eventID
       )
     }
 
@@ -312,7 +344,7 @@ final class PushNotificationsCoordinator: ObservableObject {
   }
 
   func enableFromExplainer() async {
-    let userID = normalized(await sessionStore.currentUserID)
+    let userID = await normalized(sessionStore.currentUserID)
     guard !userID.isEmpty else {
       return
     }
@@ -326,7 +358,7 @@ final class PushNotificationsCoordinator: ObservableObject {
 
   func dismissExplainer() {
     Task {
-      let userID = normalized(await sessionStore.currentUserID)
+      let userID = await normalized(sessionStore.currentUserID)
       guard !userID.isEmpty else {
         showPostLoginExplainer = false
         return
@@ -339,7 +371,7 @@ final class PushNotificationsCoordinator: ObservableObject {
   }
 
   func setNotificationsEnabled(_ enabled: Bool) async {
-    let userID = normalized(await sessionStore.currentUserID)
+    let userID = await normalized(sessionStore.currentUserID)
     guard !userID.isEmpty else {
       return
     }
@@ -361,7 +393,7 @@ final class PushNotificationsCoordinator: ObservableObject {
   }
 
   func loadEarningsPreferencesIfPossible() async {
-    let userID = normalized(await sessionStore.currentUserID)
+    let userID = await normalized(sessionStore.currentUserID)
     guard !userID.isEmpty else {
       return
     }
@@ -379,7 +411,7 @@ final class PushNotificationsCoordinator: ObservableObject {
   }
 
   func setEarningsAlertsEnabled(_ enabled: Bool) async {
-    let userID = normalized(await sessionStore.currentUserID)
+    let userID = await normalized(sessionStore.currentUserID)
     guard !userID.isEmpty else {
       return
     }
@@ -450,7 +482,7 @@ final class PushNotificationsCoordinator: ObservableObject {
       return
     }
 
-    let userID = normalized(await sessionStore.currentUserID)
+    let userID = await normalized(sessionStore.currentUserID)
     guard !userID.isEmpty else {
       return
     }
@@ -514,31 +546,31 @@ final class PushNotificationsCoordinator: ObservableObject {
   private static let optedInUserIDsKey = "push_notifications_opted_in_user_ids"
 
   nonisolated static func resolveAPNSEnvironment() -> PushAPNSEnvironment {
-#if targetEnvironment(simulator)
-    return .development
-#else
-    guard
-      let provisioningProfileURL = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
-      let data = try? Data(contentsOf: provisioningProfileURL),
-      let source = String(data: data, encoding: .utf8),
-      let plistStart = source.range(of: "<plist"),
-      let plistEnd = source.range(of: "</plist>"),
-      plistStart.lowerBound < plistEnd.upperBound
-    else {
-      return .production
-    }
+    #if targetEnvironment(simulator)
+      return .development
+    #else
+      guard
+        let provisioningProfileURL = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
+        let data = try? Data(contentsOf: provisioningProfileURL),
+        let source = String(data: data, encoding: .utf8),
+        let plistStart = source.range(of: "<plist"),
+        let plistEnd = source.range(of: "</plist>"),
+        plistStart.lowerBound < plistEnd.upperBound
+      else {
+        return .production
+      }
 
-    let plistString = String(source[plistStart.lowerBound ..< plistEnd.upperBound])
-    guard
-      let plistData = plistString.data(using: .utf8),
-      let raw = try? PropertyListSerialization.propertyList(from: plistData, format: nil) as? [String: Any],
-      let entitlements = raw["Entitlements"] as? [String: Any],
-      let environment = (entitlements["aps-environment"] ?? entitlements["com.apple.developer.aps-environment"]) as? String
-    else {
-      return .production
-    }
+      let plistString = String(source[plistStart.lowerBound..<plistEnd.upperBound])
+      guard
+        let plistData = plistString.data(using: .utf8),
+        let raw = try? PropertyListSerialization.propertyList(from: plistData, format: nil) as? [String: Any],
+        let entitlements = raw["Entitlements"] as? [String: Any],
+        let environment = (entitlements["aps-environment"] ?? entitlements["com.apple.developer.aps-environment"]) as? String
+      else {
+        return .production
+      }
 
-    return environment == "development" ? .development : .production
-#endif
+      return environment == "development" ? .development : .production
+    #endif
   }
 }

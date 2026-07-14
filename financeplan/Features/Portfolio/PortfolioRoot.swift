@@ -7,6 +7,7 @@ struct PortfolioRoot: View {
   @Environment(\.colorScheme) private var colorScheme
   @Binding var isSettingsPresented: Bool
   @Binding var pendingOpenSymbol: String?
+  @Binding var pendingAutomationDestination: AutomationNavigationDestination?
   @InjectedObservable(\Container.billingManager) private var billingManager
   @StateObject private var portfolioViewModel = PortfolioViewModel()
 
@@ -16,6 +17,16 @@ struct PortfolioRoot: View {
         pendingOpenSymbol: $pendingOpenSymbol
       )
       .environmentObject(portfolioViewModel)
+      .navigationDestination(item: $pendingAutomationDestination) { destination in
+        switch destination {
+        case let .smartScreen(id): ProGateView(billingManager: billingManager) { SmartScreeningScreen(
+            initialScreenID: id
+          ) }
+        case let .rebalancing(id): ProGateView(billingManager: billingManager) { RebalancingRulesScreen(
+            initialPortfolioID: id
+          ) }
+        }
+      }
       .navigationTitle("Portfolio")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {

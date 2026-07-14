@@ -8,15 +8,23 @@ protocol WealthAutomationServicing: Sendable {
   func forecasts() async throws -> [ForecastDefinitionWire]
   func forecastDefaults() async throws -> ForecastDefaultsWire
   func createForecast(portfolioID: String, request: ForecastUpsertWire) async throws -> ForecastDefinitionWire
+  func updateForecast(id: String, request: ForecastUpsertWire) async throws -> ForecastDefinitionWire
+  func deleteForecast(id: String) async throws
   func runForecast(id: String) async throws -> ForecastRunWire
   func screens() async throws -> [WatchlistScreenWire]
   func screenCatalog() async throws -> [ScreenMetricWire]
   func createScreen(_ request: WatchlistScreenUpsertWire) async throws -> WatchlistScreenWire
+  func updateScreen(id: String, request: WatchlistScreenUpsertWire) async throws -> WatchlistScreenWire
+  func deleteScreen(id: String) async throws
   func evaluateScreen(id: String) async throws -> ScreenEvaluationWire
+  func screenHistory(id: String) async throws -> [ScreenEvaluationWire]
   func rebalancingPolicy(portfolioID: String) async throws -> RebalancingPolicyWire?
   func saveRebalancingPolicy(portfolioID: String, request: RebalancingPolicyUpsertWire) async throws -> RebalancingPolicyWire
   func previewRebalancing(portfolioID: String) async throws -> RebalancePreviewWire
-  func notifications() async throws -> NotificationPageWire
+  func rebalanceEvents(portfolioID: String) async throws -> [RebalanceEventWire]
+  func confirmRebalanceEvent(portfolioID: String, eventID: String) async throws -> RebalanceEventWire
+  func dismissRebalanceEvent(portfolioID: String, eventID: String) async throws -> RebalanceEventWire
+  func notifications(cursor: String?) async throws -> NotificationPageWire
   func markNotificationRead(id: String) async throws
   func markAllNotificationsRead() async throws
 }
@@ -80,6 +88,14 @@ final class WealthAutomationService: WealthAutomationServicing {
     )
   }
 
+  func updateForecast(id: String, request: ForecastUpsertWire) async throws -> ForecastDefinitionWire {
+    try await send("/v1/net-worth-forecasts/\(id)", method: "PUT", body: request)
+  }
+
+  func deleteForecast(id: String) async throws {
+    try await sendWithoutResponse("/v1/net-worth-forecasts/\(id)", method: "DELETE")
+  }
+
   func runForecast(id: String) async throws -> ForecastRunWire {
     try await send("/v1/net-worth-forecasts/\(id)/runs", method: "POST", body: EmptyAutomationBody())
   }
@@ -99,12 +115,24 @@ final class WealthAutomationService: WealthAutomationServicing {
       body: request
     ) }
 
+  func updateScreen(id: String, request: WatchlistScreenUpsertWire) async throws -> WatchlistScreenWire {
+    try await send("/v1/watchlist/screens/\(id)", method: "PUT", body: request)
+  }
+
+  func deleteScreen(id: String) async throws {
+    try await sendWithoutResponse("/v1/watchlist/screens/\(id)", method: "DELETE")
+  }
+
   func evaluateScreen(id: String) async throws -> ScreenEvaluationWire {
     try await send(
       "/v1/watchlist/screens/\(id)/evaluate",
       method: "POST",
       body: EmptyAutomationBody()
     ) }
+
+  func screenHistory(id: String) async throws -> [ScreenEvaluationWire] {
+    try await get("/v1/watchlist/screens/\(id)/history")
+  }
 
   func rebalancingPolicy(portfolioID: String) async throws -> RebalancingPolicyWire? {
     do { return try await get("/v1/portfolio/lists/\(portfolioID)/rebalancing-policy") }
@@ -116,18 +144,42 @@ final class WealthAutomationService: WealthAutomationServicing {
   }
 
   func previewRebalancing(portfolioID: String) async throws -> RebalancePreviewWire {
-    try await get(
-      "/v1/portfolio/lists/\(portfolioID)/rebalancing-policy/preview"
-    ) }
+    try await send(
+      "/v1/portfolio/lists/\(portfolioID)/rebalancing-policy/preview",
+      method: "POST",
+      body: EmptyAutomationBody()
+    )
+  }
 
-  func notifications() async throws -> NotificationPageWire {
-    try await get("/v1/notifications/inbox")
+  func rebalanceEvents(portfolioID: String) async throws -> [RebalanceEventWire] {
+    try await get("/v1/portfolio/lists/\(portfolioID)/rebalancing-policy/events")
+  }
+
+  func confirmRebalanceEvent(portfolioID: String, eventID: String) async throws -> RebalanceEventWire {
+    try await send(
+      "/v1/portfolio/lists/\(portfolioID)/rebalancing-policy/events/\(eventID)/confirm",
+      method: "POST",
+      body: EmptyAutomationBody()
+    )
+  }
+
+  func dismissRebalanceEvent(portfolioID: String, eventID: String) async throws -> RebalanceEventWire {
+    try await send(
+      "/v1/portfolio/lists/\(portfolioID)/rebalancing-policy/events/\(eventID)/dismiss",
+      method: "POST",
+      body: EmptyAutomationBody()
+    )
+  }
+
+  func notifications(cursor: String? = nil) async throws -> NotificationPageWire {
+    let query = cursor.map { [URLQueryItem(name: "cursor", value: $0)] } ?? []
+    return try await get("/v1/notifications/inbox", query: query)
   }
 
   func markNotificationRead(id: String) async throws {
     let _: NotificationItemWire = try await send(
-      "/v1/notifications/inbox/\(id)",
-      method: "PATCH",
+      "/v1/notifications/inbox/\(id)/read",
+      method: "PUT",
       body: NotificationReadWire(read: true)
     )
   }
@@ -136,11 +188,11 @@ final class WealthAutomationService: WealthAutomationServicing {
     try await sendWithoutResponse("/v1/notifications/inbox/read-all", method: "POST")
   }
 
-  private func get<Response: Decodable & Sendable>(_ path: String) async throws -> Response {
+  private func get<Response: Decodable & Sendable>(_ path: String, query: [URLQueryItem] = []) async throws -> Response {
     try await request(
       path: path,
       method: "GET",
-      query: [],
+      query: query,
       body: EmptyAutomationBody?.none,
       response: Response.self,
       forceRefresh: false

@@ -189,7 +189,7 @@ public struct ContentView: View {
         break
       }
     }
-    .onReceive(pushNotificationsCoordinator.$pendingNotificationRoute.compactMap { $0 }) { _ in
+    .onReceive(pushNotificationsCoordinator.$pendingNotificationRoute.compactMap(\.self)) { _ in
       deliverPendingPushNotificationRouteIfPossible()
     }
     .onChange(of: isAuthenticated) { _, _ in
@@ -210,37 +210,39 @@ public struct ContentView: View {
       }
 
       launchStarted = true
-      
+
       // UI-test session injection must never ship in release builds.
       #if DEBUG
-      let processInfo = ProcessInfo.processInfo
-      if processInfo.arguments.contains("-ui_test_reset_session") {
-        await sessionStore.clearSession()
-        let defaults = UserDefaults.standard
-        defaults.removeObject(forKey: "initial_stock_import_user_ids")
-      }
+        let processInfo = ProcessInfo.processInfo
+        if processInfo.arguments.contains("-ui_test_reset_session") {
+          await sessionStore.clearSession()
+          let defaults = UserDefaults.standard
+          defaults.removeObject(forKey: "initial_stock_import_user_ids")
+        }
 
-      if let forcedAuthToken = processInfo.argumentValue(for: "-ui_test_auth_token") {
-        await sessionStore.setAuthToken(forcedAuthToken)
-        await sessionStore.setAuthTokenExpiresAt(JWTTokenInspector.expirationDate(in: forcedAuthToken) ?? .distantFuture)
-      }
+        if let forcedAuthToken = processInfo.argumentValue(for: "-ui_test_auth_token") {
+          await sessionStore.setAuthToken(forcedAuthToken)
+          await sessionStore.setAuthTokenExpiresAt(
+            JWTTokenInspector.expirationDate(in: forcedAuthToken) ?? .distantFuture
+          )
+        }
 
-      if let forcedRefreshToken = processInfo.argumentValue(for: "-ui_test_refresh_token") {
-        await sessionStore.setRefreshToken(forcedRefreshToken)
-        await sessionStore.setRefreshTokenExpiresAt(.distantFuture)
-      }
+        if let forcedRefreshToken = processInfo.argumentValue(for: "-ui_test_refresh_token") {
+          await sessionStore.setRefreshToken(forcedRefreshToken)
+          await sessionStore.setRefreshTokenExpiresAt(.distantFuture)
+        }
 
-      if let forcedUserID = processInfo.argumentValue(for: "-ui_test_user_id") {
-        await sessionStore.setCurrentUserID(forcedUserID)
-      }
+        if let forcedUserID = processInfo.argumentValue(for: "-ui_test_user_id") {
+          await sessionStore.setCurrentUserID(forcedUserID)
+        }
 
-      if let forcedUsername = processInfo.argumentValue(for: "-ui_test_username") {
-        await sessionStore.setCurrentUsername(forcedUsername)
-      }
+        if let forcedUsername = processInfo.argumentValue(for: "-ui_test_username") {
+          await sessionStore.setCurrentUsername(forcedUsername)
+        }
 
-      if let importedUserID = processInfo.argumentValue(for: "-ui_test_imported_user_id") {
-        await sessionStore.markInitialStockImportCompleted(for: importedUserID)
-      }
+        if let importedUserID = processInfo.argumentValue(for: "-ui_test_imported_user_id") {
+          await sessionStore.markInitialStockImportCompleted(for: importedUserID)
+        }
       #endif
 
       if splashDelay != .zero {
@@ -267,7 +269,7 @@ public struct ContentView: View {
         }
       )
     }
-    .alert("Session Recovery Needed", isPresented: $showSessionRecoveryAlert) { } message: {
+    .alert("Session Recovery Needed", isPresented: $showSessionRecoveryAlert) {} message: {
       Text(sessionRecoveryMessage)
     }
   }
@@ -288,10 +290,10 @@ public struct ContentView: View {
       requiresOnboardingQuestionnaire = await sessionStore.requiresOnboardingQuestionnaire(for: userID)
       let hasImported = await sessionStore.hasCompletedInitialStockImport(for: userID)
       requiresInitialStockImport = userID.isEmpty || !hasImported
-      
+
       let username = await sessionStore.currentUsername
       sessionManager.updateUsername(username)
-      
+
       billingManager.configureForCurrentUser()
       await billingManager.reconcilePendingBackendSyncIfNeeded()
 
@@ -317,10 +319,12 @@ public struct ContentView: View {
   }
 
   private func deliverPendingPushNotificationRouteIfPossible() {
-    guard launchCompleted,
-          isAuthenticated,
-          !requiresInitialStockImport,
-          !requiresOnboardingQuestionnaire else {
+    guard
+      launchCompleted,
+      isAuthenticated,
+      !requiresInitialStockImport,
+      !requiresOnboardingQuestionnaire
+    else {
       return
     }
 
@@ -329,13 +333,17 @@ public struct ContentView: View {
     }
 
     switch route.kind {
-    case .targetHit, .earningsReminder:
+    case .earningsReminder, .targetHit:
       guard let symbol = route.symbol, !symbol.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-        Self.pushLogger.warning("push.analytics routed_failure destination=home reason=missing_symbol kind=\(route.kind.rawValue, privacy: .public)")
+        Self.pushLogger.warning(
+          "push.analytics routed_failure destination=home reason=missing_symbol kind=\(route.kind.rawValue, privacy: .public)"
+        )
         return
       }
 
-      Self.pushLogger.info("push.analytics routed_success destination=home kind=\(route.kind.rawValue, privacy: .public) symbol=\(symbol, privacy: .public)")
+      Self.pushLogger.info(
+        "push.analytics routed_success destination=home kind=\(route.kind.rawValue, privacy: .public) symbol=\(symbol, privacy: .public)"
+      )
       NotificationCenter.default.post(
         name: .openStockFromPushNotification,
         object: nil,
@@ -344,7 +352,9 @@ public struct ContentView: View {
         ]
       )
     case .openPortfolio:
-      Self.pushLogger.info("push.analytics routed_success destination=home kind=open_portfolio symbol=\(route.symbol ?? "-", privacy: .public)")
+      Self.pushLogger.info(
+        "push.analytics routed_success destination=home kind=open_portfolio symbol=\(route.symbol ?? "-", privacy: .public)"
+      )
       let userInfo: [AnyHashable: Any]? = route.symbol.map { symbol in
         ["symbol": symbol]
       }
@@ -354,11 +364,27 @@ public struct ContentView: View {
         userInfo: userInfo
       )
     case .taxOpportunity:
-      Self.pushLogger.info("push.analytics routed_success destination=tax opportunity=\(route.opportunityID ?? "-", privacy: .public)")
+      Self.pushLogger.info(
+        "push.analytics routed_success destination=tax opportunity=\(route.opportunityID ?? "-", privacy: .public)"
+      )
       NotificationCenter.default.post(
         name: .openTaxFromPushNotification,
         object: nil,
         userInfo: route.opportunityID.map { ["opportunityId": $0] }
+      )
+    case .watchlistScreen:
+      Self.pushLogger.info("push.analytics routed_success destination=smart_screen")
+      NotificationCenter.default.post(
+        name: .openPortfolioFromPushNotification,
+        object: nil,
+        userInfo: ["automation_destination": "watchlist_screen", "automation_id": route.screenID ?? ""]
+      )
+    case .rebalancing:
+      Self.pushLogger.info("push.analytics routed_success destination=rebalancing")
+      NotificationCenter.default.post(
+        name: .openPortfolioFromPushNotification,
+        object: nil,
+        userInfo: ["automation_destination": "rebalancing", "automation_id": route.portfolioListID ?? ""]
       )
     }
   }

@@ -1,6 +1,6 @@
 import Foundation
 
-/// These wire models mirror StockPlanShared 3.23.0. They remain local until the
+/// These wire models mirror the next StockPlanShared automation release. They remain local until the
 /// coordinated shared-package tag is published, so this branch can build in isolation.
 nonisolated struct AutomationListOption: Codable, Identifiable, Sendable {
   let id: UUID
@@ -150,17 +150,30 @@ nonisolated struct RebalancingPolicyWire: Codable, Identifiable, Sendable {
   let id: String
   let portfolioListId: String
   let enabled: Bool
+  let baseCurrency: String
   let cadence: String
   let driftThreshold: Double?
   let targets: [RebalanceTargetWire]
   let lastConfirmedAt: String?
+  let lastTriggeredAt: String?
 }
 
 nonisolated struct RebalancingPolicyUpsertWire: Codable, Sendable {
   let enabled: Bool
+  let baseCurrency: String
   let cadence: String
   let driftThreshold: Double?
   let targets: [RebalanceTargetWire]
+}
+
+nonisolated struct RebalanceEventWire: Codable, Identifiable, Sendable {
+  let id: String
+  let policyId: String
+  let status: String
+  let preview: RebalancePreviewWire
+  let createdAt: String
+  let confirmedAt: String?
+  let dismissedAt: String?
 }
 
 nonisolated struct RebalanceTradeWire: Codable, Identifiable, Sendable {
@@ -205,3 +218,30 @@ nonisolated struct NotificationReadWire: Codable, Sendable {
 }
 
 nonisolated struct EmptyAutomationBody: Codable, Sendable {}
+
+nonisolated enum RebalanceTargetsParser {
+  enum ValidationError: LocalizedError {
+    case invalidTargets
+    var errorDescription: String? {
+      "Enter targets like AAPL:60, MSFT:30, cash:10 and total 100%."
+    }
+  }
+
+  static func parse(_ raw: String) throws -> [RebalanceTargetWire] {
+    let targets = try raw.split(separator: ",").map { part -> RebalanceTargetWire in
+      let pair = part.split(separator: ":", maxSplits: 1).map(String.init)
+      guard pair.count == 2, let weight = Double(pair[1]), weight > 0 else { throw ValidationError.invalidTargets }
+      let asset = pair[0].trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !asset.isEmpty else { throw ValidationError.invalidTargets }
+      let isCash = asset.lowercased() == "cash"
+      return .init(
+        id: UUID().uuidString,
+        kind: isCash ? "cash" : "symbol",
+        symbol: isCash ? nil : asset.uppercased(),
+        targetWeight: weight / 100
+      )
+    }
+    guard !targets.isEmpty, abs(targets.reduce(0) { $0 + $1.targetWeight } - 1) < 0.0001 else { throw ValidationError.invalidTargets }
+    return targets
+  }
+}
