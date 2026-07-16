@@ -1,5 +1,6 @@
 import AnyAPI
 import Foundation
+import StockPlanShared
 
 nonisolated enum BudgetDriftLevelWire: String, Codable, Sendable { case green, yellow, red }
 nonisolated enum BudgetAllocationKindWire: String, Codable, Sendable { case expense, investmentContribution }
@@ -88,6 +89,18 @@ nonisolated struct BudgetReallocationEventWire: Codable, Sendable, Identifiable,
   let createdAt: String?
 }
 
+nonisolated struct BudgetFinancialGoalWire: Codable, Sendable, Identifiable, Equatable {
+  let id: String
+  let name: String
+  let portfolioListId: String
+}
+
+nonisolated struct BudgetPortfolioListWire: Codable, Sendable, Identifiable, Equatable {
+  let id: String
+  let name: String
+  let isDefault: Bool
+}
+
 nonisolated struct GetBudgetDriftEndpoint: Endpoint {
   typealias Response = BudgetDriftDashboardWire
   let snapshotId: String
@@ -102,6 +115,32 @@ nonisolated struct GetBudgetDisciplineEndpoint: Endpoint {
   var method: HTTPMethod { .get }
   var path: String { "/v1/budget/discipline" }
   func asParameters() throws -> Parameters { ["months": String(months)] }
+}
+
+nonisolated struct UpdateBudgetAlertPolicyEndpoint: Endpoint {
+  typealias Response = BudgetSnapshotResponse
+  let snapshotId: String
+  let policy: BudgetAlertPolicy
+  var method: HTTPMethod { .put }
+  var path: String { "/v1/budget/snapshots/\(snapshotId)/alert-policy" }
+  func asParameters() throws -> Parameters {
+    let data = try JSONEncoder().encode(policy)
+    return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+  }
+}
+
+nonisolated struct GetBudgetFinancialGoalsEndpoint: Endpoint {
+  typealias Response = [BudgetFinancialGoalWire]
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/financial-goals" }
+  func asParameters() throws -> Parameters { [:] }
+}
+
+nonisolated struct GetBudgetPortfolioListsEndpoint: Endpoint {
+  typealias Response = [BudgetPortfolioListWire]
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/portfolio/lists" }
+  func asParameters() throws -> Parameters { [:] }
 }
 
 nonisolated struct PreviewBudgetReallocationEndpoint: Endpoint {

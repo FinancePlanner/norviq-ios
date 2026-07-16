@@ -193,6 +193,18 @@ struct ExpensesHTTPClient: Sendable {
         try await client.call(GetBudgetDisciplineEndpoint(months: months), errorType: Error.self)
     }
 
+    func updateBudgetAlertPolicy(snapshotId: String, policy: BudgetAlertPolicy) async throws -> BudgetSnapshotResponse {
+        try await client.call(UpdateBudgetAlertPolicyEndpoint(snapshotId: snapshotId, policy: policy), errorType: Error.self)
+    }
+
+    func getBudgetFinancialGoals() async throws -> [BudgetFinancialGoalWire] {
+        try await client.call(GetBudgetFinancialGoalsEndpoint(), errorType: Error.self)
+    }
+
+    func getBudgetPortfolioLists() async throws -> [BudgetPortfolioListWire] {
+        try await client.call(GetBudgetPortfolioListsEndpoint(), errorType: Error.self)
+    }
+
     func previewBudgetReallocation(_ request: BudgetReallocationPreviewRequestWire) async throws -> BudgetReallocationPreviewWire {
         try await client.call(PreviewBudgetReallocationEndpoint(body: request), errorType: Error.self)
     }

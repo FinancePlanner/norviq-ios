@@ -27,6 +27,7 @@ struct ExpensesPlannerScreen: View {
   @State private var isPaywallPresented = false
   @State private var driftViewModel = BudgetDriftViewModel()
   @State private var isReallocationPresented = false
+  @State private var isAlertPolicyPresented = false
 
   private var isShowingLoadingState: Bool {
     viewModel.isLoading && viewModel.monthlySnapshots.isEmpty
@@ -76,6 +77,7 @@ struct ExpensesPlannerScreen: View {
             viewModel: driftViewModel,
             isPro: billingManager.isPro,
             onOpenSimulator: { isReallocationPresented = true },
+            onOpenPolicy: { isAlertPolicyPresented = true },
             onOpenPaywall: { isPaywallPresented = true }
           )
           .padding(.horizontal, 16)
@@ -184,6 +186,9 @@ struct ExpensesPlannerScreen: View {
         BudgetReallocationSimulatorSheet(viewModel: driftViewModel) {
           Task { await viewModel.load(force: true) }
         }
+      }
+      .sheet(isPresented: $isAlertPolicyPresented) {
+        BudgetAlertPolicySheet(viewModel: driftViewModel)
       }
       .task(id: viewModel.selectedMonthSnapshot?.id) {
         guard let id = viewModel.selectedMonthSnapshot?.id.uuidString else { return }

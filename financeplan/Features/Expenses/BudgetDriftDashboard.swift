@@ -9,18 +9,44 @@ final class BudgetDriftViewModel {
   private(set) var discipline: BudgetDisciplineSummaryWire?
   private(set) var history: [BudgetReallocationEventWire] = []
   private(set) var preview: BudgetReallocationPreviewWire?
+  private(set) var financialGoals: [BudgetFinancialGoalWire] = []
+  private(set) var portfolioLists: [BudgetPortfolioListWire] = []
   private(set) var isLoading = false
   private(set) var isCommitting = false
+  private(set) var isSavingPolicy = false
+  private var includesProData = false
   var adjustments: [String: Double] = [:]
+  var categoryAlertThreshold = 15.0
+  var totalAlertThreshold = 10.0
+  var alertsEnabled = true
+  var alertOnUnbudgeted = true
+  var selectedFinancialGoalID: String? {
+    didSet {
+      guard let selectedFinancialGoalID,
+            let goal = financialGoals.first(where: { $0.id == selectedFinancialGoalID })
+      else { return }
+      selectedPortfolioListID = goal.portfolioListId
+    }
+  }
+  var selectedPortfolioListID: String?
   var errorMessage: String?
+  var isShowingError: Bool {
+    get { errorMessage != nil }
+    set { if !newValue { errorMessage = nil } }
+  }
 
   private let service: any ExpensesServicing
 
-  init(service: any ExpensesServicing = Container.shared.expensesService()) {
+  init(
+    service: any ExpensesServicing = Container.shared.expensesService(),
+    dashboard: BudgetDriftDashboardWire? = nil
+  ) {
     self.service = service
+    self.dashboard = dashboard
   }
 
   func load(snapshotID: String, includePro: Bool) async {
+    includesProData = includePro
     isLoading = true
     errorMessage = nil
     do {
@@ -30,6 +56,20 @@ final class BudgetDriftViewModel {
       discipline = try await score
       seedSuggestedAdjustments()
       history = includePro ? (try? await service.getBudgetReallocationHistory()) ?? [] : []
+      if let snapshots = try? await service.getSnapshots(year: nil, month: nil),
+         let snapshot = snapshots.first(where: { $0.id == snapshotID }) {
+        categoryAlertThreshold = snapshot.categoryDriftThreshold
+        totalAlertThreshold = snapshot.totalDriftThreshold
+        alertsEnabled = snapshot.alertsEnabled
+        alertOnUnbudgeted = snapshot.alertOnUnbudgeted
+      }
+      if includePro {
+        financialGoals = (try? await service.getBudgetFinancialGoals()) ?? []
+        portfolioLists = (try? await service.getBudgetPortfolioLists()) ?? []
+      } else {
+        financialGoals = []
+        portfolioLists = []
+      }
     } catch {
       errorMessage = error.localizedDescription
     }
@@ -50,17 +90,7 @@ final class BudgetDriftViewModel {
   }
 
   func refreshPreview() async {
-    guard let dashboard else { return }
-    let request = BudgetReallocationPreviewRequestWire(
-      snapshotId: dashboard.snapshotId,
-      expectedRevision: dashboard.revision,
-      adjustments: adjustments.compactMap { id, value in
-        value > 0 ? BudgetReallocationAdjustmentWire(planItemId: id, amount: value) : nil
-      },
-      financialGoalId: nil,
-      portfolioListId: nil
-    )
-    guard !request.adjustments.isEmpty else { preview = nil; return }
+    guard let request = makePreviewRequest() else { preview = nil; return }
     do { preview = try await service.previewBudgetReallocation(request) }
     catch { errorMessage = error.localizedDescription }
   }
@@ -68,16 +98,7 @@ final class BudgetDriftViewModel {
   @discardableResult
   func commit() async -> Bool {
     guard let dashboard else { return false }
-    let request = BudgetReallocationPreviewRequestWire(
-      snapshotId: dashboard.snapshotId,
-      expectedRevision: dashboard.revision,
-      adjustments: adjustments.compactMap { id, value in
-        value > 0 ? BudgetReallocationAdjustmentWire(planItemId: id, amount: value) : nil
-      },
-      financialGoalId: nil,
-      portfolioListId: nil
-    )
-    guard !request.adjustments.isEmpty else { return false }
+    guard let request = makePreviewRequest() else { return false }
     isCommitting = true
     defer { isCommitting = false }
     do {
@@ -95,6 +116,50 @@ final class BudgetDriftViewModel {
     }
   }
 
+  func makePreviewRequest() -> BudgetReallocationPreviewRequestWire? {
+    guard let dashboard else { return nil }
+    let selectedAdjustments = adjustments.compactMap { id, value in
+      value > 0 ? BudgetReallocationAdjustmentWire(planItemId: id, amount: value) : nil
+    }
+    guard !selectedAdjustments.isEmpty else { return nil }
+    return BudgetReallocationPreviewRequestWire(
+      snapshotId: dashboard.snapshotId,
+      expectedRevision: dashboard.revision,
+      adjustments: selectedAdjustments,
+      financialGoalId: selectedFinancialGoalID,
+      portfolioListId: selectedPortfolioListID
+    )
+  }
+
+  @discardableResult
+  func saveAlertPolicy() async -> Bool {
+    guard let dashboard else { return false }
+    guard categoryAlertThreshold.isFinite, totalAlertThreshold.isFinite,
+          (0 ... 1_000).contains(categoryAlertThreshold), (0 ... 1_000).contains(totalAlertThreshold)
+    else {
+      errorMessage = "Enter alert thresholds between 0 and 1000 percent."
+      return false
+    }
+    isSavingPolicy = true
+    defer { isSavingPolicy = false }
+    do {
+      _ = try await service.updateBudgetAlertPolicy(
+        snapshotId: dashboard.snapshotId,
+        policy: BudgetAlertPolicy(
+          categoryThreshold: categoryAlertThreshold,
+          totalThreshold: totalAlertThreshold,
+          alertsEnabled: alertsEnabled,
+          alertOnUnbudgeted: alertOnUnbudgeted
+        )
+      )
+      await load(snapshotID: dashboard.snapshotId, includePro: includesProData)
+      return true
+    } catch {
+      errorMessage = error.localizedDescription
+      return false
+    }
+  }
+
   private func seedSuggestedAdjustments() {
     adjustments = Dictionary(uniqueKeysWithValues: eligibleCategories.map { ($0.id, maximum(for: $0)) })
   }
@@ -104,6 +169,7 @@ struct BudgetDriftDashboardCard: View {
   let viewModel: BudgetDriftViewModel
   let isPro: Bool
   let onOpenSimulator: () -> Void
+  let onOpenPolicy: () -> Void
   let onOpenPaywall: () -> Void
 
   var body: some View {
@@ -114,6 +180,9 @@ struct BudgetDriftDashboardCard: View {
             .font(.headline)
           Spacer()
           if let level = viewModel.dashboard?.totalLevel { statusLabel(level) }
+          Button("Alert policy", systemImage: "bell.badge") { onOpenPolicy() }
+            .labelStyle(.iconOnly)
+            .accessibilityHint("Configure budget drift thresholds and alerts")
         }
 
         if viewModel.isLoading {
@@ -225,6 +294,27 @@ struct BudgetReallocationSimulatorSheet: View {
             ForEach(preview.warnings, id: \.self) { Label($0, systemImage: "exclamationmark.triangle") }
           }
         }
+
+        if !viewModel.financialGoals.isEmpty || !viewModel.portfolioLists.isEmpty {
+          Section {
+            Picker("Portfolio", selection: $viewModel.selectedPortfolioListID) {
+              Text("General Investments bucket").tag(String?.none)
+              ForEach(viewModel.portfolioLists) { portfolio in
+                Text(portfolio.name).tag(String?.some(portfolio.id))
+              }
+            }
+            Picker("Financial goal", selection: $viewModel.selectedFinancialGoalID) {
+              Text("No linked goal").tag(String?.none)
+              ForEach(viewModel.financialGoals) { goal in
+                Text(goal.name).tag(String?.some(goal.id))
+              }
+            }
+          } header: {
+            Text("Investment destination")
+          } footer: {
+            Text("Selecting a goal also routes the contribution forecast to that goal’s portfolio.")
+          }
+        }
       }
       .navigationTitle("Reallocation plan")
       .navigationBarTitleDisplayMode(.inline)
@@ -237,8 +327,8 @@ struct BudgetReallocationSimulatorSheet: View {
           .disabled(viewModel.selectedTotal <= 0 || viewModel.isCommitting)
         }
       }
-      .task(id: viewModel.selectedTotal) { await viewModel.refreshPreview() }
-      .alert("Could not update budget", isPresented: Binding(get: { viewModel.errorMessage != nil }, set: { if !$0 { viewModel.errorMessage = nil } })) {
+      .task(id: "\(viewModel.selectedTotal)-\(viewModel.selectedFinancialGoalID ?? "")-\(viewModel.selectedPortfolioListID ?? "")") { await viewModel.refreshPreview() }
+      .alert("Could not update budget", isPresented: $viewModel.isShowingError) {
         Button("OK", role: .cancel) { viewModel.errorMessage = nil }
       } message: { Text(viewModel.errorMessage ?? "Please try again.") }
     }
@@ -249,6 +339,44 @@ struct BudgetReallocationSimulatorSheet: View {
   }
 }
 
+struct BudgetAlertPolicySheet: View {
+  @Bindable var viewModel: BudgetDriftViewModel
+  @Environment(\.dismiss) private var dismiss
+
+  var body: some View {
+    NavigationStack {
+      Form {
+        Section {
+          TextField("Category threshold", value: $viewModel.categoryAlertThreshold, format: .number)
+            .keyboardType(.decimalPad)
+          TextField("Total budget threshold", value: $viewModel.totalAlertThreshold, format: .number)
+            .keyboardType(.decimalPad)
+        } header: {
+          Text("Drift thresholds")
+        } footer: {
+          Text("Thresholds are percentages above each category target and the total monthly plan.")
+        }
+        Section("Notifications") {
+          Toggle("Enable drift alerts", isOn: $viewModel.alertsEnabled)
+          Toggle("Alert on unbudgeted spending", isOn: $viewModel.alertOnUnbudgeted)
+        }
+      }
+      .navigationTitle("Budget alerts")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+        ToolbarItem(placement: .confirmationAction) {
+          Button("Save") { Task { if await viewModel.saveAlertPolicy() { dismiss() } } }
+            .disabled(viewModel.isSavingPolicy)
+        }
+      }
+      .alert("Could not save alert policy", isPresented: $viewModel.isShowingError) {
+        Button("OK", role: .cancel) { viewModel.errorMessage = nil }
+      } message: { Text(viewModel.errorMessage ?? "Please try again.") }
+    }
+  }
+}
+
 struct ExpenseHistoryScreen: View {
   let activities: [BudgetActivity]
   @State private var search = ""
@@ -256,7 +384,7 @@ struct ExpenseHistoryScreen: View {
 
   private var filtered: [BudgetActivity] {
     activities.filter { activity in
-      (search.isEmpty || activity.title.localizedCaseInsensitiveContains(search)) && (pillar == nil || activity.pillar == pillar)
+      (search.isEmpty || activity.title.localizedStandardContains(search)) && (pillar == nil || activity.pillar == pillar)
     }
   }
 

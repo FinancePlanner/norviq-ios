@@ -57,6 +57,9 @@ protocol ExpensesServicing: ExpenseBudgetSetupServicing, Sendable {
     // Rule-based budgeting engine
     func getBudgetDrift(snapshotId: String) async throws -> BudgetDriftDashboardWire
     func getBudgetDiscipline(months: Int) async throws -> BudgetDisciplineSummaryWire
+    func updateBudgetAlertPolicy(snapshotId: String, policy: BudgetAlertPolicy) async throws -> BudgetSnapshotResponse
+    func getBudgetFinancialGoals() async throws -> [BudgetFinancialGoalWire]
+    func getBudgetPortfolioLists() async throws -> [BudgetPortfolioListWire]
     func previewBudgetReallocation(_ request: BudgetReallocationPreviewRequestWire) async throws -> BudgetReallocationPreviewWire
     func commitBudgetReallocation(_ request: BudgetReallocationCommitRequestWire) async throws -> BudgetReallocationEventWire
     func getBudgetReallocationHistory() async throws -> [BudgetReallocationEventWire]
@@ -79,6 +82,14 @@ extension ExpensesServicing {
     func getBudgetDiscipline(months _: Int) async throws -> BudgetDisciplineSummaryWire {
         throw BudgetingEngineServiceError.unavailable
     }
+
+    func updateBudgetAlertPolicy(snapshotId _: String, policy _: BudgetAlertPolicy) async throws -> BudgetSnapshotResponse {
+        throw BudgetingEngineServiceError.unavailable
+    }
+
+    func getBudgetFinancialGoals() async throws -> [BudgetFinancialGoalWire] { [] }
+
+    func getBudgetPortfolioLists() async throws -> [BudgetPortfolioListWire] { [] }
 
     func previewBudgetReallocation(_: BudgetReallocationPreviewRequestWire) async throws -> BudgetReallocationPreviewWire {
         throw BudgetingEngineServiceError.unavailable
@@ -241,6 +252,18 @@ struct ExpensesHTTPService: ExpensesServicing {
 
     func getBudgetDiscipline(months: Int) async throws -> BudgetDisciplineSummaryWire {
         try await client.getBudgetDiscipline(months: months)
+    }
+
+    func updateBudgetAlertPolicy(snapshotId: String, policy: BudgetAlertPolicy) async throws -> BudgetSnapshotResponse {
+        try await client.updateBudgetAlertPolicy(snapshotId: snapshotId, policy: policy)
+    }
+
+    func getBudgetFinancialGoals() async throws -> [BudgetFinancialGoalWire] {
+        try await client.getBudgetFinancialGoals()
+    }
+
+    func getBudgetPortfolioLists() async throws -> [BudgetPortfolioListWire] {
+        try await client.getBudgetPortfolioLists()
     }
 
     func previewBudgetReallocation(_ request: BudgetReallocationPreviewRequestWire) async throws -> BudgetReallocationPreviewWire {
