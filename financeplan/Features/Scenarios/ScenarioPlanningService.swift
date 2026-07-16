@@ -16,10 +16,17 @@ struct ScenarioResultPayload: Decodable, Sendable {
     enum CodingKeys: String, CodingKey { case elapsedMonths = "elapsed_months"; case p10, p25, p50, p75, p90 }
   }
   let timeline: [Point]?; let percentileBands: [Band]?; let maximumDrawdown: Double?; let goalProbability: Double?; let expectedShortfall: Double?
+  let endingValue: Double?; let portfolioChangePercent: Double?; let goalDelayMonths: Double?
+  let requiredMonthlyContribution: Double?; let contributionDelta: Double?; let recoveryMonths: Double?
+  let expenseImpactMonthly: Double?
   let assumptions: ScenarioJSONValue?; let warnings: ScenarioJSONValue?
   enum CodingKeys: String, CodingKey {
     case timeline; case percentileBands = "percentile_bands"; case maximumDrawdown = "maximum_drawdown"
     case goalProbability = "goal_probability"; case expectedShortfall = "expected_shortfall"
+    case endingValue = "ending_value"; case portfolioChangePercent = "portfolio_change_percent"
+    case goalDelayMonths = "goal_delay_months"; case requiredMonthlyContribution = "required_monthly_contribution"
+    case contributionDelta = "contribution_delta"; case recoveryMonths = "recovery_months"
+    case expenseImpactMonthly = "expense_impact_monthly"
     case assumptions, warnings
   }
 }

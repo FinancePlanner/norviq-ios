@@ -48,11 +48,17 @@ final class ScenarioPlanningTests: XCTestCase {
   }
 
   func testResultDecodesBackendSnakeCase() throws {
-    let data = Data(#"{"id":"00000000-0000-0000-0000-000000000001","state":"completed","progress":1,"engineVersion":"scenario-engine-v1","errorMessage":null,"result":{"timeline":[{"elapsed_months":12,"value":125000}],"maximum_drawdown":0.18,"goal_probability":0.72,"expected_shortfall":5000}}"#.utf8)
+    let data = Data(#"{"id":"00000000-0000-0000-0000-000000000001","state":"completed","progress":1,"engineVersion":"scenario-engine-v1","errorMessage":null,"result":{"timeline":[{"elapsed_months":12,"value":125000}],"maximum_drawdown":0.18,"goal_probability":0.72,"expected_shortfall":5000,"ending_value":78000,"portfolio_change_percent":-0.22,"goal_delay_months":14,"required_monthly_contribution":680,"contribution_delta":180,"recovery_months":18,"expense_impact_monthly":180}}"#.utf8)
     let run = try JSONDecoder().decode(ScenarioRunSummary.self, from: data)
     XCTAssertEqual(run.result?.timeline?.first?.elapsedMonths, 12)
     XCTAssertEqual(run.result?.maximumDrawdown, 0.18)
     XCTAssertEqual(run.result?.goalProbability, 0.72)
+    XCTAssertEqual(run.result?.endingValue, 78_000)
+    XCTAssertEqual(run.result?.portfolioChangePercent, -0.22)
+    XCTAssertEqual(run.result?.goalDelayMonths, 14)
+    XCTAssertEqual(run.result?.contributionDelta, 180)
+    XCTAssertEqual(run.result?.recoveryMonths, 18)
+    XCTAssertEqual(run.result?.expenseImpactMonthly, 180)
   }
 
   func testResultDecodesPercentileFan() throws {

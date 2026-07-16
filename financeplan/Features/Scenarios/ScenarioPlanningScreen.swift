@@ -516,6 +516,7 @@ struct ScenarioPlanningScreen: View {
 
   private func runCardResult(run: ScenarioRunSummary, result: ScenarioResultPayload) -> some View {
     VStack(alignment: .leading, spacing: 12) {
+      impactMetricsStrip(result)
       if let probability = result.goalProbability {
         Gauge(value: probability) {
           Text("Goal probability")
@@ -555,6 +556,49 @@ struct ScenarioPlanningScreen: View {
         }
       }
     }
+  }
+
+  private func impactMetricsStrip(_ result: ScenarioResultPayload) -> some View {
+    ScrollView(.horizontal, showsIndicators: false) {
+      HStack(spacing: 8) {
+        impactChip("Portfolio", text: percentOrDash(result.portfolioChangePercent))
+        impactChip("Max DD", text: percentOrDash(result.maximumDrawdown))
+        impactChip("Goal delay", text: monthsOrDash(result.goalDelayMonths))
+        impactChip("+ / mo", text: moneyOrDash(result.contributionDelta))
+        impactChip("Recovery", text: monthsOrDash(result.recoveryMonths))
+        impactChip("Expense cut", text: moneyOrDash(result.expenseImpactMonthly))
+      }
+    }
+    .accessibilityElement(children: .contain)
+  }
+
+  private func impactChip(_ title: String, text: String) -> some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(title)
+        .font(.caption2.weight(.semibold))
+        .foregroundStyle(.secondary)
+      Text(text)
+        .font(.subheadline.weight(.semibold).monospacedDigit())
+    }
+    .padding(.horizontal, 10)
+    .padding(.vertical, 8)
+    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+  }
+
+  private func percentOrDash(_ value: Double?) -> String {
+    guard let value else { return "—" }
+    return value.formatted(.percent.precision(.fractionLength(1)))
+  }
+
+  private func monthsOrDash(_ value: Double?) -> String {
+    guard let value else { return "—" }
+    return String(format: "%.1f mo", value)
+  }
+
+  private func moneyOrDash(_ value: Double?) -> String {
+    guard let value else { return "—" }
+    let sign = value >= 0 ? "+" : ""
+    return "\(sign)\(value.formatted(.number.precision(.fractionLength(0))))"
   }
 
   private func runComparisonToggle(_ run: ScenarioRunSummary) -> some View {
