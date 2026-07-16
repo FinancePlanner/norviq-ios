@@ -135,6 +135,7 @@ final class AdvancedReportingViewModel {
     case .budget: "Budget"
     case .insights: "Insights"
     case .retirementForecast: "Retirement forecast"
+    case .goalProgress: "Goal progress"
     case .hypotheticalComparison: "What-if comparison"
     case .assumptions: "Assumptions"
     case .customText: "Notes"
