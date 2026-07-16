@@ -45,11 +45,6 @@ jobs:
             sleep 20
           done
 
-      - name: Patch SwiftyCrop for Compatibility
-        run: |
-          find ~/Library/Developer/Xcode/DerivedData -name "ToolbarView.swift" -path "*SwiftyCrop*" -exec sed -i '' 's/\.glassEffect/\/\/ .glassEffect/g' {} + || true
-          find ~/Library/Developer/Xcode/DerivedData -name "ProgressLayer.swift" -path "*SwiftyCrop*" -exec sed -i '' 's/\.glassEffect/\/\/ .glassEffect/g' {} + || true
-
       - name: Build (no tests) to surface all Swift errors
         run: |
           xcodebuild build \
