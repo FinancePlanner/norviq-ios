@@ -352,6 +352,10 @@ private struct WatchlistRow: View {
           .foregroundStyle(chg >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger)
       }
 
+      if let q = liveQuote {
+        WatchlistQuoteDetailLine(quote: q)
+      }
+
       if let note = item.note, !note.isEmpty {
         Text(note)
           .typography(.small)
@@ -382,6 +386,34 @@ private struct WatchlistRow: View {
     .contentShape(Rectangle())
     .onTapGesture {
       onQuickTrade?()
+    }
+  }
+}
+
+private struct WatchlistQuoteDetailLine: View {
+  let quote: QuoteResponse
+
+  var body: some View {
+    HStack(spacing: 12) {
+      detail("Open", quote.open)
+      detail("Prev", quote.previousClose)
+      detail("High", quote.high)
+      detail("Low", quote.low)
+    }
+  }
+
+  @ViewBuilder
+  private func detail(_ title: String, _ value: Double?) -> some View {
+    if let value {
+      HStack(spacing: 3) {
+        Text(title)
+          .typography(.nano)
+          .foregroundStyle(.secondary)
+        Text(value.currency)
+          .typography(.nano, weight: .semibold)
+          .monospacedDigit()
+          .foregroundStyle(.primary)
+      }
     }
   }
 }

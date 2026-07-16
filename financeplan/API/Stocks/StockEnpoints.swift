@@ -182,6 +182,23 @@ struct GetPortfolioSummaryEndpoint: Endpoint {
   }
 }
 
+struct GetPnlEndpoint: Endpoint {
+  typealias Response = PnlResponse
+  let portfolioListId: String?
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/pnl" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [:]
+    if let portfolioListId, !portfolioListId.isEmpty {
+      params["portfolioListId"] = portfolioListId
+    }
+    return params
+  }
+}
+
 struct GetPortfolioSectorExposureEndpoint: Endpoint {
   typealias Response = PortfolioSectorExposureResponse
   let portfolioListId: String?

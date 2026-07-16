@@ -263,7 +263,7 @@ struct PortfolioScreen: View {
     return NavigationLink {
       StockDetailScreen(stockId: stock.id, initialSymbol: stock.symbol)
     } label: {
-      PortfolioRow(stock: stock, targetAlert: targetAlert, liveQuote: nil)
+      PortfolioRow(stock: stock, targetAlert: targetAlert, liveQuote: nil, pnl: viewModel.pnl(for: stock.symbol))
         .accessibilityIdentifier("portfolio.stockRow.\(stock.symbol)")
     }
     .buttonStyle(PressableStyle())
@@ -375,6 +375,7 @@ struct PortfolioScreen: View {
         PortfolioPositionsSection(
           stocks: filteredStocks,
           liveQuotes: viewModel.liveQuotes,
+          pnlProvider: viewModel.pnl(for:),
           targetAlertProvider: viewModel.targetAlert(for:),
           onAddPosition: presentAddPositionSheet,
           onEditStock: beginEditing,

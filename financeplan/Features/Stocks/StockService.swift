@@ -20,6 +20,7 @@ protocol StockServicing: Sendable {
   func fetchPortfolioSummary() async throws -> PortfolioSummaryResponse
   func fetchPortfolioPerformance(portfolioListId: String?) async throws -> PortfolioPerformanceResponse
   func fetchPortfolioSummary(portfolioListId: String?) async throws -> PortfolioSummaryResponse
+  func fetchPnl(portfolioListId: String?) async throws -> PnlResponse
   func fetchPortfolioSectorExposure(portfolioListId: String?) async throws -> PortfolioSectorExposureResponse
   func fetchStockHistory(symbol: String) async throws -> [StockHistory]
   func fetchStockNews(symbol: String) async throws -> [StockNews]
@@ -103,6 +104,10 @@ extension StockServicing {
 
   func fetchPortfolioSummary() async throws -> PortfolioSummaryResponse {
     try await fetchPortfolioSummary(portfolioListId: nil)
+  }
+
+  func fetchPnl(portfolioListId _: String? = nil) async throws -> PnlResponse {
+    throw StockHTTPClient.Error.api("P&L endpoint is unavailable.")
   }
 
   func fetchPortfolioSectorExposure(portfolioListId _: String? = nil) async throws -> PortfolioSectorExposureResponse {
@@ -274,6 +279,12 @@ final class StockService: StockServicing {
   func fetchPortfolioSummary(portfolioListId: String? = nil) async throws -> PortfolioSummaryResponse {
     try await performAuthenticated { client in
       return try await client.call(GetPortfolioSummaryEndpoint(portfolioListId: portfolioListId))
+    }
+  }
+
+  func fetchPnl(portfolioListId: String? = nil) async throws -> PnlResponse {
+    try await performAuthenticated { client in
+      return try await client.call(GetPnlEndpoint(portfolioListId: portfolioListId))
     }
   }
 
