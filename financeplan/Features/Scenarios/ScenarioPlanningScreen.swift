@@ -216,15 +216,6 @@ struct ScenarioPlanningScreen: View {
   @State private var selected: Set<UUID> = []
   @State private var comparisonMode = ScenarioComparisonMode.value
   @State private var reports: [UUID: URL] = [:]
-  @State private var goalName = ""
-  @State private var editingGoalID: UUID?
-  @State private var goalPortfolioID: UUID?
-  @State private var goalTargetAmount = ""
-  @State private var goalTargetDate = Calendar.current.date(byAdding: .year, value: 10, to: .now) ?? .now
-  @State private var goalCurrency = "USD"
-  @State private var goalMonthlyContribution = "0"
-  @State private var goalContributionGrowth = "0"
-  @State private var goalInflation = "2"
   @State private var riskHoldingID: UUID?
   @State private var riskCategory = "stock"
   @State private var riskSector = ""
@@ -466,29 +457,6 @@ struct ScenarioPlanningScreen: View {
         }.padding(.top, 12)
       }
       Divider()
-      DisclosureGroup("Financial goals") {
-        VStack(spacing: 12) {
-          TextField("Goal name", text: $goalName).textFieldStyle(.roundedBorder)
-          Picker("Portfolio", selection: $goalPortfolioID) { Text("Choose portfolio").tag(UUID?.none); ForEach(model.portfolios) { Text($0.name).tag(Optional($0.id)) } }
-          TextField("Target amount", text: $goalTargetAmount).keyboardType(.decimalPad).textFieldStyle(.roundedBorder)
-          DatePicker("Target date", selection: $goalTargetDate, displayedComponents: .date)
-          TextField("Base currency", text: $goalCurrency).textInputAutocapitalization(.characters).textFieldStyle(.roundedBorder)
-          TextField("Monthly contribution", text: $goalMonthlyContribution).keyboardType(.decimalPad).textFieldStyle(.roundedBorder)
-          TextField("Annual contribution growth (%)", text: $goalContributionGrowth).keyboardType(.numbersAndPunctuation).textFieldStyle(.roundedBorder)
-          TextField("Inflation assumption (%)", text: $goalInflation).keyboardType(.numbersAndPunctuation).textFieldStyle(.roundedBorder)
-          Button(editingGoalID == nil ? "Create financial goal" : "Save goal changes") {
-            Task {
-              if let editingGoalID {
-                if await model.updateGoal(id: editingGoalID, name: goalName, portfolioID: goalPortfolioID, targetAmount: Double(goalTargetAmount), targetDate: goalTargetDate, currency: goalCurrency, monthlyContribution: Double(goalMonthlyContribution), contributionGrowth: Double(goalContributionGrowth), inflation: Double(goalInflation)) { self.editingGoalID = nil }
-              } else {
-                await model.createGoal(name: goalName, portfolioID: goalPortfolioID, targetAmount: Double(goalTargetAmount), targetDate: goalTargetDate, currency: goalCurrency, monthlyContribution: Double(goalMonthlyContribution), contributionGrowth: Double(goalContributionGrowth), inflation: Double(goalInflation))
-              }
-            }
-          }.buttonStyle(.borderedProminent)
-          ForEach(model.goals) { goal in HStack { VStack(alignment: .leading) { Text(goal.name); if let amount = goal.targetAmount { Text(amount, format: .currency(code: goal.baseCurrency ?? "USD")).font(.caption).foregroundStyle(.secondary) } }; Spacer(); Button("Edit") { beginEditing(goal) }; Button("Delete", role: .destructive) { Task { await model.deleteGoal(goal) } } } }
-        }.padding(.top, 12)
-      }
-      Divider()
       DisclosureGroup("Holding risk profiles") {
         VStack(spacing: 12) {
           Picker("Holding", selection: $riskHoldingID) { Text("Choose holding").tag(UUID?.none); ForEach(model.holdings) { Text("\($0.symbol) · \($0.category)").tag(Optional($0.id)) } }
@@ -504,13 +472,6 @@ struct ScenarioPlanningScreen: View {
         }.padding(.top, 12)
       }
     }.card()
-  }
-
-  private func beginEditing(_ goal: ScenarioGoal) {
-    editingGoalID = goal.id; goalName = goal.name; goalTargetAmount = goal.targetAmount.map { String($0) } ?? ""
-    goalTargetDate = goal.targetDate ?? goalTargetDate; goalCurrency = goal.baseCurrency ?? "USD"
-    goalPortfolioID = goal.portfolioListId; goalMonthlyContribution = String(goal.monthlyContribution ?? 0)
-    goalContributionGrowth = String((goal.annualContributionGrowth ?? 0) * 100); goalInflation = String((goal.inflationAssumption ?? 0.02) * 100)
   }
 
   // MARK: - Runs
