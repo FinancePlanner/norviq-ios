@@ -10,15 +10,21 @@ struct OnboardingWelcomeScreen: View {
     VStack(spacing: 0) {
       Spacer(minLength: 32)
 
-      OnboardingHeroDashboardMock()
+      Image("CerberusMarkFull")
+        .resizable()
+        .scaledToFit()
+        .frame(maxHeight: 220)
+        .padding(.horizontal, 40)
         .padding(.bottom, 32)
+        .accessibilityHidden(true)
 
       VStack(spacing: 12) {
-        Text("All your money. One screen.")
+        Text("Three heads. Every angle of your money.")
           .typography(.hero, weight: .bold)
           .multilineTextAlignment(.center)
+          .padding(.horizontal, 24)
 
-        Text("Stocks, savings, spending — calm, not chaotic.")
+        Text("Norviq keeps the vigil — wealth, spending, and the signals between. Nothing slips past.")
           .typography(.label)
           .foregroundStyle(.secondary)
           .multilineTextAlignment(.center)

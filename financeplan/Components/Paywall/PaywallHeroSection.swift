@@ -28,7 +28,7 @@ struct PaywallHeroSection: View {
 
       VStack(spacing: 16) {
         if showsLogo {
-          NorviqFullLogo(width: 210)
+          NorviqLogo(size: 64)
             .scaleEffect(appeared ? 1.0 : 0.6)
             .opacity(appeared ? 1 : 0)
         }

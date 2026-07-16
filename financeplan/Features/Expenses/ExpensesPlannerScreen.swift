@@ -196,10 +196,11 @@ struct ExpensesPlannerScreen: View {
     } else if shouldShowEmptyState {
       EmptyStateView(
         icon: "chart.bar.doc.horizontal",
-        title: "No budget yet",
-        message: "Set up your first monthly budget to get started.",
+        title: "No budget posted",
+        message: "Set your first monthly budget. The watch starts there.",
         ctaLabel: "Add Budget",
-        onCTA: presentSalaryEditor
+        onCTA: presentSalaryEditor,
+        usesBrandIcon: true
       )
     } else {
       mainScrollView

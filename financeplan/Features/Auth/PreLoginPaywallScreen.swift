@@ -18,8 +18,8 @@ struct PreLoginPaywallScreen: View {
       ScrollView {
         VStack(spacing: 24) {
           PaywallHeroSection(
-            headline: "Unlock your\nfinancial potential",
-            subtitle: "Get full clarity on your net worth and make better decisions with Pro."
+            headline: "Post all three guards.",
+            subtitle: "Wealth, spending, and the signals between — Pro keeps every watch posted."
           )
 
           featuresList

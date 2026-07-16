@@ -5,28 +5,22 @@ struct OnboardingSolutionScreen: View {
 
   private static let rows: [SolutionRow] = [
     SolutionRow(
-      icon: "rectangle.stack.fill",
-      pain: "Investments scattered across apps",
-      solution: "All your holdings in one portfolio.",
-      stat: "4 in 10 investors juggle two or more investment apps."
-    ),
-    SolutionRow(
-      icon: "magnifyingglass.circle.fill",
-      pain: "Mystery spending",
-      solution: "Auto-categorised expenses with leak detection.",
-      stat: "People who start tracking save $2,000+ a year — money that could be earning compound returns."
-    ),
-    SolutionRow(
       icon: "chart.line.uptrend.xyaxis",
-      pain: "No projection clarity",
-      solution: "10-year projections on every position.",
-      stat: "What a spreadsheet takes 30 minutes to model, you see in 5 seconds."
+      pain: "WATCH I — WEALTH",
+      solution: "Every holding, watched.",
+      stat: "Portfolio, crypto, chart builder, scenarios, and research — one place, 10-year projections on every position."
     ),
     SolutionRow(
-      icon: "scale.3d",
-      pain: "Allocation guesswork",
-      solution: "Visual allocation across stock, sector, and asset class.",
-      stat: "Spot concentration risk before the market does."
+      icon: "creditcard.fill",
+      pain: "WATCH II — SPENDING",
+      solution: "Every expense, accounted for.",
+      stat: "Expenses, budgets, receipt scanning, bank sync, and tax. People who start tracking save $2,000+ a year."
+    ),
+    SolutionRow(
+      icon: "sparkles",
+      pain: "WATCH III — INTELLIGENCE",
+      solution: "Every signal, heard.",
+      stat: "AI assistant, sentiment insights, macro data, news, and MCP integrations. Nothing slips past."
     )
   ]
 
@@ -35,11 +29,11 @@ struct OnboardingSolutionScreen: View {
       ScrollView {
         VStack(spacing: 18) {
           VStack(spacing: 10) {
-            Text("A smarter way to see your money.")
+            Text("One guardian. Three watches.")
               .typography(.title, weight: .bold)
               .multilineTextAlignment(.center)
 
-            Text("You told us what's broken. Here's how Norviq fixes it.")
+            Text("You told us what's broken. Norviq stands watch over all of it.")
               .typography(.label)
               .foregroundStyle(.secondary)
               .multilineTextAlignment(.center)
@@ -87,8 +81,9 @@ private struct SolutionRowCard: View {
 
         VStack(alignment: .leading, spacing: 6) {
           Text(row.pain)
-            .typography(.nano)
-            .foregroundStyle(.secondary)
+            .typography(.nano, weight: .semibold)
+            .tracking(1.2)
+            .foregroundStyle(AppTheme.Colors.bronze(for: colorScheme))
           Text(row.solution)
             .typography(.label, weight: .bold)
             .fixedSize(horizontal: false, vertical: true)

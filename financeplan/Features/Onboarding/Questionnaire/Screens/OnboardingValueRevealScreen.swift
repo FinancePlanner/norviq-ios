@@ -53,7 +53,7 @@ struct OnboardingValueRevealScreen: View {
           .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
       }
 
-      Text("Building your starter dashboard…")
+      Text("Setting your first watch…")
         .typography(.title, weight: .bold)
         .multilineTextAlignment(.center)
         .padding(.horizontal, 32)
@@ -109,6 +109,11 @@ struct OnboardingValueRevealScreen: View {
   private var allocationCard: some View {
     GlassCard(cornerRadius: 22) {
       VStack(alignment: .leading, spacing: 14) {
+        Text("WATCH I — WEALTH")
+          .typography(.nano, weight: .semibold)
+          .tracking(1.2)
+          .foregroundStyle(AppTheme.Colors.bronze(for: colorScheme))
+
         Text("Your starter portfolio")
           .typography(.caption, weight: .semibold)
           .foregroundStyle(.secondary)
@@ -177,6 +182,11 @@ struct OnboardingValueRevealScreen: View {
   private var leakCard: some View {
     GlassCard(cornerRadius: 22) {
       VStack(alignment: .leading, spacing: 10) {
+        Text("WATCH II — SPENDING")
+          .typography(.nano, weight: .semibold)
+          .tracking(1.2)
+          .foregroundStyle(AppTheme.Colors.bronze(for: colorScheme))
+
         HStack(spacing: 8) {
           Image(systemName: "drop.degreesign")
             .font(.title3)
@@ -228,10 +238,10 @@ struct OnboardingValueRevealScreen: View {
     let summary = shareSummary
     return ShareLink(
       item: ShareURLBuilder.app(),
-      subject: Text("My Norviqa starter plan"),
+      subject: Text("My Norviq starter plan"),
       message: Text(summary),
       preview: SharePreview(
-        "My Norviqa starter plan",
+        "My Norviq starter plan",
         image: Image(systemName: "chart.line.uptrend.xyaxis")
       )
     ) {

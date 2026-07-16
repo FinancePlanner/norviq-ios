@@ -43,8 +43,9 @@ struct ProGateView<Content: View>: View {
                 .font(.largeTitle)
                 .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
 
-            Text("Pro Feature")
+            Text("Post all three guards.")
                 .typography(.title, weight: .bold)
+                .multilineTextAlignment(.center)
                 .accessibilityIdentifier("proGate.title")
 
             Text(billingManager.selectedPlanHasFreeTrial
@@ -56,6 +57,7 @@ struct ProGateView<Content: View>: View {
 
             Button("Unlock Pro") { showPaywall = true }
                 .buttonStyle(.borderedProminent)
+                .tint(AppTheme.Colors.tint(for: colorScheme))
                 .accessibilityIdentifier("proGate.unlockButton")
         }
         .padding(32)

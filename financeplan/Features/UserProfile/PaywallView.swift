@@ -16,8 +16,8 @@ struct PaywallView: View {
         ScrollView {
           VStack(spacing: 0) {
             PaywallHeroSection(
-              headline: "Unlock your\nfinancial potential",
-              subtitle: "Get full clarity on your net worth and make better decisions with Pro."
+              headline: "Post all three guards.",
+              subtitle: "Wealth, spending, and the signals between — Pro keeps every watch posted."
             )
             .padding(.top, 32)
             .padding(.horizontal, 20)
@@ -95,16 +95,28 @@ struct PaywallView: View {
 
   private var featureList: some View {
     VStack(spacing: 12) {
-      ForEach(Array(PaywallView.proFeatures.enumerated()), id: \.element.title) { index, feature in
-        PaywallFeatureRow(icon: feature.icon, title: feature.title, badge: .pro)
+      ForEach(Array(PaywallView.watches.enumerated()), id: \.element.title) { watchIndex, watch in
+        PaywallWatchHeader(title: watch.title)
           .opacity(featuresAppeared ? 1 : 0)
-          .offset(y: featuresAppeared ? 0 : 16)
           .animation(
             reduceMotion
               ? .easeOut(duration: 0.15)
-              : .spring(response: 0.45, dampingFraction: 0.8).delay(Double(index) * 0.08),
+              : .spring(response: 0.45, dampingFraction: 0.8).delay(Double(watchIndex) * 0.16),
             value: featuresAppeared
           )
+
+        ForEach(Array(watch.features.enumerated()), id: \.element.title) { index, feature in
+          PaywallFeatureRow(icon: feature.icon, title: feature.title, badge: .pro)
+            .opacity(featuresAppeared ? 1 : 0)
+            .offset(y: featuresAppeared ? 0 : 16)
+            .animation(
+              reduceMotion
+                ? .easeOut(duration: 0.15)
+                : .spring(response: 0.45, dampingFraction: 0.8)
+                  .delay(Double(watchIndex) * 0.16 + Double(index) * 0.08),
+              value: featuresAppeared
+            )
+        }
       }
     }
     .onAppear {
@@ -159,10 +171,34 @@ struct PaywallView: View {
     let title: String
   }
 
-  private static let proFeatures: [FeatureInfo] = [
-    FeatureInfo(icon: "person.2.fill", title: "Cloud sync across devices"),
-    FeatureInfo(icon: "chart.bar.fill", title: "Real fundamentals & financial statements"),
-    FeatureInfo(icon: "bell.badge.fill", title: "Price, dividend & earnings alerts"),
-    FeatureInfo(icon: "arrow.up.arrow.down", title: "Bear/base/bull projections"),
+  private struct WatchGroup {
+    let title: String
+    let features: [FeatureInfo]
+  }
+
+  private static let watches: [WatchGroup] = [
+    WatchGroup(
+      title: "WATCH I — WEALTH",
+      features: [
+        FeatureInfo(icon: "chart.bar.fill", title: "Real fundamentals & financial statements"),
+        FeatureInfo(icon: "arrow.up.arrow.down", title: "Bear/base/bull projections & chart builder"),
+        FeatureInfo(icon: "bell.badge.fill", title: "Price, dividend & earnings alerts"),
+      ]
+    ),
+    WatchGroup(
+      title: "WATCH II — SPENDING",
+      features: [
+        FeatureInfo(icon: "creditcard.fill", title: "Budgets, expenses & receipt scanning"),
+        FeatureInfo(icon: "building.columns", title: "Read-only bank sync"),
+      ]
+    ),
+    WatchGroup(
+      title: "WATCH III — INTELLIGENCE",
+      features: [
+        FeatureInfo(icon: "sparkles", title: "AI assistant & sentiment insights"),
+        FeatureInfo(icon: "point.3.connected.trianglepath.dotted", title: "MCP-backed intelligence & integrations"),
+        FeatureInfo(icon: "person.2.fill", title: "Cloud sync across devices"),
+      ]
+    ),
   ]
 }

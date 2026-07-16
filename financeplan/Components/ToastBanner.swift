@@ -17,47 +17,41 @@ struct ToastBanner: View {
       }
     }
 
-    var foreground: Color {
+    func foreground(for scheme: ColorScheme) -> Color {
       switch self {
       case .success:
-        return Color.green
+        return AppTheme.Colors.success
       case .error:
-        return Color.red
+        return AppTheme.Colors.danger
       case .info:
-        return Color.blue
+        return AppTheme.Colors.ember(for: scheme)
       }
     }
 
-    var background: Color {
-      switch self {
-      case .success:
-        return Color.green.opacity(0.14)
-      case .error:
-        return Color.red.opacity(0.14)
-      case .info:
-        return Color.blue.opacity(0.14)
-      }
+    func background(for scheme: ColorScheme) -> Color {
+      foreground(for: scheme).opacity(0.14)
     }
   }
 
   let message: String
   let style: Style
+  @Environment(\.colorScheme) private var colorScheme
   @AccessibilityFocusState private var isAccessibilityFocused: Bool
 
   var body: some View {
     HStack(alignment: .center, spacing: 10) {
       Image(systemName: style.iconName)
         .font(.footnote.weight(.semibold))
-        .foregroundStyle(style.foreground)
+        .foregroundStyle(style.foreground(for: colorScheme))
 
       Text(message)
         .font(.footnote.weight(.semibold))
-        .foregroundStyle(style.foreground)
+        .foregroundStyle(style.foreground(for: colorScheme))
         .frame(maxWidth: .infinity, alignment: .leading)
     }
     .padding(.horizontal, 14)
     .padding(.vertical, 10)
-    .appGlassEffect(.capsule, tint: style.background)
+    .appGlassEffect(.capsule, tint: style.background(for: colorScheme))
     .accessibilityElement(children: .combine)
     .accessibilityLabel(Text(accessibilityAnnouncement))
     .accessibilityHint(Text("Temporary message."))

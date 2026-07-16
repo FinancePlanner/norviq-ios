@@ -240,8 +240,9 @@ private struct ReportContentView<CardContent: View>: View {
       } else if shouldShowEmptyState {
         EmptyStateView(
           icon: "chart.pie",
-          title: "No reports yet",
-          message: "Reports appear once you have expenses recorded."
+          title: "The ledger is quiet",
+          message: "Log your first expense. Reports appear once spending is recorded.",
+          usesBrandIcon: true
         )
       } else {
         ReportCardsSection(cards: cards, content: cardContent)
