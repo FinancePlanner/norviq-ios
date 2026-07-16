@@ -185,6 +185,26 @@ struct ExpensesHTTPClient: Sendable {
         try await client.call(DismissReportSuggestionEndpoint(suggestionId: id), errorType: Error.self)
     }
 
+    func getBudgetDrift(snapshotId: String) async throws -> BudgetDriftDashboardWire {
+        try await client.call(GetBudgetDriftEndpoint(snapshotId: snapshotId), errorType: Error.self)
+    }
+
+    func getBudgetDiscipline(months: Int = 6) async throws -> BudgetDisciplineSummaryWire {
+        try await client.call(GetBudgetDisciplineEndpoint(months: months), errorType: Error.self)
+    }
+
+    func previewBudgetReallocation(_ request: BudgetReallocationPreviewRequestWire) async throws -> BudgetReallocationPreviewWire {
+        try await client.call(PreviewBudgetReallocationEndpoint(body: request), errorType: Error.self)
+    }
+
+    func commitBudgetReallocation(_ request: BudgetReallocationCommitRequestWire) async throws -> BudgetReallocationEventWire {
+        try await client.call(CommitBudgetReallocationEndpoint(body: request), errorType: Error.self)
+    }
+
+    func getBudgetReallocationHistory() async throws -> [BudgetReallocationEventWire] {
+        try await client.call(GetBudgetReallocationHistoryEndpoint(), errorType: Error.self)
+    }
+
     // MARK: - Logging
     
     nonisolated private static func logRequest(logger: Logger, path: String, method: HTTPMethod, parameters: Parameters) {

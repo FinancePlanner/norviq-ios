@@ -20,6 +20,13 @@ final class LocalExpense {
     var foreignAmount: Double?
     var foreignCurrency: String?
     var exchangeRate: Double?
+    var notes: String?
+    var receiptSourceRawValue: String?
+    var receiptMerchant: String?
+    var receiptTaxIdentifier: String?
+    var receiptIssuedOn: String?
+    var receiptCurrency: String?
+    var receiptTotal: Double?
     
     // Metadata for syncing
     var lastUpdated: Date
@@ -39,6 +46,13 @@ final class LocalExpense {
         foreignAmount: Double? = nil,
         foreignCurrency: String? = nil,
         exchangeRate: Double? = nil,
+        notes: String? = nil,
+        receiptSourceRawValue: String? = nil,
+        receiptMerchant: String? = nil,
+        receiptTaxIdentifier: String? = nil,
+        receiptIssuedOn: String? = nil,
+        receiptCurrency: String? = nil,
+        receiptTotal: Double? = nil,
         lastUpdated: Date = .now,
         isPendingSync: Bool = false
     ) {
@@ -55,6 +69,13 @@ final class LocalExpense {
         self.foreignAmount = foreignAmount
         self.foreignCurrency = foreignCurrency
         self.exchangeRate = exchangeRate
+        self.notes = notes
+        self.receiptSourceRawValue = receiptSourceRawValue
+        self.receiptMerchant = receiptMerchant
+        self.receiptTaxIdentifier = receiptTaxIdentifier
+        self.receiptIssuedOn = receiptIssuedOn
+        self.receiptCurrency = receiptCurrency
+        self.receiptTotal = receiptTotal
         self.lastUpdated = lastUpdated
         self.isPendingSync = isPendingSync
     }
@@ -76,6 +97,12 @@ final class LocalBudgetSnapshot {
     var monthStart: Date
     var netSalary: Double
     var targetSharesRaw: [String: Double]
+    var currencyCode: String = "USD"
+    var categoryDriftThreshold: Double = 15
+    var totalDriftThreshold: Double = 10
+    var alertsEnabled: Bool = true
+    var alertOnUnbudgeted: Bool = true
+    var revision: Int = 0
     var lastUpdated: Date
     var isPendingSync: Bool
 
@@ -88,6 +115,12 @@ final class LocalBudgetSnapshot {
         monthStart: Date,
         netSalary: Double,
         targetShares: [BudgetPillar: Double],
+        currencyCode: String = "USD",
+        categoryDriftThreshold: Double = 15,
+        totalDriftThreshold: Double = 10,
+        alertsEnabled: Bool = true,
+        alertOnUnbudgeted: Bool = true,
+        revision: Int = 0,
         lastUpdated: Date = .now,
         isPendingSync: Bool = false
     ) {
@@ -98,6 +131,12 @@ final class LocalBudgetSnapshot {
         var raw: [String: Double] = [:]
         for (k, v) in targetShares { raw[k.rawValue] = v }
         self.targetSharesRaw = raw
+        self.currencyCode = currencyCode
+        self.categoryDriftThreshold = categoryDriftThreshold
+        self.totalDriftThreshold = totalDriftThreshold
+        self.alertsEnabled = alertsEnabled
+        self.alertOnUnbudgeted = alertOnUnbudgeted
+        self.revision = revision
         self.lastUpdated = lastUpdated
         self.isPendingSync = isPendingSync
     }
@@ -124,6 +163,13 @@ final class LocalBudgetPlanItem {
     var categoryId: String?
     var splitModeRawValue: String
     var userSharePercent: Double
+    var targetTypeRawValue: String = "fixed"
+    var incomePercentage: Double?
+    var thresholdOverride: Double?
+    var allocationKindRawValue: String = "expense"
+    var reallocationEligible: Bool = false
+    var destinationFinancialGoalId: String?
+    var destinationPortfolioListId: String?
     var lastUpdated: Date
     var isPendingSync: Bool
     
@@ -138,6 +184,13 @@ final class LocalBudgetPlanItem {
         categoryId: String? = nil,
         splitMode: ExpenseSplitMode = .personal,
         userSharePercent: Double = 100,
+        targetTypeRawValue: String = "fixed",
+        incomePercentage: Double? = nil,
+        thresholdOverride: Double? = nil,
+        allocationKindRawValue: String = "expense",
+        reallocationEligible: Bool = false,
+        destinationFinancialGoalId: String? = nil,
+        destinationPortfolioListId: String? = nil,
         lastUpdated: Date = .now,
         isPendingSync: Bool = false
     ) {
@@ -149,6 +202,13 @@ final class LocalBudgetPlanItem {
         self.categoryId = categoryId
         self.splitModeRawValue = splitMode.rawValue
         self.userSharePercent = userSharePercent
+        self.targetTypeRawValue = targetTypeRawValue
+        self.incomePercentage = incomePercentage
+        self.thresholdOverride = thresholdOverride
+        self.allocationKindRawValue = allocationKindRawValue
+        self.reallocationEligible = reallocationEligible
+        self.destinationFinancialGoalId = destinationFinancialGoalId
+        self.destinationPortfolioListId = destinationPortfolioListId
         self.lastUpdated = lastUpdated
         self.isPendingSync = isPendingSync
     }

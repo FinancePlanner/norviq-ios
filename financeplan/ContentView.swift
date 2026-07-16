@@ -386,6 +386,13 @@ public struct ContentView: View {
         object: nil,
         userInfo: ["automation_destination": "rebalancing", "automation_id": route.portfolioListID ?? ""]
       )
+    case .budget:
+      Self.pushLogger.info("push.analytics routed_success destination=expenses")
+      NotificationCenter.default.post(
+        name: .openBudgetFromPushNotification,
+        object: nil,
+        userInfo: ["snapshot_id": route.snapshotID ?? "", "scope": route.budgetScope ?? ""]
+      )
     }
   }
 

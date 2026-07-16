@@ -13,6 +13,7 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     case taxOpportunity = "tax_harvest_opportunity"
     case watchlistScreen = "watchlist_screen"
     case rebalancing
+    case budget
   }
 
   let kind: Kind
@@ -26,6 +27,8 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
   let screenID: String?
   let portfolioListID: String?
   let eventID: String?
+  let snapshotID: String?
+  let budgetScope: String?
 
   nonisolated init(
     kind: Kind,
@@ -38,7 +41,9 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     opportunityID: String? = nil,
     screenID: String? = nil,
     portfolioListID: String? = nil,
-    eventID: String? = nil
+    eventID: String? = nil,
+    snapshotID: String? = nil,
+    budgetScope: String? = nil
   ) {
     self.kind = kind
     self.symbol = symbol
@@ -51,6 +56,8 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     self.screenID = screenID
     self.portfolioListID = portfolioListID
     self.eventID = eventID
+    self.snapshotID = snapshotID
+    self.budgetScope = budgetScope
   }
 }
 
@@ -78,6 +85,8 @@ enum PushNotificationPayloadParser {
     let screenID = normalize(stringValue(for: ["screenId", "screen_id"], in: dictionaries))
     let portfolioListID = normalize(stringValue(for: ["portfolioListId", "portfolio_list_id"], in: dictionaries))
     let eventID = normalize(stringValue(for: ["eventId", "event_id"], in: dictionaries))
+    let snapshotID = normalize(stringValue(for: ["snapshotId", "snapshot_id"], in: dictionaries))
+    let budgetScope = normalize(stringValue(for: ["scope"], in: dictionaries))
 
     return PushNotificationRoute(
       kind: kind,
@@ -90,7 +99,9 @@ enum PushNotificationPayloadParser {
       opportunityID: opportunityID,
       screenID: screenID,
       portfolioListID: portfolioListID,
-      eventID: eventID
+      eventID: eventID,
+      snapshotID: snapshotID,
+      budgetScope: budgetScope
     )
   }
 

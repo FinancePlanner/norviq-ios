@@ -53,6 +53,13 @@ protocol ExpensesServicing: ExpenseBudgetSetupServicing, Sendable {
     func getYearlyExpenseReports(from: String?, to: String?) async throws -> [BudgetYearSummaryResponse]
     func getReportSuggestions(from: String?, to: String?) async throws -> ReportSuggestionsResponse
     func dismissReportSuggestion(id: String) async throws
+
+    // Rule-based budgeting engine
+    func getBudgetDrift(snapshotId: String) async throws -> BudgetDriftDashboardWire
+    func getBudgetDiscipline(months: Int) async throws -> BudgetDisciplineSummaryWire
+    func previewBudgetReallocation(_ request: BudgetReallocationPreviewRequestWire) async throws -> BudgetReallocationPreviewWire
+    func commitBudgetReallocation(_ request: BudgetReallocationCommitRequestWire) async throws -> BudgetReallocationEventWire
+    func getBudgetReallocationHistory() async throws -> [BudgetReallocationEventWire]
 }
 
 // MARK: - Convenience overloads (default parameters)
@@ -64,6 +71,32 @@ extension ExpensesServicing {
     func getExpenses(from: String? = nil, to: String? = nil) async throws -> (items: [ExpenseResponse], nextCursor: String?) {
         try await getExpenses(from: from, to: to, cursor: nil, limit: nil)
     }
+
+    func getBudgetDrift(snapshotId _: String) async throws -> BudgetDriftDashboardWire {
+        throw BudgetingEngineServiceError.unavailable
+    }
+
+    func getBudgetDiscipline(months _: Int) async throws -> BudgetDisciplineSummaryWire {
+        throw BudgetingEngineServiceError.unavailable
+    }
+
+    func previewBudgetReallocation(_: BudgetReallocationPreviewRequestWire) async throws -> BudgetReallocationPreviewWire {
+        throw BudgetingEngineServiceError.unavailable
+    }
+
+    func commitBudgetReallocation(_: BudgetReallocationCommitRequestWire) async throws -> BudgetReallocationEventWire {
+        throw BudgetingEngineServiceError.unavailable
+    }
+
+    func getBudgetReallocationHistory() async throws -> [BudgetReallocationEventWire] {
+        throw BudgetingEngineServiceError.unavailable
+    }
+}
+
+private enum BudgetingEngineServiceError: LocalizedError {
+    case unavailable
+
+    var errorDescription: String? { "Budgeting engine is unavailable." }
 }
 
 struct ExpensesHTTPService: ExpensesServicing {
@@ -201,5 +234,24 @@ struct ExpensesHTTPService: ExpensesServicing {
     func dismissReportSuggestion(id: String) async throws {
         _ = try await client.dismissReportSuggestion(id: id)
     }
-}
 
+    func getBudgetDrift(snapshotId: String) async throws -> BudgetDriftDashboardWire {
+        try await client.getBudgetDrift(snapshotId: snapshotId)
+    }
+
+    func getBudgetDiscipline(months: Int) async throws -> BudgetDisciplineSummaryWire {
+        try await client.getBudgetDiscipline(months: months)
+    }
+
+    func previewBudgetReallocation(_ request: BudgetReallocationPreviewRequestWire) async throws -> BudgetReallocationPreviewWire {
+        try await client.previewBudgetReallocation(request)
+    }
+
+    func commitBudgetReallocation(_ request: BudgetReallocationCommitRequestWire) async throws -> BudgetReallocationEventWire {
+        try await client.commitBudgetReallocation(request)
+    }
+
+    func getBudgetReallocationHistory() async throws -> [BudgetReallocationEventWire] {
+        try await client.getBudgetReallocationHistory()
+    }
+}

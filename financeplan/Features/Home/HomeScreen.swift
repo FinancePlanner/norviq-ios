@@ -106,6 +106,10 @@ struct HomeScreen: View {
     .onReceive(NotificationCenter.default.publisher(for: .openTaxFromPushNotification)) { _ in
       selectedTab = .tax
     }
+    .onReceive(NotificationCenter.default.publisher(for: .openBudgetFromPushNotification)) { _ in
+      selectedTab = .expenses
+      Task { await budgetPlannerViewModel.load(force: true) }
+    }
   }
 
   private var settingsSheet: some View {

@@ -271,4 +271,19 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     XCTAssertEqual(route?.leadDays, 7)
     XCTAssertEqual(route?.deepLink, "financeplan://stocks/AAPL")
   }
+
+  func testPayloadParser_ParsesBudgetDriftPayload() {
+    let route = PushNotificationPayloadParser.parse(
+      userInfo: [
+        "type": "budget",
+        "snapshot_id": "snapshot-1",
+        "scope": "dining-out",
+        "deepLink": "norviq://expenses?month=2026-07-01"
+      ]
+    )
+
+    XCTAssertEqual(route?.kind, .budget)
+    XCTAssertEqual(route?.snapshotID, "snapshot-1")
+    XCTAssertEqual(route?.budgetScope, "dining-out")
+  }
 }

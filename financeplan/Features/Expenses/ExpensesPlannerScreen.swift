@@ -25,6 +25,8 @@ struct ExpensesPlannerScreen: View {
   @State private var recordSpendInitialPillar: BudgetPillar = .fundamentals
   @State private var destructiveFeedbackTrigger = 0
   @State private var isPaywallPresented = false
+  @State private var driftViewModel = BudgetDriftViewModel()
+  @State private var isReallocationPresented = false
 
   private var isShowingLoadingState: Bool {
     viewModel.isLoading && viewModel.monthlySnapshots.isEmpty
@@ -69,6 +71,23 @@ struct ExpensesPlannerScreen: View {
             totalAmount: viewModel.selectedMonthSnapshot?.netSalary ?? 0
           )
           .padding(.top, 10)
+
+          BudgetDriftDashboardCard(
+            viewModel: driftViewModel,
+            isPro: billingManager.isPro,
+            onOpenSimulator: { isReallocationPresented = true },
+            onOpenPaywall: { isPaywallPresented = true }
+          )
+          .padding(.horizontal, 16)
+
+          NavigationLink {
+            ExpenseHistoryScreen(activities: viewModel.activities)
+          } label: {
+            Label("View searchable spending log", systemImage: "list.bullet.rectangle")
+              .frame(maxWidth: .infinity, alignment: .leading)
+          }
+          .buttonStyle(.bordered)
+          .padding(.horizontal, 16)
             
             MonthlyPlanItemsCard(
               monthTitle: viewModel.selectedMonthDisplayTitle,
@@ -160,6 +179,15 @@ struct ExpensesPlannerScreen: View {
       .sheet(isPresented: $isRecurringManagerPresented, content: recurringManagerSheet)
       .sheet(isPresented: $isPaywallPresented) {
         PaywallView(billingManager: billingManager)
+      }
+      .sheet(isPresented: $isReallocationPresented) {
+        BudgetReallocationSimulatorSheet(viewModel: driftViewModel) {
+          Task { await viewModel.load(force: true) }
+        }
+      }
+      .task(id: viewModel.selectedMonthSnapshot?.id) {
+        guard let id = viewModel.selectedMonthSnapshot?.id.uuidString else { return }
+        await driftViewModel.load(snapshotID: id, includePro: billingManager.isPro)
       }
       .confirmationDialog(
         "Delete planned item?",
