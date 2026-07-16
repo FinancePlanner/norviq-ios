@@ -216,15 +216,6 @@ struct ScenarioPlanningScreen: View {
   @State private var selected: Set<UUID> = []
   @State private var comparisonMode = ScenarioComparisonMode.value
   @State private var reports: [UUID: URL] = [:]
-  @State private var goalName = ""
-  @State private var editingGoalID: UUID?
-  @State private var goalPortfolioID: UUID?
-  @State private var goalTargetAmount = ""
-  @State private var goalTargetDate = Calendar.current.date(byAdding: .year, value: 10, to: .now) ?? .now
-  @State private var goalCurrency = "USD"
-  @State private var goalMonthlyContribution = "0"
-  @State private var goalContributionGrowth = "0"
-  @State private var goalInflation = "2"
   @State private var riskHoldingID: UUID?
   @State private var riskCategory = "stock"
   @State private var riskSector = ""
@@ -466,29 +457,6 @@ struct ScenarioPlanningScreen: View {
         }.padding(.top, 12)
       }
       Divider()
-      DisclosureGroup("Financial goals") {
-        VStack(spacing: 12) {
-          TextField("Goal name", text: $goalName).textFieldStyle(.roundedBorder)
-          Picker("Portfolio", selection: $goalPortfolioID) { Text("Choose portfolio").tag(UUID?.none); ForEach(model.portfolios) { Text($0.name).tag(Optional($0.id)) } }
-          TextField("Target amount", text: $goalTargetAmount).keyboardType(.decimalPad).textFieldStyle(.roundedBorder)
-          DatePicker("Target date", selection: $goalTargetDate, displayedComponents: .date)
-          TextField("Base currency", text: $goalCurrency).textInputAutocapitalization(.characters).textFieldStyle(.roundedBorder)
-          TextField("Monthly contribution", text: $goalMonthlyContribution).keyboardType(.decimalPad).textFieldStyle(.roundedBorder)
-          TextField("Annual contribution growth (%)", text: $goalContributionGrowth).keyboardType(.numbersAndPunctuation).textFieldStyle(.roundedBorder)
-          TextField("Inflation assumption (%)", text: $goalInflation).keyboardType(.numbersAndPunctuation).textFieldStyle(.roundedBorder)
-          Button(editingGoalID == nil ? "Create financial goal" : "Save goal changes") {
-            Task {
-              if let editingGoalID {
-                if await model.updateGoal(id: editingGoalID, name: goalName, portfolioID: goalPortfolioID, targetAmount: Double(goalTargetAmount), targetDate: goalTargetDate, currency: goalCurrency, monthlyContribution: Double(goalMonthlyContribution), contributionGrowth: Double(goalContributionGrowth), inflation: Double(goalInflation)) { self.editingGoalID = nil }
-              } else {
-                await model.createGoal(name: goalName, portfolioID: goalPortfolioID, targetAmount: Double(goalTargetAmount), targetDate: goalTargetDate, currency: goalCurrency, monthlyContribution: Double(goalMonthlyContribution), contributionGrowth: Double(goalContributionGrowth), inflation: Double(goalInflation))
-              }
-            }
-          }.buttonStyle(.borderedProminent)
-          ForEach(model.goals) { goal in HStack { VStack(alignment: .leading) { Text(goal.name); if let amount = goal.targetAmount { Text(amount, format: .currency(code: goal.baseCurrency ?? "USD")).font(.caption).foregroundStyle(.secondary) } }; Spacer(); Button("Edit") { beginEditing(goal) }; Button("Delete", role: .destructive) { Task { await model.deleteGoal(goal) } } } }
-        }.padding(.top, 12)
-      }
-      Divider()
       DisclosureGroup("Holding risk profiles") {
         VStack(spacing: 12) {
           Picker("Holding", selection: $riskHoldingID) { Text("Choose holding").tag(UUID?.none); ForEach(model.holdings) { Text("\($0.symbol) · \($0.category)").tag(Optional($0.id)) } }
@@ -504,13 +472,6 @@ struct ScenarioPlanningScreen: View {
         }.padding(.top, 12)
       }
     }.card()
-  }
-
-  private func beginEditing(_ goal: ScenarioGoal) {
-    editingGoalID = goal.id; goalName = goal.name; goalTargetAmount = goal.targetAmount.map { String($0) } ?? ""
-    goalTargetDate = goal.targetDate ?? goalTargetDate; goalCurrency = goal.baseCurrency ?? "USD"
-    goalPortfolioID = goal.portfolioListId; goalMonthlyContribution = String(goal.monthlyContribution ?? 0)
-    goalContributionGrowth = String((goal.annualContributionGrowth ?? 0) * 100); goalInflation = String((goal.inflationAssumption ?? 0.02) * 100)
   }
 
   // MARK: - Runs
@@ -555,6 +516,7 @@ struct ScenarioPlanningScreen: View {
 
   private func runCardResult(run: ScenarioRunSummary, result: ScenarioResultPayload) -> some View {
     VStack(alignment: .leading, spacing: 12) {
+      impactMetricsStrip(result)
       if let probability = result.goalProbability {
         Gauge(value: probability) {
           Text("Goal probability")
@@ -594,6 +556,49 @@ struct ScenarioPlanningScreen: View {
         }
       }
     }
+  }
+
+  private func impactMetricsStrip(_ result: ScenarioResultPayload) -> some View {
+    ScrollView(.horizontal, showsIndicators: false) {
+      HStack(spacing: 8) {
+        impactChip("Portfolio", text: percentOrDash(result.portfolioChangePercent))
+        impactChip("Max DD", text: percentOrDash(result.maximumDrawdown))
+        impactChip("Goal delay", text: monthsOrDash(result.goalDelayMonths))
+        impactChip("+ / mo", text: moneyOrDash(result.contributionDelta))
+        impactChip("Recovery", text: monthsOrDash(result.recoveryMonths))
+        impactChip("Expense cut", text: moneyOrDash(result.expenseImpactMonthly))
+      }
+    }
+    .accessibilityElement(children: .contain)
+  }
+
+  private func impactChip(_ title: String, text: String) -> some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(title)
+        .font(.caption2.weight(.semibold))
+        .foregroundStyle(.secondary)
+      Text(text)
+        .font(.subheadline.weight(.semibold).monospacedDigit())
+    }
+    .padding(.horizontal, 10)
+    .padding(.vertical, 8)
+    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+  }
+
+  private func percentOrDash(_ value: Double?) -> String {
+    guard let value else { return "—" }
+    return value.formatted(.percent.precision(.fractionLength(1)))
+  }
+
+  private func monthsOrDash(_ value: Double?) -> String {
+    guard let value else { return "—" }
+    return String(format: "%.1f mo", value)
+  }
+
+  private func moneyOrDash(_ value: Double?) -> String {
+    guard let value else { return "—" }
+    let sign = value >= 0 ? "+" : ""
+    return "\(sign)\(value.formatted(.number.precision(.fractionLength(0))))"
   }
 
   private func runComparisonToggle(_ run: ScenarioRunSummary) -> some View {

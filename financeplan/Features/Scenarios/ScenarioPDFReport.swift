@@ -10,7 +10,12 @@ enum ScenarioPDFReport {
       draw("Private report · Engine \(run.engineVersion) · \(Date().formatted(.iso8601))", .systemFont(ofSize: 10), &y)
       y += 18
       if let probability = result.goalProbability { draw("Goal probability: \(probability.formatted(.percent.precision(.fractionLength(0))))", .boldSystemFont(ofSize: 16), &y) }
+      if let change = result.portfolioChangePercent { draw("Portfolio change: \(change.formatted(.percent.precision(.fractionLength(1))))", .systemFont(ofSize: 13), &y) }
       if let drawdown = result.maximumDrawdown { draw("Maximum drawdown: \(drawdown.formatted(.percent.precision(.fractionLength(1))))", .systemFont(ofSize: 13), &y) }
+      if let delay = result.goalDelayMonths { draw("Goal delay: \(String(format: "%.1f months", delay))", .systemFont(ofSize: 13), &y) }
+      if let delta = result.contributionDelta { draw("Contribution change: \(delta.formatted(.currency(code: "USD").precision(.fractionLength(0)))) / mo", .systemFont(ofSize: 13), &y) }
+      if let recovery = result.recoveryMonths { draw("Recovery: \(String(format: "%.1f months", recovery))", .systemFont(ofSize: 13), &y) }
+      if let expense = result.expenseImpactMonthly { draw("Expense cut: \(expense.formatted(.currency(code: "USD").precision(.fractionLength(0)))) / mo", .systemFont(ofSize: 13), &y) }
       if let shortfall = result.expectedShortfall { draw("Expected shortfall: \(shortfall.formatted(.number.precision(.fractionLength(0))))", .systemFont(ofSize: 13), &y) }
       let values = result.timeline?.map(\.value) ?? result.percentileBands?.map(\.p50) ?? []
       if values.count > 1 { y += 8; drawChart(values, context: context.cgContext, y: y); y += 150 }

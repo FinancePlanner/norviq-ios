@@ -34,6 +34,7 @@ struct DashboardRoot: View {
   @State private var isQuickAddPresented = false
   @State private var isChartBuilderPresented = false
   @State private var isScenarioPlanningPresented = false
+  @State private var isGoalPlanningPresented = false
   @State private var hasLoadedContent = false
 
   private let dashboardService: any DashboardServicing = Container.shared.dashboardService()
@@ -124,6 +125,7 @@ struct DashboardRoot: View {
             onExpensesTap: showExpensesTab,
             onReportsTap: showReportsTab,
             onChartBuilderTap: presentChartBuilder,
+            onGoalPlanningTap: { isGoalPlanningPresented = true },
             onQuickAddTap: presentQuickAdd
           )
         }
@@ -189,6 +191,11 @@ struct DashboardRoot: View {
       .sheet(isPresented: $isQuickAddPresented) {
         HomeQuickExpenseSheet { draft in
           await handleQuickExpenseSave(draft)
+        }
+      }
+      .fullScreenCover(isPresented: $isGoalPlanningPresented) {
+        NavigationStack {
+          GoalPlanningScreen()
         }
       }
     }
@@ -390,6 +397,7 @@ private struct DashboardContentSection: View {
   let onExpensesTap: () -> Void
   let onReportsTap: () -> Void
   let onChartBuilderTap: () -> Void
+  let onGoalPlanningTap: () -> Void
   let onQuickAddTap: () -> Void
 
   @Environment(\.colorScheme) private var colorScheme
@@ -424,6 +432,8 @@ private struct DashboardContentSection: View {
       )
 
       MacroTeaserCard()
+
+      GoalPlanningDashboardCard(action: onGoalPlanningTap)
 
       ChartBuilderDashboardCard(onOpen: onChartBuilderTap)
 
