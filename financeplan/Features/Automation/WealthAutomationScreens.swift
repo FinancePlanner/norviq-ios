@@ -531,7 +531,7 @@ struct SmartScreeningScreen: View {
 }
 
 @MainActor
-private final class RebalancingViewModel: ObservableObject {
+private final class RebalancingRulesViewModel: ObservableObject {
   @Published var portfolios: [AutomationListOption] = []
   @Published var policy: RebalancingPolicyWire?
   @Published var preview: RebalancePreviewWire?
@@ -588,7 +588,7 @@ private final class RebalancingViewModel: ObservableObject {
 
 @MainActor
 struct RebalancingRulesScreen: View {
-  @StateObject private var model = RebalancingViewModel(service: Container.shared.wealthAutomationService())
+  @StateObject private var model = RebalancingRulesViewModel(service: Container.shared.wealthAutomationService())
   private let initialPortfolioID: String?
   @State private var portfolioID = ""
   @State private var baseCurrency = "EUR"
