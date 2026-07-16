@@ -139,8 +139,28 @@ struct FinancingPlannerScreen: View {
             LabeledContent("Credit cost", value: result.totalCreditCost.formatted(.currency(code: model.market.defaultCurrency)))
             LabeledContent("Cash-flow result", value: result.affordability.cashFlowStatus.label)
             Text(result.affordability.message).font(.footnote).foregroundStyle(.secondary)
-            Text(result.affordability.benchmark.message).font(.footnote).foregroundStyle(.secondary)
             ForEach(result.warnings, id: \.self) { Text($0).font(.footnote).foregroundStyle(.orange) }
+          }
+          Section("Debt-service guidance") {
+            LabeledContent("Status", value: result.affordability.benchmark.status.label)
+            if let ratio = result.affordability.benchmark.ratio {
+              let basis = result.affordability.benchmark.incomeBasis.map { " of \($0) income" } ?? ""
+              LabeledContent("Calculated ratio", value: String(format: "%.1f%%%@", ratio, basis))
+            }
+            if let max = result.affordability.benchmark.guidanceMaximum {
+              if let min = result.affordability.benchmark.guidanceMinimum {
+                LabeledContent("Published band", value: String(format: "%.0f–%.0f%%", min, max))
+              } else {
+                LabeledContent("Published max", value: String(format: "up to %.0f%%", max))
+              }
+            } else if result.affordability.benchmark.status == .notEvaluated {
+              Text("This market has no universal consumer pass/fail threshold. The ratio is informational only.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            }
+            Text(result.affordability.benchmark.message)
+              .font(.footnote)
+              .foregroundStyle(.secondary)
           }
           Section {
             Button("Save to Expenses") { Task { await model.save() } }
@@ -197,6 +217,17 @@ private extension FinancingCashFlowStatus {
     case .tight: "Tight"
     case .notDoable: "Not doable"
     case .insufficientData: "Add income data"
+    }
+  }
+}
+
+private extension FinancingBenchmarkStatus {
+  var label: String {
+    switch self {
+    case .pass: "Within published guidance"
+    case .aboveGuidance: "Above published guidance"
+    case .notEvaluated: "No pass/fail threshold"
+    case .stale: "Stale guidance"
     }
   }
 }

@@ -32,9 +32,14 @@ struct TaxDashboardScreen: View {
       ScrollView {
         LazyVStack(alignment: .leading, spacing: 16) {
           jurisdictionPicker
+          supportLevelBanner
           profileStatus
           if model.isLoading && model.dashboard == nil { loadingState }
-          else if let dashboard = model.dashboard { summary(dashboard); opportunities(dashboard) }
+          else if let dashboard = model.dashboard {
+            summary(dashboard)
+            assumptions(dashboard)
+            opportunities(dashboard)
+          }
           else { ContentUnavailableView("Tax estimate unavailable", systemImage: "building.columns") }
         }
         .padding()
@@ -51,7 +56,10 @@ struct TaxDashboardScreen: View {
               presentPro { isFundAnnualInputPresented = true }
             }
           }
-          if model.selectedJurisdiction == .portugal || model.selectedJurisdiction == .germany {
+          if model.selectedJurisdiction == .portugal
+            || model.selectedJurisdiction == .germany
+            || model.selectedJurisdiction == .unitedStates
+            || model.selectedJurisdiction == .spain {
             Button("Losses", systemImage: "calendar.badge.clock") {
               presentPro { isCarryforwardPresented = true }
             }
@@ -114,10 +122,29 @@ struct TaxDashboardScreen: View {
 
   private var jurisdictionPicker: some View {
     Picker("Tax jurisdiction", selection: $model.selectedJurisdiction) {
-      ForEach(TaxJurisdiction.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+      ForEach(TaxJurisdiction.allCases, id: \.self) { Text($0.displayName).tag($0) }
     }
     .pickerStyle(.menu)
     .accessibilityHint("Changes the rules used for estimates")
+  }
+
+  private var supportLevelBanner: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Text(model.selectedJurisdiction.supportBannerTitle)
+        .font(.subheadline.weight(.semibold))
+      Text(model.selectedJurisdiction.supportBannerDetail)
+        .font(.caption)
+        .foregroundStyle(.secondary)
+      if model.selectedJurisdiction == .spain {
+        Text("Market admission is user-attested only; Norviq does not auto-classify ISINs.")
+          .font(.caption2)
+          .foregroundStyle(.secondary)
+      }
+    }
+    .padding(14)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    .accessibilityElement(children: .combine)
   }
 
   private var profileStatus: some View {
@@ -168,6 +195,23 @@ struct TaxDashboardScreen: View {
     }
     .padding(18)
     .background(AppTheme.Colors.cardBackground(for: colorScheme), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+  }
+
+  @ViewBuilder
+  private func assumptions(_ dashboard: TaxDashboardResponse) -> some View {
+    if !dashboard.assumptions.isEmpty {
+      VStack(alignment: .leading, spacing: 8) {
+        Text("Rule pack assumptions").font(.headline)
+        ForEach(dashboard.assumptions, id: \.self) { line in
+          Text("• \(line)")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+      }
+      .padding(16)
+      .background(AppTheme.Colors.cardBackground(for: colorScheme), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
   }
 
   private func opportunities(_ dashboard: TaxDashboardResponse) -> some View {
@@ -228,5 +272,42 @@ struct TaxDashboardScreen: View {
 
   private func money(_ value: TaxMoney) -> String {
     value.amount.formatted(.currency(code: value.currency))
+  }
+}
+
+private extension TaxJurisdiction {
+  var displayName: String {
+    switch self {
+    case .unitedStates: "United States"
+    case .portugal: "Portugal"
+    case .spain: "Spain"
+    case .germany: "Germany"
+    case .france: "France"
+    case .italy: "Italy"
+    }
+  }
+
+  var supportBannerTitle: String {
+    switch self {
+    case .unitedStates:
+      return "US · actionable when profile is complete"
+    case .france, .italy:
+      return "\(displayName) · professional review only"
+    case .portugal, .spain, .germany:
+      return "\(displayName) · estimate only until validated"
+    }
+  }
+
+  var supportBannerDetail: String {
+    switch self {
+    case .unitedStates:
+      return "Opportunities can become actionable under the US rule pack. Review with a tax professional before filing or trading."
+    case .france, .italy:
+      return "No production capital-gains rule pack is enabled. Norviq will not invent rates or loss ledgers for this jurisdiction yet."
+    case .portugal, .germany:
+      return "Detailed rules are implemented, but production remains estimate-only while TAX_VALIDATED_JURISDICTIONS is limited to US."
+    case .spain:
+      return "Estimates use user-attested market admission for homogeneous securities. Actionable recommendations stay disabled until professional validation."
+    }
   }
 }
