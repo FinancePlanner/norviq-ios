@@ -184,9 +184,9 @@ struct ExpensesByCategoryCard: View {
 
         if activities.isEmpty {
           ContentUnavailableView {
-            Label("No expenses logged", systemImage: "cart")
+            Label("The ledger is quiet", systemImage: "cart")
           } description: {
-            Text("Your spending summary will appear here once you record your first expense")
+            Text("Log your first expense. Your spending summary appears here.")
           }
           .padding(.vertical, 8)
         } else {

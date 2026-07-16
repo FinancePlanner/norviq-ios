@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <!-- Tileable engraved hatch: fine diagonals + sparse cross-strokes, neutral for both modes -->
+  <g stroke="#8a7a5c" stroke-width="0.5" opacity="0.08">
+    <path d="M-10 10 L10 -10 M-10 40 L40 -10 M-10 70 L70 -10 M-10 100 L100 -10 M-10 130 L130 -10 M20 130 L130 20 M50 130 L130 50 M80 130 L130 80 M110 130 L130 110"/>
+  </g>
+  <g stroke="#8a7a5c" stroke-width="0.4" opacity="0.05">
+    <path d="M0 30 L120 30 M0 66 L120 66 M0 102 L120 102"/>
+  </g>
+</svg>

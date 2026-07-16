@@ -17,9 +17,9 @@ struct PortfolioPositionsSection: View {
     Group {
       if stocks.isEmpty {
         ContentUnavailableView {
-          Label("No Positions", systemImage: "chart.line.uptrend.xyaxis")
+          Label("Nothing under watch yet", systemImage: "chart.line.uptrend.xyaxis")
         } description: {
-          Text("Add your first holding or change your filter.")
+          Text("Add your first holding, or change your filter.")
         } actions: {
           Button("Add Position", action: onAddPosition)
             .buttonStyle(.borderedProminent)

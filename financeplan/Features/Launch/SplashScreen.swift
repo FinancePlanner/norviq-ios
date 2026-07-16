@@ -28,10 +28,10 @@ struct SplashScreen: View {
         .padding(.bottom, 40)
 
         // Tagline
-        Text("Your wealth, wisely managed")
-          .font(.system(size: 16, weight: .medium))
-          .foregroundStyle(.secondary)
-          .opacity(isAnimating ? 0.8 : 0.0)
+        Text("The vigil begins.")
+          .typography(.hero)
+          .foregroundStyle(AppTheme.Colors.foreground(for: colorScheme))
+          .opacity(isAnimating ? 0.9 : 0.0)
           .offset(y: isAnimating ? 0 : 20)
           .padding(.top, 8)
 
@@ -104,12 +104,13 @@ private struct SplashBrandStage: View {
 
   var body: some View {
     ZStack {
+      // Outer gold ring glow
       Circle()
         .fill(
           RadialGradient(
             colors: [
-              AppTheme.Colors.tint(for: colorScheme).opacity(0.3),
-              AppTheme.Colors.tint(for: colorScheme).opacity(0.0)
+              AppTheme.Colors.splashRing,
+              AppTheme.Colors.splashRing.opacity(0.0)
             ],
             center: .center,
             startRadius: 54,
@@ -120,12 +121,13 @@ private struct SplashBrandStage: View {
         .scaleEffect(pulseAnimation ? 1.1 : 0.9)
         .opacity(pulseAnimation ? 0.6 : 0.3)
 
+      // Inner ember core glow
       Circle()
         .fill(
           RadialGradient(
             colors: [
-              AppTheme.Colors.secondaryTint(for: colorScheme).opacity(0.4),
-              AppTheme.Colors.secondaryTint(for: colorScheme).opacity(0.0)
+              AppTheme.Colors.splashCore.opacity(0.4),
+              AppTheme.Colors.splashCore.opacity(0.0)
             ],
             center: .center,
             startRadius: 36,
@@ -136,7 +138,11 @@ private struct SplashBrandStage: View {
         .scaleEffect(pulseAnimation ? 0.95 : 1.05)
         .opacity(pulseAnimation ? 0.4 : 0.2)
 
-      NorviqFullLogo(width: logoWidth)
+      Image("CerberusMarkFull")
+        .resizable()
+        .scaledToFit()
+        .frame(width: logoWidth)
+        .accessibilityLabel("Norviq")
         .scaleEffect(isAnimating ? 1.0 : 0.8)
         .opacity(isAnimating ? 1.0 : 0.0)
     }

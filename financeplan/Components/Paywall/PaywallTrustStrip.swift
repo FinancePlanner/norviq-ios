@@ -13,7 +13,7 @@ struct PaywallTrustStrip: View {
 
   private var items: [Item] {
     [
-      Item(icon: "lock.shield.fill", text: "Bank-level encryption"),
+      Item(icon: "lock.shield.fill", text: "The gate holds. Encrypted."),
       Item(icon: "clock.fill", text: "Cancel anytime"),
       Item(
         icon: "creditcard.fill",

@@ -6,6 +6,24 @@ enum PaywallFeatureBadge {
   case free
 }
 
+/// Kicker header that groups paywall feature rows under one of the three
+/// Vigil watches (WATCH I — WEALTH / WATCH II — SPENDING / WATCH III — INTELLIGENCE).
+struct PaywallWatchHeader: View {
+  let title: String
+
+  @Environment(\.colorScheme) private var colorScheme
+
+  var body: some View {
+    Text(title)
+      .font(.caption.weight(.semibold))
+      .tracking(1.4)
+      .foregroundStyle(AppTheme.Colors.bronze(for: colorScheme))
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.top, 4)
+      .accessibilityAddTraits(.isHeader)
+  }
+}
+
 /// A single feature bullet row used in paywall feature lists.
 /// Groups all content for VoiceOver accessibility.
 struct PaywallFeatureRow: View {

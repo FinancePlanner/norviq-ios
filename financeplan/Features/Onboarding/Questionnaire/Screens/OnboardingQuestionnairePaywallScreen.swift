@@ -75,7 +75,7 @@ struct OnboardingQuestionnairePaywallScreen: View {
 
   private var headlineBlock: some View {
     VStack(spacing: 8) {
-      Text("Your full financial picture, locked in.")
+      Text("Post all three guards.")
         .font(.title.bold())
         .multilineTextAlignment(.center)
 
@@ -128,15 +128,26 @@ struct OnboardingQuestionnairePaywallScreen: View {
     GlassCard(cornerRadius: 20) {
       VStack(alignment: .leading, spacing: 12) {
         ForEach(Array(OnboardingQuestionnairePaywallScreen.features.enumerated()), id: \.element.title) { index, feature in
-          HStack(spacing: 12) {
-            Image(systemName: feature.icon)
-              .font(.body.weight(.semibold))
-              .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme))
-              .frame(width: 24)
-              .accessibilityHidden(true)
-            Text(feature.title)
-              .font(.subheadline.weight(.medium))
-              .fixedSize(horizontal: false, vertical: true)
+          Group {
+            if let kicker = feature.kicker {
+              Text(kicker)
+                .font(.caption2.weight(.semibold))
+                .tracking(1.2)
+                .foregroundStyle(AppTheme.Colors.bronze(for: colorScheme))
+                .padding(.top, index == 0 ? 0 : 6)
+            }
+
+            HStack(spacing: 12) {
+              Image(systemName: feature.icon)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme))
+                .frame(width: 24)
+                .accessibilityHidden(true)
+              Text(feature.title)
+                .font(.subheadline.weight(.medium))
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            .accessibilityElement(children: .combine)
           }
           .opacity(featuresAppeared ? 1 : 0)
           .offset(y: featuresAppeared ? 0 : 10)
@@ -146,7 +157,6 @@ struct OnboardingQuestionnairePaywallScreen: View {
               : .spring(response: 0.4, dampingFraction: 0.8).delay(Double(index) * 0.06),
             value: featuresAppeared
           )
-          .accessibilityElement(children: .combine)
         }
       }
       .padding(.vertical, 4)
@@ -235,13 +245,27 @@ struct OnboardingQuestionnairePaywallScreen: View {
   private struct FeatureInfo: Hashable {
     let icon: String
     let title: String
+    var kicker: String? = nil
   }
 
   private static let features: [FeatureInfo] = [
-    FeatureInfo(icon: "chart.line.uptrend.xyaxis", title: "Unlimited holdings, watchlists & alerts"),
-    FeatureInfo(icon: "creditcard.fill", title: "Auto-categorised expense tracking"),
-    FeatureInfo(icon: "chart.xyaxis.line", title: "10-year projections on every position"),
-    FeatureInfo(icon: "scale.3d", title: "Allocation visuals & concentration alerts"),
-    FeatureInfo(icon: "icloud.and.arrow.up", title: "Live syncing across devices"),
+    FeatureInfo(
+      icon: "chart.line.uptrend.xyaxis",
+      title: "Unlimited holdings, watchlists & alerts",
+      kicker: "WATCH I — WEALTH"
+    ),
+    FeatureInfo(icon: "chart.xyaxis.line", title: "10-year projections, chart builder & scenarios"),
+    FeatureInfo(
+      icon: "creditcard.fill",
+      title: "Auto-categorised expenses, budgets & receipt scanning",
+      kicker: "WATCH II — SPENDING"
+    ),
+    FeatureInfo(icon: "building.columns", title: "Read-only bank sync"),
+    FeatureInfo(
+      icon: "sparkles",
+      title: "AI assistant, sentiment insights & macro data",
+      kicker: "WATCH III — INTELLIGENCE"
+    ),
+    FeatureInfo(icon: "icloud.and.arrow.up", title: "MCP integrations & live syncing across devices"),
   ]
 }

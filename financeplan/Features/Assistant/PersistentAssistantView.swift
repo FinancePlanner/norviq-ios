@@ -49,6 +49,11 @@ struct PersistentAssistantView: View {
                 LazyVStack(spacing: 16) {
                     statusHeader
                     if !viewModel.tips.isEmpty { tipsSection }
+                    if viewModel.activeConversation?.messages.isEmpty ?? true,
+                       viewModel.pendingActions.isEmpty,
+                       !viewModel.isSending {
+                        idleState
+                    }
                     if let messages = viewModel.activeConversation?.messages {
                         ForEach(messages, id: \.id) { message in messageBubble(message).id(message.id) }
                     }
@@ -62,6 +67,28 @@ struct PersistentAssistantView: View {
                 if let id = viewModel.activeConversation?.messages.last?.id { withAnimation { proxy.scrollTo(id, anchor: .bottom) } }
             }
         }
+    }
+
+    private var idleState: some View {
+        VStack(spacing: 12) {
+            Image("CerberusHeadIcon")
+                .renderingMode(.original)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 56, height: 56)
+                .shadow(color: Color.accentColor.opacity(0.25), radius: 14, x: 0, y: 6)
+                .accessibilityHidden(true)
+            Text("Ask. The third head is listening.")
+                .font(.headline)
+                .multilineTextAlignment(.center)
+            Text("Add an expense, review your spending, or look up a stock.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 32)
+        .padding(.horizontal, 24)
     }
 
     private var statusHeader: some View {

@@ -21,6 +21,7 @@ private enum UserProfileDestination: Hashable {
     case dataAvailability
     case connect
     case integrations
+    case integrationsHub
     case sensitiveActions
     case subscription
 }
@@ -215,7 +216,11 @@ public struct UserProfileView: View {
                 .disabled(billingManager.isRestoring)
 
                 if let days = billingManager.trialDaysRemaining {
-                    Label("Trial: \(days) days remaining", systemImage: "calendar.badge.clock")
+                    Label(
+                        days == 1
+                            ? "Trial watch ends in 1 day."
+                            : "Trial watch ends in \(days) days.",
+                        systemImage: "calendar.badge.clock")
                         .foregroundStyle(.secondary)
                         .accessibilityIdentifier("settings.subscription.trial")
                 } else {
@@ -428,10 +433,10 @@ public struct UserProfileView: View {
                 }
                 ShareLink(
                     item: ShareURLBuilder.app(),
-                    subject: Text("Norviqa"),
-                    message: Text("Plan, track, and understand your investments with Norviqa."),
+                    subject: Text("Norviq"),
+                    message: Text("Plan, track, and understand your investments with Norviq."),
                     preview: SharePreview(
-                        "Norviqa — your portfolio companion",
+                        "Norviq — the guardian of your money",
                         image: Image(systemName: "chart.line.uptrend.xyaxis")
                     )
                 ) {
@@ -453,6 +458,17 @@ public struct UserProfileView: View {
             Section(LocalizedStringKey("Integrations")) {
                 NavigationLink(value: UserProfileDestination.integrations) {
                     Label(LocalizedStringKey("Connected Accounts"), systemImage: "building.columns")
+                }
+                NavigationLink(value: UserProfileDestination.integrationsHub) {
+                    HStack {
+                        Label(
+                            LocalizedStringKey("Integrations Hub"),
+                            systemImage: "point.3.connected.trianglepath.dotted")
+                        Spacer()
+                        Text("MCP, banks, receipts, API")
+                            .typography(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
@@ -599,6 +615,8 @@ public struct UserProfileView: View {
             ConnectView()
         case .integrations:
             IntegrationsView()
+        case .integrationsHub:
+            IntegrationsHubView()
         case .sensitiveActions:
             Text("Sensitive actions")
         case .subscription:

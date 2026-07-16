@@ -207,9 +207,9 @@ private struct RecordedSpendCard: View {
 
       if activities.isEmpty {
         ContentUnavailableView {
-          Label("No spending recorded", systemImage: "wallet.pass")
+          Label("The ledger is quiet", systemImage: "wallet.pass")
         } description: {
-          Text("Start tracking your expenses to see where your money goes")
+          Text("Log your first expense to see where your money goes.")
         } actions: {
           Button("Add First Transaction") {
             onAddTransaction()

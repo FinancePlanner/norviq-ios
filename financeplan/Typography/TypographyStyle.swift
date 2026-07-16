@@ -72,6 +72,22 @@ public struct TypographyStyle {
     type == .code
   }
 
+  /// Font *design* axis per role (Vigil identity). Display-tier roles render in
+  /// the serif design (New York); numeric roles keep their monospaced/tabular
+  /// treatment; everything else stays on the default SF design. Only the design
+  /// axis varies here — sizes, weights, and Dynamic Type scaling are untouched.
+  public var fontDesign: UIFontDescriptor.SystemDesign {
+    if isMonospaced {
+      return .monospaced
+    }
+    switch type {
+    case .display, .hero, .heading:
+      return .serif
+    default:
+      return .default
+    }
+  }
+
   public var usesTabularNumbers: Bool {
     switch type {
     case .displayNumber, .metricNumber, .numeric, .numericSmall:
@@ -88,7 +104,7 @@ public struct TypographyStyle {
   /// the design at the default setting. The clamp at the app root bounds extreme sizes.
   public var font: Font {
     let uiWeight: UIFont.Weight = isMonospaced ? .regular : weight.uiFontWeight
-    let design: UIFontDescriptor.SystemDesign = isMonospaced ? .monospaced : .default
+    let design: UIFontDescriptor.SystemDesign = fontDesign
 
     var descriptor = UIFont.systemFont(ofSize: size, weight: uiWeight).fontDescriptor
     if let designed = descriptor.withDesign(design) {

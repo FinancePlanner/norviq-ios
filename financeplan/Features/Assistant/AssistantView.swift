@@ -59,14 +59,26 @@ struct AssistantView: View {
     }
 
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Ask me anything about your money", systemImage: "sparkles")
+        VStack(spacing: 12) {
+            Image("CerberusHeadIcon")
+                .renderingMode(.original)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 56, height: 56)
+                .shadow(
+                    color: AppTheme.Colors.ember(for: scheme).opacity(0.25),
+                    radius: 14, x: 0, y: 6
+                )
+                .accessibilityHidden(true)
+            Text("Ask. The third head is listening.")
                 .typography(.headline, weight: .semibold)
-            Text("Add an expense, review your spending, or look up a stock — just ask.")
+                .multilineTextAlignment(.center)
+            Text("Add an expense, review your spending, or look up a stock.")
                 .typography(.body)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
         .padding(.top, 40)
     }
 

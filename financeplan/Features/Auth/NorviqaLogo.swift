@@ -6,7 +6,7 @@ struct NorviqLogo: View {
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
-    Image("NorviqIcon")
+    Image("CerberusHeadIcon")
       .resizable()
       .scaledToFit()
       .frame(width: size, height: size)

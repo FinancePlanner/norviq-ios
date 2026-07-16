@@ -19,12 +19,12 @@ struct TrialEndedBanner: View {
         .accessibilityHidden(true)
 
       VStack(alignment: .leading, spacing: 2) {
-        Text("Your free trial has ended")
+        Text("The trial watch has ended.")
           .font(.subheadline.weight(.semibold))
           .foregroundStyle(.primary)
           .fixedSize(horizontal: false, vertical: true)
 
-        Text("Subscribe to keep your Pro features.")
+        Text("Subscribe to keep all three guards posted.")
           .font(.footnote)
           .foregroundStyle(.secondary)
           .fixedSize(horizontal: false, vertical: true)
@@ -49,7 +49,7 @@ struct TrialEndedBanner: View {
     .clipShape(.rect(cornerRadius: 16))
     .padding(.horizontal, 12)
     .accessibilityElement(children: .combine)
-    .accessibilityLabel("Your free trial has ended. Subscribe to keep your Pro features.")
+    .accessibilityLabel("The trial watch has ended. Subscribe to keep all three guards posted.")
     .accessibilityIdentifier("trialEndedBanner")
   }
 }

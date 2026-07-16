@@ -49,7 +49,7 @@ struct SubscriptionSettingsView: View {
                     .accessibilityIdentifier("subscription.planName")
 
                 if let days = billingManager.trialDaysRemaining, days > 0 {
-                    Text("Trial: \(days) day\(days == 1 ? "" : "s") remaining")
+                    Text("Trial watch ends in \(days) day\(days == 1 ? "" : "s").")
                         .typography(.body)
                         .foregroundStyle(.secondary)
                         .accessibilityIdentifier("subscription.status.trial")
