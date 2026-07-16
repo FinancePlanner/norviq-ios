@@ -59,6 +59,7 @@ final class PortfolioViewModel: ObservableObject {
   @Published private(set) var targetAlertsBySymbol: [String: TargetResponse] = [:]
   @Published private(set) var isSavingTargetAlert = false
   @Published private(set) var liveQuotes: [String: QuoteResponse] = [:]
+  @Published private(set) var pnlBySymbol: [String: PnlBySymbol] = [:]
 
   private let service: StockServicing
   private let marketDataService: MarketDataServicing
@@ -115,6 +116,9 @@ final class PortfolioViewModel: ObservableObject {
       let sectorExposureTask = Task {
         await self.fetchPortfolioSectorExposureSafely(portfolioListId: selectedPortfolioListId)
       }
+      let pnlTask = Task {
+        await self.fetchPnlSafely(portfolioListId: selectedPortfolioListId)
+      }
       let (stocksResult, summary, targets) = try await (
         stocksTask,
         summaryTask,
@@ -125,6 +129,7 @@ final class PortfolioViewModel: ObservableObject {
       nextCursor = fetchedNextCursor
       cashBalance = extractCashBalance(from: summary)
       self.sectorExposure = await sectorExposureTask.value
+      pnlBySymbol = await pnlTask.value
       targetAlertsBySymbol = Self.makeTargetAlertsBySymbol(targets)
 
       hasLoadedOnce = true
@@ -149,6 +154,29 @@ final class PortfolioViewModel: ObservableObject {
       }
     } catch {
       portfolioViewModelLogger.warning("refreshLiveQuotes failed: \(error.localizedDescription)")
+    }
+
+    let refreshedPnl = await fetchPnlSafely(portfolioListId: selectedPortfolioListId)
+    if !refreshedPnl.isEmpty {
+      pnlBySymbol = refreshedPnl
+    }
+  }
+
+  func pnl(for symbol: String) -> PnlBySymbol? {
+    pnlBySymbol[Self.normalizedSymbol(symbol)]
+  }
+
+  private func fetchPnlSafely(portfolioListId: String?) async -> [String: PnlBySymbol] {
+    do {
+      let response = try await service.fetchPnl(portfolioListId: portfolioListId)
+      var mapped: [String: PnlBySymbol] = [:]
+      for item in response.items {
+        mapped[Self.normalizedSymbol(item.symbol)] = item
+      }
+      return mapped
+    } catch {
+      portfolioViewModelLogger.warning("Failed to fetch P&L: \(error.localizedDescription, privacy: .public)")
+      return [:]
     }
   }
 
