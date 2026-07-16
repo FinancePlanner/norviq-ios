@@ -16,15 +16,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
 
       - name: Cache derived data
         uses: actions/cache@v4
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-xcode-derived-data-${{ hashFiles('financeplan.xcodeproj/project.xcworkspace/contents.xcworkspacedata') }}
+          key: ${{ runner.os }}-xcode-26.3-derived-data-${{ hashFiles('financeplan.xcodeproj/project.xcworkspace/contents.xcworkspacedata') }}
           restore-keys: |
-            ${{ runner.os }}-xcode-derived-data-
+            ${{ runner.os }}-xcode-26.3-derived-data-
 
       - name: Cache SwiftPM repositories
         uses: actions/cache@v4
@@ -32,9 +32,9 @@ jobs:
           path: |
             ~/Library/Caches/org.swift.swiftpm
             ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
-          key: ${{ runner.os }}-swiftpm-${{ hashFiles('**/Package.resolved') }}
+          key: ${{ runner.os }}-xcode-26.3-swiftpm-${{ hashFiles('**/Package.resolved') }}
           restore-keys: |
-            ${{ runner.os }}-swiftpm-
+            ${{ runner.os }}-xcode-26.3-swiftpm-
 
       - name: Resolve Package Dependencies (retry)
         run: |
