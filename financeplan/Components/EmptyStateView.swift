@@ -18,12 +18,13 @@ struct EmptyStateView: View {
                 Text(title)
             } icon: {
                 if usesBrandIcon {
-                    // Asset ships light/dark variants; render as-authored.
+                    // Monoline template mark; tinted per brand theme.
                     Image("CerberusHeadIcon")
-                        .renderingMode(.original)
+                        .renderingMode(.template)
                         .resizable()
                         .scaledToFit()
                         .frame(width: 56, height: 56)
+                        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
                         .accessibilityHidden(true)
                 } else {
                     Image(systemName: icon)

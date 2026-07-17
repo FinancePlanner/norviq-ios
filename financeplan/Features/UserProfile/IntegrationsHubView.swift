@@ -13,10 +13,11 @@ struct IntegrationsHubView: View {
       Section {
         VStack(alignment: .leading, spacing: 8) {
           Image("CerberusHeadIcon")
-            .renderingMode(.original)
+            .renderingMode(.template)
             .resizable()
             .scaledToFit()
             .frame(width: 48, height: 48)
+            .foregroundStyle(AppTheme.Colors.tint(for: scheme))
             .accessibilityHidden(true)
           Text("Speaks to your tools.")
             .font(.headline)

@@ -61,10 +61,11 @@ struct AssistantView: View {
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image("CerberusHeadIcon")
-                .renderingMode(.original)
+                .renderingMode(.template)
                 .resizable()
                 .scaledToFit()
                 .frame(width: 56, height: 56)
+                .foregroundStyle(AppTheme.Colors.tint(for: scheme))
                 .shadow(
                     color: AppTheme.Colors.ember(for: scheme).opacity(0.25),
                     radius: 14, x: 0, y: 6

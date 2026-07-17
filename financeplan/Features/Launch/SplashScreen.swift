@@ -139,9 +139,11 @@ private struct SplashBrandStage: View {
         .opacity(pulseAnimation ? 0.4 : 0.2)
 
       Image("CerberusMarkFull")
+        .renderingMode(.template)
         .resizable()
         .scaledToFit()
         .frame(width: logoWidth)
+        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
         .accessibilityLabel("Norviq")
         .scaleEffect(isAnimating ? 1.0 : 0.8)
         .opacity(isAnimating ? 1.0 : 0.0)

@@ -3,6 +3,7 @@ import SwiftUI
 
 struct PersistentAssistantView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var scheme
     @State private var viewModel = PersistentAssistantViewModel()
     @State private var showsConversations = false
     @State private var showsPreferences = false
@@ -72,11 +73,12 @@ struct PersistentAssistantView: View {
     private var idleState: some View {
         VStack(spacing: 12) {
             Image("CerberusHeadIcon")
-                .renderingMode(.original)
+                .renderingMode(.template)
                 .resizable()
                 .scaledToFit()
                 .frame(width: 56, height: 56)
-                .shadow(color: Color.accentColor.opacity(0.25), radius: 14, x: 0, y: 6)
+                .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+                .shadow(color: AppTheme.Colors.tint(for: scheme).opacity(0.25), radius: 14, x: 0, y: 6)
                 .accessibilityHidden(true)
             Text("Ask. The third head is listening.")
                 .font(.headline)

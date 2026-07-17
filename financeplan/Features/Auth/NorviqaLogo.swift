@@ -7,9 +7,11 @@ struct NorviqLogo: View {
 
   var body: some View {
     Image("CerberusHeadIcon")
+      .renderingMode(.template)
       .resizable()
       .scaledToFit()
       .frame(width: size, height: size)
+      .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
       .accessibilityLabel("Norviq")
       .shadow(
         color: AppTheme.Colors.tint(for: colorScheme).opacity(0.18),

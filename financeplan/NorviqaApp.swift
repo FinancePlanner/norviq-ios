@@ -24,6 +24,7 @@ struct NorviqApp: App {
   @Injected(\.analytics) private var analytics
   @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system
     .rawValue
+  @AppStorage(BrandTheme.storageKey) private var brandThemeRawValue = BrandTheme.classic.rawValue
   @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
 
   private var appAppearance: AppAppearance {
@@ -79,6 +80,7 @@ struct NorviqApp: App {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .id(appLanguage.localeIdentifier)
         .id(environmentManager.current)
+        .id(brandThemeRawValue)
         .environment(sessionManager)
         .environment(\.locale, Locale(identifier: appLanguage.localeIdentifier))
         .preferredColorScheme(appAppearance.colorScheme)
