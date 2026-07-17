@@ -61,6 +61,8 @@ final class StockDetailsViewModel: ObservableObject {
     @Published private(set) var earningsIncomeStatements: [IncomeStatementResponse] = []
     @Published private(set) var stockEarningsMessage: String?
     @Published private(set) var isEarningsLoading = false
+    @Published private(set) var tickerSentiment: TickerSentimentResponse?
+    @Published private(set) var isSentimentLoading = false
     @Published private(set) var selectedEarningsTranscript: EarningsTranscript?
     @Published private(set) var earningsTranscriptMessage: String?
     @Published private(set) var isEarningsTranscriptLoading = false
@@ -451,8 +453,25 @@ final class StockDetailsViewModel: ObservableObject {
             isChartLoading = false
             loadedTabs.insert(.chart)
             loadingTabs.remove(.chart)
+        case .sentiment:
+            guard !loadedTabs.contains(.sentiment), !loadingTabs.contains(.sentiment) else { return }
+            loadingTabs.insert(.sentiment)
+            isSentimentLoading = true
+            tickerSentiment = await loadTickerSentiment(symbol: symbol)
+            isSentimentLoading = false
+            loadedTabs.insert(.sentiment)
+            loadingTabs.remove(.sentiment)
         case .builder, .overview, .news:
             return
+        }
+    }
+
+    private func loadTickerSentiment(symbol: String) async -> TickerSentimentResponse? {
+        do {
+            return try await Container.shared.insightsHTTPClient().getTickerSentiment(symbol: symbol)
+        } catch {
+            // No sentiment yet / transient failure — surface the empty state, not an error.
+            return nil
         }
     }
 

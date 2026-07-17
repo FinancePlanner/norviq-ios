@@ -10,6 +10,7 @@ enum StockDetailTab: String, CaseIterable, Identifiable {
     case forecast
     case compare
     case news
+    case sentiment
     case earnings
 
     var id: String { rawValue }
@@ -32,6 +33,8 @@ enum StockDetailTab: String, CaseIterable, Identifiable {
             "Compare"
         case .news:
             "News"
+        case .sentiment:
+            "Sentiment"
         case .earnings:
             "Earnings"
         }
@@ -40,7 +43,7 @@ enum StockDetailTab: String, CaseIterable, Identifiable {
     var isProOnly: Bool {
         switch self {
         case .chart, .overview, .news: return false
-        case .builder, .forecast, .statements, .analysis, .compare, .earnings: return true
+        case .builder, .forecast, .statements, .analysis, .compare, .earnings, .sentiment: return true
         }
     }
 }

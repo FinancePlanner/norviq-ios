@@ -278,6 +278,14 @@ struct StockDetailScreen: View {
                     }
                 case .news:
                     StockNewsTab(news: viewModel.news, defaultSymbol: viewModel.details?.symbol ?? initialSymbol)
+                case .sentiment:
+                    ProGateView(billingManager: billingManager) {
+                        StockSentimentTab(
+                            symbol: viewModel.details?.symbol ?? initialSymbol,
+                            response: viewModel.tickerSentiment,
+                            isLoading: viewModel.isSentimentLoading
+                        )
+                    }
                 case .earnings:
                     ProGateView(billingManager: billingManager) {
                         StockEarningsTab(
