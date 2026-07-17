@@ -8,6 +8,9 @@ struct HomeQuickExpenseDraft: Equatable {
   let occurredOn: Date
   let splitMode: ExpenseSplitMode
   let userSharePercent: Double
+  /// Receipt provenance (VAT, merchant tax id, source) captured when the entry
+  /// was seeded from a scanned receipt. Nil for manually typed spend.
+  var receiptMetadata: ExpenseReceiptMetadata?
 }
 
 struct HomeQuickExpenseSheet: View {
@@ -23,6 +26,7 @@ struct HomeQuickExpenseSheet: View {
   @State private var isSaving = false
   @State private var errorMessage: String?
   @State private var isScannerPresented = false
+  @State private var receiptMetadata: ExpenseReceiptMetadata?
 
   private var canSave: Bool {
     !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -151,6 +155,17 @@ struct HomeQuickExpenseSheet: View {
     if let date = draft.date, let parsed = Self.receiptDateFormatter.date(from: date) {
       occurredOn = parsed
     }
+    // Preserve the receipt's tax provenance so it persists with the expense
+    // instead of being discarded (VAT total, merchant tax id, source).
+    receiptMetadata = ExpenseReceiptMetadata(
+      source: ExpenseReceiptSource(rawValue: draft.source.rawValue) ?? .qr,
+      merchant: draft.merchant,
+      taxIdentifier: draft.taxId,
+      issuedOn: draft.date,
+      currency: draft.currency,
+      total: draft.total,
+      vatTotal: draft.taxTotal
+    )
     errorMessage = nil
   }
 
@@ -184,7 +199,8 @@ struct HomeQuickExpenseSheet: View {
       pillar: pillar,
       occurredOn: occurredOn,
       splitMode: splitMode,
-      userSharePercent: splitMode == .shared ? userSharePercent : 100
+      userSharePercent: splitMode == .shared ? userSharePercent : 100,
+      receiptMetadata: receiptMetadata
     )
     let saveError = await onSave(draft)
     if let saveError {

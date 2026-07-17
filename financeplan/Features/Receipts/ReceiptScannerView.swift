@@ -1,3 +1,5 @@
+import Factory
+import PhotosUI
 import StockPlanShared
 import SwiftUI
 import Vision
@@ -13,6 +15,8 @@ struct ReceiptScannerView: View {
 
   @Environment(\.dismiss) private var dismiss
   @State private var errorMessage: String?
+  @State private var photoItem: PhotosPickerItem?
+  @State private var isUploading = false
 
   private var isScannerAvailable: Bool {
     DataScannerViewController.isSupported && DataScannerViewController.isAvailable
@@ -44,6 +48,58 @@ struct ReceiptScannerView: View {
             .padding()
         }
       }
+      .safeAreaInset(edge: .bottom) {
+        photoPickerBar
+      }
+      .onChange(of: photoItem) { _, item in
+        guard let item else { return }
+        Task { await handlePhoto(item) }
+      }
+    }
+  }
+
+  // Photo OCR fallback: pick/take a receipt photo and upload it to the backend
+  // vision OCR endpoint. Works even when the on-device QR scanner is unavailable.
+  private var photoPickerBar: some View {
+    PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
+      HStack {
+        if isUploading {
+          ProgressView()
+          Text("Reading receipt…")
+        } else {
+          Image(systemName: "photo")
+          Text("Scan a photo instead")
+        }
+      }
+      .frame(maxWidth: .infinity)
+      .padding()
+      .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+      .padding(.horizontal)
+    }
+    .disabled(isUploading)
+  }
+
+  private func handlePhoto(_ item: PhotosPickerItem) async {
+    isUploading = true
+    errorMessage = nil
+    defer {
+      isUploading = false
+      photoItem = nil
+    }
+    do {
+      guard let data = try await item.loadTransferable(type: Data.self), !data.isEmpty else {
+        errorMessage = "Couldn't read that photo. Try another or enter manually."
+        return
+      }
+      let response = try await Container.shared.receiptsHTTPClient().ocr(imageData: data, contentType: "image/jpeg")
+      guard response.recognized, let draft = response.draft else {
+        errorMessage = "Couldn't read that receipt photo. Try another or enter manually."
+        return
+      }
+      onDraft(draft)
+      dismiss()
+    } catch {
+      errorMessage = "Couldn't scan that photo. Try again or enter manually."
     }
   }
 
