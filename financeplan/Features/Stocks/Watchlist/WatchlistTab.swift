@@ -323,49 +323,81 @@ private struct WatchlistRow: View {
   let onAddToPortfolio: () -> Void
   let onQuickTrade: (() -> Void)?
 
+  private var noteLine: String? {
+    HoldingRowPresentation.displaySubtitle(notes: item.note, fallback: nil)
+  }
+
+  private var accessibilitySummary: String {
+    var parts = [item.symbol]
+    if let price = liveQuote?.currentPrice {
+      parts.append(price.currency)
+    }
+    if let change = liveQuote?.change, let pct = liveQuote?.percentChange {
+      parts.append(
+        "day \(StockMetricFormatter.signedCurrencyText(change)) \(String(format: "%+.2f%%", pct))"
+      )
+    }
+    parts.append(item.status)
+    return parts.joined(separator: ", ")
+  }
+
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      HStack {
-        Text(item.symbol)
-          .typography(.label, weight: .semibold)
+    VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+      HStack(alignment: .top, spacing: AppTheme.Spacing.md) {
+        VStack(alignment: .leading, spacing: 4) {
+          HStack(spacing: 8) {
+            Text(item.symbol)
+              .font(.headline)
+              .foregroundStyle(.primary)
 
-        Spacer()
+            Text(item.status.capitalized)
+              .font(.caption2.weight(.semibold))
+              .padding(.horizontal, 8)
+              .padding(.vertical, 3)
+              .appGlassEffect(.capsule)
+          }
 
-        if let q = liveQuote {
-          Text(q.currentPrice.currency)
-            .typography(.label, weight: .bold)
-            .monospacedDigit()
-            .foregroundStyle(.primary)
+          if let noteLine {
+            Text(noteLine)
+              .font(.caption)
+              .foregroundStyle(.secondary)
+              .lineLimit(1)
+          }
         }
 
-        Text(item.status.capitalized)
-          .typography(.nano, weight: .semibold)
-          .padding(.horizontal, 8)
-          .padding(.vertical, 4)
-          .appGlassEffect(.capsule)
+        Spacer(minLength: 8)
+
+        VStack(alignment: .trailing, spacing: 4) {
+          if let price = liveQuote?.currentPrice {
+            Text(price.currency)
+              .font(.headline)
+              .monospacedDigit()
+              .foregroundStyle(.primary)
+              .contentTransition(.numericText())
+          } else {
+            Text("—")
+              .font(.headline)
+              .foregroundStyle(.tertiary)
+          }
+
+          QuoteChangeLabel(
+            absoluteChange: liveQuote?.change,
+            percentChange: liveQuote?.percentChange,
+            // Finnhub-style quote percent is already percentage points (e.g. 1.22).
+            percentIsPointScale: true,
+            style: .compact
+          )
+        }
       }
 
-      if let q = liveQuote, let pct = q.percentChange {
-        let chg = q.change ?? 0
-        Text(StockMetricFormatter.signedCurrencyText(chg) + " (" + StockMetricFormatter.signedPercentText(pct) + ")")
-          .typography(.caption)
-          .foregroundStyle(chg >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger)
-      }
-
-      if let q = liveQuote {
-        WatchlistQuoteDetailLine(quote: q)
-      }
-
-      if let note = item.note, !note.isEmpty {
-        Text(note)
-          .typography(.small)
-          .foregroundStyle(.secondary)
+      if let quote = liveQuote {
+        WatchlistQuoteDetailLine(quote: quote)
       }
 
       HStack {
         if let nextReviewAt = item.nextReviewAt {
           Text("Review \(nextReviewAt)")
-            .typography(.nano)
+            .font(.caption2)
             .foregroundStyle(.secondary)
         }
 
@@ -387,32 +419,40 @@ private struct WatchlistRow: View {
     .onTapGesture {
       onQuickTrade?()
     }
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel(accessibilitySummary)
   }
 }
 
 private struct WatchlistQuoteDetailLine: View {
   let quote: QuoteResponse
 
-  var body: some View {
-    HStack(spacing: 12) {
-      detail("Open", quote.open)
-      detail("Prev", quote.previousClose)
-      detail("High", quote.high)
-      detail("Low", quote.low)
-    }
+  private var items: [(String, Double)] {
+    var result: [(String, Double)] = []
+    if let open = quote.open { result.append(("Open", open)) }
+    if let prev = quote.previousClose { result.append(("Prev", prev)) }
+    if let high = quote.high { result.append(("High", high)) }
+    if let low = quote.low { result.append(("Low", low)) }
+    return result
   }
 
-  @ViewBuilder
-  private func detail(_ title: String, _ value: Double?) -> some View {
-    if let value {
-      HStack(spacing: 3) {
-        Text(title)
-          .typography(.nano)
-          .foregroundStyle(.secondary)
-        Text(value.currency)
-          .typography(.nano, weight: .semibold)
-          .monospacedDigit()
-          .foregroundStyle(.primary)
+  var body: some View {
+    if items.isEmpty {
+      EmptyView()
+    } else {
+      HStack(spacing: 12) {
+        ForEach(items, id: \.0) { title, value in
+          HStack(spacing: 3) {
+            Text(title)
+              .font(.caption2)
+              .foregroundStyle(.secondary)
+            Text(value.currency)
+              .font(.caption2.weight(.semibold))
+              .monospacedDigit()
+              .foregroundStyle(.primary)
+          }
+        }
+        Spacer(minLength: 0)
       }
     }
   }

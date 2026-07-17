@@ -132,6 +132,10 @@ final class PortfolioViewModel: ObservableObject {
       pnlBySymbol = await pnlTask.value
       targetAlertsBySymbol = Self.makeTargetAlertsBySymbol(targets)
 
+      // Seed live quotes so row metrics + the 20s refresh timer have symbols to poll.
+      trackedSymbols = Set(remoteStocks.map { Self.normalizedSymbol($0.symbol) }.filter { !$0.isEmpty })
+      await fetchAndMergeQuotes(for: Array(trackedSymbols))
+
       hasLoadedOnce = true
     } catch {
       errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load portfolio."
@@ -141,24 +145,46 @@ final class PortfolioViewModel: ObservableObject {
   /// Refresh only the live market quotes for currently known symbols (cheap poll for "live" feel).
   func refreshLiveQuotes() async {
     guard !isRefreshingLiveQuotes else { return }
-    let symbols = liveQuotes.keys.isEmpty ? [] : Array(liveQuotes.keys)
-    // If no prior quotes, we can't easily know symbols without full load; caller should load first.
+    let symbols = symbolsForQuoteRefresh()
     guard !symbols.isEmpty else { return }
     isRefreshingLiveQuotes = true
     defer { isRefreshingLiveQuotes = false }
 
-    do {
-      let batch = try await marketDataService.fetchQuoteBatch(symbols: symbols)
-      for q in batch.quotes {
-        liveQuotes[q.symbol.uppercased()] = q
-      }
-    } catch {
-      portfolioViewModelLogger.warning("refreshLiveQuotes failed: \(error.localizedDescription)")
-    }
+    await fetchAndMergeQuotes(for: symbols)
 
     let refreshedPnl = await fetchPnlSafely(portfolioListId: selectedPortfolioListId)
     if !refreshedPnl.isEmpty {
       pnlBySymbol = refreshedPnl
+    }
+  }
+
+  /// Symbols currently shown in the portfolio (kept for quote refresh even before first batch returns).
+  private var trackedSymbols: Set<String> = []
+
+  private func symbolsForQuoteRefresh() -> [String] {
+    if !trackedSymbols.isEmpty {
+      return Array(trackedSymbols)
+    }
+    return Array(liveQuotes.keys)
+  }
+
+  private func fetchAndMergeQuotes(for symbols: [String]) async {
+    let cleaned = symbols
+      .map { Self.normalizedSymbol($0) }
+      .filter { !$0.isEmpty }
+    guard !cleaned.isEmpty else { return }
+
+    do {
+      let batch = try await marketDataService.fetchQuoteBatch(symbols: cleaned)
+      var next = liveQuotes
+      for quote in batch.quotes {
+        next[Self.normalizedSymbol(quote.symbol)] = quote
+      }
+      liveQuotes = next
+    } catch {
+      portfolioViewModelLogger.warning(
+        "fetchAndMergeQuotes failed: \(error.localizedDescription, privacy: .public)"
+      )
     }
   }
 
@@ -205,6 +231,9 @@ final class PortfolioViewModel: ObservableObject {
         }
       }
       nextCursor = newCursor
+      let newSymbols = items.map { Self.normalizedSymbol($0.symbol) }.filter { !$0.isEmpty }
+      trackedSymbols.formUnion(newSymbols)
+      await fetchAndMergeQuotes(for: newSymbols)
     } catch {
       portfolioViewModelLogger.error("Load more failed: \(error.localizedDescription, privacy: .public)")
     }
