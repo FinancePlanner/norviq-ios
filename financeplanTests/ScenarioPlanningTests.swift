@@ -124,6 +124,9 @@ final class ScenarioPlanningTests: XCTestCase {
       ],
       percentileBands: nil, maximumDrawdown: 0.12, goalProbability: 0.74,
       expectedShortfall: 8_000,
+      endingValue: nil, portfolioChangePercent: nil, goalDelayMonths: nil,
+      requiredMonthlyContribution: nil, contributionDelta: nil, recoveryMonths: nil,
+      expenseImpactMonthly: nil,
       assumptions: .object(["distribution": .string("normal")]),
       warnings: .array([.object(["message": .string("Used benchmark proxy SPY.")])])
     )
