@@ -326,7 +326,8 @@ struct DashboardRoot: View {
               occurredOn: draft.occurredOn,
               linkedPlanItemID: nil,
               splitMode: draft.splitMode,
-              userSharePercent: draft.userSharePercent
+              userSharePercent: draft.userSharePercent,
+              receiptMetadata: draft.receiptMetadata
           )
       )
       guard didSave else {

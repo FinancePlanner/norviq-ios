@@ -329,6 +329,7 @@ struct BudgetActivityDraft: Sendable {
   var foreignAmount: Double?
   var foreignCurrency: String?
   var exchangeRate: Double?
+  var receiptMetadata: ExpenseReceiptMetadata?
 
   init(
     title: String,
@@ -341,7 +342,8 @@ struct BudgetActivityDraft: Sendable {
     userSharePercent: Double = 100,
     foreignAmount: Double? = nil,
     foreignCurrency: String? = nil,
-    exchangeRate: Double? = nil
+    exchangeRate: Double? = nil,
+    receiptMetadata: ExpenseReceiptMetadata? = nil
   ) {
     self.title = title
     self.amount = amount
@@ -354,6 +356,7 @@ struct BudgetActivityDraft: Sendable {
     self.foreignAmount = foreignAmount
     self.foreignCurrency = foreignCurrency
     self.exchangeRate = exchangeRate
+    self.receiptMetadata = receiptMetadata
   }
 }
 

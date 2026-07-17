@@ -782,7 +782,8 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
         userSharePercent: prepared.draft.userSharePercent,
         foreignAmount: prepared.draft.foreignAmount,
         foreignCurrency: prepared.draft.foreignCurrency,
-        exchangeRate: prepared.draft.exchangeRate
+        exchangeRate: prepared.draft.exchangeRate,
+        receiptMetadata: prepared.draft.receiptMetadata
       )
       let created = try await expensesService.createExpense(request: req)
       if let mapped = mapExpenseResponse(created) {
