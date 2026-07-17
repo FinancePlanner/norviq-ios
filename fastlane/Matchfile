@@ -8,5 +8,9 @@
 git_url("https://github.com/FinancePlanner/norviq-certificates.git")
 storage_mode("git")
 type("appstore")
-app_identifier(["facorreia.financeplan"])
+# Prod App Store + side-by-side TestFlight beta (separate ASC app).
+app_identifier([
+  "facorreia.financeplan",
+  "facorreia.financeplan.beta"
+])
 team_id("84X9WYBF36")

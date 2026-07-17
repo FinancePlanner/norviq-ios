@@ -5,7 +5,7 @@
 	<key>AmplitudeAPIKey</key>
 	<string>57c03f2418ee11b11a26ba7a21827187</string>
 	<key>CFBundleDisplayName</key>
-	<string>Norviq</string>
+	<string>$(APP_DISPLAY_NAME)</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -23,7 +23,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>norviqa</string>
+				<string>$(OAUTH_CALLBACK_SCHEME)</string>
 			</array>
 		</dict>
 		<dict>
@@ -50,7 +50,7 @@
 	<key>GoogleOAuthClientID</key>
 	<string>543855343463-8mhma1ss69aboaum7qetf1li2ko8mg5g.apps.googleusercontent.com</string>
 	<key>OAuthCallbackScheme</key>
-	<string>norviqa</string>
+	<string>$(OAUTH_CALLBACK_SCHEME)</string>
 	<key>PexelsAPIKey</key>
 	<string>WVDa5RXl1hx8Xw70OH94iXkSKwRvsVeOUopxx8cvvLKVouilEMVMukf2</string>
 	<key>PostHogHost</key>
