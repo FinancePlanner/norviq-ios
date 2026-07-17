@@ -67,17 +67,13 @@ final class WatchlistViewModel: ObservableObject {
       let remoteItems = try await service.fetchWatchlist(watchlistListId: selectedWatchlistListId)
       await syncWithSwiftData(remoteItems, listId: selectedWatchlistListId)
 
-      // Enrich with live quotes for prices/changes (like Portfolio)
-      let symbols = remoteItems.map { $0.symbol }
-      if !symbols.isEmpty {
-        do {
-          let batch = try await marketDataService.fetchQuoteBatch(symbols: symbols)
-          liveQuotes = Dictionary(uniqueKeysWithValues: batch.quotes.map { ($0.symbol.uppercased(), $0) })
-        } catch {
-          watchlistViewModelLogger.warning("Watchlist quote batch failed: \(error.localizedDescription)")
-          liveQuotes = [:]
-        }
-      }
+      // Keep tracked symbols so the 20s refresh still works if a batch fails.
+      trackedSymbols = Set(
+        remoteItems
+          .map { $0.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
+          .filter { !$0.isEmpty }
+      )
+      await fetchAndMergeQuotes(for: Array(trackedSymbols), replace: true)
 
       hasLoadedOnce = true
     } catch {
@@ -94,21 +90,42 @@ final class WatchlistViewModel: ObservableObject {
     }
   }
 
+  private var trackedSymbols: Set<String> = []
+
   /// Refresh only live market quotes for watchlist symbols.
   func refreshLiveQuotes() async {
     guard !isRefreshingLiveQuotes else { return }
-    let symbols = Array(liveQuotes.keys)
+    let symbols = trackedSymbols.isEmpty ? Array(liveQuotes.keys) : Array(trackedSymbols)
     guard !symbols.isEmpty else { return }
     isRefreshingLiveQuotes = true
     defer { isRefreshingLiveQuotes = false }
 
+    await fetchAndMergeQuotes(for: symbols, replace: false)
+  }
+
+  private func fetchAndMergeQuotes(for symbols: [String], replace: Bool) async {
+    let cleaned = symbols
+      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
+      .filter { !$0.isEmpty }
+    guard !cleaned.isEmpty else {
+      if replace { liveQuotes = [:] }
+      return
+    }
+
     do {
-      let batch = try await marketDataService.fetchQuoteBatch(symbols: symbols)
-      for q in batch.quotes {
-        liveQuotes[q.symbol.uppercased()] = q
+      let batch = try await marketDataService.fetchQuoteBatch(symbols: cleaned)
+      var next: [String: QuoteResponse] = replace ? [:] : liveQuotes
+      for quote in batch.quotes {
+        next[quote.symbol.uppercased()] = quote
       }
+      liveQuotes = next
     } catch {
-      watchlistViewModelLogger.warning("refreshLiveQuotes watchlist failed: \(error.localizedDescription)")
+      watchlistViewModelLogger.warning(
+        "Watchlist quote batch failed: \(error.localizedDescription, privacy: .public)"
+      )
+      if replace {
+        liveQuotes = [:]
+      }
     }
   }
 
