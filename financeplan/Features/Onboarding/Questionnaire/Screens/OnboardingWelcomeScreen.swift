@@ -11,9 +11,11 @@ struct OnboardingWelcomeScreen: View {
       Spacer(minLength: 32)
 
       Image("CerberusMarkFull")
+        .renderingMode(.template)
         .resizable()
         .scaledToFit()
         .frame(maxHeight: 220)
+        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
         .padding(.horizontal, 40)
         .padding(.bottom, 32)
         .accessibilityHidden(true)

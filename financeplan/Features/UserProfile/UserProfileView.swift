@@ -52,6 +52,7 @@ public struct UserProfileView: View {
     // Appearance State
     @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system
         .rawValue
+    @AppStorage(BrandTheme.storageKey) private var brandThemeRawValue = BrandTheme.classic.rawValue
     @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english
         .rawValue
 
@@ -375,6 +376,22 @@ public struct UserProfileView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
+            // Theme
+            Section(LocalizedStringKey("Theme")) {
+                Picker(LocalizedStringKey("Theme"), selection: $brandThemeRawValue) {
+                    ForEach(BrandTheme.allCases, id: \.self) { theme in
+                        Text(theme.title)
+                            .tag(theme.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Text(selectedBrandTheme.subtitle)
+                    .typography(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
             // Language
             Section(LocalizedStringKey("Language")) {
                 NavigationLink(value: UserProfileDestination.language) {
@@ -641,6 +658,10 @@ public struct UserProfileView: View {
 
     private var selectedAppearance: AppAppearance {
         AppAppearance.from(appAppearanceRawValue)
+    }
+
+    private var selectedBrandTheme: BrandTheme {
+        BrandTheme.from(brandThemeRawValue)
     }
 
     private var appLanguage: AppLanguage {
