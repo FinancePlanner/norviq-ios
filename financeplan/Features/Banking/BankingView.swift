@@ -10,6 +10,7 @@ struct BankingView: View {
   @InjectedObservable(\Container.billingManager) private var billingManager
 
   @State private var isPresentingLink = false
+  @State private var isPresentingGoCardless = false
   @State private var confirmingDisconnect: BankConnectionResponse?
 
   var body: some View {
@@ -38,6 +39,9 @@ struct BankingView: View {
     .refreshable { await viewModel.load() }
     .onChange(of: viewModel.pendingLinkToken) { _, token in
       isPresentingLink = token != nil
+    }
+    .sheet(isPresented: $isPresentingGoCardless) {
+      GoCardlessConnectView(viewModel: viewModel)
     }
     .sheet(isPresented: $isPresentingLink, onDismiss: { viewModel.clearPendingLinkToken() }) {
       if let token = viewModel.pendingLinkToken {
@@ -90,10 +94,17 @@ struct BankingView: View {
       if viewModel.isConnecting {
         ProgressView()
       } else {
-        Label("Connect a bank", systemImage: "building.columns")
+        Label("Connect a US bank", systemImage: "building.columns")
       }
     }
     .accessibilityIdentifier("banking.connect")
+
+    Button {
+      isPresentingGoCardless = true
+    } label: {
+      Label("Connect a European bank", systemImage: "building.columns.circle")
+    }
+    .accessibilityIdentifier("banking.connect.eu")
   }
 
   private func connectionRow(_ connection: BankConnectionResponse) -> some View {

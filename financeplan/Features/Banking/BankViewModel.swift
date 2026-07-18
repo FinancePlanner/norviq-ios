@@ -15,6 +15,9 @@ final class BankViewModel {
   /// Link token fetched from the backend, consumed by Plaid Link.
   private(set) var pendingLinkToken: String?
 
+  private(set) var institutions: [BankInstitutionResponse] = []
+  private(set) var isLoadingInstitutions = false
+
   private let service: any BankServicing
 
   init(service: any BankServicing = Container.shared.bankService()) {
@@ -53,6 +56,30 @@ final class BankViewModel {
 
   func clearPendingLinkToken() {
     pendingLinkToken = nil
+  }
+
+  func loadInstitutions(country: String) async {
+    isLoadingInstitutions = true
+    defer { isLoadingInstitutions = false }
+    do {
+      institutions = try await service.listInstitutions(country: country)
+      errorMessage = nil
+    } catch {
+      errorMessage = describe(error)
+      institutions = []
+    }
+  }
+
+  @MainActor
+  func connectGoCardless(institutionId: String) async {
+    isConnecting = true
+    defer { isConnecting = false }
+    do {
+      try await service.connectGoCardless(institutionId: institutionId)
+      await load()
+    } catch {
+      errorMessage = describe(error)
+    }
   }
 
   /// Completes the Plaid Link flow by exchanging the public token.
