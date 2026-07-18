@@ -155,14 +155,18 @@ public struct BaseHTTPClient: Sendable {
     // MARK: - Request Building
     
     public func makeURLRequest<E: Endpoint>(for endpoint: E) async throws -> URLRequest where E.Response: Codable {
-        let normalizedPath = endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        let base = baseURL.appendingPathComponent(normalizedPath)
+        let requestPath = Self.splitPathAndQuery(endpoint.path)
+        let base = baseURL.appendingPathComponent(requestPath.path)
         let parameters = try endpoint.asParameters()
         
         var urlComponents: URLComponents?
-        if endpoint.method == .get, !parameters.isEmpty {
+        if !requestPath.queryItems.isEmpty || (endpoint.method == .get && !parameters.isEmpty) {
             urlComponents = URLComponents(url: base, resolvingAgainstBaseURL: false)
-            urlComponents?.queryItems = parameters.map { URLQueryItem(name: $0.key, value: String(describing: $0.value)) }
+            var queryItems = requestPath.queryItems
+            if endpoint.method == .get {
+                queryItems.append(contentsOf: parameters.map { URLQueryItem(name: $0.key, value: String(describing: $0.value)) })
+            }
+            urlComponents?.queryItems = queryItems.isEmpty ? nil : queryItems
         }
         let finalURL = urlComponents?.url ?? base
         
@@ -189,6 +193,19 @@ public struct BaseHTTPClient: Sendable {
         requestLogger(endpoint.path, endpoint.method, parameters)
         
         return request
+    }
+
+    private static func splitPathAndQuery(_ rawPath: String) -> (path: String, queryItems: [URLQueryItem]) {
+        let normalizedPath = rawPath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard let queryStart = normalizedPath.firstIndex(of: "?") else {
+            return (normalizedPath, [])
+        }
+
+        let path = String(normalizedPath[..<queryStart])
+        let query = String(normalizedPath[normalizedPath.index(after: queryStart)...])
+        var components = URLComponents()
+        components.query = query
+        return (path, components.queryItems ?? [])
     }
     
     // MARK: - Network Execution
