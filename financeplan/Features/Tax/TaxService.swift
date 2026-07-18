@@ -11,6 +11,12 @@ protocol TaxServiceProtocol: Sendable {
   func fundAnnualInput(accountId: String, instrumentId: String, calculationYear: Int) async throws -> TaxFundAdvanceLumpSumResponse
   func createScenario(_ request: TaxScenarioRequest) async throws -> TaxScenarioResponse
   func createActionPlan(_ request: TaxActionPlanRequest) async throws -> TaxActionPlanResponse
+  func actionPlans() async throws -> [TaxActionPlanResponse]
+  func transitionActionPlan(id: String, request: TaxActionPlanTransitionRequest) async throws -> TaxActionPlanResponse
+  func createLocationScenario(_ request: TaxLocationScenarioRequest) async throws -> TaxLocationScenarioResponse
+  func createPlacementPlan(_ request: TaxPlacementPlanRequest) async throws -> TaxActionPlanResponse
+  func dismissOpportunity(id: String, jurisdiction: TaxJurisdiction, taxYear: Int) async throws
+  func restoreOpportunity(id: String, taxYear: Int) async throws
   func notificationPreferences() async throws -> TaxNotificationPreferences
   func saveNotificationPreferences(_ request: TaxNotificationPreferences) async throws -> TaxNotificationPreferences
   func reports() async throws -> [TaxReportResponse]
@@ -40,7 +46,7 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
       URLQueryItem(name: "taxYear", value: String(taxYear))
     ]
     guard let url = components?.url else { throw URLError(.badURL) }
-    return try await send(url: url, method: "GET", body: Optional<Data>.none)
+    return try await send(url: url, method: "GET", body: Data?.none)
   }
 
   func profileContext(jurisdiction: TaxJurisdiction, taxYear: Int) async throws -> TaxProfileContextResponse {
@@ -53,7 +59,7 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
       URLQueryItem(name: "taxYear", value: String(taxYear))
     ]
     guard let url = components?.url else { throw URLError(.badURL) }
-    return try await send(url: url, method: "GET", body: Optional<Data>.none)
+    return try await send(url: url, method: "GET", body: Data?.none)
   }
 
   func saveProfile(_ request: TaxProfileRequest) async throws -> TaxProfileResponse {
@@ -67,7 +73,9 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
   func saveMarketAdmission(
     instrumentId: String,
     status: TaxMarketAdmissionStatus
-  ) async throws -> TaxInstrumentMarketOption {
+  )
+    async throws -> TaxInstrumentMarketOption
+  {
     struct Request: Encodable { let status: TaxMarketAdmissionStatus }
     let url = environment.current.apiBaseUrl
       .appending(path: "v1/tax/instruments/\(instrumentId)/market-admission")
@@ -82,7 +90,9 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
   func saveFundClassification(
     instrumentId: String,
     classification: TaxFundClassification
-  ) async throws -> TaxInstrumentMarketOption {
+  )
+    async throws -> TaxInstrumentMarketOption
+  {
     let url = environment.current.apiBaseUrl
       .appending(path: "v1/tax/instruments/\(instrumentId)/fund-classification")
     return try await send(
@@ -104,7 +114,9 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     accountId: String,
     instrumentId: String,
     calculationYear: Int
-  ) async throws -> TaxFundAdvanceLumpSumResponse {
+  )
+    async throws -> TaxFundAdvanceLumpSumResponse
+  {
     var components = URLComponents(
       url: environment.current.apiBaseUrl.appending(path: "v1/tax/funds/annual-inputs"),
       resolvingAgainstBaseURL: false
@@ -115,7 +127,7 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
       URLQueryItem(name: "calculationYear", value: String(calculationYear))
     ]
     guard let url = components?.url else { throw URLError(.badURL) }
-    return try await send(url: url, method: "GET", body: Optional<Data>.none)
+    return try await send(url: url, method: "GET", body: Data?.none)
   }
 
   func createScenario(_ request: TaxScenarioRequest) async throws -> TaxScenarioResponse {
@@ -126,12 +138,64 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     try await send(path: "v1/tax/action-plans", body: JSONEncoder().encode(request))
   }
 
+  func actionPlans() async throws -> [TaxActionPlanResponse] {
+    try await send(
+      url: environment.current.apiBaseUrl.appending(path: "v1/tax/action-plans"),
+      method: "GET",
+      body: nil
+    )
+  }
+
+  func transitionActionPlan(
+    id: String,
+    request: TaxActionPlanTransitionRequest
+  )
+    async throws -> TaxActionPlanResponse
+  {
+    try await send(
+      url: environment.current.apiBaseUrl.appending(path: "v1/tax/action-plans/\(id)"),
+      method: "PATCH",
+      body: JSONEncoder().encode(request)
+    )
+  }
+
+  func createLocationScenario(_ request: TaxLocationScenarioRequest) async throws -> TaxLocationScenarioResponse {
+    try await send(path: "v1/tax/location-scenarios", body: JSONEncoder().encode(request))
+  }
+
+  func createPlacementPlan(_ request: TaxPlacementPlanRequest) async throws -> TaxActionPlanResponse {
+    try await send(path: "v1/tax/placement-plans", body: JSONEncoder().encode(request))
+  }
+
+  func dismissOpportunity(id: String, jurisdiction: TaxJurisdiction, taxYear: Int) async throws {
+    try await sendNoContent(
+      path: "v1/tax/opportunities/\(id)/dismiss",
+      method: "POST",
+      queryItems: [
+        URLQueryItem(name: "jurisdiction", value: jurisdiction.rawValue),
+        URLQueryItem(name: "taxYear", value: String(taxYear))
+      ]
+    )
+  }
+
+  func restoreOpportunity(id: String, taxYear: Int) async throws {
+    try await sendNoContent(
+      path: "v1/tax/opportunities/\(id)/dismiss",
+      method: "DELETE",
+      queryItems: [URLQueryItem(name: "taxYear", value: String(taxYear))]
+    )
+  }
+
   func notificationPreferences() async throws -> TaxNotificationPreferences {
     try await send(url: environment.current.apiBaseUrl.appending(path: "v1/tax/notifications"), method: "GET", body: nil)
   }
 
   func saveNotificationPreferences(_ request: TaxNotificationPreferences) async throws -> TaxNotificationPreferences {
-    try await send(url: environment.current.apiBaseUrl.appending(path: "v1/tax/notifications"), method: "PUT", body: JSONEncoder().encode(request))
+    try await send(
+      url: environment.current.apiBaseUrl.appending(path: "v1/tax/notifications"),
+      method: "PUT",
+      body: JSONEncoder().encode(request)
+    )
   }
 
   func reports() async throws -> [TaxReportResponse] {
@@ -164,7 +228,9 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
   func lossCarryforwards(
     jurisdiction: TaxJurisdiction,
     taxYear: Int
-  ) async throws -> TaxLossCarryforwardLedgerResponse {
+  )
+    async throws -> TaxLossCarryforwardLedgerResponse
+  {
     var components = URLComponents(
       url: environment.current.apiBaseUrl.appending(path: "v1/tax/loss-carryforwards"),
       resolvingAgainstBaseURL: false
@@ -181,19 +247,46 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     try await send(url: environment.current.apiBaseUrl.appending(path: path), method: "POST", body: body)
   }
 
+  private func sendNoContent(
+    path: String,
+    method: String,
+    queryItems: [URLQueryItem]
+  )
+    async throws
+  {
+    var components = URLComponents(
+      url: environment.current.apiBaseUrl.appending(path: path),
+      resolvingAgainstBaseURL: false
+    )
+    components?.queryItems = queryItems
+    guard let url = components?.url else { throw URLError(.badURL) }
+    guard let token = try await auth.validAccessToken() else { throw AuthSessionError.notAuthenticated }
+    var request = URLRequest(url: url)
+    request.httpMethod = method
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    let (_, response) = try await session.data(for: request)
+    guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+      throw URLError(.badServerResponse)
+    }
+  }
+
   private func send<Response: Decodable>(
     url: URL,
     method: String,
     body: Data?,
     additionalHeaders: [String: String] = [:]
-  ) async throws -> Response {
+  )
+    async throws -> Response
+  {
     guard let token = try await auth.validAccessToken() else { throw AuthSessionError.notAuthenticated }
     var request = URLRequest(url: url)
     request.httpMethod = method
     request.httpBody = body
     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     request.setValue("application/json", forHTTPHeaderField: "Accept")
-    if body != nil { request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
+    if body != nil {
+      request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    }
     for (name, value) in additionalHeaders {
       request.setValue(value, forHTTPHeaderField: name)
     }
