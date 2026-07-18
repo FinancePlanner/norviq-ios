@@ -61,6 +61,14 @@ final class BankHTTPClient: Sendable {
     try await client.call(CreateBankLinkSessionEndpoint(), errorType: Error.self)
   }
 
+  func listInstitutions(country: String) async throws -> [BankInstitutionResponse] {
+    try await client.call(ListBankInstitutionsEndpoint(country: country), errorType: Error.self)
+  }
+
+  func createHostedLink(institutionId: String, redirectURI: String) async throws -> BankLinkSessionResponse {
+    try await client.call(CreateBankHostedLinkEndpoint(institutionId: institutionId, redirectURI: redirectURI), errorType: Error.self)
+  }
+
   func exchange(publicToken: String, institutionId: String?, institutionName: String?) async throws -> BankConnectionResponse {
     try await client.call(
       ExchangeBankConnectionEndpoint(publicToken: publicToken, institutionId: institutionId, institutionName: institutionName),

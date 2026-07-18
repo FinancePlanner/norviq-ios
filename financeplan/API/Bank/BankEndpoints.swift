@@ -34,6 +34,33 @@ struct ExchangeBankConnectionEndpoint: Endpoint {
 /// Placeholder response for endpoints that return 204 No Content.
 struct EmptyBankResponse: Codable, Sendable {}
 
+struct ListBankInstitutionsEndpoint: Endpoint {
+  typealias Response = [BankInstitutionResponse]
+
+  let country: String
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/banks/institutions?provider=gocardless&country=\(country)" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+struct CreateBankHostedLinkEndpoint: Endpoint {
+  typealias Response = BankLinkSessionResponse
+
+  let institutionId: String
+  let redirectURI: String
+
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/banks/link-session?provider=gocardless" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    ["institutionId": institutionId, "redirectURI": redirectURI]
+  }
+}
+
 struct DisconnectBankConnectionEndpoint: Endpoint {
   typealias Response = EmptyBankResponse
 
