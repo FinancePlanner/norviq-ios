@@ -28,6 +28,17 @@ struct IntegrationsView: View {
       } footer: {
         Text("Norviq reads your holdings only. It can never place trades or move funds.")
       }
+
+      Section {
+        NavigationLink {
+          BankingView()
+        } label: {
+          Label("Bank Sync", systemImage: "building.columns")
+        }
+        .accessibilityIdentifier("integrations.bankSync")
+      } footer: {
+        Text("Connect a bank to review transactions and turn them into expenses.")
+      }
     }
     .navigationTitle("Integrations")
     .navigationBarTitleDisplayMode(.inline)
