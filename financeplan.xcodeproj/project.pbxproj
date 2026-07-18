@@ -23,6 +23,7 @@
 		70B001A13C5E11AA00F01001 /* StockPlanShared in Frameworks */ = {isa = PBXBuildFile; productRef = 70B001A23C5E11AA00F01001 /* StockPlanShared */; };
 		70B002A13C5E11AA00F02001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 70B002A23C5E11AA00F02001 /* RevenueCat */; };
 		70B002A33C5E11AA00F02001 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 70B002A43C5E11AA00F02001 /* RevenueCatUI */; };
+		B14D0000000000000000A001 /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = B14D0000000000000000A002 /* LinkKit */; };
 		A0B003A13C5E11AA00F03001 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = A0B003A23C5E11AA00F03001 /* PostHog */; };
 /* End PBXBuildFile section */
 
@@ -88,6 +89,7 @@
 				60543DEA2F48D35700B67ADA /* EntityStore in Frameworks */,
 				70B002A13C5E11AA00F02001 /* RevenueCat in Frameworks */,
 				70B002A33C5E11AA00F02001 /* RevenueCatUI in Frameworks */,
+				B14D0000000000000000A001 /* LinkKit in Frameworks */,
 				70B001A13C5E11AA00F01001 /* StockPlanShared in Frameworks */,
 				A0B003A13C5E11AA00F03001 /* PostHog in Frameworks */,
 			);
@@ -180,6 +182,7 @@
 				60543E082F48D90000B67ADA /* SwiftyCrop */,
 				70B002A23C5E11AA00F02001 /* RevenueCat */,
 				70B002A43C5E11AA00F02001 /* RevenueCatUI */,
+				B14D0000000000000000A002 /* LinkKit */,
 				70B001A23C5E11AA00F01001 /* StockPlanShared */,
 				605462E32F9B5F3C001A3351 /* AmplitudeUnified */,
 				A0B003A23C5E11AA00F03001 /* PostHog */,
@@ -280,6 +283,7 @@
 				60543E282F48D90000B67ADA /* XCRemoteSwiftPackageReference "SwiftyCrop" */,
 				70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "norviq-shared" */,
 				70B002A53C5E11AA00F02001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				B14D0000000000000000A003 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */,
 				60543D592F48C8B400B67ADA /* XCRemoteSwiftPackageReference "AnyAPI" */,
 				60543DE82F48D35700B67ADA /* XCRemoteSwiftPackageReference "EntityStore" */,
 				602AAA712F8810D2004485ED /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
@@ -950,6 +954,14 @@
 				minimumVersion = 5.0.0;
 			};
 		};
+		B14D0000000000000000A003 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/plaid/plaid-link-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
 		A0B003A33C5E11AA00F03001 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/PostHog/posthog-ios";
@@ -1040,6 +1052,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 70B002A53C5E11AA00F02001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
 			productName = RevenueCatUI;
+		};
+		B14D0000000000000000A002 /* LinkKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B14D0000000000000000A003 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */;
+			productName = LinkKit;
 		};
 		A0B003A23C5E11AA00F03001 /* PostHog */ = {
 			isa = XCSwiftPackageProductDependency;
