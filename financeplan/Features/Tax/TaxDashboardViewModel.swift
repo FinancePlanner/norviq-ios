@@ -50,11 +50,16 @@ final class TaxDashboardViewModel {
 
   func simulate(_ opportunity: TaxOpportunityResponse, replacement: TaxReplacementCandidate?) async {
     do {
-      scenario = try await service.createScenario(.init(
-        taxYear: Calendar.current.component(.year, from: Date()),
-        opportunityIds: [opportunity.id],
-        plannedReplacementInstrumentIds: replacement.map { [opportunity.id: $0.instrumentId] } ?? [:]
-      ))
+      let taxYear = Calendar.current.component(.year, from: Date())
+      scenario = try await service.createScenario(
+        .init(
+          taxYear: taxYear,
+          opportunityIds: [opportunity.id],
+          plannedReplacementInstrumentIds: replacement.map { [opportunity.id: $0.instrumentId] } ?? [:]
+        ),
+        jurisdiction: selectedJurisdiction,
+        taxYear: taxYear
+      )
     } catch { errorMessage = "The scenario could not be created." }
   }
 
@@ -81,10 +86,15 @@ final class TaxDashboardViewModel {
 
   func simulateLocation(_ opportunity: TaxLocationOpportunity) async {
     do {
-      locationScenario = try await service.createLocationScenario(.init(
-        taxYear: Calendar.current.component(.year, from: Date()),
-        opportunityIds: [opportunity.id]
-      ))
+      let taxYear = Calendar.current.component(.year, from: Date())
+      locationScenario = try await service.createLocationScenario(
+        .init(
+          taxYear: taxYear,
+          opportunityIds: [opportunity.id]
+        ),
+        jurisdiction: selectedJurisdiction,
+        taxYear: taxYear
+      )
     } catch { errorMessage = "The asset-location scenario could not be created." }
   }
 

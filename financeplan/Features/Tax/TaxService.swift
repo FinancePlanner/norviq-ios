@@ -9,11 +9,19 @@ protocol TaxServiceProtocol: Sendable {
   func saveFundClassification(instrumentId: String, classification: TaxFundClassification) async throws -> TaxInstrumentMarketOption
   func saveFundAnnualInput(_ request: TaxFundAnnualInputRequest) async throws -> TaxFundAdvanceLumpSumResponse
   func fundAnnualInput(accountId: String, instrumentId: String, calculationYear: Int) async throws -> TaxFundAdvanceLumpSumResponse
-  func createScenario(_ request: TaxScenarioRequest) async throws -> TaxScenarioResponse
+  func createScenario(
+    _ request: TaxScenarioRequest,
+    jurisdiction: TaxJurisdiction,
+    taxYear: Int
+  ) async throws -> TaxScenarioResponse
   func createActionPlan(_ request: TaxActionPlanRequest) async throws -> TaxActionPlanResponse
   func actionPlans() async throws -> [TaxActionPlanResponse]
   func transitionActionPlan(id: String, request: TaxActionPlanTransitionRequest) async throws -> TaxActionPlanResponse
-  func createLocationScenario(_ request: TaxLocationScenarioRequest) async throws -> TaxLocationScenarioResponse
+  func createLocationScenario(
+    _ request: TaxLocationScenarioRequest,
+    jurisdiction: TaxJurisdiction,
+    taxYear: Int
+  ) async throws -> TaxLocationScenarioResponse
   func createPlacementPlan(_ request: TaxPlacementPlanRequest) async throws -> TaxActionPlanResponse
   func dismissOpportunity(id: String, jurisdiction: TaxJurisdiction, taxYear: Int) async throws
   func restoreOpportunity(id: String, taxYear: Int) async throws
@@ -130,8 +138,21 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     return try await send(url: url, method: "GET", body: Data?.none)
   }
 
-  func createScenario(_ request: TaxScenarioRequest) async throws -> TaxScenarioResponse {
-    try await send(path: "v1/tax/scenarios", body: JSONEncoder().encode(request))
+  func createScenario(
+    _ request: TaxScenarioRequest,
+    jurisdiction: TaxJurisdiction,
+    taxYear: Int
+  )
+    async throws -> TaxScenarioResponse
+  {
+    try await send(
+      path: "v1/tax/scenarios",
+      body: JSONEncoder().encode(request),
+      queryItems: [
+        URLQueryItem(name: "jurisdiction", value: jurisdiction.rawValue),
+        URLQueryItem(name: "taxYear", value: String(taxYear))
+      ]
+    )
   }
 
   func createActionPlan(_ request: TaxActionPlanRequest) async throws -> TaxActionPlanResponse {
@@ -159,8 +180,21 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     )
   }
 
-  func createLocationScenario(_ request: TaxLocationScenarioRequest) async throws -> TaxLocationScenarioResponse {
-    try await send(path: "v1/tax/location-scenarios", body: JSONEncoder().encode(request))
+  func createLocationScenario(
+    _ request: TaxLocationScenarioRequest,
+    jurisdiction: TaxJurisdiction,
+    taxYear: Int
+  )
+    async throws -> TaxLocationScenarioResponse
+  {
+    try await send(
+      path: "v1/tax/location-scenarios",
+      body: JSONEncoder().encode(request),
+      queryItems: [
+        URLQueryItem(name: "jurisdiction", value: jurisdiction.rawValue),
+        URLQueryItem(name: "taxYear", value: String(taxYear))
+      ]
+    )
   }
 
   func createPlacementPlan(_ request: TaxPlacementPlanRequest) async throws -> TaxActionPlanResponse {
@@ -245,6 +279,22 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
 
   private func send<Response: Decodable>(path: String, body: Data) async throws -> Response {
     try await send(url: environment.current.apiBaseUrl.appending(path: path), method: "POST", body: body)
+  }
+
+  private func send<Response: Decodable>(
+    path: String,
+    body: Data,
+    queryItems: [URLQueryItem]
+  )
+    async throws -> Response
+  {
+    var components = URLComponents(
+      url: environment.current.apiBaseUrl.appending(path: path),
+      resolvingAgainstBaseURL: false
+    )
+    components?.queryItems = queryItems
+    guard let url = components?.url else { throw URLError(.badURL) }
+    return try await send(url: url, method: "POST", body: body)
   }
 
   private func sendNoContent(
