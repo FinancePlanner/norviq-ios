@@ -386,4 +386,49 @@ final class AuthHTTPClientTests: XCTestCase {
 
     XCTAssertEqual(response, expected)
   }
+
+  func testBankInstitutionsRequest_PreservesPathQueryItems() async throws {
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
+    let client = BaseHTTPClient(baseURL: baseURL)
+
+    let request = try await client.makeURLRequest(for: ListBankInstitutionsEndpoint(country: "PT"))
+
+    XCTAssertEqual(request.httpMethod, "GET")
+    XCTAssertEqual(request.url?.path, "/v1/banks/institutions")
+    XCTAssertEqual(request.url?.query, "provider=gocardless&country=PT")
+    XCTAssertNil(request.httpBody)
+  }
+
+  func testBankHostedLinkRequest_PreservesProviderQueryAndJSONBody() async throws {
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
+    let client = BaseHTTPClient(baseURL: baseURL)
+
+    let request = try await client.makeURLRequest(
+      for: CreateBankHostedLinkEndpoint(
+        institutionId: "bank-123",
+        redirectURI: "financeplan://bank-callback"
+      )
+    )
+
+    XCTAssertEqual(request.httpMethod, "POST")
+    XCTAssertEqual(request.url?.path, "/v1/banks/link-session")
+    XCTAssertEqual(request.url?.query, "provider=gocardless")
+
+    let body = try XCTUnwrap(request.httpBody)
+    let payload = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: String])
+    XCTAssertEqual(payload["institutionId"], "bank-123")
+    XCTAssertEqual(payload["redirectURI"], "financeplan://bank-callback")
+  }
+
+  func testBankTransactionsRequest_PreservesStatusQueryItem() async throws {
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
+    let client = BaseHTTPClient(baseURL: baseURL)
+
+    let request = try await client.makeURLRequest(for: ListBankTransactionsEndpoint(status: "suggested"))
+
+    XCTAssertEqual(request.httpMethod, "GET")
+    XCTAssertEqual(request.url?.path, "/v1/banks/transactions")
+    XCTAssertEqual(request.url?.query, "status=suggested")
+    XCTAssertNil(request.httpBody)
+  }
 }
