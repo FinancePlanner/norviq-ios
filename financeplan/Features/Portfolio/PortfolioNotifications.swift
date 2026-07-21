@@ -19,4 +19,5 @@ extension Notification.Name {
   static let openPortfolioFromPushNotification = Notification.Name("openPortfolioFromPushNotification")
   static let openTaxFromPushNotification = Notification.Name("openTaxFromPushNotification")
   static let openBudgetFromPushNotification = Notification.Name("openBudgetFromPushNotification")
+  static let openThesisWatchFromPushNotification = Notification.Name("openThesisWatchFromPushNotification")
 }

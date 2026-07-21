@@ -14,6 +14,7 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     case watchlistScreen = "watchlist_screen"
     case rebalancing
     case budget
+    case thesisWatch = "thesis_watch"
   }
 
   let kind: Kind

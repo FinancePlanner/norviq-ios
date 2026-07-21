@@ -93,3 +93,68 @@ struct RecordNewsViewEndpoint: Endpoint {
         return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
     }
 }
+
+struct GetThesisWatchEndpoint: Endpoint {
+    typealias Response = ThesisWatchFeedResponse
+    let scope: ThesisWatchScope
+    let sector: String?
+    let cursor: String?
+    let limit: Int
+
+    var method: HTTPMethod { .get }
+    var path: String { "/v1/news/thesis-watch" }
+    var decoder: JSONDecoder { .stockPlanShared }
+
+    func asParameters() throws -> Parameters {
+        var parameters: Parameters = ["scope": scope.rawValue, "limit": String(limit)]
+        if let sector { parameters["sector"] = sector }
+        if let cursor { parameters["cursor"] = cursor }
+        return parameters
+    }
+}
+
+struct ThesisWatchFeedbackEndpoint: Endpoint {
+    typealias Response = EmptyAPIResponse
+    let storyId: String
+    let signal: ThesisWatchFeedbackSignal
+
+    var method: HTTPMethod { .post }
+    var path: String { "/v1/news/thesis-watch/\(storyId)/feedback" }
+    var decoder: JSONDecoder { .stockPlanShared }
+
+    func asParameters() throws -> Parameters { ["signal": signal.rawValue] }
+}
+
+struct MarkThesisWatchReadEndpoint: Endpoint {
+    typealias Response = EmptyAPIResponse
+    let storyId: String
+
+    var method: HTTPMethod { .post }
+    var path: String { "/v1/news/thesis-watch/\(storyId)/view" }
+    var decoder: JSONDecoder { .stockPlanShared }
+
+    func asParameters() throws -> Parameters { [:] }
+}
+
+struct GetThesisWatchNotificationPreferencesEndpoint: Endpoint {
+    typealias Response = ThesisWatchNotificationPreferences
+
+    var method: HTTPMethod { .get }
+    var path: String { "/v1/news/thesis-watch/notifications" }
+    var decoder: JSONDecoder { .stockPlanShared }
+
+    func asParameters() throws -> Parameters { [:] }
+}
+
+struct UpdateThesisWatchNotificationPreferencesEndpoint: Endpoint {
+    typealias Response = ThesisWatchNotificationPreferences
+    let payload: UpdateThesisWatchNotificationPreferences
+
+    var method: HTTPMethod { .put }
+    var path: String { "/v1/news/thesis-watch/notifications" }
+    var decoder: JSONDecoder { .stockPlanShared }
+
+    func asParameters() throws -> Parameters {
+        ["enabled": payload.enabled, "timezone": payload.timezone]
+    }
+}
