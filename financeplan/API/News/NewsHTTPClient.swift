@@ -81,4 +81,33 @@ final class NewsHTTPClient: Sendable {
     func recordNewsView(payload: NewsViewPayload) async throws {
         try await client.callWithoutResponse(RecordNewsViewEndpoint(payload: payload), errorType: Error.self)
     }
+
+    func thesisWatch(scope: ThesisWatchScope, sector: String?, cursor: String?, limit: Int) async throws -> ThesisWatchFeedResponse {
+        try await client.call(
+            GetThesisWatchEndpoint(scope: scope, sector: sector, cursor: cursor, limit: limit),
+            errorType: Error.self
+        )
+    }
+
+    func sendThesisWatchFeedback(storyId: String, signal: ThesisWatchFeedbackSignal) async throws {
+        try await client.callWithoutResponse(
+            ThesisWatchFeedbackEndpoint(storyId: storyId, signal: signal),
+            errorType: Error.self
+        )
+    }
+
+    func markThesisWatchRead(storyId: String) async throws {
+        try await client.callWithoutResponse(MarkThesisWatchReadEndpoint(storyId: storyId), errorType: Error.self)
+    }
+
+    func thesisWatchNotificationPreferences() async throws -> ThesisWatchNotificationPreferences {
+        try await client.call(GetThesisWatchNotificationPreferencesEndpoint(), errorType: Error.self)
+    }
+
+    func updateThesisWatchNotificationPreferences(enabled: Bool, timezone: String) async throws -> ThesisWatchNotificationPreferences {
+        try await client.call(
+            UpdateThesisWatchNotificationPreferencesEndpoint(payload: .init(enabled: enabled, timezone: timezone)),
+            errorType: Error.self
+        )
+    }
 }

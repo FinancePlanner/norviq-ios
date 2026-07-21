@@ -36,6 +36,7 @@ struct PortfolioScreen: View {
   @State private var isPaywallPresented = false
   @State private var isEarningsCalendarPresented = false
   @State private var isSectorGainsPresented = false
+  @State private var isThesisWatchPresented = false
   @State private var selectedTradingSymbol: String?
 
   private let quoteRefreshTimer = Timer.publish(every: 20, on: .main, in: .common).autoconnect()
@@ -241,6 +242,11 @@ struct PortfolioScreen: View {
         SectorGainsScreen()
       }
     }
+    .sheet(isPresented: $isThesisWatchPresented) {
+      NavigationStack {
+        MarketNewsScreen()
+      }
+    }
     .sheet(
       isPresented: Binding(
         get: { selectedTradingSymbol != nil },
@@ -272,6 +278,9 @@ struct PortfolioScreen: View {
         symbol.map { "\($0) was updated elsewhere — refreshed your portfolio." }
           ?? "Position was updated elsewhere — refreshed your portfolio."
       )
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .openThesisWatchFromPushNotification)) { _ in
+      isThesisWatchPresented = true
     }
     .appSensoryFeedback(destructive: destructiveFeedbackTrigger)
   }
@@ -390,6 +399,29 @@ struct PortfolioScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("portfolio.earningsCalendarLink")
+
+        Button {
+          isThesisWatchPresented = true
+        } label: {
+          HStack {
+            Image(systemName: "newspaper.fill")
+              .font(.title3)
+            VStack(alignment: .leading, spacing: 2) {
+              Text("Thesis Watch")
+                .typography(.headline, weight: .semibold)
+              Text("News ranked by holdings, exposure & thesis")
+                .typography(.nano)
+                .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+              .foregroundStyle(.secondary)
+          }
+          .padding()
+          .appGlassEffect(.rect(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("portfolio.thesisWatchLink")
 
         Button {
           if billingManager.isPro {

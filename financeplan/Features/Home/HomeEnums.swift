@@ -40,9 +40,9 @@ enum PortfolioSegment: String, CaseIterable, Identifiable {
 
   var isProOnly: Bool {
     switch self {
-    case .allocation, .earnings, .news:
+    case .allocation, .earnings:
       return true
-    case .holdings, .watchlist:
+    case .holdings, .watchlist, .news:
       return false
     }
   }

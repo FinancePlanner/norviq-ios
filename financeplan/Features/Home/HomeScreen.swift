@@ -110,6 +110,9 @@ struct HomeScreen: View {
       selectedTab = .expenses
       Task { await budgetPlannerViewModel.load(force: true) }
     }
+    .onReceive(NotificationCenter.default.publisher(for: .openThesisWatchFromPushNotification)) { _ in
+      selectedTab = .portfolio
+    }
   }
 
   private var settingsSheet: some View {

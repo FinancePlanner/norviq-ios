@@ -393,6 +393,13 @@ public struct ContentView: View {
         object: nil,
         userInfo: ["snapshot_id": route.snapshotID ?? "", "scope": route.budgetScope ?? ""]
       )
+    case .thesisWatch:
+      Self.pushLogger.info("push.analytics routed_success destination=thesis_watch")
+      NotificationCenter.default.post(
+        name: .openThesisWatchFromPushNotification,
+        object: nil,
+        userInfo: ["story_id": route.eventID ?? ""]
+      )
     }
   }
 
