@@ -200,6 +200,30 @@ final class CsvImportFlowViewModel: ObservableObject {
   }
 
   @discardableResult
+  func connectIBKRCredentials(token: String, queryId: String) async -> Bool {
+    guard !isConnectingBroker else { return false }
+    isConnectingBroker = true
+    errorMessage = nil
+    brokerStatusMessage = nil
+    defer { isConnectingBroker = false }
+
+    do {
+      _ = try await brokerService.connectIBKRCredentials(
+        token: token,
+        queryId: queryId,
+        portfolioListId: portfolioListId
+      )
+      brokerStatusMessage = "Connected IBKR Web Service."
+      await loadProviders(force: true)
+      return true
+    } catch {
+      brokerStatusMessage = nil
+      errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+      return false
+    }
+  }
+
+  @discardableResult
   func syncIBKRConnection() async -> Bool {
     guard !isSyncingBroker else { return false }
     isSyncingBroker = true

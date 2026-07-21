@@ -9,6 +9,9 @@ struct PortfolioCSVImportSheet: View {
   @Environment(\.dismiss) private var dismiss
   @StateObject private var viewModel: CsvImportFlowViewModel
   @State private var isImporterPresented = false
+  @State private var isPresentingCredentials = false
+  @State private var tokenDraft = ""
+  @State private var queryIdDraft = ""
 
   let onImportCompleted: @MainActor () async -> Void
 
@@ -194,6 +197,9 @@ struct PortfolioCSVImportSheet: View {
         Text(brokerSubtitle)
           .font(.subheadline)
           .foregroundStyle(.secondary)
+        Text("Under development — statement sync is not live yet.")
+          .font(.caption)
+          .foregroundStyle(.orange)
       }
 
       if viewModel.isLoadingProviders {
@@ -205,7 +211,6 @@ struct PortfolioCSVImportSheet: View {
           Task {
             let didSync = await viewModel.syncIBKRConnection()
             if didSync {
-              // PostHog: Track IBKR broker sync
               PostHogSDK.shared.capture("broker_synced", properties: [
                 "provider": "ibkr",
               ])
@@ -219,13 +224,13 @@ struct PortfolioCSVImportSheet: View {
             Text("Sync Now")
           }
         }
+        .disabled(true)
         .accessibilityIdentifier("portfolioBroker.sync")
 
         Button(role: .destructive) {
           Task {
             let result = await viewModel.disconnectIBKRConnection()
             if result {
-              // PostHog: Track IBKR broker disconnect
               PostHogSDK.shared.capture("broker_disconnected", properties: [
                 "provider": "ibkr",
               ])
@@ -241,16 +246,9 @@ struct PortfolioCSVImportSheet: View {
         .accessibilityIdentifier("portfolioBroker.disconnect")
       } else {
         Button {
-          Task {
-            let didConnect = await viewModel.connectIBKR()
-            if didConnect {
-              // PostHog: Track IBKR broker connection
-              PostHogSDK.shared.capture("broker_connected", properties: [
-                "provider": "ibkr",
-              ])
-              await onImportCompleted()
-            }
-          }
+          tokenDraft = ""
+          queryIdDraft = ""
+          isPresentingCredentials = true
         } label: {
           if viewModel.isConnectingBroker {
             ProgressView()
@@ -258,8 +256,56 @@ struct PortfolioCSVImportSheet: View {
             Text("Connect IBKR")
           }
         }
+        .disabled(true)
         .accessibilityIdentifier("portfolioBroker.connect")
       }
+    }
+    .sheet(isPresented: $isPresentingCredentials) {
+      NavigationStack {
+        Form {
+          Section {
+            SecureField("Token", text: $tokenDraft)
+              .textInputAutocapitalization(.never)
+              .autocorrectionDisabled()
+            TextField("Query ID", text: $queryIdDraft)
+              .textInputAutocapitalization(.never)
+              .autocorrectionDisabled()
+          } footer: {
+            Text("Paste the IBKR Norviq Web Service token and query ID.")
+          }
+        }
+        .navigationTitle("Connect IBKR")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+          ToolbarItem(placement: .cancellationAction) {
+            Button("Cancel") { isPresentingCredentials = false }
+          }
+          ToolbarItem(placement: .confirmationAction) {
+            Button("Connect") {
+              Task {
+                let didConnect = await viewModel.connectIBKRCredentials(
+                  token: tokenDraft,
+                  queryId: queryIdDraft
+                )
+                if didConnect {
+                  isPresentingCredentials = false
+                  PostHogSDK.shared.capture("broker_connected", properties: [
+                    "provider": "ibkr",
+                    "mode": "sod",
+                  ])
+                  await onImportCompleted()
+                }
+              }
+            }
+            .disabled(
+              tokenDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || queryIdDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || viewModel.isConnectingBroker
+            )
+          }
+        }
+      }
+      .presentationDetents([.medium])
     }
   }
 

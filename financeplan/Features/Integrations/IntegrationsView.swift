@@ -12,6 +12,9 @@ struct IntegrationsView: View {
   @InjectedObservable(\Container.billingManager) private var billingManager
 
   @State private var isConfirmingDisconnect = false
+  @State private var isPresentingCredentials = false
+  @State private var tokenDraft = ""
+  @State private var queryIdDraft = ""
 
   init(viewModel: CsvImportFlowViewModel = CsvImportFlowViewModel()) {
     _viewModel = StateObject(wrappedValue: viewModel)
@@ -26,18 +29,7 @@ struct IntegrationsView: View {
       } header: {
         Text("Connected accounts")
       } footer: {
-        Text("Norviq reads your holdings only. It can never place trades or move funds.")
-      }
-
-      Section {
-        NavigationLink {
-          BankingView()
-        } label: {
-          Label("Bank Sync", systemImage: "building.columns")
-        }
-        .accessibilityIdentifier("integrations.bankSync")
-      } footer: {
-        Text("Connect a bank to review transactions and turn them into expenses.")
+        Text("Norviq reads your holdings only. It can never place trades or move funds. Each user connects their own IBKR Web Service token and query ID.")
       }
     }
     .navigationTitle("Integrations")
@@ -55,6 +47,38 @@ struct IntegrationsView: View {
       Button("Cancel", role: .cancel) {}
     } message: {
       Text("Positions imported from IBKR will be removed. Manually added holdings are kept.")
+    }
+    .sheet(isPresented: $isPresentingCredentials) {
+      NavigationStack {
+        Form {
+          Section {
+            SecureField("Token", text: $tokenDraft)
+              .textInputAutocapitalization(.never)
+              .autocorrectionDisabled()
+            TextField("Query ID", text: $queryIdDraft)
+              .textInputAutocapitalization(.never)
+              .autocorrectionDisabled()
+          } footer: {
+            Text("Get these from IBKR after enabling the Norviq Web Service feed (Reporting → Third-party Reports).")
+          }
+        }
+        .navigationTitle("Connect IBKR")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+          ToolbarItem(placement: .cancellationAction) {
+            Button("Cancel") { isPresentingCredentials = false }
+          }
+          ToolbarItem(placement: .confirmationAction) {
+            Button("Connect") {
+              Task { await connectWithCredentials() }
+            }
+            .disabled(tokenDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+              || queryIdDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+              || viewModel.isConnectingBroker)
+          }
+        }
+      }
+      .presentationDetents([.medium])
     }
   }
 
@@ -82,10 +106,20 @@ struct IntegrationsView: View {
       ProgressView("Loading connection…")
     }
 
+    Text("Under development — IBKR statement sync is not live yet. Connect and Sync stay disabled until the feed is ready.")
+      .font(.caption)
+      .foregroundStyle(.orange)
+      .accessibilityIdentifier("integrations.ibkr.underDevelopment")
+
     if let message = viewModel.brokerStatusMessage, !message.isEmpty {
       Text(message)
         .font(.caption)
         .foregroundStyle(.secondary)
+    }
+    if let error = viewModel.errorMessage, !error.isEmpty {
+      Text(error)
+        .font(.caption)
+        .foregroundStyle(.red)
     }
 
     if viewModel.isIBKRConnected {
@@ -94,6 +128,7 @@ struct IntegrationsView: View {
       } label: {
         buttonLabel("Sync Now", isBusy: viewModel.isSyncingBroker)
       }
+      .disabled(true)
       .accessibilityIdentifier("integrations.ibkr.sync")
 
       Button(role: .destructive) {
@@ -104,10 +139,13 @@ struct IntegrationsView: View {
       .accessibilityIdentifier("integrations.ibkr.disconnect")
     } else {
       Button {
-        Task { await connect() }
+        tokenDraft = ""
+        queryIdDraft = ""
+        isPresentingCredentials = true
       } label: {
         buttonLabel("Connect IBKR", isBusy: viewModel.isConnectingBroker)
       }
+      .disabled(true)
       .accessibilityIdentifier("integrations.ibkr.connect")
     }
   }
@@ -137,15 +175,19 @@ struct IntegrationsView: View {
       return detail
     }
     if viewModel.isIBKRConnected {
-      return "Your IBKR positions sync automatically each day."
+      return "Your IBKR positions sync from the daily statement feed."
     }
-    return "Connect IBKR to auto-import positions into your portfolio."
+    return "Connect with your IBKR Web Service token and query ID."
   }
 
-  private func connect() async {
-    let didConnect = await viewModel.connectIBKR()
+  private func connectWithCredentials() async {
+    let didConnect = await viewModel.connectIBKRCredentials(
+      token: tokenDraft,
+      queryId: queryIdDraft
+    )
     if didConnect {
-      PostHogSDK.shared.capture("broker_connected", properties: ["provider": "ibkr"])
+      isPresentingCredentials = false
+      PostHogSDK.shared.capture("broker_connected", properties: ["provider": "ibkr", "mode": "sod"])
     }
   }
 
