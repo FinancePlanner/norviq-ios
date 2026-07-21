@@ -27,6 +27,7 @@ struct PortfolioScreen: View {
   @State private var destructiveFeedbackTrigger = 0
   @State private var selectedTimeRange: TimeRange = .month
   @State private var selectedAssetFilter: AssetFilter = .all
+  @State private var selectedHoldingsSort: HoldingsSort = .name
   @State private var chartData: [ChartDataPoint] = []
   @State private var pushNavigationRoute: PushNavigationRoute?
   @State private var pushFallbackToast: ToastData?
@@ -55,6 +56,13 @@ struct PortfolioScreen: View {
       case etfs = "ETFs"
       case crypto = "Crypto"
       var id: String { rawValue }
+  }
+
+  enum HoldingsSort: String, CaseIterable, Identifiable {
+    case name = "Name"
+    case gains = "Gains"
+    case weight = "% of Portfolio"
+    var id: String { rawValue }
   }
 
   private struct PushNavigationRoute: Identifiable, Hashable {
@@ -100,12 +108,31 @@ struct PortfolioScreen: View {
   }
 
   private var filteredStocks: [SDPortfolioStock] {
+      let base: [SDPortfolioStock]
       switch selectedAssetFilter {
-      case .all: return scopedStocks
-      case .stocks: return scopedStocks.filter { ($0.category ?? AssetCategory.stock.rawValue) == AssetCategory.stock.rawValue }
-      case .etfs: return scopedStocks.filter { ($0.category ?? AssetCategory.stock.rawValue) == AssetCategory.etf.rawValue }
-      case .crypto: return scopedStocks.filter { ($0.category ?? AssetCategory.stock.rawValue) == AssetCategory.crypto.rawValue }
+      case .all: base = scopedStocks
+      case .stocks: base = scopedStocks.filter { ($0.category ?? AssetCategory.stock.rawValue) == AssetCategory.stock.rawValue }
+      case .etfs: base = scopedStocks.filter { ($0.category ?? AssetCategory.stock.rawValue) == AssetCategory.etf.rawValue }
+      case .crypto: base = scopedStocks.filter { ($0.category ?? AssetCategory.stock.rawValue) == AssetCategory.crypto.rawValue }
       }
+      return sortedHoldings(base)
+  }
+
+  private func sortedHoldings(_ stocks: [SDPortfolioStock]) -> [SDPortfolioStock] {
+    switch selectedHoldingsSort {
+    case .name:
+      return stocks.sorted { $0.symbol.localizedCaseInsensitiveCompare($1.symbol) == .orderedAscending }
+    case .gains:
+      return stocks.sorted {
+        (viewModel.pnl(for: $0.symbol)?.unrealizedPnl ?? -.greatestFiniteMagnitude)
+          > (viewModel.pnl(for: $1.symbol)?.unrealizedPnl ?? -.greatestFiniteMagnitude)
+      }
+    case .weight:
+      return stocks.sorted {
+        (viewModel.pnl(for: $0.symbol)?.weightPercent ?? -.greatestFiniteMagnitude)
+          > (viewModel.pnl(for: $1.symbol)?.weightPercent ?? -.greatestFiniteMagnitude)
+      }
+    }
   }
 
   private var totalShares: Double {
@@ -317,6 +344,14 @@ struct PortfolioScreen: View {
           selectedAssetFilter: selectedAssetFilter,
           onSelectFilter: selectAssetFilter
         )
+
+        Picker("Sort", selection: $selectedHoldingsSort) {
+          ForEach(HoldingsSort.allCases) { sort in
+            Text(sort.rawValue).tag(sort)
+          }
+        }
+        .pickerStyle(.segmented)
+        .accessibilityIdentifier("portfolio.holdingsSort")
 
         // Revived from PortfolioSegment.earnings — teaser entry (list free, transcripts Pro)
         Button {

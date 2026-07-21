@@ -89,6 +89,17 @@ final class BrokerHTTPClient: Sendable {
     try await client.call(StartIBKRConnectEndpoint(redirectURI: redirectURI, portfolioListId: portfolioListId), errorType: Error.self)
   }
 
+  func connectIBKRCredentials(
+    token: String,
+    queryId: String,
+    portfolioListId: String?
+  ) async throws -> BrokerConnectionResponse {
+    try await client.call(
+      ConnectIBKRCredentialsEndpoint(token: token, queryId: queryId, portfolioListId: portfolioListId),
+      errorType: Error.self
+    )
+  }
+
   func disconnectIBKR() async throws -> BrokerConnectionResponse {
     try await client.call(DisconnectIBKREndpoint(), errorType: Error.self)
   }

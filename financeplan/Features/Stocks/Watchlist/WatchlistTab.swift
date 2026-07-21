@@ -21,7 +21,15 @@ struct WatchlistTab: View {
   @State private var isRenameListPresented = false
   @State private var isDeleteListPresented = false
   @State private var listNameDraft = ""
+  @State private var selectedWatchlistSort: WatchlistSort = .name
   private let quoteRefreshTimer = Timer.publish(every: 20, on: .main, in: .common).autoconnect()
+
+  enum WatchlistSort: String, CaseIterable, Identifiable {
+    case name = "Name"
+    case gains = "Gains"
+    case weight = "% of Portfolio"
+    var id: String { rawValue }
+  }
 
   private var ownedItems: [SDWatchlistItem] {
     let currentUserId = LocalCacheScope.currentOwnerUserId
@@ -29,10 +37,36 @@ struct WatchlistTab: View {
   }
 
   private var scopedItems: [SDWatchlistItem] {
-    guard let selectedListId = viewModel.selectedWatchlistListId else {
-      return ownedItems
+    let scoped: [SDWatchlistItem]
+    if let selectedListId = viewModel.selectedWatchlistListId {
+      scoped = ownedItems.filter { ($0.watchlistListId ?? "") == selectedListId }
+    } else {
+      scoped = ownedItems
     }
-    return ownedItems.filter { ($0.watchlistListId ?? "") == selectedListId }
+    return sortedWatchlist(scoped)
+  }
+
+  private func sortedWatchlist(_ items: [SDWatchlistItem]) -> [SDWatchlistItem] {
+    switch selectedWatchlistSort {
+    case .name:
+      return items.sorted { $0.symbol.localizedCaseInsensitiveCompare($1.symbol) == .orderedAscending }
+    case .gains:
+      return items.sorted {
+        let leftGain = portfolioViewModel.pnl(for: $0.symbol)?.unrealizedPnl
+        let rightGain = portfolioViewModel.pnl(for: $1.symbol)?.unrealizedPnl
+        if leftGain != nil || rightGain != nil {
+          return (leftGain ?? -.greatestFiniteMagnitude) > (rightGain ?? -.greatestFiniteMagnitude)
+        }
+        let leftDay = viewModel.liveQuotes[$0.symbol.uppercased()]?.percentChange ?? -.greatestFiniteMagnitude
+        let rightDay = viewModel.liveQuotes[$1.symbol.uppercased()]?.percentChange ?? -.greatestFiniteMagnitude
+        return leftDay > rightDay
+      }
+    case .weight:
+      return items.sorted {
+        (portfolioViewModel.pnl(for: $0.symbol)?.weightPercent ?? -.greatestFiniteMagnitude)
+          > (portfolioViewModel.pnl(for: $1.symbol)?.weightPercent ?? -.greatestFiniteMagnitude)
+      }
+    }
   }
 
   init(viewModel: WatchlistViewModel = WatchlistViewModel()) {
@@ -49,6 +83,18 @@ struct WatchlistTab: View {
       }
 
       watchlistListSection
+
+      if !scopedItems.isEmpty {
+        Section {
+          Picker("Sort", selection: $selectedWatchlistSort) {
+            ForEach(WatchlistSort.allCases) { sort in
+              Text(sort.rawValue).tag(sort)
+            }
+          }
+          .pickerStyle(.segmented)
+          .accessibilityIdentifier("watchlist.sort")
+        }
+      }
 
       if scopedItems.isEmpty {
         emptyWatchlistSection

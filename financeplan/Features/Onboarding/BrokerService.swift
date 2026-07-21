@@ -24,6 +24,7 @@ protocol BrokerServicing: Sendable {
   func getConnection(provider: String) async throws -> BrokerConnectionResponse
   @MainActor
   func connectIBKR(portfolioListId: String?) async throws -> BrokerConnectionResponse
+  func connectIBKRCredentials(token: String, queryId: String, portfolioListId: String?) async throws -> BrokerConnectionResponse
   func syncIBKR() async throws -> BrokerSyncResponse
   func disconnectIBKR() async throws -> BrokerConnectionResponse
   func previewCsvImport(provider: String, portfolioListId: String?, csvData: Data) async throws -> CsvImportPreviewResponse
@@ -100,6 +101,20 @@ struct BrokerService: BrokerServicing {
     }
 
     return try await getConnection(provider: "ibkr")
+  }
+
+  func connectIBKRCredentials(
+    token: String,
+    queryId: String,
+    portfolioListId: String?
+  ) async throws -> BrokerConnectionResponse {
+    try await performAuthenticated { client in
+      try await client.connectIBKRCredentials(
+        token: token,
+        queryId: queryId,
+        portfolioListId: portfolioListId
+      )
+    }
   }
 
   func syncIBKR() async throws -> BrokerSyncResponse {

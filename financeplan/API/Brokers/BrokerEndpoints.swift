@@ -52,6 +52,29 @@ struct StartIBKRConnectEndpoint: Endpoint {
   }
 }
 
+struct ConnectIBKRCredentialsEndpoint: Endpoint {
+  typealias Response = BrokerConnectionResponse
+
+  let token: String
+  let queryId: String
+  let portfolioListId: String?
+
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/brokers/ibkr/connect/credentials" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [
+      "token": token,
+      "queryId": queryId,
+    ]
+    if let portfolioListId, !portfolioListId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      params["portfolioListId"] = portfolioListId
+    }
+    return params
+  }
+}
+
 struct DisconnectIBKREndpoint: Endpoint {
   typealias Response = BrokerConnectionResponse
 
