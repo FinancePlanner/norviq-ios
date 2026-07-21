@@ -102,9 +102,11 @@ struct WatchlistTab: View {
 
       ForEach(scopedItems) { item in
         let live = viewModel.liveQuotes[item.symbol.uppercased()]
+        let weight = portfolioViewModel.pnl(for: item.symbol)?.weightPercent
         WatchlistRow(
           item: item,
           liveQuote: live,
+          portfolioWeightPercent: weight,
           onAddToPortfolio: { convertingItem = item },
           onQuickTrade: { selectedTradingSymbol = item.symbol }
         )
@@ -366,11 +368,17 @@ struct WatchlistTab: View {
 private struct WatchlistRow: View {
   let item: SDWatchlistItem
   let liveQuote: QuoteResponse?
+  let portfolioWeightPercent: Double?
   let onAddToPortfolio: () -> Void
   let onQuickTrade: (() -> Void)?
 
   private var noteLine: String? {
     HoldingRowPresentation.displaySubtitle(notes: item.note, fallback: nil)
+  }
+
+  private var weightLabel: String {
+    guard let portfolioWeightPercent else { return "—" }
+    return String(format: "%.1f%%", portfolioWeightPercent)
   }
 
   private var accessibilitySummary: String {
@@ -382,6 +390,11 @@ private struct WatchlistRow: View {
       parts.append(
         "day \(StockMetricFormatter.signedCurrencyText(change)) \(String(format: "%+.2f%%", pct))"
       )
+    }
+    if portfolioWeightPercent != nil {
+      parts.append("portfolio weight \(weightLabel)")
+    } else {
+      parts.append("not held in portfolio")
     }
     parts.append(item.status)
     return parts.joined(separator: ", ")
@@ -433,6 +446,16 @@ private struct WatchlistRow: View {
             percentIsPointScale: true,
             style: .compact
           )
+
+          Text(weightLabel)
+            .font(.caption2)
+            .foregroundStyle(portfolioWeightPercent == nil ? .tertiary : .secondary)
+            .monospacedDigit()
+            .accessibilityLabel(
+              portfolioWeightPercent == nil
+                ? "Portfolio weight not available"
+                : "Portfolio weight \(weightLabel)"
+            )
         }
       }
 

@@ -13,9 +13,8 @@ enum Constants {
 
     static let webAppBaseUrl = URL(string: "https://www.norviqaapp.com")!
 
-    static let privacyPolicyUrl = URL(
-      string: "https://gist.github.com/FACorreiaa/a60bcbf818a50a0e60df625f10021ef4"
-    )!
+    /// Public privacy policy (same document as Settings → About on web).
+    static let privacyPolicyUrl = URL(string: "https://norviq.app/privacy")!
 
     /// Apple's standard EULA (Terms of Use) used for auto-renewable subscriptions.
     static let termsOfUseUrl = URL(
