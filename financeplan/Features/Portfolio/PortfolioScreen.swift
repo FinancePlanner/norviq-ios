@@ -352,6 +352,20 @@ struct PortfolioScreen: View {
         }
         .pickerStyle(.segmented)
         .accessibilityIdentifier("portfolio.holdingsSort")
+        .onChange(of: selectedHoldingsSort) { _, newValue in
+          guard newValue != .name else { return }
+          Task { await viewModel.loadAllPagesForSortIfNeeded() }
+        }
+
+        if viewModel.isLoadingMore, selectedHoldingsSort != .name {
+          HStack(spacing: 8) {
+            ProgressView()
+            Text("Loading all positions for sort…")
+              .font(.caption)
+              .foregroundStyle(.secondary)
+          }
+          .accessibilityIdentifier("portfolio.sortLoading")
+        }
 
         // Revived from PortfolioSegment.earnings — teaser entry (list free, transcripts Pro)
         Button {

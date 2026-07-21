@@ -239,6 +239,15 @@ final class PortfolioViewModel: ObservableObject {
     }
   }
 
+  /// Gains / weight sorts need the full portfolio, not just the first page.
+  func loadAllPagesForSortIfNeeded() async {
+    while nextCursor != nil {
+      let before = nextCursor
+      await loadMoreIfAvailable()
+      if nextCursor == before { break }
+    }
+  }
+
   @discardableResult
   func delete(id: String) async -> Bool {
     guard !isDeletingStock else { return false }
