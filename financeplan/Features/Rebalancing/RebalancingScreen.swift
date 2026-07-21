@@ -431,7 +431,7 @@ private struct RebalancingSimulator: View {
             TextField("Plan name (optional)", text: $planName)
             Button("Save plan") {
               Task {
-                if await model.savePlan(name: planName) {
+                if await model.savePlan(name: planName, overrides: currentOverrides()) {
                   dismiss()
                 }
               }
@@ -466,6 +466,10 @@ private struct RebalancingSimulator: View {
   private func recalculate() async {
     await model.simulate(overrides: overrides.map { .init(symbol: $0.key, amount: $0.value) })
     seedOverrides()
+  }
+
+  private func currentOverrides() -> [RebalanceTradeOverride] {
+    overrides.map { .init(symbol: $0.key, amount: $0.value) }
   }
 
   private func seedOverrides() {

@@ -82,9 +82,14 @@ final class RebalancingViewModel {
     }
   }
 
-  func savePlan(name: String?) async -> Bool {
+  func savePlan(name: String?, overrides: [RebalanceTradeOverride] = []) async -> Bool {
     guard let model = overview?.model else { return false }
     return await save {
+      let tradeOverrides = overrides.isEmpty
+        ? simulation?.trades.map {
+          .init(symbol: $0.symbol, amount: $0.side == .buy ? $0.notional : -$0.notional)
+        } ?? []
+        : overrides
       let plan = try await service.createPlan(
         portfolioId: portfolio.id,
         request: .init(
@@ -93,9 +98,7 @@ final class RebalancingViewModel {
             modelId: model.id,
             modelRevision: model.revision,
             cashFlow: cashFlow,
-            overrides: simulation?.trades.map {
-              .init(symbol: $0.symbol, amount: $0.side == .buy ? $0.notional : -$0.notional)
-            } ?? []
+            overrides: tradeOverrides
           )
         )
       )
