@@ -46,7 +46,7 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
       _ = token
       _ = queryId
       _ = portfolioListId
-      try connectResult.get()
+      return try connectResult.get()
     }
 
     func syncIBKR() async throws -> BrokerSyncResponse {
