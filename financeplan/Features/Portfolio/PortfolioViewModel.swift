@@ -11,6 +11,14 @@ private let portfolioViewModelLogger = Logger(
   category: "PortfolioViewModel"
 )
 
+private enum PortfolioPaginationError: LocalizedError {
+  case repeatedCursor
+
+  var errorDescription: String? {
+    "Portfolio refresh returned a repeated page cursor."
+  }
+}
+
 struct PortfolioAllocationSlice: Identifiable, Equatable, Sendable {
   let id: String
   let symbol: String
@@ -125,15 +133,20 @@ final class PortfolioViewModel: ObservableObject {
         targetsTask
       )
       let (remoteStocks, fetchedNextCursor) = stocksResult
-      await syncWithSwiftData(remoteStocks, listId: selectedPortfolioListId)
-      nextCursor = fetchedNextCursor
+      let fullSnapshot = try await fetchCompletePortfolioSnapshot(
+        firstPage: remoteStocks,
+        nextCursor: fetchedNextCursor,
+        portfolioListId: selectedPortfolioListId
+      )
+      await syncWithSwiftData(fullSnapshot.items, listId: selectedPortfolioListId)
+      nextCursor = fullSnapshot.nextCursor
       cashBalance = extractCashBalance(from: summary)
       self.sectorExposure = await sectorExposureTask.value
       pnlBySymbol = await pnlTask.value
       targetAlertsBySymbol = Self.makeTargetAlertsBySymbol(targets)
 
       // Seed live quotes so row metrics + the 20s refresh timer have symbols to poll.
-      trackedSymbols = Set(remoteStocks.map { Self.normalizedSymbol($0.symbol) }.filter { !$0.isEmpty })
+      trackedSymbols = Set(fullSnapshot.items.map { Self.normalizedSymbol($0.symbol) }.filter { !$0.isEmpty })
       await fetchAndMergeQuotes(for: Array(trackedSymbols))
 
       hasLoadedOnce = true
@@ -217,6 +230,32 @@ final class PortfolioViewModel: ObservableObject {
       )
       errorMessage = "Couldn't update your cached portfolio. Pull to refresh to try again."
     }
+  }
+
+  private func fetchCompletePortfolioSnapshot(
+    firstPage: [StockResponse],
+    nextCursor: String?,
+    portfolioListId: String?
+  ) async throws -> (items: [StockResponse], nextCursor: String?) {
+    var items = firstPage
+    var cursor = nextCursor
+    var seenCursors = Set<String>()
+
+    while let currentCursor = cursor, !currentCursor.isEmpty {
+      guard seenCursors.insert(currentCursor).inserted else {
+        throw PortfolioPaginationError.repeatedCursor
+      }
+
+      let (pageItems, newCursor) = try await service.fetchPortfolio(
+        portfolioListId: portfolioListId,
+        cursor: currentCursor,
+        limit: 50
+      )
+      items.append(contentsOf: pageItems)
+      cursor = newCursor
+    }
+
+    return (items, cursor)
   }
 
   func loadMoreIfAvailable() async {

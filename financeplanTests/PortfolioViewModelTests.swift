@@ -68,6 +68,30 @@ final class PortfolioViewModelTests: XCTestCase {
     XCTAssertEqual(service.fetchPortfolioSummaryCalls, 2)
   }
 
+  func testLoadReconcilesCompletePaginatedSnapshot() async {
+    let service = MockStockService()
+    service.fetchPortfolioPages = [
+      (items: [makeStock(id: "holding-1", symbol: "AAA", shares: 1, buyPrice: 10)], nextCursor: "page-2"),
+      (items: [makeStock(id: "holding-2", symbol: "BBB", shares: 2, buyPrice: 20)], nextCursor: nil)
+    ]
+    let localStore = MockPortfolioLocalStore()
+
+    let viewModel = PortfolioViewModel(
+      service: service,
+      marketDataService: MarketDataServiceStub(),
+      localStore: localStore
+    )
+    await viewModel.load(force: true)
+
+    XCTAssertEqual(service.fetchPortfolioCalls, 2)
+    let expectedCursors: [String?] = [nil, "page-2"]
+    XCTAssertEqual(service.fetchPortfolioCursors, expectedCursors)
+    XCTAssertEqual(localStore.reconcileCalls, 1)
+    XCTAssertEqual(localStore.lastReconciledIDs, ["holding-1", "holding-2"])
+    XCTAssertNil(viewModel.nextCursor)
+    XCTAssertNil(viewModel.errorMessage)
+  }
+
   func testRefreshLiveQuotesUsesQuoteBatchWithoutReloadingPortfolioData() async {
     let service = MockStockService()
     service.fetchPortfolioResult = .success([
@@ -588,6 +612,7 @@ private final class MockPortfolioLocalStore: PortfolioLocalPersisting {
 @MainActor
 private final class MockStockService: StockServicing {
   var fetchPortfolioCalls = 0
+  var fetchPortfolioCursors: [String?] = []
   var fetchPortfolioSummaryCalls = 0
   var fetchPortfolioSectorExposureCalls = 0
   var fetchTargetsCalls = 0
@@ -596,6 +621,7 @@ private final class MockStockService: StockServicing {
   var lastCreateRequest: StockRequest?
   var lastCreatePortfolioListId: String?
   var fetchPortfolioResult: Result<[StockResponse], Error> = .success([])
+  var fetchPortfolioPages: [(items: [StockResponse], nextCursor: String?)]?
   var fetchPortfolioListsResult: Result<[PortfolioListDTOResponse], Error> = .success([
     PortfolioListDTOResponse(id: "default-list", name: "Default", isDefault: true, createdAt: nil, updatedAt: nil)
   ])
@@ -645,9 +671,14 @@ private final class MockStockService: StockServicing {
     try await fetchPortfolio()
   }
 
-  func fetchPortfolio(portfolioListId _: String?, cursor _: String?, limit _: Int?) async throws -> (items: [StockResponse], nextCursor: String?) {
-
+  func fetchPortfolio(portfolioListId _: String?, cursor: String?, limit _: Int?) async throws -> (items: [StockResponse], nextCursor: String?) {
     fetchPortfolioCalls += 1
+    fetchPortfolioCursors.append(cursor)
+    if var pages = fetchPortfolioPages, !pages.isEmpty {
+      let page = pages.removeFirst()
+      fetchPortfolioPages = pages
+      return page
+    }
     return (try fetchPortfolioResult.get(), nil)
   }
 
