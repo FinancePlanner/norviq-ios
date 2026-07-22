@@ -9,6 +9,9 @@ protocol MacroServicing: Sendable {
   func getFedWatch() async throws -> FedWatchResponse
   func getItems(country: String?) async throws -> MacroItemsResponse
   func getItemSeries(itemId: String, country: String?, limit: Int?) async throws -> MacroItemSeriesResponse
+  func getHousing(country: String?) async throws -> HousingHubResponse
+  func getEconomy(country: String?) async throws -> EconomyHubResponse
+  func getPolicyWatch(country: String?) async throws -> PolicyWatchResponse
 }
 
 final class MacroHTTPService: MacroServicing {
@@ -44,5 +47,17 @@ final class MacroHTTPService: MacroServicing {
 
   func getItemSeries(itemId: String, country: String?, limit: Int? = nil) async throws -> MacroItemSeriesResponse {
     try await httpClient.getItemSeries(itemId: itemId, country: country, limit: limit)
+  }
+
+  func getHousing(country: String?) async throws -> HousingHubResponse {
+    try await httpClient.getHousing(country: country)
+  }
+
+  func getEconomy(country: String?) async throws -> EconomyHubResponse {
+    try await httpClient.getEconomy(country: country)
+  }
+
+  func getPolicyWatch(country: String?) async throws -> PolicyWatchResponse {
+    try await httpClient.getPolicyWatch(country: country)
   }
 }

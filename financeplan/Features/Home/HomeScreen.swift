@@ -57,6 +57,11 @@ struct HomeScreen: View {
         )
       }
 
+      Tab(HomeTab.economy.title, systemImage: "chart.bar.xaxis", value: .economy) {
+        EconomyHubScreen()
+          .accessibilityIdentifier("tab.economy")
+      }
+
       Tab(HomeTab.crypto.title, systemImage: "bitcoinsign.circle", value: .crypto) {
         CryptoHomeView(isSettingsPresented: $isSettingsPresented)
           .accessibilityIdentifier("tab.crypto")
@@ -67,7 +72,7 @@ struct HomeScreen: View {
           .accessibilityIdentifier("tab.expenses")
       }
 
-      Tab(HomeTab.reports.title, systemImage: "chart.bar.xaxis", value: .reports) {
+      Tab(HomeTab.reports.title, systemImage: "chart.bar.doc.horizontal", value: .reports) {
         ExpensesComparisonScreen()
           .accessibilityIdentifier("tab.reports")
       }

@@ -81,4 +81,16 @@ struct MacroHTTPClient: Sendable {
   func getItemSeries(itemId: String, country: String? = nil, limit: Int? = nil) async throws -> MacroItemSeriesResponse {
     try await client.call(GetMacroItemSeriesEndpoint(itemId: itemId, country: country, limit: limit), errorType: Error.self)
   }
+
+  func getHousing(country: String? = nil) async throws -> HousingHubResponse {
+    try await client.call(GetHousingHubEndpoint(country: country), errorType: Error.self)
+  }
+
+  func getEconomy(country: String? = nil) async throws -> EconomyHubResponse {
+    try await client.call(GetEconomyHubEndpoint(country: country), errorType: Error.self)
+  }
+
+  func getPolicyWatch(country: String? = nil) async throws -> PolicyWatchResponse {
+    try await client.call(GetPolicyWatchEndpoint(country: country), errorType: Error.self)
+  }
 }
