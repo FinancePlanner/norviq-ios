@@ -60,6 +60,23 @@ struct GetInflationSeriesEndpoint: Endpoint {
   }
 }
 
+struct GetPersonalInflationEndpoint: Endpoint {
+  typealias Response = PersonalInflationResponse
+
+  let country: String?
+  let months: Int
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/macro/inflation/personal" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    var parameters: Parameters = ["months": String(months)]
+    if let country { parameters["country"] = country }
+    return parameters
+  }
+}
+
 struct GetFedWatchEndpoint: Endpoint {
   typealias Response = FedWatchResponse
 

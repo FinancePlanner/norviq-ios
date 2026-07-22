@@ -5,6 +5,7 @@ protocol MacroServicing: Sendable {
   func getCurrentInflation(country: String?) async throws -> InflationSnapshotResponse
   func getTopMovers(country: String?, focus: String?) async throws -> [TopMoverDTO]
   func getSeries(country: String?, series: String, limit: Int?) async throws -> MacroSeriesResponse
+  func getPersonalInflation(country: String?, months: Int) async throws -> PersonalInflationResponse
   func getSupportedCountries() async throws -> [SupportedCountry]
   func getFedWatch() async throws -> FedWatchResponse
   func getItems(country: String?) async throws -> MacroItemsResponse
@@ -31,6 +32,10 @@ final class MacroHTTPService: MacroServicing {
 
   func getSeries(country: String?, series: String, limit: Int? = nil) async throws -> MacroSeriesResponse {
     try await httpClient.getSeries(country: country, series: series, limit: limit)
+  }
+
+  func getPersonalInflation(country: String?, months: Int = 12) async throws -> PersonalInflationResponse {
+    try await httpClient.getPersonalInflation(country: country, months: months)
   }
 
   func getSupportedCountries() async throws -> [SupportedCountry] {
