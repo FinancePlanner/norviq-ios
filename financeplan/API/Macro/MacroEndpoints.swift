@@ -113,3 +113,48 @@ struct GetSupportedCountriesEndpoint: Endpoint {
 
   func asParameters() throws -> Parameters { [:] }
 }
+
+struct GetHousingHubEndpoint: Endpoint {
+  typealias Response = HousingHubResponse
+
+  let country: String?
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/macro/housing" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    if let country { return ["country": country] }
+    return [:]
+  }
+}
+
+struct GetEconomyHubEndpoint: Endpoint {
+  typealias Response = EconomyHubResponse
+
+  let country: String?
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/macro/economy" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    if let country { return ["country": country] }
+    return [:]
+  }
+}
+
+struct GetPolicyWatchEndpoint: Endpoint {
+  typealias Response = PolicyWatchResponse
+
+  let country: String?
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/macro/policy-watch" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    if let country { return ["country": country] }
+    return [:]
+  }
+}
