@@ -66,6 +66,10 @@ struct MacroHTTPClient: Sendable {
     try await client.call(GetInflationSeriesEndpoint(country: country, series: series, from: from, to: to, limit: limit), errorType: Error.self)
   }
 
+  func getPersonalInflation(country: String? = nil, months: Int = 12) async throws -> PersonalInflationResponse {
+    try await client.call(GetPersonalInflationEndpoint(country: country, months: months), errorType: Error.self)
+  }
+
   func getSupportedCountries() async throws -> [SupportedCountry] {
     try await client.call(GetSupportedCountriesEndpoint(), errorType: Error.self)
   }
