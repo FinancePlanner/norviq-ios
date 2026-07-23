@@ -707,7 +707,7 @@ public struct UserProfileView: View {
                     }
                 }
             } icon: {
-                Image(systemName: signInProviderIcon(for: provider))
+                signInProviderIconView(for: provider)
             }
 
             Spacer()
@@ -731,6 +731,28 @@ public struct UserProfileView: View {
             }
         }
         .accessibilityIdentifier("settings.connectedAccount.\(provider.rawValue)")
+    }
+
+    @ViewBuilder
+    private func signInProviderIconView(for provider: OAuthProviderKind) -> some View {
+        switch provider {
+        case .x:
+            Image("XLogo")
+                .renderingMode(.template)
+                .resizable()
+                .interpolation(.high)
+                .scaledToFit()
+                .frame(width: 16, height: 16)
+        case .google:
+            Image("GoogleLogo")
+                .renderingMode(.original)
+                .resizable()
+                .interpolation(.high)
+                .scaledToFit()
+                .frame(width: 16, height: 16)
+        default:
+            Image(systemName: signInProviderIcon(for: provider))
+        }
     }
 
     private func signInProviderIcon(for provider: OAuthProviderKind) -> String {
