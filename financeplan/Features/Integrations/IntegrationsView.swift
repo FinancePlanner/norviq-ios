@@ -3,9 +3,8 @@ import PostHog
 import StockPlanShared
 import SwiftUI
 
-/// Dedicated home for read-only account connections. Currently surfaces the
-/// IBKR brokerage sync (previously buried in the portfolio CSV-import sheet);
-/// bank connections join this screen in a later phase.
+/// Dedicated home for read-only account connections, including bank sync and
+/// IBKR brokerage sync.
 @MainActor
 struct IntegrationsView: View {
   @StateObject private var viewModel: CsvImportFlowViewModel
@@ -22,6 +21,19 @@ struct IntegrationsView: View {
 
   var body: some View {
     List {
+      Section {
+        NavigationLink {
+          BankingView()
+        } label: {
+          Label("Bank Sync", systemImage: "building.columns")
+        }
+        .accessibilityIdentifier("integrations.bankSync")
+      } header: {
+        Text("Banks")
+      } footer: {
+        Text("Connect banks via Plaid or GoCardless, then review synced transactions before recording expenses.")
+      }
+
       Section {
         ProGateView(billingManager: billingManager) {
           ibkrCard
