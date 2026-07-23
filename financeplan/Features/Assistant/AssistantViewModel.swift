@@ -41,13 +41,32 @@ final class AssistantViewModel {
         errorMessage = nil
         messages.append(AssistantMessage(role: .user, text: text))
 
-        let history = messages.map {
+        let outgoingContent: String
+        switch AssistantCommandParser.resolve(text) {
+        case let .local(reply):
+            messages.append(AssistantMessage(role: .assistant, text: reply))
+            return
+        case let .command(_, expandedPrompt):
+            outgoingContent = expandedPrompt
+        case let .plain(content):
+            outgoingContent = content
+        }
+
+        var history = messages.map {
             AssistantChatMessageDTO(role: $0.role == .user ? "user" : "assistant", content: $0.text)
         }
+        history[history.count - 1] = AssistantChatMessageDTO(role: "user", content: outgoingContent)
 
         isStreaming = true
         toolActivity = nil
         Task { await consume(history: history) }
+    }
+
+    /// Sends a suggestion chip or autocompleted command as if typed.
+    func send(message: String) {
+        guard !isStreaming else { return }
+        draft = message
+        send()
     }
 
     private func consume(history: [AssistantChatMessageDTO]) async {

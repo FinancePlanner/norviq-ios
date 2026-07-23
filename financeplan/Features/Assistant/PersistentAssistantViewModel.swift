@@ -86,13 +86,35 @@ final class PersistentAssistantViewModel {
             createdAt: ISO8601DateFormatter().string(from: Date())
         )
         activeConversation = replacingMessages(in: conversation, with: conversation.messages + [optimistic])
+
+        let outgoingContent: String
+        switch AssistantCommandParser.resolve(content) {
+        case let .local(reply):
+            let localReply = AIMessageResponse(
+                id: UUID().uuidString,
+                conversationId: conversation.id,
+                role: .assistant,
+                content: reply,
+                createdAt: ISO8601DateFormatter().string(from: Date())
+            )
+            if let current = activeConversation {
+                activeConversation = replacingMessages(in: current, with: current.messages + [localReply])
+            }
+            isSending = false
+            return
+        case let .command(_, expandedPrompt):
+            outgoingContent = expandedPrompt
+        case let .plain(text):
+            outgoingContent = text
+        }
+
         defer {
             isSending = false
             activityLabel = nil
         }
         do {
             var receivedTurn = false
-            for try await event in service.streamTurn(conversationID: conversation.id, content: content) {
+            for try await event in service.streamTurn(conversationID: conversation.id, content: outgoingContent) {
                 switch event {
                 case .started:
                     activityLabel = "Reviewing your finances…"
