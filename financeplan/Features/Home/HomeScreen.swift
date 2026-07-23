@@ -20,9 +20,26 @@ struct HomeScreen: View {
   @State private var pendingPortfolioOpenSymbol: String?
   @State private var pendingAutomationDestination: AutomationNavigationDestination?
   @State private var budgetPlannerViewModel = BudgetPlannerViewModel()
+  @State private var tabBarChrome = TabBarChromeController()
+  @State private var isMorePresented = false
+  @State private var isCapturePresented = false
 
   private var appLanguage: AppLanguage {
     AppLanguage.from(appLanguageRawValue)
+  }
+
+  private var chromeItems: [RevolutTabBar.Item] {
+    [
+      .init(kind: .tab(.dashboard), title: HomeTab.dashboard.title, systemImage: HomeTab.dashboard.systemImage),
+      .init(kind: .tab(.portfolio), title: HomeTab.portfolio.title, systemImage: HomeTab.portfolio.systemImage),
+      .init(kind: .tab(.expenses), title: HomeTab.expenses.title, systemImage: HomeTab.expenses.systemImage),
+      .init(kind: .tab(.crypto), title: HomeTab.crypto.title, systemImage: HomeTab.crypto.systemImage),
+      .init(kind: .more, title: String(localized: "More"), systemImage: "ellipsis"),
+    ]
+  }
+
+  private var moreTabs: Set<HomeTab> {
+    [.economy, .reports, .tax, .insights]
   }
 
   var body: some View {
@@ -34,14 +51,39 @@ struct HomeScreen: View {
           .transition(AppTransition.move(edge: .top, reduceMotion: reduceMotion))
       }
 
-      tabView
+      ZStack(alignment: .bottom) {
+        tabView
+
+        RevolutTabBar(
+          selection: $selectedTab,
+          items: chromeItems,
+          moreTabs: moreTabs,
+          showsCapture: true,
+          isMinimized: tabBarChrome.isMinimized,
+          onSelect: { tab in
+            tabBarChrome.expand()
+            selectedTab = tab
+          },
+          onMore: {
+            tabBarChrome.expand()
+            isMorePresented = true
+          },
+          onCapture: {
+            tabBarChrome.expand()
+            isCapturePresented = true
+          }
+        )
+        .padding(.horizontal, 16)
+        .padding(.bottom, 10)
+      }
     }
+    .environment(\.tabBarChrome, tabBarChrome)
     .appAnimation(AppMotion.structural, value: billingManager.shouldShowTrialEndedBanner)
   }
 
   private var tabView: some View {
     TabView(selection: $selectedTab) {
-      Tab(HomeTab.dashboard.title, systemImage: "house", value: .dashboard) {
+      Tab(HomeTab.dashboard.title, systemImage: HomeTab.dashboard.systemImage, value: .dashboard) {
         DashboardRoot(
           selectedTab: $selectedTab,
           isSettingsPresented: $isSettingsPresented,
@@ -49,7 +91,7 @@ struct HomeScreen: View {
         )
       }
 
-      Tab(HomeTab.portfolio.title, systemImage: "chart.line.uptrend.xyaxis", value: .portfolio) {
+      Tab(HomeTab.portfolio.title, systemImage: HomeTab.portfolio.systemImage, value: .portfolio) {
         PortfolioRoot(
           isSettingsPresented: $isSettingsPresented,
           pendingOpenSymbol: $pendingPortfolioOpenSymbol,
@@ -57,45 +99,55 @@ struct HomeScreen: View {
         )
       }
 
-      Tab(HomeTab.economy.title, systemImage: "chart.bar.xaxis", value: .economy) {
+      Tab(HomeTab.economy.title, systemImage: HomeTab.economy.systemImage, value: .economy) {
         EconomyHubScreen()
           .accessibilityIdentifier("tab.economy")
       }
 
-      Tab(HomeTab.crypto.title, systemImage: "bitcoinsign.circle", value: .crypto) {
+      Tab(HomeTab.crypto.title, systemImage: HomeTab.crypto.systemImage, value: .crypto) {
         CryptoHomeView(isSettingsPresented: $isSettingsPresented)
           .accessibilityIdentifier("tab.crypto")
       }
 
-      Tab(HomeTab.expenses.title, systemImage: "creditcard", value: .expenses) {
+      Tab(HomeTab.expenses.title, systemImage: HomeTab.expenses.systemImage, value: .expenses) {
         ExpensesPlannerScreen(isSettingsPresented: $isSettingsPresented, viewModel: budgetPlannerViewModel)
           .accessibilityIdentifier("tab.expenses")
       }
 
-      Tab(HomeTab.reports.title, systemImage: "chart.bar.doc.horizontal", value: .reports) {
+      Tab(HomeTab.reports.title, systemImage: HomeTab.reports.systemImage, value: .reports) {
         ExpensesComparisonScreen()
           .accessibilityIdentifier("tab.reports")
       }
 
-      Tab(HomeTab.tax.title, systemImage: "building.columns", value: .tax) {
+      Tab(HomeTab.tax.title, systemImage: HomeTab.tax.systemImage, value: .tax) {
         TaxDashboardScreen()
           .accessibilityIdentifier("tab.tax")
       }
 
-      Tab(HomeTab.insights.title, systemImage: "sparkles", value: .insights) {
+      Tab(HomeTab.insights.title, systemImage: HomeTab.insights.systemImage, value: .insights) {
         InsightsScreen()
           .accessibilityIdentifier("tab.insights")
       }
     }
     .id(appLanguage.rawValue)
     .tint(AppTheme.Colors.tint(for: colorScheme))
-    .toolbarBackground(.visible, for: .tabBar)
-    .toolbarBackground(AppTheme.Colors.tabBarBackground(for: colorScheme), for: .tabBar)
+    .toolbar(.hidden, for: .tabBar)
+    .safeAreaInset(edge: .bottom, spacing: 0) {
+      Color.clear.frame(height: tabBarChrome.isMinimized ? 70 : 98)
+    }
     .sheet(isPresented: $isSettingsPresented) {
       settingsSheet
     }
     .sheet(isPresented: $isPaywallPresented) {
       PaywallView(billingManager: billingManager)
+    }
+    .sheet(isPresented: $isMorePresented) {
+      moreSheet
+    }
+    .sheet(isPresented: $isCapturePresented) {
+      HomeQuickExpenseSheet { draft in
+        await handleCaptureSave(draft)
+      }
     }
     .onChange(of: selectedTab) { _, newValue in
       guard newValue == .insights, !billingManager.isPro else { return }
@@ -123,6 +175,51 @@ struct HomeScreen: View {
   private var settingsSheet: some View {
     UserProfileView()
       .environment(\.locale, Locale(identifier: appLanguage.localeIdentifier))
+  }
+
+  private var moreSheet: some View {
+    NavigationStack {
+      List {
+        ForEach([HomeTab.economy, .reports, .tax, .insights], id: \.self) { tab in
+          Button {
+            isMorePresented = false
+            selectedTab = tab
+          } label: {
+            Label(tab.title, systemImage: tab.systemImage)
+          }
+          .accessibilityIdentifier("tabBar.more.\(tab)")
+        }
+      }
+      .navigationTitle(String(localized: "More"))
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button(String(localized: "Done")) {
+            isMorePresented = false
+          }
+        }
+      }
+    }
+    .presentationDetents([.medium])
+  }
+
+  private func handleCaptureSave(_ draft: HomeQuickExpenseDraft) async -> String? {
+    let didSave = await budgetPlannerViewModel.recordExpenseAndWait(
+      BudgetActivityDraft(
+        title: draft.title,
+        amount: draft.amount,
+        pillar: draft.pillar,
+        occurredOn: draft.occurredOn,
+        linkedPlanItemID: nil,
+        splitMode: draft.splitMode,
+        userSharePercent: draft.userSharePercent,
+        receiptMetadata: draft.receiptMetadata
+      )
+    )
+    guard didSave else {
+      return budgetPlannerViewModel.errorMessage ?? String(localized: "Could not save expense. Please try again.")
+    }
+    return nil
   }
 
   private func handleOpenStockNotification(_ notification: Notification) {

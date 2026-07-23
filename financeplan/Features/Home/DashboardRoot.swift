@@ -135,6 +135,7 @@ struct DashboardRoot: View {
         // edge-to-edge (Guideline 4). Background below still fills the screen.
         .maxContentWidth(regularSizeClass: ContentWidth.dense)
       }
+      .tracksTabBarMinimize()
       .background(MeshGradientBackground())
       .navigationTitle(greetingText)
       .navigationBarTitleDisplayMode(.large)

@@ -13,6 +13,9 @@ enum AppMotion {
   /// Structural motion: step changes, banners, row insertion/removal.
   static let structural: Animation = .spring(response: 0.32, dampingFraction: 1)
 
+  /// Floating Revolut-style tab bar pill morph + minimize/expand.
+  static let tabBar: Animation = .spring(response: 0.28, dampingFraction: 0.82)
+
   /// One-shot data reveals (chart draw-in). Financial data should settle
   /// precisely and without overshoot.
   static let dataReveal: Animation = .easeOut(duration: 0.24)

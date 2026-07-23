@@ -471,6 +471,7 @@ struct PortfolioScreen: View {
         refreshPortfolioQuotesIfActive()
       }
     }
+    .tracksTabBarMinimize()
   }
 
   private var addPositionSheetContent: some View {
