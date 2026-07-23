@@ -78,6 +78,10 @@ struct AssistantView: View {
                 .typography(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+            AssistantSuggestionChips { message in
+                viewModel.send(message: message)
+            }
+            .padding(.top, 8)
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.top, 40)
@@ -94,6 +98,15 @@ struct AssistantView: View {
     }
 
     private var inputBar: some View {
+        VStack(spacing: 0) {
+            AssistantCommandSuggestionList(draft: viewModel.draft) { command in
+                viewModel.draft = command.argumentHint == nil ? command.trigger : command.trigger + " "
+            }
+            inputRow
+        }
+    }
+
+    private var inputRow: some View {
         HStack(spacing: 10) {
             TextField("Message", text: $viewModel.draft, axis: .vertical)
                 .textFieldStyle(.plain)

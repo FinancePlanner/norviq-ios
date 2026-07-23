@@ -87,6 +87,11 @@ struct PersistentAssistantView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+            AssistantSuggestionChips { message in
+                viewModel.draft = message
+                Task { await viewModel.send() }
+            }
+            .padding(.top, 8)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 32)
@@ -157,16 +162,21 @@ struct PersistentAssistantView: View {
 
     private var composer: some View {
         @Bindable var viewModel = viewModel
-        return HStack(alignment: .bottom, spacing: 8) {
-            TextField("Ask about your finances", text: $viewModel.draft, axis: .vertical)
-                .lineLimit(1...5).textFieldStyle(.roundedBorder)
-                .submitLabel(.send).onSubmit { Task { await viewModel.send() } }
-            Button { Task { await viewModel.send() } } label: { Image(systemName: "arrow.up.circle.fill").font(.title) }
-                .disabled(viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isSending)
-                .accessibilityLabel("Send")
+        return VStack(spacing: 0) {
+            AssistantCommandSuggestionList(draft: viewModel.draft) { command in
+                viewModel.draft = command.argumentHint == nil ? command.trigger : command.trigger + " "
+            }
+            HStack(alignment: .bottom, spacing: 8) {
+                TextField("Ask about your finances", text: $viewModel.draft, axis: .vertical)
+                    .lineLimit(1...5).textFieldStyle(.roundedBorder)
+                    .submitLabel(.send).onSubmit { Task { await viewModel.send() } }
+                Button { Task { await viewModel.send() } } label: { Image(systemName: "arrow.up.circle.fill").font(.title) }
+                    .disabled(viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isSending)
+                    .accessibilityLabel("Send")
+            }
+            .padding(.horizontal, 16).padding(.vertical, 12)
+            .background(.bar)
         }
-        .padding(.horizontal, 16).padding(.vertical, 12)
-        .background(.bar)
     }
 
     private var conversationsSheet: some View {
