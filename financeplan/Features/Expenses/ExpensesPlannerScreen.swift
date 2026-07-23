@@ -370,6 +370,7 @@ struct ExpensesPlannerScreen: View {
     ScrollView {
       plannerContent
     }
+    .tracksTabBarMinimize()
     .refreshable {
       await viewModel.load(force: true)
     }

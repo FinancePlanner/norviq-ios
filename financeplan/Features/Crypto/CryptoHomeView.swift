@@ -128,6 +128,7 @@ struct CryptoHomeView: View {
             }
             .padding(.vertical)
         }
+        .tracksTabBarMinimize()
         .refreshable {
             await reloadCrypto(force: true)
         }

@@ -30,6 +30,27 @@ enum HomeTab: Hashable {
       return String(localized: "Insights")
     }
   }
+
+  var systemImage: String {
+    switch self {
+    case .dashboard:
+      return "house"
+    case .portfolio:
+      return "chart.line.uptrend.xyaxis"
+    case .economy:
+      return "chart.bar.xaxis"
+    case .crypto:
+      return "bitcoinsign.circle"
+    case .expenses:
+      return "creditcard"
+    case .reports:
+      return "chart.bar.doc.horizontal"
+    case .tax:
+      return "building.columns"
+    case .insights:
+      return "sparkles"
+    }
+  }
 }
 
 enum PortfolioSegment: String, CaseIterable, Identifiable {
