@@ -35,8 +35,8 @@ enum SocialAuthProvider: String, CaseIterable, Identifiable {
   var icon: String {
     switch self {
     case .apple: "apple.logo"
-    case .google: ""
-    case .x: ""
+    case .google: "GoogleLogo"
+    case .x: "XLogo"
     }
   }
 

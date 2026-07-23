@@ -341,6 +341,8 @@ struct EarningsDetailView: View {
             .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
         }
         .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .presentationContentInteraction(.scrolls)
         .task {
             await loadIncomeStatements()
         }
