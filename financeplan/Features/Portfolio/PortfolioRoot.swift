@@ -7,6 +7,7 @@ struct PortfolioRoot: View {
   @Environment(\.colorScheme) private var colorScheme
   @Binding var isSettingsPresented: Bool
   @Binding var pendingOpenSymbol: String?
+  @Binding var pendingThesisWatchOpen: Bool
   @Binding var pendingAutomationDestination: AutomationNavigationDestination?
   @InjectedObservable(\Container.billingManager) private var billingManager
   @StateObject private var portfolioViewModel = PortfolioViewModel()
@@ -14,7 +15,8 @@ struct PortfolioRoot: View {
   var body: some View {
     NavigationStack {
       PortfolioScreen(
-        pendingOpenSymbol: $pendingOpenSymbol
+        pendingOpenSymbol: $pendingOpenSymbol,
+        pendingThesisWatchOpen: $pendingThesisWatchOpen
       )
       .environmentObject(portfolioViewModel)
       .navigationDestination(item: $pendingAutomationDestination) { destination in
