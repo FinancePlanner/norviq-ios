@@ -40,7 +40,7 @@ struct HomeScreen: View {
   }
 
   private var moreTabs: Set<HomeTab> {
-    [.economy, .reports, .tax, .insights]
+    [.markets, .economy, .reports, .tax, .insights]
   }
 
   var body: some View {
@@ -99,6 +99,11 @@ struct HomeScreen: View {
           pendingThesisWatchOpen: $pendingThesisWatchOpen,
           pendingAutomationDestination: $pendingAutomationDestination
         )
+      }
+
+      Tab(HomeTab.markets.title, systemImage: HomeTab.markets.systemImage, value: .markets) {
+        MarketsScreen()
+          .accessibilityIdentifier("tab.markets")
       }
 
       Tab(HomeTab.economy.title, systemImage: HomeTab.economy.systemImage, value: .economy) {

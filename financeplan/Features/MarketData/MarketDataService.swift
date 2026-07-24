@@ -26,6 +26,7 @@ protocol MarketDataServicing: Sendable {
   func fetchStockEarningsTranscript(symbol: String, date: String) async throws -> EarningsTranscript
   func fetchEarningsCalendar(from: String, to: String) async throws -> [EarningsEvent]
   func fetchMarketNews(limit: Int?) async throws -> [StockNews]
+  func fetchMarketOverview() async throws -> MarketOverviewResponse
   func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements
   func fetchPriceChart(symbol: String, range: String) async throws -> PriceChartSeries
   func fetchPriceChartComparison(symbols: [String], range: String) async throws -> PriceChartComparisonResponse
@@ -209,6 +210,12 @@ final class MarketDataHTTPService: MarketDataServicing {
   func fetchMarketNews(limit: Int?) async throws -> [StockNews] {
     try await performAuthenticated { client in
       try await client.fetchMarketNews(limit: limit)
+    }
+  }
+
+  func fetchMarketOverview() async throws -> MarketOverviewResponse {
+    try await performAuthenticated { client in
+      try await client.fetchMarketOverview()
     }
   }
 
@@ -396,6 +403,10 @@ struct MarketDataServiceStub: MarketDataServicing {
   }
 
   func fetchMarketNews(limit _: Int?) async throws -> [StockNews] {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchMarketOverview() async throws -> MarketOverviewResponse {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 

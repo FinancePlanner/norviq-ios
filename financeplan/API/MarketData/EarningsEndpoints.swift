@@ -44,6 +44,16 @@ struct GetEarningsCalendarEndpoint: Endpoint {
   }
 }
 
+struct GetMarketOverviewEndpoint: Endpoint {
+  typealias Response = MarketOverviewResponse
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/overview" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
 struct GetGeneralMarketNewsEndpoint: Endpoint {
   typealias Response = [StockNews]
   let limit: Int?
