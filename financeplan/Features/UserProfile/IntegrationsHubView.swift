@@ -30,17 +30,21 @@ struct IntegrationsHubView: View {
       }
 
       Section {
-        VStack(alignment: .leading, spacing: 6) {
-          Label("MCP integration", systemImage: "point.3.connected.trianglepath.dotted")
-            .font(.body.weight(.semibold))
-          Text("Connect Claude or any MCP client to your Norviq data — expenses, market data, and insights, scoped to what you allow.")
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-          Text("Generate a personal access token on the web app under Settings > API access, then add Norviq as an MCP server in your client.")
-            .font(.footnote)
-            .foregroundStyle(.secondary)
+        NavigationLink {
+          MCPGuideView()
+        } label: {
+          VStack(alignment: .leading, spacing: 6) {
+            Label("Connect an AI agent (MCP)", systemImage: "point.3.connected.trianglepath.dotted")
+              .font(.body.weight(.semibold))
+            Text("Connect Claude, ChatGPT, or Cursor to your Norviq data — expenses, market data, and insights, scoped to what you allow.")
+              .font(.subheadline)
+              .foregroundStyle(.secondary)
+            Text("Step-by-step setup with the server address and per-client instructions.")
+              .font(.footnote)
+              .foregroundStyle(.secondary)
+          }
+          .padding(.vertical, 4)
         }
-        .padding(.vertical, 4)
 
         VStack(alignment: .leading, spacing: 6) {
           Label("API access", systemImage: "key.fill")
