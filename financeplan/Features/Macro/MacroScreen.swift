@@ -36,6 +36,10 @@ struct MacroScreen: View {
 
           MacroGaugesCard(gauges: snapshot.gauges)
           MacroComponentsCard(components: snapshot.components)
+
+          if !viewModel.news.isEmpty {
+            MacroNewsCard(news: viewModel.news)
+          }
         } else if viewModel.isLoading {
           ProgressView("Loading inflation data…")
             .frame(maxWidth: .infinity)
