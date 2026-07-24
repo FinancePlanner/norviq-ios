@@ -11,13 +11,23 @@ final class MacroViewModel {
   var series: MacroSeriesResponse?
   var fedWatch: FedWatchResponse?
   var items: [MacroItemDTO] = []
+  var news: [StockNews] = []
   var isLoading = false
   var errorMessage: String?
 
   /// Months of history shown in the trend chart.
   static let chartMonths = 36
 
-  private let macroService: any MacroServicing = Container.shared.macroService()
+  private let macroService: any MacroServicing
+  private let marketDataService: any MarketDataServicing
+
+  init(
+    macroService: any MacroServicing = Container.shared.macroService(),
+    marketDataService: any MarketDataServicing = Container.shared.marketDataService()
+  ) {
+    self.macroService = macroService
+    self.marketDataService = marketDataService
+  }
 
   /// Loads everything for a country. The snapshot is the only required call;
   /// chart/fed-watch/items are enrichments and fail silently to nil/empty.
@@ -31,6 +41,7 @@ final class MacroViewModel {
     async let seriesTask = fetchSeries(country: country)
     async let itemsTask = fetchItems(country: country)
     async let fedWatchTask = fetchFedWatch(country: country)
+    async let newsTask = fetchNews()
 
     do {
       snapshot = try await snapshotTask
@@ -41,6 +52,11 @@ final class MacroViewModel {
     series = await seriesTask
     items = await itemsTask
     fedWatch = await fedWatchTask
+    news = await newsTask
+  }
+
+  private func fetchNews() async -> [StockNews] {
+    (try? await marketDataService.fetchMarketNews(limit: 6)) ?? []
   }
 
   private func fetchMovers(country: String) async -> [TopMoverDTO] {
