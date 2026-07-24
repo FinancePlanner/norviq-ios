@@ -19,6 +19,7 @@ struct PortfolioScreen: View {
   @EnvironmentObject private var viewModel: PortfolioViewModel
   @InjectedObservable(\Container.billingManager) private var billingManager
   @Binding var pendingOpenSymbol: String?
+  @Binding var pendingThesisWatchOpen: Bool
 
   @Query(sort: \SDPortfolioStock.symbol) private var stocks: [SDPortfolioStock]
 
@@ -200,6 +201,9 @@ struct PortfolioScreen: View {
     }
     .onChange(of: pendingOpenSymbol) { _, _ in
       consumePendingOpenSymbolIfNeeded()
+    }
+    .onChange(of: pendingThesisWatchOpen) { _, _ in
+      consumePendingThesisWatchOpenIfNeeded()
     }
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
@@ -542,6 +546,7 @@ struct PortfolioScreen: View {
     viewModel.setModelContext(modelContext)
     rebuildChartData()
     consumePendingOpenSymbolIfNeeded()
+    consumePendingThesisWatchOpenIfNeeded()
     Task { await reloadPortfolio() }
   }
 
@@ -711,6 +716,12 @@ struct PortfolioScreen: View {
 
     pendingOpenSymbol = nil
     openStockFromPushNotification(symbol: symbol)
+  }
+
+  private func consumePendingThesisWatchOpenIfNeeded() {
+    guard pendingThesisWatchOpen else { return }
+    pendingThesisWatchOpen = false
+    isThesisWatchPresented = true
   }
 
   private func openStockFromPushNotification(symbol: String) {

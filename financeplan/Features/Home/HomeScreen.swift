@@ -18,6 +18,7 @@ struct HomeScreen: View {
   @State private var isSettingsPresented = false
   @State private var isPaywallPresented = false
   @State private var pendingPortfolioOpenSymbol: String?
+  @State private var pendingThesisWatchOpen = false
   @State private var pendingAutomationDestination: AutomationNavigationDestination?
   @State private var budgetPlannerViewModel = BudgetPlannerViewModel()
   @State private var tabBarChrome = TabBarChromeController()
@@ -95,6 +96,7 @@ struct HomeScreen: View {
         PortfolioRoot(
           isSettingsPresented: $isSettingsPresented,
           pendingOpenSymbol: $pendingPortfolioOpenSymbol,
+          pendingThesisWatchOpen: $pendingThesisWatchOpen,
           pendingAutomationDestination: $pendingAutomationDestination
         )
       }
@@ -168,6 +170,7 @@ struct HomeScreen: View {
       Task { await budgetPlannerViewModel.load(force: true) }
     }
     .onReceive(NotificationCenter.default.publisher(for: .openThesisWatchFromPushNotification)) { _ in
+      pendingThesisWatchOpen = true
       selectedTab = .portfolio
     }
   }
