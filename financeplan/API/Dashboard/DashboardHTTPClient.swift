@@ -61,4 +61,8 @@ struct DashboardHTTPClient: Sendable {
     func getInsights() async throws -> DashboardInsightsResponse {
         try await client.call(GetDashboardInsightsEndpoint(), errorType: Error.self)
     }
+
+    func getWhyMoved() async throws -> WhyMovedResponse {
+        try await client.call(GetWhyMovedEndpoint(), errorType: Error.self)
+    }
 }
