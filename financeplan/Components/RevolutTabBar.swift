@@ -45,21 +45,11 @@ struct RevolutTabBar: View {
   }
 
   var body: some View {
-    ZStack(alignment: .top) {
-      capsule
-        .padding(.top, showsCapture && !isMinimized ? 18 : 0)
-
-      if showsCapture {
-        captureButton
-          .offset(y: isMinimized ? 4 : -10)
-          .scaleEffect(isMinimized ? 0.82 : 1)
-          .opacity(isMinimized ? 0.92 : 1)
-          .accessibilityIdentifier("tabBar.capture")
-      }
-    }
-    .animation(reduceMotion ? AppMotion.reduced : AppMotion.tabBar, value: selection)
-    .animation(reduceMotion ? AppMotion.reduced : AppMotion.tabBar, value: isMinimized)
-    .animation(reduceMotion ? AppMotion.reduced : AppMotion.tabBar, value: moreIsActive)
+    capsule
+      .padding(.top, showsCapture && !isMinimized ? 14 : 0)
+      .animation(reduceMotion ? AppMotion.reduced : AppMotion.tabBar, value: selection)
+      .animation(reduceMotion ? AppMotion.reduced : AppMotion.tabBar, value: isMinimized)
+      .animation(reduceMotion ? AppMotion.reduced : AppMotion.tabBar, value: moreIsActive)
   }
 
   private var capsule: some View {
@@ -68,6 +58,13 @@ struct RevolutTabBar: View {
         if showsCapture, index == items.count / 2 {
           Color.clear
             .frame(width: isMinimized ? 36 : 48)
+            .overlay(alignment: .center) {
+              captureButton
+                .offset(y: isMinimized ? -12 : -26)
+                .scaleEffect(isMinimized ? 0.82 : 1)
+                .opacity(isMinimized ? 0.92 : 1)
+                .accessibilityIdentifier("tabBar.capture")
+            }
         }
         tabButton(item)
       }
