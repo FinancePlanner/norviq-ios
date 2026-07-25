@@ -4,6 +4,7 @@ import Observation
 import OSLog
 import StoreKit
 import SwiftUI
+import UIKit
 import StockPlanShared
 import Factory
 
@@ -24,6 +25,12 @@ struct HomeScreen: View {
   @State private var tabBarChrome = TabBarChromeController()
   @State private var isMorePresented = false
   @State private var isCapturePresented = false
+
+  init(onLogout: @escaping () async -> Void) {
+    self.onLogout = onLogout
+    // Hard-hide native TabView chrome while the floating Revolut bar is in use.
+    UITabBar.appearance().isHidden = true
+  }
 
   private var appLanguage: AppLanguage {
     AppLanguage.from(appLanguageRawValue)
@@ -74,6 +81,7 @@ struct HomeScreen: View {
             isCapturePresented = true
           }
         )
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 16)
         .padding(.bottom, 10)
       }
@@ -90,6 +98,7 @@ struct HomeScreen: View {
           isSettingsPresented: $isSettingsPresented,
           budgetStore: budgetPlannerViewModel
         )
+        .toolbar(.hidden, for: .tabBar)
       }
 
       Tab(HomeTab.portfolio.title, systemImage: HomeTab.portfolio.systemImage, value: .portfolio) {
@@ -99,41 +108,49 @@ struct HomeScreen: View {
           pendingThesisWatchOpen: $pendingThesisWatchOpen,
           pendingAutomationDestination: $pendingAutomationDestination
         )
+        .toolbar(.hidden, for: .tabBar)
       }
 
       Tab(HomeTab.markets.title, systemImage: HomeTab.markets.systemImage, value: .markets) {
         MarketsScreen()
           .accessibilityIdentifier("tab.markets")
+          .toolbar(.hidden, for: .tabBar)
       }
 
       Tab(HomeTab.economy.title, systemImage: HomeTab.economy.systemImage, value: .economy) {
         EconomyHubScreen()
           .accessibilityIdentifier("tab.economy")
+          .toolbar(.hidden, for: .tabBar)
       }
 
       Tab(HomeTab.crypto.title, systemImage: HomeTab.crypto.systemImage, value: .crypto) {
         CryptoHomeView(isSettingsPresented: $isSettingsPresented)
           .accessibilityIdentifier("tab.crypto")
+          .toolbar(.hidden, for: .tabBar)
       }
 
       Tab(HomeTab.expenses.title, systemImage: HomeTab.expenses.systemImage, value: .expenses) {
         ExpensesPlannerScreen(isSettingsPresented: $isSettingsPresented, viewModel: budgetPlannerViewModel)
           .accessibilityIdentifier("tab.expenses")
+          .toolbar(.hidden, for: .tabBar)
       }
 
       Tab(HomeTab.reports.title, systemImage: HomeTab.reports.systemImage, value: .reports) {
         ExpensesComparisonScreen()
           .accessibilityIdentifier("tab.reports")
+          .toolbar(.hidden, for: .tabBar)
       }
 
       Tab(HomeTab.tax.title, systemImage: HomeTab.tax.systemImage, value: .tax) {
         TaxDashboardScreen()
           .accessibilityIdentifier("tab.tax")
+          .toolbar(.hidden, for: .tabBar)
       }
 
       Tab(HomeTab.insights.title, systemImage: HomeTab.insights.systemImage, value: .insights) {
         InsightsScreen()
           .accessibilityIdentifier("tab.insights")
+          .toolbar(.hidden, for: .tabBar)
       }
     }
     .id(appLanguage.rawValue)
@@ -188,7 +205,7 @@ struct HomeScreen: View {
   private var moreSheet: some View {
     NavigationStack {
       List {
-        ForEach([HomeTab.economy, .reports, .tax, .insights], id: \.self) { tab in
+        ForEach([HomeTab.markets, .economy, .reports, .tax, .insights], id: \.self) { tab in
           Button {
             isMorePresented = false
             selectedTab = tab

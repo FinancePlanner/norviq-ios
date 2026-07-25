@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/amplitude/AmplitudeCore-Swift.git",
       "state" : {
-        "revision" : "6fc9fb3cc74e394a96bd9cb6a4d440d3db6cbf46",
-        "version" : "1.4.8"
+        "revision" : "bf7afcc808ff9ed66c9e0f99c1d65ba8fca8caa3",
+        "version" : "1.4.9"
       }
     },
     {
@@ -195,8 +195,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/PostHog/posthog-ios",
       "state" : {
-        "revision" : "067ccbb5290517eb7362117879488f9286ffe299",
-        "version" : "3.67.0"
+        "revision" : "0191008e2b089a59574ab02a9ee5afbd65631aaf",
+        "version" : "3.67.1"
       }
     },
     {
@@ -204,8 +204,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/RevenueCat/purchases-ios-spm.git",
       "state" : {
-        "revision" : "4b28e6817c746be6bb710f2bcc0a7e8d9f9e3afa",
-        "version" : "5.81.1"
+        "revision" : "5d8667fc283993e7a791f28c6b5e5071ed2cc70c",
+        "version" : "5.81.2"
       }
     },
     {
@@ -213,8 +213,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/getsentry/sentry-cocoa.git",
       "state" : {
-        "revision" : "67310f115f3fc1e5e1f2e262f9009c64bb387e3f",
-        "version" : "9.22.0"
+        "revision" : "afa7510e05b99f35c1febe47566bfd868fa53fb9",
+        "version" : "9.23.0"
       }
     },
     {

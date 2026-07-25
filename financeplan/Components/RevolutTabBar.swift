@@ -86,7 +86,8 @@ struct RevolutTabBar: View {
         }
         .shadow(color: .black.opacity(colorScheme == .dark ? 0.45 : 0.12), radius: 18, y: 8)
     }
-    .appGlassEffect(.capsule)
+    // Avoid .appGlassEffect(.capsule) here — on iOS 26 native glassEffect
+    // expands to the full ZStack proposal and covers the screen.
     .scaleEffect(isMinimized ? 0.94 : 1, anchor: .bottom)
   }
 
