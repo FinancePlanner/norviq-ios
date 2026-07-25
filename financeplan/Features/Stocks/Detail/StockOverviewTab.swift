@@ -2,6 +2,7 @@ import StockPlanShared
 import SwiftUI
 
 struct StockOverviewTab: View {
+    let symbol: String
     let details: StockDetails?
     let valuation: StockValuationRequest?
     let marketSnapshot: StockMarketSnapshot?
@@ -22,6 +23,8 @@ struct StockOverviewTab: View {
                     onSellPosition: onSellPosition
                 )
             }
+
+            StockPressureCard(symbol: symbol)
 
             if let marketSnapshot {
                 StockMarketSnapshotCard(snapshot: marketSnapshot)

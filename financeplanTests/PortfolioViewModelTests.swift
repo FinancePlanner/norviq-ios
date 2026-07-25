@@ -453,6 +453,10 @@ extension MarketDataServicing {
     throw QuoteMarketDataMockError.notConfigured
   }
 
+  func fetchMarketPressure(symbol _: String) async throws -> MarketPressureResponse {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
   func fetchCompanyProfile(symbol _: String) async throws -> CompanyProfileResponse {
     throw QuoteMarketDataMockError.notConfigured
   }
