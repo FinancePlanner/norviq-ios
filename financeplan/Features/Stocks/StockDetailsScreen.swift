@@ -231,6 +231,7 @@ struct StockDetailScreen: View {
                     }
                 case .overview:
                     StockOverviewTab(
+                        symbol: viewModel.details?.symbol ?? initialSymbol,
                         details: viewModel.details,
                         valuation: viewModel.valuation,
                         marketSnapshot: viewModel.marketSnapshot,
