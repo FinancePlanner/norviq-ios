@@ -4,6 +4,7 @@ enum HomeTab: Hashable {
   case dashboard
   case portfolio
   case economy
+  case markets
   case crypto
   case expenses
   case reports
@@ -18,6 +19,8 @@ enum HomeTab: Hashable {
       return String(localized: "Portfolio")
     case .economy:
       return String(localized: "Economy")
+    case .markets:
+      return String(localized: "Markets")
     case .crypto:
       return String(localized: "Crypto")
     case .expenses:
@@ -39,6 +42,8 @@ enum HomeTab: Hashable {
       return "chart.line.uptrend.xyaxis"
     case .economy:
       return "chart.bar.xaxis"
+    case .markets:
+      return "square.grid.3x3.fill"
     case .crypto:
       return "bitcoinsign.circle"
     case .expenses:

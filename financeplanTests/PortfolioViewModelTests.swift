@@ -449,6 +449,10 @@ final class PortfolioViewModelTests: XCTestCase {
 }
 
 extension MarketDataServicing {
+  func fetchMarketOverview() async throws -> MarketOverviewResponse {
+    throw QuoteMarketDataMockError.notConfigured
+  }
+
   func fetchCompanyProfile(symbol _: String) async throws -> CompanyProfileResponse {
     throw QuoteMarketDataMockError.notConfigured
   }

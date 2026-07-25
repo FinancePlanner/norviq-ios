@@ -168,6 +168,10 @@ struct MarketDataHTTPClient: Sendable {
     try await client.call(GetGeneralMarketNewsEndpoint(limit: limit), errorType: Error.self)
   }
 
+  func fetchMarketOverview() async throws -> MarketOverviewResponse {
+    try await client.call(GetMarketOverviewEndpoint(), errorType: Error.self)
+  }
+
   func fetchPriceChart(symbol: String, range: String) async throws -> PriceChartSeries {
     try await client.call(GetPriceChartEndpoint(symbol: symbol, range: range), errorType: Error.self)
   }
