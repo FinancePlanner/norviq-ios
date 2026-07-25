@@ -40,7 +40,7 @@ struct HomeScreen: View {
   }
 
   private var moreTabs: Set<HomeTab> {
-    [.markets, .economy, .reports, .tax, .insights]
+    Set(HomeTab.moreMenuTabs)
   }
 
   var body: some View {
@@ -188,7 +188,7 @@ struct HomeScreen: View {
   private var moreSheet: some View {
     NavigationStack {
       List {
-        ForEach([HomeTab.economy, .reports, .tax, .insights], id: \.self) { tab in
+        ForEach(HomeTab.moreMenuTabs, id: \.self) { tab in
           Button {
             isMorePresented = false
             selectedTab = tab

@@ -11,6 +11,8 @@ enum HomeTab: Hashable {
   case tax
   case insights
 
+  static let moreMenuTabs: [HomeTab] = [.markets, .economy, .reports, .tax, .insights]
+
   var title: String {
     switch self {
     case .dashboard:

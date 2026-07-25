@@ -6,6 +6,21 @@ import StockPlanShared
 
 final class HomeDashboardTests: XCTestCase {
 
+    func testMoreMenuIncludesMarketsTab() {
+        XCTAssertTrue(
+            HomeTab.moreMenuTabs.contains(.markets),
+            "Markets must remain reachable from the custom More menu."
+        )
+    }
+
+    func testMoreMenuTabsAreUnique() {
+        XCTAssertEqual(
+            Set(HomeTab.moreMenuTabs).count,
+            HomeTab.moreMenuTabs.count,
+            "Duplicated More menu tabs would render duplicate navigation rows."
+        )
+    }
+
     // This is a placeholder test file for the Dashboard logic.
     // Based on the 'DashboardService.swift' existing in Features/Home.
 
