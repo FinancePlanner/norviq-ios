@@ -35,6 +35,14 @@ struct WhyMovedCard: View {
         }
       }
 
+      // Names the differentiator and its recency. Omitted entirely when no
+      // sentiment was covered, so the card never implies coverage it lacks.
+      if let source = response.sentimentSource, source.postsAnalyzed > 0 {
+        Text(sentimentSourceLine(source))
+          .font(.caption2.weight(.semibold))
+          .foregroundStyle(.secondary)
+      }
+
       if let summary = response.aiSummary {
         HStack(alignment: .top, spacing: 6) {
           Image(systemName: "sparkles")
@@ -78,6 +86,16 @@ struct WhyMovedCard: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(.thinMaterial)
     .clipShape(RoundedRectangle(cornerRadius: 16))
+  }
+
+  private func sentimentSourceLine(_ source: WhyMovedSentimentSource) -> String {
+    var line = "\(source.postsAnalyzed) X posts across \(source.symbolsCovered) holdings"
+    if let raw = source.lastPostAt, let posted = MacroNewsDateFormatting.parse(raw) {
+      let formatter = RelativeDateTimeFormatter()
+      formatter.unitsStyle = .abbreviated
+      line += " · newest \(formatter.localizedString(for: posted, relativeTo: Date()))"
+    }
+    return line
   }
 
   private func moverChip(_ mover: WhyMovedMover) -> some View {

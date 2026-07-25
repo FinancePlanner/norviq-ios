@@ -11,6 +11,16 @@ nonisolated struct WhyMovedResponse: Codable, Equatable, Sendable {
   let movers: [WhyMovedMover]
   let context: WhyMovedContext
   let aiSummary: WhyMovedAISummary?
+  /// Nil when no mover carried sentiment, so the card can omit the claim
+  /// instead of rendering an empty one.
+  let sentimentSource: WhyMovedSentimentSource?
+}
+
+nonisolated struct WhyMovedSentimentSource: Codable, Equatable, Sendable {
+  let postsAnalyzed: Int
+  let symbolsCovered: Int
+  let windowDays: Int
+  let lastPostAt: String?
 }
 
 nonisolated struct WhyMovedMover: Codable, Equatable, Sendable, Identifiable {
