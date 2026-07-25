@@ -17,3 +17,11 @@ struct GetDashboardInsightsEndpoint: Endpoint {
     var decoder: JSONDecoder { .stockPlanShared }
     func asParameters() throws -> Parameters { [:] }
 }
+
+struct GetWhyMovedEndpoint: Endpoint {
+    typealias Response = WhyMovedResponse
+    var method: HTTPMethod { .get }
+    var path: String { "/v1/dashboard/why-moved" }
+    var decoder: JSONDecoder { .stockPlanShared }
+    func asParameters() throws -> Parameters { [:] }
+}

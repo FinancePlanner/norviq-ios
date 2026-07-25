@@ -420,6 +420,8 @@ private struct DashboardContentSection: View {
       .redacted(reason: isHomeMetricsRedacted ? .placeholder : [])
       .appAnimation(AppMotion.state, value: isHomeMetricsRedacted)
 
+      WhyMovedCard()
+
       if isSearchResultsVisible {
         AssetSearchCard(viewModel: searchViewModel)
           .transition(.opacity.combined(with: .move(edge: .top)))

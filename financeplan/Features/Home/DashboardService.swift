@@ -5,6 +5,7 @@ import Factory
 protocol DashboardServicing: Sendable {
     func getDashboard() async throws -> DashboardResponse
     func getInsights() async throws -> DashboardInsightsResponse
+    func getWhyMoved() async throws -> WhyMovedResponse
 }
 
 struct DefaultDashboardService: DashboardServicing, @unchecked Sendable {
@@ -25,6 +26,10 @@ struct DefaultDashboardService: DashboardServicing, @unchecked Sendable {
 
     func getInsights() async throws -> DashboardInsightsResponse {
         try await client.getInsights()
+    }
+
+    func getWhyMoved() async throws -> WhyMovedResponse {
+        try await client.getWhyMoved()
     }
 }
 
