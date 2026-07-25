@@ -16,7 +16,10 @@ final class WhyMovedViewModelTests: XCTestCase {
         indices: [WhyMovedIndex(symbol: "SPY", label: "S&P 500", changePercent: 0.4)],
         topics: [WhyMovedTopic(topic: "Stocks", count: 7)]
       ),
-      aiSummary: summaryText.map { WhyMovedAISummary(text: $0, generatedAt: "2026-07-25T12:00:00Z") }
+      aiSummary: summaryText.map { WhyMovedAISummary(text: $0, generatedAt: "2026-07-25T12:00:00Z") },
+      sentimentSource: WhyMovedSentimentSource(
+        postsAnalyzed: 12, symbolsCovered: 1, windowDays: 7, lastPostAt: "2026-07-25T10:00:00Z"
+      )
     )
   }
 
@@ -57,6 +60,7 @@ final class WhyMovedViewModelTests: XCTestCase {
      "aiSummary":{"text":"AAPL drove the gain.","generatedAt":"2026-07-25T12:00:00Z"}}
     """
     let decoded = try JSONDecoder().decode(WhyMovedResponse.self, from: Data(json.utf8))
+    XCTAssertNil(decoded.sentimentSource, "absent provenance must decode as nil, not a zeroed struct")
     XCTAssertEqual(decoded.movers.count, 2)
     XCTAssertNil(decoded.movers.last?.sentiment)
     XCTAssertEqual(decoded.aiSummary?.text, "AAPL drove the gain.")
