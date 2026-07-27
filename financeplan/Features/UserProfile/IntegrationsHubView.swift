@@ -36,10 +36,10 @@ struct IntegrationsHubView: View {
           VStack(alignment: .leading, spacing: 6) {
             Label("Connect an AI agent (MCP)", systemImage: "point.3.connected.trianglepath.dotted")
               .font(.body.weight(.semibold))
-            Text("Connect Claude, ChatGPT, or Cursor to your Norviq data — expenses, market data, and insights, scoped to what you allow.")
+            Text("Connect Claude, ChatGPT, Cursor, or Hermes to your Norviq data — expenses, market, tax, and insights, scoped to what you allow.")
               .font(.subheadline)
               .foregroundStyle(.secondary)
-            Text("Step-by-step setup with the server address and per-client instructions.")
+            Text("Server address, token steps, and per-client recipes including Hermes.")
               .font(.footnote)
               .foregroundStyle(.secondary)
           }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Step-by-step guide for connecting an external AI agent (Claude, ChatGPT,
-/// Cursor, Claude Code) to the user's Norviq data over MCP.
+/// Cursor, Hermes, Claude Code) to the user's Norviq data over MCP.
 struct MCPGuideView: View {
   @Environment(\.colorScheme) private var scheme
 
@@ -12,7 +12,7 @@ struct MCPGuideView: View {
     List {
       Section {
         VStack(alignment: .leading, spacing: 8) {
-          Text("Let your AI assistant read your expenses, quotes, reports, and insights — scoped to exactly what you allow, revocable any time.")
+          Text("Let your AI assistant read expenses, quotes, reports, insights, and tax data — scoped to exactly what you allow, revocable any time.")
             .font(.subheadline)
             .foregroundStyle(.secondary)
           Text("Norviq provides the tools; your AI client provides (and bills) the model.")
@@ -39,9 +39,20 @@ struct MCPGuideView: View {
       }
       .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
+      Section("What you can access") {
+        stepText("Expenses, categories, recurring, CSV import/export")
+        stepText("Spending reports, budgets, and goals")
+        stepText("Quotes, symbol search, market insights")
+        stepText("Tax dashboard and loss carryforwards")
+        Text("Exact tools depend on the scopes on your personal access token (Pro).")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+      .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
       Section("1 · Claude (app & web)") {
         stepText("Settings → Connectors → Add custom connector.")
-        stepText("Paste the server address and authorize in the browser with your Norviq login — no token needed.")
+        stepText("Paste the server address and authorize in the browser with your Norviq login — no token needed for connector OAuth.")
       }
       .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
@@ -52,12 +63,24 @@ struct MCPGuideView: View {
 
       Section("3 · Cursor / Claude Code (token)") {
         stepText("Create a personal access token on the web app (button below), then add the server with the token as a bearer header:")
-        Text("claude mcp add --transport http norviq \(Self.mcpEndpoint) --header \"Authorization: Bearer nvq_pat_…\"")
-          .font(.caption.monospaced())
-          .textSelection(.enabled)
-          .padding(8)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .background(AppTheme.Colors.pageBackground(for: scheme), in: .rect(cornerRadius: 8))
+        codeBlock(
+          "claude mcp add --transport http norviq \(Self.mcpEndpoint) --header \"Authorization: Bearer nvq_pat_…\""
+        )
+      }
+      .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
+      Section("4 · Hermes Agent (token)") {
+        stepText("Mint a token on the web app, then on the Hermes host (example profile mac-mcp):")
+        codeBlock(
+          """
+          sudo hermes --profile mac-mcp mcp add norviq \\
+            --url \(Self.mcpEndpoint) \\
+            --auth header
+          # Header: Authorization = Bearer nvq_pat_…
+          sudo hermes --profile mac-mcp mcp test norviq
+          """
+        )
+        stepText("Ask Hermes things like “list my recent expenses” or “quote AAPL.” Model cost stays with Hermes / your provider.")
       }
       .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
@@ -80,5 +103,19 @@ struct MCPGuideView: View {
     Text(text)
       .font(.subheadline)
       .foregroundStyle(.secondary)
+  }
+
+  private func codeBlock(_ text: String) -> some View {
+    Text(text)
+      .font(.caption.monospaced())
+      .textSelection(.enabled)
+      .padding(8)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(AppTheme.Colors.pageBackground(for: scheme), in: .rect(cornerRadius: 8))
+      .contextMenu {
+        Button("Copy") {
+          UIPasteboard.general.string = text
+        }
+      }
   }
 }
