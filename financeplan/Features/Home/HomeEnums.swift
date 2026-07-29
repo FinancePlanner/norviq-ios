@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum HomeTab: Hashable {
+enum HomeTab: Hashable, CaseIterable {
   case dashboard
   case portfolio
   case economy
@@ -10,6 +10,16 @@ enum HomeTab: Hashable {
   case reports
   case tax
   case insights
+
+  /// Tabs with their own slot in the custom bottom bar.
+  static let primaryTabs: [HomeTab] = [.dashboard, .portfolio, .expenses, .crypto]
+
+  /// Single source of truth for the custom More menu. The native tab bar is
+  /// hidden, so a tab in neither `primaryTabs` nor here is unreachable — which
+  /// is how Markets shipped invisible once already. Both the More sheet rows
+  /// and the More-tab active indicator read from here so the two cannot drift
+  /// apart.
+  static let moreMenuTabs: [HomeTab] = [.markets, .economy, .reports, .tax, .insights]
 
   var title: String {
     switch self {
