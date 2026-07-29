@@ -12,6 +12,16 @@ struct RetirementPlanningScreen: View {
   var body: some View {
     @Bindable var model = model
     Form {
+      Section {
+        VigilPageHeader(
+          watch: .wealth,
+          title: "Retirement plan",
+          subtitle: "Project your path to retirement"
+        )
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
+        .listRowBackground(Color.clear)
+      }
+
       Section("Planning assumptions") {
         Picker("Jurisdiction", selection: $model.jurisdiction) {
           ForEach(TaxJurisdiction.allCases, id: \.self) { Text($0.rawValue).tag($0) }
@@ -79,7 +89,9 @@ struct RetirementPlanningScreen: View {
           .disabled(model.isLoading || model.retirementAge <= model.currentAge)
       }
     }
-    .navigationTitle("Retirement plan")
+    .vigilListChrome()
+    .vigilNavigationTitle("Retirement plan")
+    .vigilInlineNavigationBar()
     .overlay {
       if model.isLoading {
         ProgressView().controlSize(.large)

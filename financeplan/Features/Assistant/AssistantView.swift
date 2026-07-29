@@ -20,8 +20,9 @@ struct AssistantView: View {
                 inputBar
             }
             .background(AppTheme.Colors.pageBackground(for: scheme))
-            .navigationTitle("Assistant")
-            .navigationBarTitleDisplayMode(.inline)
+            .vigilScreenBackground()
+            .vigilNavigationTitle("Assistant")
+            .vigilInlineNavigationBar()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
@@ -34,6 +35,13 @@ struct AssistantView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
+                    VigilPageHeader(
+                        watch: .intelligence,
+                        title: "Assistant",
+                        subtitle: "Ask. The third head is listening."
+                    )
+                    .padding(.horizontal, 4)
+
                     if viewModel.messages.isEmpty {
                         emptyState
                     }

@@ -16,6 +16,16 @@ struct BankingView: View {
   var body: some View {
     List {
       Section {
+        VigilPageHeader(
+          watch: .spending,
+          title: "Bank sync",
+          subtitle: "Read-only transaction import via Plaid"
+        )
+        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+        .listRowBackground(Color.clear)
+      }
+
+      Section {
         ProGateView(billingManager: billingManager) {
           connectionsContent
         }
@@ -33,8 +43,10 @@ struct BankingView: View {
         }
       }
     }
-    .navigationTitle("Bank Sync")
-    .navigationBarTitleDisplayMode(.inline)
+    .vigilListChrome()
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Bank Sync")
+    .vigilInlineNavigationBar()
     .task { await viewModel.load() }
     .refreshable { await viewModel.load() }
     .onChange(of: viewModel.pendingLinkToken) { _, token in

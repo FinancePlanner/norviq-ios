@@ -10,28 +10,36 @@ struct OnboardingWelcomeScreen: View {
     VStack(spacing: 0) {
       Spacer(minLength: 32)
 
-      Image("CerberusMarkFull")
-        .renderingMode(.template)
-        .resizable()
-        .scaledToFit()
-        .frame(maxHeight: 220)
-        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-        .padding(.horizontal, 40)
-        .padding(.bottom, 32)
-        .accessibilityHidden(true)
+      VStack(spacing: 24) {
+        if BrandTheme.current == .vigil {
+          Text(VigilWatch.wealth.eyebrow)
+            .vigilOverline()
+            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme).opacity(0.88))
+        }
 
-      VStack(spacing: 12) {
-        Text("Three heads. Every angle of your money.")
-          .typography(.hero, weight: .bold)
-          .multilineTextAlignment(.center)
-          .padding(.horizontal, 24)
+        Image("CerberusMarkFull")
+          .renderingMode(.template)
+          .resizable()
+          .scaledToFit()
+          .frame(maxHeight: 220)
+          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+          .accessibilityHidden(true)
 
-        Text("Norviq keeps the vigil — wealth, spending, and the signals between. Nothing slips past.")
-          .typography(.label)
-          .foregroundStyle(.secondary)
-          .multilineTextAlignment(.center)
-          .padding(.horizontal, 32)
+        VStack(spacing: 12) {
+          Text("Three heads. Every angle of your money.")
+            .typography(.hero, weight: .bold)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 24)
+
+          Text("Norviq keeps the vigil — wealth, spending, and the signals between. Nothing slips past.")
+            .typography(.label)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 32)
+        }
       }
+      .onboardingStepCard(cornerRadius: 28)
+      .padding(.horizontal, 20)
 
       Spacer(minLength: 24)
 
@@ -51,6 +59,7 @@ struct OnboardingWelcomeScreen: View {
       }
       .padding(.bottom, 32)
     }
+    .vigilScreenBackground()
   }
 
   private var legalFootnote: some View {

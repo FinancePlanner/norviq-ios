@@ -40,8 +40,8 @@ struct SectorGainsScreen: View {
         content
       }
     }
-    .navigationTitle("Sector Gains")
-    .navigationBarTitleDisplayMode(.inline)
+    .vigilNavigationTitle("Sector Gains")
+    .vigilInlineNavigationBar()
     .refreshable { await viewModel.load(force: true) }
     .task { await viewModel.load() }
   }
@@ -49,6 +49,12 @@ struct SectorGainsScreen: View {
   private var content: some View {
     ScrollView {
       VStack(spacing: 20) {
+        VigilPageHeader(
+          watch: .wealth,
+          title: "Sector Gains",
+          subtitle: "Unrealized P/L grouped by sector"
+        )
+
         GlassCard(backgroundColor: pnlTint(totalUnrealizedPnl)) {
           VStack(alignment: .leading, spacing: 12) {
             Text("Total unrealized P/L")
@@ -88,6 +94,7 @@ struct SectorGainsScreen: View {
       .padding(.horizontal, 16)
       .padding(.vertical, 12)
     }
+    .vigilScreenBackground()
   }
 
   private func sectorRow(_ sector: SectorGainItem) -> some View {

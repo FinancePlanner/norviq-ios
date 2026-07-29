@@ -18,6 +18,12 @@ struct SuccessImportScreen: View {
       Spacer()
 
       VStack(spacing: 24) {
+        if BrandTheme.current == .vigil {
+          Text(VigilWatch.vigilActive.eyebrow)
+            .vigilOverline()
+            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme).opacity(0.88))
+        }
+
         ZStack {
           Circle()
             .fill(AppTheme.Colors.success.opacity(0.12))
@@ -39,6 +45,8 @@ struct SuccessImportScreen: View {
             .padding(.horizontal, 40)
         }
       }
+      .onboardingStepCard(cornerRadius: 28)
+      .padding(.horizontal, 24)
 
       VStack(spacing: 16) {
         Button {

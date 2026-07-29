@@ -17,6 +17,11 @@ public struct MeshGradientBackground: View {
 
       GeometryReader { proxy in
         ZStack {
+          if BrandTheme.current == .vigil, colorScheme == .dark {
+            VigilCircuitMesh()
+              .opacity(0.35)
+          }
+
           RoundedRectangle(cornerRadius: 36, style: .continuous)
             .fill(
               LinearGradient(
@@ -53,5 +58,25 @@ public struct MeshGradientBackground: View {
       withAnimation(.easeOut(duration: 0.6)) { animate = true }
     }
     .ignoresSafeArea()
+  }
+}
+
+/// Low-opacity circuit grid for Vigil dark command center canvas.
+private struct VigilCircuitMesh: View {
+  var body: some View {
+    Canvas { context, size in
+      let step: CGFloat = 28
+      var path = Path()
+      stride(from: 0, through: size.width, by: step).forEach { x in
+        path.move(to: CGPoint(x: x, y: 0))
+        path.addLine(to: CGPoint(x: x, y: size.height))
+      }
+      stride(from: 0, through: size.height, by: step).forEach { y in
+        path.move(to: CGPoint(x: 0, y: y))
+        path.addLine(to: CGPoint(x: size.width, y: y))
+      }
+      context.stroke(path, with: .color(Color(red: 0, green: 0.949, blue: 1).opacity(0.08)), lineWidth: 0.5)
+    }
+    .allowsHitTesting(false)
   }
 }

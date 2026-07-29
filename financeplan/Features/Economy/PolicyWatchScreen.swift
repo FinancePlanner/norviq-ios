@@ -33,6 +33,12 @@ struct PolicyWatchScreen: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 16) {
+        VigilPageHeader(
+          watch: .intelligence,
+          title: "Policy Watch",
+          subtitle: "Central bank stance and rates"
+        )
+
         EconomyCountryPicker(selection: $selectedCountry)
           .onChange(of: selectedCountry) { _, newValue in
             Task { await viewModel.load(country: newValue) }
@@ -54,10 +60,11 @@ struct PolicyWatchScreen: View {
       }
       .padding()
     }
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Policy Watch")
     .refreshable {
       await viewModel.load(country: selectedCountry)
     }
-    .navigationTitle("Policy Watch")
     .task {
       if viewModel.response == nil {
         await viewModel.load(country: selectedCountry)

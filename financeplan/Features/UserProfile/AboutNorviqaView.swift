@@ -21,6 +21,15 @@ struct AboutNorviqView: View {
 
     var body: some View {
         List {
+            Section {
+                VigilPageHeader(
+                    watch: .settings("About"),
+                    title: "About Norviq",
+                    subtitle: "Product scope, legal, and community links"
+                )
+                .listRowBackground(Color.clear)
+            }
+
             // Brand Header
             Section {
                 VStack(spacing: 16) {
@@ -95,11 +104,10 @@ struct AboutNorviqView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
         }
-        .scrollContentBackground(.hidden)
-        .listStyle(.insetGrouped)
-        .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-        .navigationTitle("About Norviq")
-        .navigationBarTitleDisplayMode(.inline)
+        .vigilListChrome()
+        .vigilScreenBackground()
+        .vigilNavigationTitle("About Norviq")
+        .vigilInlineNavigationBar()
     }
 
     private func aboutRow(title: String, detail: String, systemImage: String) -> some View {

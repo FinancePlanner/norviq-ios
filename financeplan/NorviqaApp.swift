@@ -24,7 +24,7 @@ struct NorviqApp: App {
   @Injected(\.analytics) private var analytics
   @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system
     .rawValue
-  @AppStorage(BrandTheme.storageKey) private var brandThemeRawValue = BrandTheme.classic.rawValue
+  @AppStorage(BrandTheme.storageKey) private var brandThemeRawValue = BrandTheme.vigil.rawValue
   @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
 
   private var appAppearance: AppAppearance {
@@ -88,6 +88,19 @@ struct NorviqApp: App {
         .onAppear {
           AppLanguage.applyStoredLanguage()
           analytics.track("App Launched")
+          VigilNavigationAppearance.apply(
+            colorScheme: appAppearance.colorScheme ?? .dark
+          )
+        }
+        .onChange(of: brandThemeRawValue) { _, _ in
+          VigilNavigationAppearance.apply(
+            colorScheme: appAppearance.colorScheme ?? .dark
+          )
+        }
+        .onChange(of: appAppearanceRawValue) { _, _ in
+          VigilNavigationAppearance.apply(
+            colorScheme: appAppearance.colorScheme ?? .dark
+          )
         }
         .onChange(of: appLanguageRawValue) { _, newValue in
           AppLanguage.applyBundleLanguage(AppLanguage.from(newValue))

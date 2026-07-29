@@ -11,11 +11,17 @@ struct CryptoDetailScreen: View {
 
     var body: some View {
         ZStack {
-            MeshGradientBackground()
+            AppTheme.Colors.pageBackground(for: colorScheme)
                 .ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 20) {
+                    VigilPageHeader(
+                        watch: .wealth,
+                        title: LocalizedStringKey(viewModel.symbol),
+                        subtitle: LocalizedStringKey(viewModel.name)
+                    )
+
                     header
 
                     GlassCard {
@@ -37,8 +43,9 @@ struct CryptoDetailScreen: View {
                 .padding()
             }
         }
-        .navigationTitle(viewModel.symbol)
-        .navigationBarTitleDisplayMode(.inline)
+        .vigilScreenBackground()
+        .vigilNavigationTitle(viewModel.symbol)
+        .vigilInlineNavigationBar()
         .task {
             await viewModel.initialLoad()
         }

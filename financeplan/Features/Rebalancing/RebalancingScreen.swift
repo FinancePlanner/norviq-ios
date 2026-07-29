@@ -15,6 +15,16 @@ struct RebalancingScreen: View {
 
   var body: some View {
     List {
+      Section {
+        VigilPageHeader(
+          watch: .wealth,
+          title: "Rebalancing",
+          subtitle: "Policy targets, drift monitoring, and reviewable trade plans"
+        )
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
+        .listRowBackground(Color.clear)
+      }
+
       if let overview = model.overview {
         summary(overview)
         if overview.model != nil {
@@ -46,7 +56,9 @@ struct RebalancingScreen: View {
         ProgressView()
       }
     }
-    .navigationTitle("Rebalancing")
+    .vigilListChrome()
+    .vigilNavigationTitle("Rebalancing")
+    .vigilInlineNavigationBar()
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
         Button("Edit targets", systemImage: "slider.horizontal.3") { isEditingTargets = true }

@@ -14,17 +14,11 @@ struct OnboardingComparisonScreen: View {
     VStack(spacing: 0) {
       ScrollView {
         VStack(spacing: 20) {
-          VStack(spacing: 10) {
-            Text("Two in three Americans don't track their spending at all.")
-              .typography(.title, weight: .bold)
-              .multilineTextAlignment(.center)
-
-            Text("It doesn't have to be that way.")
-              .typography(.label)
-              .foregroundStyle(.secondary)
-              .multilineTextAlignment(.center)
-          }
-          .padding(.top, 28)
+          OnboardingQuestionHeader(
+            watch: .wealthPlan,
+            title: "Two in three Americans don't track their spending at all.",
+            subtitle: "It doesn't have to be that way."
+          )
 
           comparisonTable
         }
@@ -41,18 +35,30 @@ struct OnboardingComparisonScreen: View {
   }
 
   private var comparisonTable: some View {
-    GlassCard(cornerRadius: 22) {
-      VStack(spacing: 0) {
-        headerRow
-        ForEach(Array(Self.rows.enumerated()), id: \.element.id) { index, row in
-          if index > 0 {
-            Divider().opacity(0.2)
-          }
-          ComparisonRowView(row: row)
+    Group {
+      if BrandTheme.current == .vigil {
+        comparisonTableContent
+          .padding(20)
+          .vigilGlassCard(cornerRadius: 22)
+      } else {
+        GlassCard(cornerRadius: 22) {
+          comparisonTableContent
         }
       }
-      .padding(.vertical, 4)
     }
+  }
+
+  private var comparisonTableContent: some View {
+    VStack(spacing: 0) {
+      headerRow
+      ForEach(Array(Self.rows.enumerated()), id: \.element.id) { index, row in
+        if index > 0 {
+          Divider().opacity(0.2)
+        }
+        ComparisonRowView(row: row)
+      }
+    }
+    .padding(.vertical, 4)
   }
 
   private var headerRow: some View {

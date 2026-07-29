@@ -15,6 +15,15 @@ struct ShareFeedbackView: View {
 
     var body: some View {
         List {
+            Section {
+                VigilPageHeader(
+                    watch: .settings("Feedback"),
+                    title: "Share Feedback",
+                    subtitle: "Bug reports, ideas, and product thoughts"
+                )
+                .listRowBackground(Color.clear)
+            }
+
             // Header
             Section {
                 VStack(spacing: 12) {
@@ -54,11 +63,10 @@ struct ShareFeedbackView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
         }
-        .scrollContentBackground(.hidden)
-        .listStyle(.insetGrouped)
-        .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-        .navigationTitle("Share Feedback")
-        .navigationBarTitleDisplayMode(.inline)
+        .vigilListChrome()
+        .vigilScreenBackground()
+        .vigilNavigationTitle("Share Feedback")
+        .vigilInlineNavigationBar()
         .sheet(item: $feedbackTopic) { topic in
             FeedbackSheet(initialTopic: topic.title)
         }

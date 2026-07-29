@@ -8,18 +8,11 @@ struct OnboardingPainPointsScreen: View {
     VStack(spacing: 0) {
       ScrollView {
         VStack(spacing: 16) {
-          VStack(spacing: 10) {
-            Text("What's been getting in the way?")
-              .typography(.title, weight: .bold)
-              .multilineTextAlignment(.center)
-
-            Text("Pick all that apply.")
-              .typography(.label)
-              .foregroundStyle(.secondary)
-              .multilineTextAlignment(.center)
-          }
-          .padding(.top, 24)
-          .padding(.bottom, 8)
+          OnboardingQuestionHeader(
+            watch: .wealthPlan,
+            title: "What's been getting in the way?",
+            subtitle: "Pick all that apply."
+          )
 
           VStack(spacing: 10) {
             ForEach(OnboardingPainPoint.allCases) { pain in

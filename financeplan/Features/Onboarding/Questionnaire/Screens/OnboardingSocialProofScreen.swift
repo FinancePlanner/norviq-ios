@@ -29,19 +29,11 @@ struct OnboardingSocialProofScreen: View {
     VStack(spacing: 0) {
       ScrollView {
         VStack(spacing: 16) {
-          VStack(spacing: 10) {
-            Text("You're in good company.")
-              .typography(.title, weight: .bold)
-              .multilineTextAlignment(.center)
-
-            Text("Money-conscious investors track everything here.")
-              .typography(.label)
-              .foregroundStyle(.secondary)
-              .multilineTextAlignment(.center)
-              .padding(.horizontal, 24)
-          }
-          .padding(.top, 24)
-          .padding(.bottom, 8)
+          OnboardingQuestionHeader(
+            watch: .intelligence,
+            title: "You're in good company.",
+            subtitle: "Money-conscious investors track everything here."
+          )
 
           ForEach(Self.testimonials) { testimonial in
             TestimonialCard(testimonial: testimonial)

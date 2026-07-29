@@ -10,18 +10,11 @@ struct OnboardingSpendingPrefScreen: View {
     VStack(spacing: 0) {
       ScrollView {
         VStack(spacing: 16) {
-          VStack(spacing: 10) {
-            Text("Where does your money tend to leak?")
-              .typography(.title, weight: .bold)
-              .multilineTextAlignment(.center)
-
-            Text("Be honest — we won't tell.")
-              .typography(.label)
-              .foregroundStyle(.secondary)
-              .multilineTextAlignment(.center)
-          }
-          .padding(.top, 24)
-          .padding(.bottom, 8)
+          OnboardingQuestionHeader(
+            watch: .spending,
+            title: "Where does your money tend to leak?",
+            subtitle: "Be honest — we won't tell."
+          )
 
           LazyVGrid(columns: columns, spacing: 12) {
             ForEach(OnboardingSpendingLeak.allCases) { leak in

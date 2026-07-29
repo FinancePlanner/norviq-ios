@@ -25,6 +25,15 @@ struct SecurityCodeView: View {
     var body: some View {
         List {
             Section {
+                VigilPageHeader(
+                    watch: .settings("Security"),
+                    title: "Security Code",
+                    subtitle: "Six-digit fallback when biometrics are unavailable"
+                )
+                .listRowBackground(Color.clear)
+            }
+
+            Section {
                 VStack(alignment: .leading, spacing: 8) {
                     let title: LocalizedStringKey =
                         isEnabled ? "Security Code is enabled" : "Security Code is off"
@@ -58,11 +67,10 @@ struct SecurityCodeView: View {
                 .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
             }
         }
-        .scrollContentBackground(.hidden)
-        .listStyle(.insetGrouped)
-        .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-        .navigationTitle("Security Code")
-        .navigationBarTitleDisplayMode(.inline)
+        .vigilListChrome()
+        .vigilScreenBackground()
+        .vigilNavigationTitle("Security Code")
+        .vigilInlineNavigationBar()
         .onAppear {
             isEnabled = manager.isEnabled
         }

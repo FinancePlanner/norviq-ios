@@ -60,15 +60,19 @@ struct ExpensesComparisonScreen: View {
 
   var body: some View {
     NavigationStack {
-        ZStack {
-          MeshGradientBackground()
-            .ignoresSafeArea()
+        VStack(spacing: 0) {
+          VigilPageHeader(
+            watch: .reports,
+            title: "Reports",
+            subtitle: "Portfolio, spending, and trend snapshots"
+          )
+          .padding(.horizontal, 16)
+          .padding(.top, 8)
 
-          VStack(spacing: 0) {
-            tabPicker
+          tabPicker
 
-            ScrollView {
-              ReportContentView(
+          ScrollView {
+            ReportContentView(
                 isShowingLoadingState: isShowingLoadingState,
                 loadErrorMessage: loadErrorMessage,
                 shouldShowEmptyState: shouldShowEmptyState,
@@ -82,10 +86,10 @@ struct ExpensesComparisonScreen: View {
               // Center the reports column on iPad instead of stretching edge-to-edge (Guideline 4).
               .maxContentWidth(regularSizeClass: ContentWidth.dense)
             }
-          }
         }
-        .navigationTitle(LocalizedStringKey("Reports"))
-        .navigationBarTitleDisplayMode(.large)
+        .vigilScreenBackground()
+        .vigilNavigationTitle(LocalizedStringKey("Reports"))
+        .vigilInlineNavigationBar()
         .toolbar {
           ToolbarItemGroup(placement: .topBarTrailing) {
             NavigationLink {

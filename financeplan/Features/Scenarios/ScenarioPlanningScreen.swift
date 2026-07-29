@@ -238,6 +238,12 @@ struct ScenarioPlanningScreen: View {
   var body: some View {
     ScrollView {
       LazyVStack(alignment: .leading, spacing: 24) {
+        VigilPageHeader(
+          watch: .wealth,
+          title: "Scenario planning",
+          subtitle: "Stress-test an immutable portfolio snapshot with repeatable assumptions"
+        )
+
         if model.isLoading && model.catalog == nil {
           ProgressView()
             .frame(maxWidth: .infinity, minHeight: 180)
@@ -253,8 +259,9 @@ struct ScenarioPlanningScreen: View {
       }
       .padding(16)
     }
-    .navigationTitle("Scenario planning")
-    .navigationBarTitleDisplayMode(.inline)
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Scenario planning")
+    .vigilInlineNavigationBar()
     .task { await model.load() }
     .task {
       while !Task.isCancelled {

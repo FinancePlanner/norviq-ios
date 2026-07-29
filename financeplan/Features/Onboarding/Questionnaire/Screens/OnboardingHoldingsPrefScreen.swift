@@ -10,18 +10,11 @@ struct OnboardingHoldingsPrefScreen: View {
     VStack(spacing: 0) {
       ScrollView {
         VStack(spacing: 16) {
-          VStack(spacing: 10) {
-            Text("What do you currently invest in?")
-              .typography(.title, weight: .bold)
-              .multilineTextAlignment(.center)
-
-            Text("Pick all that apply. We'll tailor your sample.")
-              .typography(.label)
-              .foregroundStyle(.secondary)
-              .multilineTextAlignment(.center)
-          }
-          .padding(.top, 24)
-          .padding(.bottom, 8)
+          OnboardingQuestionHeader(
+            watch: .wealthPlan,
+            title: "What do you currently invest in?",
+            subtitle: "Pick all that apply. We'll tailor your sample."
+          )
 
           LazyVGrid(columns: columns, spacing: 12) {
             ForEach(OnboardingHoldingType.allCases) { holding in

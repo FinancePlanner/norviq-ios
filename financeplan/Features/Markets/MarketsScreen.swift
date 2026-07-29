@@ -11,6 +11,12 @@ struct MarketsScreen: View {
     NavigationStack {
       ScrollView {
         VStack(alignment: .leading, spacing: 20) {
+          VigilPageHeader(
+            watch: .wealth,
+            title: "Markets",
+            subtitle: "Indices, movers, and the market heat-map at a glance"
+          )
+
           if let overview = viewModel.overview {
             if !overview.indices.isEmpty {
               indexStrip(overview.indices)
@@ -41,8 +47,9 @@ struct MarketsScreen: View {
         }
         .padding()
       }
-      .background(AppTheme.Colors.pageBackground(for: scheme))
-      .navigationTitle("Markets")
+      .vigilScreenBackground()
+      .vigilNavigationTitle("Markets")
+      .vigilInlineNavigationBar()
       .refreshable {
         await viewModel.load()
       }

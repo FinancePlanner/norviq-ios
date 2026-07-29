@@ -8,18 +8,11 @@ struct OnboardingGoalScreen: View {
     VStack(spacing: 0) {
       ScrollView {
         VStack(spacing: 16) {
-          VStack(spacing: 10) {
-            Text("What brings you to Norviq?")
-              .typography(.title, weight: .bold)
-              .multilineTextAlignment(.center)
-
-            Text("We'll tailor what you see next.")
-              .typography(.label)
-              .foregroundStyle(.secondary)
-              .multilineTextAlignment(.center)
-          }
-          .padding(.top, 24)
-          .padding(.bottom, 8)
+          OnboardingQuestionHeader(
+            watch: .wealthPlan,
+            title: "What brings you to Norviq?",
+            subtitle: "We'll tailor what you see next."
+          )
 
           VStack(spacing: 10) {
             ForEach(OnboardingGoal.allCases) { goal in

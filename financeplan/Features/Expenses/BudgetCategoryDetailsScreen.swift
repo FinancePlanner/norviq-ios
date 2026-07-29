@@ -12,6 +12,12 @@ struct BudgetCategoryDetailsScreen: View {
   var body: some View {
     ScrollView {
       VStack(spacing: 20) {
+        VigilPageHeader(
+          watch: .spending,
+          title: "Budget categories",
+          subtitle: "Pillar targets and recorded spend"
+        )
+
         ForEach(viewModel.selectedMonthPillars, id: \.self) { pillar in
           let summary = viewModel.selectedMonthSummaries.first { $0.pillar == pillar }
             ?? PillarPlanningSummary(
@@ -47,9 +53,9 @@ struct BudgetCategoryDetailsScreen: View {
       .padding(.horizontal, 16)
       .padding(.vertical, 20)
     }
-    .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
-    .navigationTitle("Budget Category Details")
-    .navigationBarTitleDisplayMode(.inline)
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Budget Category Details")
+    .vigilInlineNavigationBar()
   }
 }
 
