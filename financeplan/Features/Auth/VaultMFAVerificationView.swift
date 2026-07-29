@@ -11,11 +11,21 @@ struct VaultMFAVerificationView: View {
       MeshGradientBackground()
 
       VStack(alignment: .leading, spacing: 18) {
-        HStack {
-          Text("Two-Factor Verification")
-            .font(.title2.weight(.bold))
-            .foregroundStyle(.primary)
+        HStack(alignment: .top) {
+          if BrandTheme.current == .vigil {
+            VigilPageHeader(
+              watch: .auth("Two-factor"),
+              title: "Two-Factor Verification",
+              subtitle: nil
+            )
+          } else {
+            Text("Two-Factor Verification")
+              .font(.title2.weight(.bold))
+              .foregroundStyle(.primary)
+          }
+
           Spacer()
+
           Button("Close") {
             viewModel.dismissMFAFlow()
             dismiss()
@@ -27,63 +37,77 @@ struct VaultMFAVerificationView: View {
           .font(.subheadline)
           .foregroundStyle(.secondary)
 
-        TextField("123456", text: $viewModel.mfaCode)
-          .keyboardType(.numberPad)
-          .textInputAutocapitalization(.never)
-          .autocorrectionDisabled()
-          .font(.title3.weight(.semibold).monospaced())
-          .padding(.horizontal, 14)
-          .padding(.vertical, 14)
-          .foregroundStyle(.primary)
-          .background(AppTheme.Colors.cardBackground(for: colorScheme))
-          .clipShape(.rect(cornerRadius: 12))
-
-        if let error = viewModel.mfaError, !error.isEmpty {
-          FormErrorBanner(message: error)
-        }
-
-        if let message = viewModel.mfaInfoMessage, !message.isEmpty {
-          HStack(spacing: 8) {
-            Image(systemName: "checkmark.circle.fill")
-            Text(message)
-          }
-          .font(.caption.weight(.medium))
-          .foregroundStyle(AppTheme.Colors.success)
-        }
-
-        Button(action: { Task { await viewModel.submitMFA() } }) {
-          HStack {
-            if viewModel.isVerifyingMFA {
-              ProgressView()
-                .tint(.white)
-            }
-            Text(viewModel.isVerifyingMFA ? "Verifying..." : "Verify and Sign In")
-              .font(.headline.weight(.semibold))
+        Group {
+          if BrandTheme.current == .vigil {
+            mfaFields
+              .padding(20)
+              .vigilGlassCard(cornerRadius: AppTheme.Radius.card)
+          } else {
+            mfaFields
           }
         }
-        .buttonStyle(.borderedProminent)
-        .tint(AppTheme.Colors.tint(for: colorScheme))
-        .disabled(viewModel.isVerifyingMFA)
-
-        Button(action: { Task { await viewModel.resendMFA() } }) {
-          HStack(spacing: 6) {
-            if viewModel.isResendingMFA {
-              ProgressView()
-                .tint(AppTheme.Colors.tint(for: colorScheme))
-            }
-            Text(resendLabel)
-              .font(.subheadline.weight(.semibold))
-          }
-          .frame(maxWidth: .infinity)
-        }
-        .disabled(viewModel.isResendingMFA || viewModel.mfaResendAvailableIn > 0)
-        .foregroundStyle(
-          viewModel.mfaResendAvailableIn > 0 ? .secondary : AppTheme.Colors.tint(for: colorScheme)
-        )
 
         Spacer()
       }
       .padding(24)
+    }
+  }
+
+  private var mfaFields: some View {
+    VStack(alignment: .leading, spacing: 18) {
+      TextField("123456", text: $viewModel.mfaCode)
+        .keyboardType(.numberPad)
+        .textInputAutocapitalization(.never)
+        .autocorrectionDisabled()
+        .font(.title3.weight(.semibold).monospaced())
+        .padding(.horizontal, 14)
+        .padding(.vertical, 14)
+        .foregroundStyle(.primary)
+        .background(AppTheme.Colors.cardBackground(for: colorScheme))
+        .clipShape(.rect(cornerRadius: 12))
+
+      if let error = viewModel.mfaError, !error.isEmpty {
+        FormErrorBanner(message: error)
+      }
+
+      if let message = viewModel.mfaInfoMessage, !message.isEmpty {
+        HStack(spacing: 8) {
+          Image(systemName: "checkmark.circle.fill")
+          Text(message)
+        }
+        .font(.caption.weight(.medium))
+        .foregroundStyle(AppTheme.Colors.success)
+      }
+
+      Button(action: { Task { await viewModel.submitMFA() } }) {
+        HStack {
+          if viewModel.isVerifyingMFA {
+            ProgressView()
+              .tint(.white)
+          }
+          Text(viewModel.isVerifyingMFA ? "Verifying..." : "Verify and Sign In")
+            .font(.headline.weight(.semibold))
+        }
+      }
+      .buttonStyle(.borderedProminent)
+      .tint(AppTheme.Colors.tint(for: colorScheme))
+      .disabled(viewModel.isVerifyingMFA)
+
+      Button(action: { Task { await viewModel.resendMFA() } }) {
+        HStack(spacing: 6) {
+          if viewModel.isResendingMFA {
+            ProgressView()
+              .tint(AppTheme.Colors.tint(for: colorScheme))
+          }
+          Text(resendLabel)
+            .font(.subheadline.weight(.semibold))
+        }
+        .frame(maxWidth: .infinity)
+      }
+      .disabled(viewModel.isResendingMFA || viewModel.mfaResendAvailableIn > 0)
+      .foregroundStyle(
+        viewModel.mfaResendAvailableIn > 0 ? .secondary : AppTheme.Colors.tint(for: colorScheme)
+      )
     }
   }
 

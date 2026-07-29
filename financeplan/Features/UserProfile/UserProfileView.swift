@@ -52,7 +52,7 @@ public struct UserProfileView: View {
     // Appearance State
     @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system
         .rawValue
-    @AppStorage(BrandTheme.storageKey) private var brandThemeRawValue = BrandTheme.classic.rawValue
+    @AppStorage(BrandTheme.storageKey) private var brandThemeRawValue = BrandTheme.vigil.rawValue
     @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english
         .rawValue
 
@@ -82,8 +82,8 @@ public struct UserProfileView: View {
         NavigationStack(path: $path) {
             rootContent
                 .id(appLanguage.rawValue)
-                .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-                .navigationTitle(LocalizedStringKey("Settings"))
+                .vigilScreenBackground()
+                .vigilNavigationTitle(LocalizedStringKey("Settings"))
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
@@ -146,6 +146,16 @@ public struct UserProfileView: View {
 
     private func settingsList(profile: UserProfile?) -> some View {
         List {
+            Section {
+                VigilPageHeader(
+                    watch: .settings("General"),
+                    title: "Settings",
+                    subtitle: "Account, appearance, and integrations"
+                )
+                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                .listRowBackground(Color.clear)
+            }
+
             // Profile Card
             Section {
                 Button {
@@ -563,9 +573,7 @@ public struct UserProfileView: View {
                 .listRowBackground(Color.clear)
             }
         }
-        .scrollContentBackground(.hidden)
-        .listStyle(.insetGrouped)
-        .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
+        .vigilListChrome()
         .refreshable {
             await viewModel.load(force: true)
             await accountLinkingViewModel.load()

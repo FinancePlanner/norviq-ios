@@ -105,6 +105,7 @@ struct DashboardRoot: View {
       ScrollView {
         Group {
           DashboardContentSection(
+            greetingText: greetingText,
             portfolioTotalValue: portfolioTotalValue,
             spendingTotalValue: spendingTotalValue,
             portfolioDeltaPercent: portfolioDeltaPercent,
@@ -136,9 +137,9 @@ struct DashboardRoot: View {
         .maxContentWidth(regularSizeClass: ContentWidth.dense)
       }
       .tracksTabBarMinimize()
-      .background(MeshGradientBackground())
-      .navigationTitle(greetingText)
-      .navigationBarTitleDisplayMode(.large)
+      .vigilScreenBackground()
+      .vigilNavigationTitle(greetingText)
+      .navigationBarTitleDisplayMode(BrandTheme.current == .vigil ? .inline : .large)
       .navigationDestination(isPresented: $isChartBuilderPresented) {
         ChartBuilderStandaloneScreen()
       }
@@ -379,6 +380,7 @@ struct DashboardRoot: View {
 }
 
 private struct DashboardContentSection: View {
+  let greetingText: String
   let portfolioTotalValue: Double
   let spendingTotalValue: Double
   let portfolioDeltaPercent: Double?
@@ -406,6 +408,24 @@ private struct DashboardContentSection: View {
 
   var body: some View {
     VStack(spacing: 20) {
+      if BrandTheme.current == .vigil {
+        VigilPageHeader(
+          watch: .intelligence,
+          title: LocalizedStringKey(greetingText),
+          subtitle: "Norviq · Unified Command Center"
+        )
+      }
+
+      if BrandTheme.current == .vigil {
+        VigilCommandMetricsBar(
+          netWorth: portfolioTotalValue,
+          periodDeltaPercent: portfolioDeltaPercent,
+          spendingThisMonth: spendingTotalValue > 0 ? spendingTotalValue : nil
+        )
+      }
+
+      WhyMovedCard()
+
       DashboardHeroCard(
         totalValue: portfolioTotalValue,
         totalSpending: spendingTotalValue,
@@ -419,8 +439,6 @@ private struct DashboardContentSection: View {
       )
       .redacted(reason: isHomeMetricsRedacted ? .placeholder : [])
       .appAnimation(AppMotion.state, value: isHomeMetricsRedacted)
-
-      WhyMovedCard()
 
       if isSearchResultsVisible {
         AssetSearchCard(viewModel: searchViewModel)
@@ -510,7 +528,12 @@ private struct DashboardHeroCard: View {
   }
 
   private var currentColor: Color {
-    showingPortfolio ? .green : .orange
+    if BrandTheme.current == .vigil {
+      return showingPortfolio
+        ? AppTheme.Colors.tint(for: colorScheme)
+        : AppTheme.Colors.secondaryTint(for: colorScheme)
+    }
+    return showingPortfolio ? .green : .orange
   }
 
   private var deltaSymbol: String {

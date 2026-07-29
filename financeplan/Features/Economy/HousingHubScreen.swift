@@ -33,6 +33,12 @@ struct HousingHubScreen: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 16) {
+        VigilPageHeader(
+          watch: .intelligence,
+          title: "Housing",
+          subtitle: "Prices, rents, mortgages, and supply"
+        )
+
         EconomyCountryPicker(selection: $selectedCountry)
           .onChange(of: selectedCountry) { _, newValue in
             Task { await viewModel.load(country: newValue) }
@@ -54,10 +60,11 @@ struct HousingHubScreen: View {
       }
       .padding()
     }
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Housing")
     .refreshable {
       await viewModel.load(country: selectedCountry)
     }
-    .navigationTitle("Housing")
     .task {
       if viewModel.response == nil {
         await viewModel.load(country: selectedCountry)

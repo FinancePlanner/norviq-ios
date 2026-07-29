@@ -102,7 +102,16 @@ struct FinancingPlannerScreen: View {
 
   var body: some View {
     NavigationStack {
-      Form {
+      VStack(spacing: 0) {
+        VigilPageHeader(
+          watch: .spending,
+          title: "Plan a purchase",
+          subtitle: "Simulate financing before it hits the ledger"
+        )
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+
+        Form {
         Section("Purchase") {
           TextField("Name, e.g. Tesla Model 3", text: $model.title)
           Picker("Type", selection: $model.purchaseType) {
@@ -174,9 +183,11 @@ struct FinancingPlannerScreen: View {
         if model.didSave {
           Section { Label("Plan saved. Its installments will appear in future Expenses months.", systemImage: "checkmark.circle.fill").foregroundStyle(.green) }
         }
+        }
       }
-      .navigationTitle("Plan a purchase")
-      .navigationBarTitleDisplayMode(.inline)
+      .vigilScreenBackground()
+      .vigilNavigationTitle("Plan a purchase")
+      .vigilInlineNavigationBar()
       .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
     }
   }

@@ -28,19 +28,11 @@ struct OnboardingSolutionScreen: View {
     VStack(spacing: 0) {
       ScrollView {
         VStack(spacing: 18) {
-          VStack(spacing: 10) {
-            Text("One guardian. Three watches.")
-              .typography(.title, weight: .bold)
-              .multilineTextAlignment(.center)
-
-            Text("You told us what's broken. Norviq stands watch over all of it.")
-              .typography(.label)
-              .foregroundStyle(.secondary)
-              .multilineTextAlignment(.center)
-              .padding(.horizontal, 16)
-          }
-          .padding(.top, 24)
-          .padding(.bottom, 8)
+          OnboardingQuestionHeader(
+            watch: .wealth,
+            title: "One guardian. Three watches.",
+            subtitle: "You told us what's broken. Norviq stands watch over all of it."
+          )
 
           ForEach(Self.rows) { row in
             SolutionRowCard(row: row)

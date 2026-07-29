@@ -32,8 +32,9 @@ struct ReceiptScannerView: View {
           unavailableView
         }
       }
-      .navigationTitle("Scan Receipt")
-      .navigationBarTitleDisplayMode(.inline)
+      .vigilScreenBackground()
+      .vigilNavigationTitle("Scan Receipt")
+      .vigilInlineNavigationBar()
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button("Cancel") { dismiss() }

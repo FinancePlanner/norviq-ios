@@ -29,8 +29,9 @@ struct PortfolioRoot: View {
           ) }
         }
       }
-      .navigationTitle("Portfolio")
-      .navigationBarTitleDisplayMode(.inline)
+      .vigilNavigationTitle("Portfolio")
+      .vigilInlineNavigationBar()
+      .vigilScreenBackground()
       .toolbar {
         ToolbarItem(placement: .topBarLeading) {
           Button("Settings", systemImage: "gearshape") {

@@ -12,6 +12,12 @@ struct MacroScreen: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 20) {
+        VigilPageHeader(
+          watch: .intelligence,
+          title: "Inflation",
+          subtitle: "CPI gauges, movers, and everyday prices"
+        )
+
         countryPicker
 
         if let snapshot = viewModel.snapshot {
@@ -54,7 +60,8 @@ struct MacroScreen: View {
       }
       .padding()
     }
-    .navigationTitle("Inflation")
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Inflation")
     .refreshable {
       await viewModel.load(country: selectedCountry)
     }

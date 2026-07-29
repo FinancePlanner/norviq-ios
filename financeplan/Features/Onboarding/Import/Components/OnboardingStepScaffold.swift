@@ -67,7 +67,11 @@ struct OnboardingStepScaffold<TopAccessory: View, Content: View, Footer: View>: 
         footer()
       }
     }
-    .background(MeshGradientBackground().ignoresSafeArea())
+    .background {
+      MeshGradientBackground()
+        .vigilScreenBackground()
+        .ignoresSafeArea()
+    }
     .overlay(alignment: .top) {
       if let banner {
         ToastBanner(message: banner.message, style: banner.style)

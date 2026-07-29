@@ -28,6 +28,7 @@ struct ExpensesPlannerScreen: View {
   @State private var driftViewModel = BudgetDriftViewModel()
   @State private var isReallocationPresented = false
   @State private var isAlertPolicyPresented = false
+  @State private var isTaxDashboardPresented = false
 
   private var isShowingLoadingState: Bool {
     viewModel.isLoading && viewModel.monthlySnapshots.isEmpty
@@ -60,6 +61,23 @@ struct ExpensesPlannerScreen: View {
     NavigationStack {
       ScrollView {
         VStack(spacing: 24) {
+          VigilPageHeader(
+            watch: .spendingDCA,
+            title: "Budget planner",
+            subtitle: LocalizedStringKey(viewModel.selectedMonthDisplayTitle)
+          )
+          .padding(.horizontal, 16)
+          .padding(.top, 4)
+
+          VigilExpensesCommandDeck(
+            activities: viewModel.activities,
+            driftViewModel: driftViewModel,
+            currencyCode: "USD",
+            onOpenTax: { isTaxDashboardPresented = true },
+            onOpenReallocation: { isReallocationPresented = true }
+          )
+          .padding(.horizontal, 16)
+
           MonthPickerHeader(
             selectedMonth: selectedMonthBinding,
             availableMonths: viewModel.availableMonths
@@ -154,6 +172,9 @@ struct ExpensesPlannerScreen: View {
           }
         }
       }
+      .vigilScreenBackground()
+      .vigilNavigationTitle("Expenses and Budgeting")
+      .vigilInlineNavigationBar()
       .toolbar {
         ToolbarItem(placement: .topBarLeading) {
           financingPlannerButton
@@ -179,6 +200,11 @@ struct ExpensesPlannerScreen: View {
         FinancingPlannerScreen()
       }
       .sheet(isPresented: $isRecurringManagerPresented, content: recurringManagerSheet)
+      .sheet(isPresented: $isTaxDashboardPresented) {
+        NavigationStack {
+          TaxDashboardScreen()
+        }
+      }
       .sheet(isPresented: $isPaywallPresented) {
         PaywallView(billingManager: billingManager)
       }

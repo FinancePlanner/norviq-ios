@@ -10,13 +10,18 @@ struct SplashScreen: View {
 
   var body: some View {
     ZStack {
-      // Background gradient
       LinearGradient(
         colors: AppTheme.splashGradient(for: colorScheme),
         startPoint: .top,
         endPoint: .bottom
       )
       .ignoresSafeArea()
+
+      if BrandTheme.current == .vigil {
+        MeshGradientBackground(animatesOnAppear: true)
+          .opacity(colorScheme == .dark ? 0.55 : 0.35)
+          .ignoresSafeArea()
+      }
 
       VStack(spacing: 0) {
         Spacer()

@@ -11,6 +11,12 @@ struct MarketNewsScreen: View {
   var body: some View {
     ScrollView {
       LazyVStack(spacing: 16) {
+        VigilPageHeader(
+          watch: .wealth,
+          title: "Thesis Watch",
+          subtitle: "Market news ranked by your holdings, exposure, and investment thesis"
+        )
+
         introduction
         scopePicker
 
@@ -22,7 +28,9 @@ struct MarketNewsScreen: View {
       }
       .padding(16)
     }
-    .navigationTitle("Thesis Watch")
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Thesis Watch")
+    .vigilInlineNavigationBar()
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
         Button {

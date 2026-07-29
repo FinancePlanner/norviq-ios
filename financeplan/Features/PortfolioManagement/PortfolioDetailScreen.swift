@@ -12,6 +12,16 @@ struct PortfolioDetailScreen: View {
 
   var body: some View {
     List {
+      Section {
+        VigilPageHeader(
+          watch: .wealth,
+          title: LocalizedStringKey(portfolio.name),
+          subtitle: LocalizedStringKey("\(portfolio.purpose.rawValue.capitalized) · \(portfolio.mode.rawValue.capitalized)")
+        )
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
+        .listRowBackground(Color.clear)
+      }
+
       Section("Details") {
         LabeledContent("Purpose", value: portfolio.purpose.rawValue.capitalized)
         LabeledContent("Ownership", value: portfolio.ownership.rawValue.capitalized)
@@ -77,7 +87,9 @@ struct PortfolioDetailScreen: View {
         }
       }
     }
-    .navigationTitle(portfolio.name)
+    .vigilListChrome()
+    .vigilNavigationTitle(portfolio.name)
+    .vigilInlineNavigationBar()
     .task { await model.loadDetails(for: portfolio) }
     .refreshable { await model.loadDetails(for: portfolio) }
     .sheet(isPresented: $isInviting) { InvitePortfolioMemberSheet(portfolio: portfolio, model: model) }

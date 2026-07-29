@@ -8,34 +8,35 @@ struct PrivacyWelcomeScreen: View {
   var body: some View {
     ZStack {
       VStack(spacing: 24) {
-        NorviqFullLogo(width: 220)
+        if BrandTheme.current == .vigil {
+          VigilPageHeader(
+            watch: .auth("The gate holds"),
+            title: "Your data is yours",
+            subtitle: "We built Norviq around one principle: your financial data belongs to you."
+          )
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.horizontal, 24)
           .padding(.top, 60)
+        } else {
+          NorviqFullLogo(width: 220)
+            .padding(.top, 60)
 
-        VStack(spacing: 8) {
-          Text("Your data is yours")
-            .font(.largeTitle.weight(.bold))
-            .multilineTextAlignment(.center)
+          VStack(spacing: 8) {
+            Text("Your data is yours")
+              .font(.largeTitle.weight(.bold))
+              .multilineTextAlignment(.center)
 
-          Text("We built Norviq around one principle: your financial data belongs to you.")
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 32)
+            Text("We built Norviq around one principle: your financial data belongs to you.")
+              .font(.subheadline)
+              .foregroundStyle(.secondary)
+              .multilineTextAlignment(.center)
+              .padding(.horizontal, 32)
+          }
         }
 
         Spacer()
 
-        GlassCard(cornerRadius: 24) {
-          VStack(alignment: .leading, spacing: 16) {
-            bulletPoint("We never sell or share your financial data")
-            bulletPoint("Your data is encrypted at rest")
-            bulletPoint("Export or delete everything, anytime")
-            bulletPoint("We don't mine your positions or expenses")
-            bulletPoint("We only store what the app needs to work")
-          }
-          .padding(.vertical, 8)
-        }
-        .padding(.horizontal, 24)
+        privacyCard
 
         Spacer()
 
@@ -62,6 +63,34 @@ struct PrivacyWelcomeScreen: View {
     }
     .background {
       MeshGradientBackground()
+    }
+  }
+
+  @ViewBuilder
+  private var privacyCard: some View {
+    Group {
+      if BrandTheme.current == .vigil {
+        privacyBullets
+          .padding(.vertical, 8)
+          .padding(.horizontal, 8)
+          .vigilGlassCard(cornerRadius: 24)
+      } else {
+        GlassCard(cornerRadius: 24) {
+          privacyBullets
+            .padding(.vertical, 8)
+        }
+      }
+    }
+    .padding(.horizontal, 24)
+  }
+
+  private var privacyBullets: some View {
+    VStack(alignment: .leading, spacing: 16) {
+      bulletPoint("We never sell or share your financial data")
+      bulletPoint("Your data is encrypted at rest")
+      bulletPoint("Export or delete everything, anytime")
+      bulletPoint("We don't mine your positions or expenses")
+      bulletPoint("We only store what the app needs to work")
     }
   }
 

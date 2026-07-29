@@ -112,6 +112,16 @@ struct NetWorthForecastScreen: View {
 
   var body: some View {
     List {
+      Section {
+        VigilPageHeader(
+          watch: .businessRules("Forecast"),
+          title: "Net Worth Forecast",
+          subtitle: "Monte Carlo paths and cash-flow assumptions."
+        )
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+      }
+
       if let defaults = model.defaults {
         Section("Cash flow baseline") {
           LabeledContent("Income", value: defaults.monthlyIncome, format: .currency(code: defaults.baseCurrency))
@@ -188,7 +198,10 @@ struct NetWorthForecastScreen: View {
           "Error: \(error)"
         ) } }
     }
-    .navigationTitle("Net Worth Forecast")
+    .vigilListChrome()
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Net Worth Forecast")
+    .vigilInlineNavigationBar()
     .overlay {
       if model.isLoading {
         ProgressView().controlSize(.large)
@@ -385,6 +398,16 @@ struct SmartScreeningScreen: View {
 
   var body: some View {
     List {
+      Section {
+        VigilPageHeader(
+          watch: .businessRules("Smart screen"),
+          title: "Smart Screens",
+          subtitle: "Fundamental filters and entry alerts across your lists."
+        )
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+      }
+
       Section(editingID == nil ? "New smart screen" : "Edit smart screen") {
         TextField("Name", text: $name)
         ForEach(model.lists) { list in Toggle(
@@ -482,7 +505,10 @@ struct SmartScreeningScreen: View {
         Section { Text(error).foregroundStyle(.red) }
       }
     }
-    .navigationTitle("Smart Screens")
+    .vigilListChrome()
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Smart Screens")
+    .vigilInlineNavigationBar()
     .task {
       await model.load(); if selectedListIDs.isEmpty, let first = model.lists.first
       {
@@ -603,6 +629,16 @@ struct RebalancingRulesScreen: View {
 
   var body: some View {
     List {
+      Section {
+        VigilPageHeader(
+          watch: .businessRules("Rebalancing"),
+          title: "Rebalancing Rules",
+          subtitle: "Drift thresholds and review-only trade drafts."
+        )
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+      }
+
       Section("Rule") {
         Picker("Portfolio", selection: $portfolioID) { Text("Choose").tag(""); ForEach(model.portfolios) { Text($0.name).tag(
           $0.id.uuidString
@@ -660,7 +696,10 @@ struct RebalancingRulesScreen: View {
         Section { Text(error).foregroundStyle(.red) }
       }
     }
-    .navigationTitle("Rebalancing Rules")
+    .vigilListChrome()
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Rebalancing Rules")
+    .vigilInlineNavigationBar()
     .task {
       await model.load(); portfolioID = initialPortfolioID ?? model.portfolios.first?.id.uuidString ?? ""; if !portfolioID.isEmpty
       {
@@ -717,6 +756,16 @@ struct NotificationInboxScreen: View {
   @StateObject private var model = InboxViewModel(service: Container.shared.wealthAutomationService())
   var body: some View {
     List {
+      Section {
+        VigilPageHeader(
+          watch: .businessRules("Alerts"),
+          title: "Notifications",
+          subtitle: "Price, budget, earnings, tax, screen, and rebalance alerts."
+        )
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+      }
+
       if let error = model.errorMessage {
         Text(error).foregroundStyle(.red)
       }
@@ -745,7 +794,10 @@ struct NotificationInboxScreen: View {
           reset: false
         ) } } }
     }
-    .navigationTitle("Notifications")
+    .vigilListChrome()
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Notifications")
+    .vigilInlineNavigationBar()
     .toolbar {
       if model.page.unreadCount > 0
       {

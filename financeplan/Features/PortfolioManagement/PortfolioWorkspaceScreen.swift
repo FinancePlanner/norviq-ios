@@ -10,6 +10,16 @@ struct PortfolioWorkspaceScreen: View {
 
   var body: some View {
     List {
+      Section {
+        VigilPageHeader(
+          watch: .wealth,
+          title: "Portfolios",
+          subtitle: "Personal, retirement, joint, and hypothetical workspaces"
+        )
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
+        .listRowBackground(Color.clear)
+      }
+
       if !billingManager.isPro {
         ContentUnavailableView(
           "Advanced portfolios are Pro",
@@ -35,7 +45,9 @@ struct PortfolioWorkspaceScreen: View {
         ProgressView()
       }
     }
-    .navigationTitle("Portfolios")
+    .vigilListChrome()
+    .vigilNavigationTitle("Portfolios")
+    .vigilInlineNavigationBar()
     .toolbar {
       ToolbarItemGroup(placement: .topBarTrailing) {
         if model.portfolios.count > 1 {

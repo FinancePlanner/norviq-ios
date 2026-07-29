@@ -19,21 +19,18 @@ struct OnboardingSwipeStatementsScreen: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      VStack(spacing: 8) {
-        Text("Sound like you?")
-          .typography(.title, weight: .bold)
-
-        Text("Swipe right if it does, left if it doesn't.")
-          .typography(.label)
-          .foregroundStyle(.secondary)
-
-        Text("\(min(topIndex + 1, Self.statements.count)) of \(Self.statements.count)")
-          .typography(.caption, weight: .semibold)
-          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-          .padding(.top, 4)
-      }
-      .padding(.top, 24)
+      OnboardingQuestionHeader(
+        watch: .wealthPlan,
+        title: "Sound like you?",
+        subtitle: "Swipe right if it does, left if it doesn't."
+      )
       .padding(.horizontal, 24)
+
+      Text("\(min(topIndex + 1, Self.statements.count)) of \(Self.statements.count)")
+        .typography(.caption, weight: .semibold)
+        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+        .padding(.top, 4)
+        .padding(.horizontal, 24)
 
       Spacer(minLength: 24)
 

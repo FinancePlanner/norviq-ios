@@ -339,6 +339,12 @@ struct PortfolioScreen: View {
   private var portfolioScrollContent: some View {
     ScrollView {
       VStack(spacing: 16) {
+        VigilPageHeader(
+          watch: .wealth,
+          title: "Portfolio",
+          subtitle: "Your stock, ETF, and crypto positions"
+        )
+
         PortfolioHeroCard(
           colorScheme: colorScheme,
           heroLabel: heroLabel,
@@ -475,6 +481,7 @@ struct PortfolioScreen: View {
         refreshPortfolioQuotesIfActive()
       }
     }
+    .vigilScreenBackground()
     .tracksTabBarMinimize()
   }
 

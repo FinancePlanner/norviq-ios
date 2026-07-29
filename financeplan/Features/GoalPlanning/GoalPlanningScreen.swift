@@ -4,6 +4,7 @@ import StockPlanShared
 import SwiftUI
 
 struct GoalPlanningScreen: View {
+  @Environment(\.colorScheme) private var colorScheme
   @Environment(\.dismiss) private var dismiss
   @State private var model = GoalPlanningViewModel(service: Container.shared.goalPlanningService())
   @State private var isCreatingGoal = false
@@ -11,6 +12,12 @@ struct GoalPlanningScreen: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 20) {
+        VigilPageHeader(
+          watch: .wealth,
+          title: "Financial goals",
+          subtitle: "Connect portfolios, contribution habits, and spending choices to measurable outcomes"
+        )
+
         overviewHeader
         if let overview = model.overview, overview.items.isEmpty {
           emptyState
@@ -22,9 +29,10 @@ struct GoalPlanningScreen: View {
       .padding(16)
       .maxContentWidth(regularSizeClass: ContentWidth.dense)
     }
-    .background(MeshGradientBackground())
-    .navigationTitle("Financial goals")
-    .navigationBarTitleDisplayMode(.inline)
+    .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Financial goals")
+    .vigilInlineNavigationBar()
     .toolbar {
       ToolbarItem(placement: .topBarLeading) {
         Button("Close", systemImage: "xmark", action: dismiss.callAsFunction)

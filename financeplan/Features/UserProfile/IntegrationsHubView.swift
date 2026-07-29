@@ -18,15 +18,26 @@ struct IntegrationsHubView: View {
             .scaledToFit()
             .frame(width: 48, height: 48)
             .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+            .shadow(color: AppTheme.Colors.tint(for: scheme).opacity(0.45), radius: 10)
             .accessibilityHidden(true)
+          Text("MCP ENGINE ROOM")
+            .vigilOverline()
+            .foregroundStyle(AppTheme.Colors.tint(for: scheme))
           Text("Speaks to your tools.")
             .font(.headline)
           Text("Norviq reads from your accounts and answers to your tools. It never places trades or moves funds.")
             .font(.subheadline)
             .foregroundStyle(.secondary)
+          Text("norviq:~$ status --protocol mcp")
+            .font(.caption.monospaced())
+            .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+            .padding(.top, 2)
+          Text("Live token activity is managed on web API access. Live = used in the last 24h.")
+            .font(.caption2)
+            .foregroundStyle(.secondary)
         }
         .padding(.vertical, 6)
-        .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+        .listRowBackground(rowBackground)
       }
 
       Section {
@@ -42,6 +53,12 @@ struct IntegrationsHubView: View {
             Text("Server address, token steps, and per-client recipes including Hermes.")
               .font(.footnote)
               .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+              mcpScopeChip("Sentiment")
+              mcpScopeChip("Portfolio")
+              mcpScopeChip("Tax")
+            }
+            .padding(.top, 4)
           }
           .padding(.vertical, 4)
         }
@@ -56,11 +73,10 @@ struct IntegrationsHubView: View {
         .padding(.vertical, 4)
       } header: {
         Text("WATCH III — INTELLIGENCE")
-          .font(.caption2.weight(.semibold))
-          .tracking(1.2)
+          .vigilOverline()
           .foregroundStyle(AppTheme.Colors.bronze(for: scheme))
       }
-      .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+      .listRowBackground(rowBackground)
 
       Section {
         NavigationLink {
@@ -86,19 +102,59 @@ struct IntegrationsHubView: View {
         .padding(.vertical, 4)
       } header: {
         Text("WATCH I & II — WEALTH, SPENDING")
-          .font(.caption2.weight(.semibold))
-          .tracking(1.2)
+          .vigilOverline()
           .foregroundStyle(AppTheme.Colors.bronze(for: scheme))
       } footer: {
         Text("Every connection is read-only. The gate holds.")
       }
-      .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+      .listRowBackground(rowBackground)
     }
-    .scrollContentBackground(.hidden)
-    .listStyle(.insetGrouped)
-    .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-    .navigationTitle("Integrations")
-    .navigationBarTitleDisplayMode(.inline)
+    .vigilListChrome()
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Integrations")
+    .vigilInlineNavigationBar()
+  }
+
+  private var rowBackground: some View {
+    RoundedRectangle(cornerRadius: 12, style: .continuous)
+      .fill(AppTheme.Colors.elevatedCardBackground(for: scheme))
+      .overlay(
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+          .stroke(
+            AppTheme.Colors.tint(for: scheme).opacity(BrandTheme.current == .vigil ? 0.22 : 0),
+            lineWidth: 1
+          )
+      )
+  }
+
+  private func mcpScopeChip(_ title: String) -> some View {
+    Text(title)
+      .font(.caption2.weight(.bold).monospaced())
+      .tracking(0.6)
+      .textCase(.uppercase)
+      .padding(.horizontal, 8)
+      .padding(.vertical, 4)
+      .foregroundStyle(
+        BrandTheme.current == .vigil && scheme == .dark
+          ? AppTheme.Colors.secondaryTint(for: scheme)
+          : AppTheme.Colors.tint(for: scheme)
+      )
+      .background(
+        Capsule()
+          .fill(
+            BrandTheme.current == .vigil && scheme == .dark
+              ? AppTheme.Colors.secondaryTint(for: scheme).opacity(0.12)
+              : AppTheme.Colors.tint(for: scheme).opacity(0.12)
+          )
+          .overlay(
+            Capsule().stroke(
+              BrandTheme.current == .vigil && scheme == .dark
+                ? AppTheme.Colors.secondaryTint(for: scheme).opacity(0.45)
+                : AppTheme.Colors.tint(for: scheme).opacity(0.35),
+              lineWidth: 1
+            )
+          )
+      )
   }
 }
 

@@ -50,8 +50,8 @@ struct StockDetailScreen: View {
 
     var body: some View {
         rootContent
-        .navigationTitle(viewModel.details?.symbol ?? initialSymbol)
-        .navigationBarTitleDisplayMode(.inline)
+        .vigilNavigationTitle(viewModel.details?.symbol ?? initialSymbol)
+        .vigilInlineNavigationBar()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 shareMenu
@@ -204,6 +204,12 @@ struct StockDetailScreen: View {
     private var content: some View {
         ScrollView {
             VStack(spacing: 16) {
+                VigilPageHeader(
+                    watch: .wealth,
+                    title: LocalizedStringKey(viewModel.details?.symbol ?? initialSymbol),
+                    subtitle: LocalizedStringKey(viewModel.companyProfile?.name ?? "")
+                )
+
                 StockDetailHeroCard(
                     details: viewModel.details,
                     companyProfile: viewModel.companyProfile,
@@ -313,7 +319,8 @@ struct StockDetailScreen: View {
             .maxContentWidth(regularSizeClass: ContentWidth.dense)
             .accessibilityIdentifier("stockDetailsScreen")
         }
-        .background(MeshGradientBackground().ignoresSafeArea())
+        .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
+        .vigilScreenBackground()
         .refreshable {
             await viewModel.load(stockId: stockId, force: true)
             await viewModel.loadSupplementaryDataIfNeeded(for: selectedTab)

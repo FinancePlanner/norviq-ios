@@ -12,6 +12,15 @@ struct HelpSupportView: View {
 
     var body: some View {
         List {
+            Section {
+                VigilPageHeader(
+                    watch: .settings("Help"),
+                    title: "Help & Support",
+                    subtitle: "Guides, contact, and community resources"
+                )
+                .listRowBackground(Color.clear)
+            }
+
             Section("Getting Started") {
                 supportGuideRow(
                     title: "Portfolio import",
@@ -77,11 +86,10 @@ struct HelpSupportView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
         }
-        .scrollContentBackground(.hidden)
-        .listStyle(.insetGrouped)
-        .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-        .navigationTitle("Help & Support")
-        .navigationBarTitleDisplayMode(.inline)
+        .vigilListChrome()
+        .vigilScreenBackground()
+        .vigilNavigationTitle("Help & Support")
+        .vigilInlineNavigationBar()
     }
 
     private func supportGuideRow(title: String, detail: String, systemImage: String) -> some View {

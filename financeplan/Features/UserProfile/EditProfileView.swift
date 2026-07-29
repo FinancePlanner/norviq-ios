@@ -43,6 +43,15 @@ struct EditProfileView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    VigilPageHeader(
+                        watch: .settings("Profile"),
+                        title: "Edit profile",
+                        subtitle: "Username, email, and password"
+                    )
+                    .listRowBackground(Color.clear)
+                }
+
                 Section("Username") {
                     TextField("Username", text: $username)
                         .focused($focusedField, equals: .username)
@@ -73,9 +82,10 @@ struct EditProfileView: View {
                     }
                 }
             }
-            .background(AppTheme.Colors.pageBackground(for: scheme))
-            .navigationTitle("Edit profile")
-            .navigationBarTitleDisplayMode(.inline)
+            .vigilListChrome()
+            .vigilScreenBackground()
+            .vigilNavigationTitle("Edit profile")
+            .vigilInlineNavigationBar()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

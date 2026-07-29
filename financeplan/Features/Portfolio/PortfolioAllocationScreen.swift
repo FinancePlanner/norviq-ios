@@ -146,6 +146,8 @@ struct PortfolioAllocationScreen: View {
             }
         }
         .appAnimation(AppMotion.reduced, value: viewModel.isLoading)
+        .vigilNavigationTitle("Allocation")
+        .vigilInlineNavigationBar()
         .onAppear {
             viewModel.setModelContext(modelContext)
         }
@@ -186,6 +188,12 @@ struct PortfolioAllocationScreen: View {
             } else {
                 ScrollView {
                     VStack(spacing: 20) {
+                        VigilPageHeader(
+                            watch: .wealth,
+                            title: "Allocation",
+                            subtitle: "Latest portfolio snapshot"
+                        )
+
                         Picker("Allocation view", selection: $selectedMode) {
                             ForEach(PortfolioAllocationMode.allCases) { mode in
                                 Text(mode.title).tag(mode)
@@ -244,6 +252,7 @@ struct PortfolioAllocationScreen: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                 }
+                .vigilScreenBackground()
             }
         }
 

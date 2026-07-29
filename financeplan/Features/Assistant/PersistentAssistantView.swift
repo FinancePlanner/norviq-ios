@@ -18,8 +18,9 @@ struct PersistentAssistantView: View {
                     conversationBody
                 }
             }
-            .navigationTitle("Assistant")
-            .navigationBarTitleDisplayMode(.inline)
+            .vigilScreenBackground()
+            .vigilNavigationTitle("Assistant")
+            .vigilInlineNavigationBar()
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close") { dismiss() }
@@ -48,6 +49,13 @@ struct PersistentAssistantView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 16) {
+                    VigilPageHeader(
+                        watch: .intelligence,
+                        title: "Assistant",
+                        subtitle: "Agentic actions and conversation history"
+                    )
+                    .padding(.horizontal, 16)
+
                     statusHeader
                     if !viewModel.tips.isEmpty { tipsSection }
                     if viewModel.activeConversation?.messages.isEmpty ?? true,
@@ -63,7 +71,8 @@ struct PersistentAssistantView: View {
                 }
                 .padding(.vertical, 16)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(AppTheme.Colors.pageBackground(for: scheme))
+            .vigilScreenBackground()
             .onChange(of: viewModel.activeConversation?.messages.count) {
                 if let id = viewModel.activeConversation?.messages.last?.id { withAnimation { proxy.scrollTo(id, anchor: .bottom) } }
             }

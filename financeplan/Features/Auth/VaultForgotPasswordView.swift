@@ -15,128 +15,167 @@ struct VaultForgotPasswordView: View {
       MeshGradientBackground()
 
       VStack(spacing: 0) {
-        // Top Bar
-        HStack {
-          Button("Back", systemImage: "arrow.left") {
-            dismiss()
-          }
-          .labelStyle(.iconOnly)
-          .font(.system(size: 20, weight: .medium))
-          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-          .frame(width: 44, height: 44)
-          .contentShape(.rect)
-          .accessibilityLabel("Back to sign in")
-
-          Spacer()
-
-          Text("Norviq")
-            .font(.title3.weight(.bold))
-            .foregroundStyle(.primary)
-
-          Spacer()
-
-          // Invisible spacer for centering
-          Color.clear
-            .frame(width: 44, height: 44)
-        }
-        .padding(.horizontal, 24)
-        .padding(.top, 20)
-        .padding(.bottom, 20)
+        topBar
 
         ScrollView {
           VStack(spacing: 32) {
-            NorviqFullLogo(width: 220)
-              .padding(.top, 40)
+            header
 
-            VStack(spacing: 12) {
-              Text("Reset Password")
-                .font(.title2.weight(.bold))
-                .foregroundStyle(.primary)
-
-              Text("Enter the email address associated with your account and we'll send a code to reset your password.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .lineSpacing(4)
-            }
-
-            VStack(spacing: 24) {
-              TextField("Email Address", text: $email)
-                .keyboardType(.emailAddress)
-                .textContentType(.emailAddress)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .padding()
-                .foregroundStyle(.primary)
-                .background(AppTheme.Colors.cardBackground(for: colorScheme))
-                .clipShape(.rect(cornerRadius: 12))
-
-              if let message {
-                HStack(spacing: 8) {
-                  Image(systemName: "checkmark.circle.fill")
-                  Text(message)
-                }
-                .font(.caption.weight(.medium))
-                .foregroundStyle(AppTheme.Colors.success)
-                .frame(maxWidth: .infinity, alignment: .leading)
-              }
-
-              if let errorMessage {
-                FormErrorBanner(message: errorMessage)
-              }
-
-              Button(action: { Task { await submit() } }) {
-                HStack {
-                  if isSubmitting {
-                    ProgressView()
-                      .tint(.white)
-                      .padding(.trailing, 8)
-                  }
-                  Text(isSubmitting ? "Sending..." : "Send Reset Link")
-                    .font(.headline.weight(.semibold))
-                  if !isSubmitting {
-                    Image(systemName: "arrow.right")
-                      .font(.subheadline.weight(.bold))
-                  }
-                }
-              }
-              .buttonStyle(.borderedProminent)
-              .tint(email.isEmpty ? AppTheme.Colors.disabled : AppTheme.Colors.tint(for: colorScheme))
-              .disabled(email.isEmpty || isSubmitting)
-
-              Button("Back to Sign In") {
-                dismiss()
-              }
-              .font(.subheadline.weight(.medium))
-              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-              .padding(.top, 8)
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 16)
+            formSection
 
             Spacer(minLength: 60)
 
-            // Secure Vault Protection Badge
-            HStack(spacing: 8) {
-              Image(systemName: "shield.fill")
-              Text("SECURE NORVIQ PROTECTION")
-            }
-            .font(.caption.weight(.semibold))
-            .tracking(1.0)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(AppTheme.Colors.cardBackground(for: colorScheme))
-            .clipShape(Capsule())
-            .overlay(
-              Capsule()
-                .stroke(.separator.opacity(0.2), lineWidth: 1)
-            )
-            .padding(.bottom, 40)
+            protectionBadge
           }
         }
       }
     }
+  }
+
+  private var topBar: some View {
+    HStack {
+      Button("Back", systemImage: "arrow.left") {
+        dismiss()
+      }
+      .labelStyle(.iconOnly)
+      .font(.system(size: 20, weight: .medium))
+      .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+      .frame(width: 44, height: 44)
+      .contentShape(.rect)
+      .accessibilityLabel("Back to sign in")
+
+      Spacer()
+
+      if BrandTheme.current != .vigil {
+        Text("Norviq")
+          .font(.title3.weight(.bold))
+          .foregroundStyle(.primary)
+      }
+
+      Spacer()
+
+      Color.clear
+        .frame(width: 44, height: 44)
+    }
+    .padding(.horizontal, 24)
+    .padding(.top, 20)
+    .padding(.bottom, 20)
+  }
+
+  @ViewBuilder
+  private var header: some View {
+    if BrandTheme.current == .vigil {
+      VigilPageHeader(
+        watch: .auth("Account recovery"),
+        title: "Reset Password",
+        subtitle: "Enter the email address associated with your account and we'll send a code to reset your password."
+      )
+      .padding(.horizontal, 24)
+      .padding(.top, 16)
+    } else {
+      VStack(spacing: 12) {
+        NorviqFullLogo(width: 220)
+          .padding(.top, 40)
+
+        Text("Reset Password")
+          .font(.title2.weight(.bold))
+          .foregroundStyle(.primary)
+
+        Text("Enter the email address associated with your account and we'll send a code to reset your password.")
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+          .multilineTextAlignment(.center)
+          .lineSpacing(4)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var formSection: some View {
+    Group {
+      if BrandTheme.current == .vigil {
+        formContent
+          .padding(24)
+          .vigilGlassCard(cornerRadius: AppTheme.Radius.hero)
+      } else {
+        formContent
+      }
+    }
+    .padding(.horizontal, 24)
+    .padding(.top, 16)
+  }
+
+  private var formContent: some View {
+    VStack(spacing: 24) {
+      TextField("Email Address", text: $email)
+        .keyboardType(.emailAddress)
+        .textContentType(.emailAddress)
+        .textInputAutocapitalization(.never)
+        .autocorrectionDisabled()
+        .padding()
+        .foregroundStyle(.primary)
+        .background(AppTheme.Colors.cardBackground(for: colorScheme))
+        .clipShape(.rect(cornerRadius: 12))
+
+      if let message {
+        HStack(spacing: 8) {
+          Image(systemName: "checkmark.circle.fill")
+          Text(message)
+        }
+        .font(.caption.weight(.medium))
+        .foregroundStyle(AppTheme.Colors.success)
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+
+      if let errorMessage {
+        FormErrorBanner(message: errorMessage)
+      }
+
+      Button(action: { Task { await submit() } }) {
+        HStack {
+          if isSubmitting {
+            ProgressView()
+              .tint(.white)
+              .padding(.trailing, 8)
+          }
+          Text(isSubmitting ? "Sending..." : "Send Reset Link")
+            .font(.headline.weight(.semibold))
+          if !isSubmitting {
+            Image(systemName: "arrow.right")
+              .font(.subheadline.weight(.bold))
+          }
+        }
+      }
+      .buttonStyle(.borderedProminent)
+      .tint(email.isEmpty ? AppTheme.Colors.disabled : AppTheme.Colors.tint(for: colorScheme))
+      .disabled(email.isEmpty || isSubmitting)
+
+      Button("Back to Sign In") {
+        dismiss()
+      }
+      .font(.subheadline.weight(.medium))
+      .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+      .padding(.top, 8)
+    }
+  }
+
+  private var protectionBadge: some View {
+    HStack(spacing: 8) {
+      Image(systemName: "shield.fill")
+      Text("SECURE NORVIQ PROTECTION")
+    }
+    .font(.caption.weight(.semibold))
+    .tracking(1.0)
+    .foregroundStyle(.secondary)
+    .padding(.horizontal, 16)
+    .padding(.vertical, 10)
+    .background(AppTheme.Colors.cardBackground(for: colorScheme))
+    .clipShape(Capsule())
+    .overlay(
+      Capsule()
+        .stroke(.separator.opacity(0.2), lineWidth: 1)
+    )
+    .padding(.bottom, 40)
   }
 
   @MainActor
@@ -148,7 +187,7 @@ struct VaultForgotPasswordView: View {
     defer { isSubmitting = false }
 
     do {
-        _ = try await viewModel.requestForgotPassword(for: trimmed)
+      _ = try await viewModel.requestForgotPassword(for: trimmed)
       message = "Instructions sent successfully."
       errorMessage = nil
     } catch {

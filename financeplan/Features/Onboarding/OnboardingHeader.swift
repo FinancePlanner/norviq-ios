@@ -11,11 +11,19 @@ struct OnboardingHeader: View {
   let icon: String
   let title: String
   let subtitle: String?
+  var watch: VigilWatch?
   @Environment(\.colorScheme) private var colorScheme
   var namespace: Namespace.ID?
 
   var body: some View {
     VStack(spacing: 16) {
+      if BrandTheme.current == .vigil, let watch {
+        Text(watch.eyebrow)
+          .vigilOverline()
+          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme).opacity(0.88))
+          .multilineTextAlignment(.center)
+      }
+
       ZStack {
         // Outer glow
         Circle()

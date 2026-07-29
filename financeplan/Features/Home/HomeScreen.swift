@@ -205,6 +205,18 @@ struct HomeScreen: View {
   private var moreSheet: some View {
     NavigationStack {
       List {
+        if BrandTheme.current == .vigil {
+          Section {
+            VigilPageHeader(
+              watch: .intelligence,
+              title: "More",
+              subtitle: "Markets, economy, reports, and tax"
+            )
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+          }
+        }
+
         ForEach([HomeTab.markets, .economy, .reports, .tax, .insights], id: \.self) { tab in
           Button {
             isMorePresented = false
@@ -215,8 +227,9 @@ struct HomeScreen: View {
           .accessibilityIdentifier("tabBar.more.\(tab)")
         }
       }
-      .navigationTitle(String(localized: "More"))
-      .navigationBarTitleDisplayMode(.inline)
+      .vigilListChrome()
+      .vigilNavigationTitle(String(localized: "More"))
+      .vigilInlineNavigationBar()
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button(String(localized: "Done")) {

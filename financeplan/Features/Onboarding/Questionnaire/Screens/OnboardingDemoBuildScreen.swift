@@ -58,14 +58,11 @@ struct OnboardingDemoBuildScreen: View {
   @ViewBuilder
   private var header: some View {
     VStack(spacing: 6) {
-      Text("Pick 3 to start your sample portfolio.")
-        .typography(.title, weight: .bold)
-        .multilineTextAlignment(.center)
-
-      Text("Swipe right to add. Left to skip.")
-        .typography(.label)
-        .foregroundStyle(.secondary)
-        .multilineTextAlignment(.center)
+      OnboardingQuestionHeader(
+        watch: .wealthImport,
+        title: "Pick 3 to start your sample portfolio.",
+        subtitle: "Swipe right to add. Left to skip."
+      )
 
       counter
         .padding(.top, 4)

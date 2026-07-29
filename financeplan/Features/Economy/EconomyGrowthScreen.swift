@@ -33,6 +33,12 @@ struct EconomyGrowthScreen: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 16) {
+        VigilPageHeader(
+          watch: .intelligence,
+          title: "Growth & Jobs",
+          subtitle: "Jobs, GDP, and recession risk"
+        )
+
         EconomyCountryPicker(selection: $selectedCountry)
           .onChange(of: selectedCountry) { _, newValue in
             Task { await viewModel.load(country: newValue) }
@@ -54,10 +60,11 @@ struct EconomyGrowthScreen: View {
       }
       .padding()
     }
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Growth & Jobs")
     .refreshable {
       await viewModel.load(country: selectedCountry)
     }
-    .navigationTitle("Growth & Jobs")
     .task {
       if viewModel.response == nil {
         await viewModel.load(country: selectedCountry)

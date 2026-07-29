@@ -11,6 +11,15 @@ struct MCPGuideView: View {
   var body: some View {
     List {
       Section {
+        VigilPageHeader(
+          watch: .intelligence,
+          title: "Connect an AI agent",
+          subtitle: "MCP server address and client recipes"
+        )
+        .listRowBackground(Color.clear)
+      }
+
+      Section {
         VStack(alignment: .leading, spacing: 8) {
           Text("Let your AI assistant read expenses, quotes, reports, insights, and tax data — scoped to exactly what you allow, revocable any time.")
             .font(.subheadline)
@@ -93,10 +102,10 @@ struct MCPGuideView: View {
       }
       .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
     }
-    .scrollContentBackground(.hidden)
-    .background(AppTheme.Colors.pageBackground(for: scheme))
-    .navigationTitle("Connect an AI agent")
-    .navigationBarTitleDisplayMode(.inline)
+    .vigilListChrome()
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Connect an AI agent")
+    .vigilInlineNavigationBar()
   }
 
   private func stepText(_ text: String) -> some View {
