@@ -103,4 +103,80 @@ final class BrandThemeParityTests: XCTestCase {
       "Nav-bar chrome must follow the resolved colour scheme."
     )
   }
+
+
+  // MARK: - Asset catalog
+
+  func testAccentColorUsesVigilAnchorsNotDeprecatedGold() throws {
+    let json = try source("financeplan/Assets.xcassets/AccentColor.colorset/Contents.json")
+
+    // Asset catalogs are static and cannot brand-switch, so this is a one-value
+    // decision. It is set to the Vigil contrast anchors because Vigil is the
+    // default brand: #0891B2 light, #00F2FF dark (docs/vigil-identity.md).
+    //
+    // It matters despite no Swift code reading it: UIKit and the system use the
+    // catalog accent where SwiftUI's .tint cannot reach — LaunchScreen,
+    // share sheets, SFSafariViewController — via
+    // ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME.
+    XCTAssertFalse(
+      json.contains("\"red\" : \"0x8F\""),
+      "AccentColor light must not be the deprecated gold #8F5E1C."
+    )
+    XCTAssertFalse(
+      json.contains("\"red\" : \"0xE8\""),
+      "AccentColor dark must not be the deprecated gold #E8A33D."
+    )
+    XCTAssertTrue(json.contains("\"blue\" : \"0xB2\""), "expected Vigil light anchor #0891B2")
+    XCTAssertTrue(json.contains("\"green\" : \"0xF2\""), "expected Vigil dark anchor #00F2FF")
+  }
+
+  func testLaunchScreenBackgroundAdaptsToAppearance() throws {
+    let plist = try source("Info.plist")
+
+    // The launch screen is the UILaunchScreen dictionary, NOT
+    // LaunchScreen.storyboard — that file is not referenced anywhere in
+    // project.pbxproj, so it never enters the build. An empty dict rendered
+    // plain systemBackground; naming a colorset matches the app's own page
+    // background so a dark launch no longer flashes a lighter panel.
+    XCTAssertTrue(
+      plist.contains("<key>UIColorName</key>"),
+      "UILaunchScreen must name a background colorset."
+    )
+    XCTAssertTrue(
+      plist.contains("<string>LaunchBackground</string>"),
+      "the launch background should be the LaunchBackground colorset."
+    )
+
+    let colorset = try source("financeplan/Assets.xcassets/LaunchBackground.colorset/Contents.json")
+    XCTAssertTrue(colorset.contains("\"value\" : \"dark\""),
+                  "LaunchBackground needs a dark variant or the launch screen cannot adapt.")
+  }
+
+  // MARK: - Dead navigation
+
+  func testNoPlaceholderSettingsDestinationsRemain() throws {
+    let src = try source("financeplan/Features/UserProfile/UserProfileView.swift")
+
+    // .dataHandling and .sensitiveActions had no push sites anywhere, so they
+    // were unreachable enum cases whose bodies were bare Text placeholders.
+    XCTAssertFalse(src.contains("Text(\"Data handling\")"),
+                   "unreachable placeholder destination should be removed, not shipped")
+    XCTAssertFalse(src.contains("Text(\"Sensitive actions\")"),
+                   "unreachable placeholder destination should be removed, not shipped")
+    XCTAssertFalse(src.contains("case dataHandling"))
+    XCTAssertFalse(src.contains("case sensitiveActions"))
+  }
+
+  func testBankSyncStaysReachableFromSettingsInTwoTaps() throws {
+    let profile = try source("financeplan/Features/UserProfile/UserProfileView.swift")
+    let integrations = try source("financeplan/Features/Integrations/IntegrationsView.swift")
+
+    // Settings > Connected Accounts > Bank Sync. PR #60 had to restore this
+    // entry once; keep the shallow path intact.
+    XCTAssertTrue(profile.contains("UserProfileDestination.integrations"),
+                  "Settings must keep a direct row to the functional integrations screen")
+    XCTAssertTrue(integrations.contains("BankingView()"),
+                  "bank sync must stay reachable from IntegrationsView")
+  }
 }
+
