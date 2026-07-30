@@ -120,18 +120,23 @@ final class PortfolioViewModel: ObservableObject {
 
       async let stocksTask = service.fetchPortfolio(portfolioListId: selectedPortfolioListId, limit: 50)
       async let summaryTask = service.fetchPortfolioSummary(portfolioListId: selectedPortfolioListId)
-      async let targetsTask = service.fetchTargets(symbol: nil)
+      // Price alerts are Pro-gated, so this call answers "Upgrade required." for
+      // every free user. Letting it throw here failed the whole load and left
+      // them staring at an error banner instead of their portfolio.
+      let targetsTask = Task {
+        await self.fetchTargetsSafely()
+      }
       let sectorExposureTask = Task {
         await self.fetchPortfolioSectorExposureSafely(portfolioListId: selectedPortfolioListId)
       }
       let pnlTask = Task {
         await self.fetchPnlSafely(portfolioListId: selectedPortfolioListId)
       }
-      let (stocksResult, summary, targets) = try await (
+      let (stocksResult, summary) = try await (
         stocksTask,
-        summaryTask,
-        targetsTask
+        summaryTask
       )
+      let targets = await targetsTask.value
       let (remoteStocks, fetchedNextCursor) = stocksResult
       let fullSnapshot = try await fetchCompletePortfolioSnapshot(
         firstPage: remoteStocks,
@@ -203,6 +208,17 @@ final class PortfolioViewModel: ObservableObject {
 
   func pnl(for symbol: String) -> PnlBySymbol? {
     pnlBySymbol[Self.normalizedSymbol(symbol)]
+  }
+
+  /// Price alerts are a Pro feature, so a free account gets "Upgrade required."
+  /// here. That must not take the rest of the portfolio down with it.
+  private func fetchTargetsSafely() async -> [TargetResponse] {
+    do {
+      return try await service.fetchTargets(symbol: nil)
+    } catch {
+      portfolioViewModelLogger.warning("Failed to fetch target alerts: \(error.localizedDescription, privacy: .public)")
+      return []
+    }
   }
 
   private func fetchPnlSafely(portfolioListId: String?) async -> [String: PnlBySymbol] {

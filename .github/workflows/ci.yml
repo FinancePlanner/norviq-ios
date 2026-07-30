@@ -53,14 +53,18 @@ jobs:
             -destination 'platform=iOS Simulator,name=iPhone 16' \
             -quiet
 
+      # Was pinned to two formatting/sorting classes, which meant a green
+      # "Build and Test" only ever proved the app compiled. Every other unit
+      # test — including the ones added by review agents that cannot run
+      # xcodebuild — went unexecuted, and main accumulated real failures nobody
+      # saw. Run the whole bundle.
       - name: Run Unit Tests
         run: |
           xcodebuild test \
             -project financeplan.xcodeproj \
             -scheme financeplan \
             -destination 'platform=iOS Simulator,name=iPhone 16' \
-            -only-testing:financeplanTests/StockComparisonFormattingTests \
-            -only-testing:financeplanTests/StockComparisonSortingTests \
+            -only-testing:financeplanTests \
             -quiet
 
       - name: Run UI Smoke Tests
