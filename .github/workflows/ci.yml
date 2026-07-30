@@ -45,13 +45,40 @@ jobs:
             sleep 20
           done
 
+      # A generic destination compiles for the simulator SDK without needing a
+      # concrete device, so a build break stays distinguishable from the runner
+      # image having no simulators — which is exactly how they got confused.
       - name: Build (no tests) to surface all Swift errors
         run: |
           xcodebuild build \
             -project financeplan.xcodeproj \
             -scheme financeplan \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination 'generic/platform=iOS Simulator' \
             -quiet
+
+      # Hardcoding 'name=iPhone 16' made this job depend on the exact device
+      # list in the macos-15 image. That list changed underneath us: runs went
+      # from iPhone 16 on iOS 26.2, to no simulators at all — at which point
+      # every step failed with "Unable to find a device matching the provided
+      # destination specifier", which reads nothing like the infrastructure
+      # problem it is. Resolve whatever iPhone the runner actually has, and if
+      # there is none, say so in one line instead of failing four steps.
+      - name: Resolve a simulator
+        id: sim
+        run: |
+          set -euo pipefail
+          udid="$(xcrun simctl list devices available \
+            | grep -E '^\s+iPhone' \
+            | head -1 \
+            | grep -oE '[0-9A-Fa-f-]{36}' || true)"
+          if [ -z "$udid" ]; then
+            echo "::error::No iOS simulator available on this runner. Available destinations:"
+            xcodebuild -project financeplan.xcodeproj -scheme financeplan -showdestinations 2>&1 | sed -n '1,40p'
+            exit 1
+          fi
+          name="$(xcrun simctl list devices available | grep "$udid" | sed -E 's/^ *([^(]+) \(.*/\1/')"
+          echo "Using simulator: $name ($udid)"
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
 
       # Gating subset. Deliberately narrow, because the full bundle cannot
       # currently complete on this runner — see the informational step below.
@@ -60,7 +87,7 @@ jobs:
           xcodebuild test \
             -project financeplan.xcodeproj \
             -scheme financeplan \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
             -only-testing:financeplanTests/StockComparisonFormattingTests \
             -only-testing:financeplanTests/StockComparisonSortingTests \
             -parallel-testing-enabled NO \
@@ -85,26 +112,27 @@ jobs:
       # Keychain-backed SecurityCodeManager tests — so skipping classes is
       # whack-a-mole, not a fix.
       #
-      # It does not reproduce locally: the full bundle passes on the same
-      # iPhone 16 simulator this job uses, and on iPhone 17 / iOS 26.4.1.
-      # Ruled out so far: parallel simulator-clone capacity (serial testing did
-      # not fix it) and a failable UserDefaults(suiteName:) force-unwrap
-      # (hardened in #75; still crashes). The remaining variable is the runtime
-      # — CI is on iOS 26.2.
+      # It does not reproduce locally: the full bundle passes on iPhone 16 and
+      # on iPhone 17 / iOS 26.4.1. Ruled out: parallel simulator-clone capacity
+      # (serial testing did not fix it) and a failable UserDefaults(suiteName:)
+      # force-unwrap (hardened in #75; still crashes).
       #
-      # To pick this up: install the iOS 26.2 runtime and run
-      #   xcodebuild test -only-testing:financeplanTests \
-      #     -destination 'platform=iOS Simulator,name=iPhone 16,OS=26.2'
-      # then read the crash report inside Logs/Test/*.xcresult — the failure
-      # list is a symptom, the abrt is the thing. Once it runs clean, make this
-      # step gating and delete the subset above.
+      # Strong suspicion is the runner's simulators rather than the app. The
+      # same image went from "iPhone 16, iOS 26.2" to no simulators at all
+      # within a few hours, which is what forced the resolve step above — an
+      # image that unstable is a plausible source of a bootstrap abrt too.
+      #
+      # Before assuming an app bug, re-run this on a healthy runner. If it is
+      # still crashing, read the crash report inside Logs/Test/*.xcresult — the
+      # failure list is a symptom, the abrt is the thing. Once it runs clean,
+      # make this step gating and delete the subset above.
       - name: Run Unit Tests (full bundle, informational)
         continue-on-error: true
         run: |
           xcodebuild test \
             -project financeplan.xcodeproj \
             -scheme financeplan \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
             -only-testing:financeplanTests \
             -parallel-testing-enabled NO \
             -quiet
@@ -114,7 +142,7 @@ jobs:
           xcodebuild test \
             -project financeplan.xcodeproj \
             -scheme financeplan \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
             -only-testing:financeplanUITests/StockDetailTabTests \
             -quiet
 
