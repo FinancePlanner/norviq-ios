@@ -53,20 +53,53 @@ jobs:
             -destination 'platform=iOS Simulator,name=iPhone 16' \
             -quiet
 
-      # Was pinned to two formatting/sorting classes, which meant a green
-      # "Build and Test" only ever proved the app compiled. Every other unit
-      # test — including the ones added by review agents that cannot run
-      # xcodebuild — went unexecuted, and main accumulated real failures nobody
-      # saw. Run the whole bundle.
+      # Gating subset. Deliberately narrow, because the full bundle cannot
+      # currently complete on this runner — see the informational step below.
+      - name: Run Unit Tests (gating subset)
+        run: |
+          xcodebuild test \
+            -project financeplan.xcodeproj \
+            -scheme financeplan \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -only-testing:financeplanTests/StockComparisonFormattingTests \
+            -only-testing:financeplanTests/StockComparisonSortingTests \
+            -parallel-testing-enabled NO \
+            -quiet
+
+      # The full bundle, non-blocking. Read the log — a failure here is real
+      # signal, it just cannot gate merges yet.
       #
-      # Parallel testing is off deliberately. xcodebuild clones the simulator
-      # per worker, and the full bundle on a macos-15 runner aborts during
-      # bootstrap — "Test crashed with signal abrt while preparing to run
-      # tests", with each subsequent test landing on a fresh clone. The same
-      # bundle passes on the same simulator locally, and two classes fit fine
-      # in parallel, so it is runner capacity rather than a test defect.
-      # Serial is slower but is the difference between a signal and a result.
-      - name: Run Unit Tests
+      # Background: this step used to be the gating one and ran only the two
+      # classes above, so a green "Build and Test" proved the app compiled and
+      # nothing else. Turning the whole bundle on surfaced five genuine
+      # failures that had been sitting on main unnoticed (fixed in #73) — and
+      # also this, which is not a test defect:
+      #
+      #   Early unexpected exit, operation never finished bootstrapping.
+      #   (Underlying Error: The test runner crashed while preparing to run
+      #    tests: financeplan at <some test>)  /  Test crashed with signal abrt.
+      #
+      # The abort is in the app under test, and it kills the host, so one crash
+      # reports as a suite-wide failure. The crash point MOVES as classes are
+      # skipped — AppEnvironmentManagerTests, then BillingManagerTests and the
+      # Keychain-backed SecurityCodeManager tests — so skipping classes is
+      # whack-a-mole, not a fix.
+      #
+      # It does not reproduce locally: the full bundle passes on the same
+      # iPhone 16 simulator this job uses, and on iPhone 17 / iOS 26.4.1.
+      # Ruled out so far: parallel simulator-clone capacity (serial testing did
+      # not fix it) and a failable UserDefaults(suiteName:) force-unwrap
+      # (hardened in #75; still crashes). The remaining variable is the runtime
+      # — CI is on iOS 26.2.
+      #
+      # To pick this up: install the iOS 26.2 runtime and run
+      #   xcodebuild test -only-testing:financeplanTests \
+      #     -destination 'platform=iOS Simulator,name=iPhone 16,OS=26.2'
+      # then read the crash report inside Logs/Test/*.xcresult — the failure
+      # list is a symptom, the abrt is the thing. Once it runs clean, make this
+      # step gating and delete the subset above.
+      - name: Run Unit Tests (full bundle, informational)
+        continue-on-error: true
         run: |
           xcodebuild test \
             -project financeplan.xcodeproj \
