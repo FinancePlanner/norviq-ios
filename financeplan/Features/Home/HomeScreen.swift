@@ -37,17 +37,13 @@ struct HomeScreen: View {
   }
 
   private var chromeItems: [RevolutTabBar.Item] {
-    [
-      .init(kind: .tab(.dashboard), title: HomeTab.dashboard.title, systemImage: HomeTab.dashboard.systemImage),
-      .init(kind: .tab(.portfolio), title: HomeTab.portfolio.title, systemImage: HomeTab.portfolio.systemImage),
-      .init(kind: .tab(.expenses), title: HomeTab.expenses.title, systemImage: HomeTab.expenses.systemImage),
-      .init(kind: .tab(.crypto), title: HomeTab.crypto.title, systemImage: HomeTab.crypto.systemImage),
-      .init(kind: .more, title: String(localized: "More"), systemImage: "ellipsis"),
-    ]
+    HomeTab.primaryTabs.map { tab in
+      .init(kind: .tab(tab), title: tab.title, systemImage: tab.systemImage)
+    } + [.init(kind: .more, title: String(localized: "More"), systemImage: "ellipsis")]
   }
 
   private var moreTabs: Set<HomeTab> {
-    [.markets, .economy, .reports, .tax, .insights]
+    Set(HomeTab.moreMenuTabs)
   }
 
   var body: some View {
@@ -205,7 +201,7 @@ struct HomeScreen: View {
   private var moreSheet: some View {
     NavigationStack {
       List {
-        ForEach([HomeTab.markets, .economy, .reports, .tax, .insights], id: \.self) { tab in
+        ForEach(HomeTab.moreMenuTabs, id: \.self) { tab in
           Button {
             isMorePresented = false
             selectedTab = tab
