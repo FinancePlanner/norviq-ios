@@ -54,8 +54,10 @@ final class BudgetPlannerViewModelTests: XCTestCase {
 
   func testRecordExpenseUpdatesActualTotalsAndMoneyLeft() async {
     let mock = BudgetPlannerServiceMock()
-    let month = makeMonth(2026, 3)
-    let occurredOn = makeDate(2026, 3, 2)
+    // Recording triggers load(force:), which refetches snapshots from the mock,
+    // so the fixture month has to be the month the mock actually serves.
+    let month = makeMonth(2026, 4)
+    let occurredOn = makeDate(2026, 4, 2)
     let rent = BudgetPlanItem(id: UUID(), title: "Rent", plannedAmount: 1100, pillar: .fundamentals)
     let snapshot = MonthlyBudgetSnapshot(
       monthStart: month,
@@ -228,8 +230,9 @@ final class BudgetPlannerViewModelTests: XCTestCase {
 
   func testRecordSharedExpenseCorrectlySplitsAmounts() async {
     let mock = BudgetPlannerServiceMock()
-    let month = makeMonth(2026, 3)
-    let occurredOn = makeDate(2026, 3, 1)
+    // Same as above: the post-save reload serves the mock's month, not this one.
+    let month = makeMonth(2026, 4)
+    let occurredOn = makeDate(2026, 4, 1)
     let rent = BudgetPlanItem(
       id: UUID(), title: "Rent", plannedAmount: 1200,
       pillar: .fundamentals, splitMode: .shared, userSharePercent: 60
@@ -414,6 +417,42 @@ final class BudgetPlannerViewModelTests: XCTestCase {
         occurredOn: makeDate(2026, 4, 2)
       )
     ]
+    // updateNetSalary reloads, which refetches plan items and expenses from the
+    // service. The initializer-injected copies above do not survive that, so the
+    // mock has to serve the same ones or the availability maths reads as if the
+    // month were empty.
+    mock.itemsResult = .success(
+      [
+        BudgetPlanItemResponse(
+          id: "77777777-7777-4777-8777-777777777777",
+          snapshotId: snapshotID.uuidString,
+          title: "Rent",
+          plannedAmount: 700,
+          pillar: .fundamentals,
+          categoryId: nil,
+          splitMode: .personal,
+          userSharePercent: 100,
+          createdAt: nil,
+          updatedAt: nil
+        )
+      ]
+    )
+    mock.expensesResult = .success(
+      [
+        ExpenseResponse(
+          id: "88888888-8888-4888-8888-888888888888",
+          title: "Rent",
+          amount: 650,
+          pillar: .fundamentals,
+          occurredOn: formattedDayString(makeDate(2026, 4, 2)),
+          linkedPlanItemId: nil,
+          splitMode: .personal,
+          userSharePercent: 100,
+          createdAt: nil,
+          updatedAt: nil
+        )
+      ]
+    )
     mock.updateSnapshotResult = .success(
       BudgetSnapshotResponse(
         id: snapshotID.uuidString,
@@ -1118,7 +1157,16 @@ private final class BudgetPlannerServiceMock: ExpensesServicing, @unchecked Send
 
   func updateSnapshot(snapshotId _: String, payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
     updateSnapshotRequests.append(payload)
-    return try updateSnapshotResult.get()
+    let updated = try updateSnapshotResult.get()
+    // A real backend returns the updated snapshot on the next list too. Without
+    // this, the reload that follows every mutation served the stale
+    // snapshotsResult and silently reverted the change under test.
+    if var snapshots = try? snapshotsResult.get() {
+      snapshots.removeAll { $0.monthStart == updated.monthStart }
+      snapshots.append(updated)
+      snapshotsResult = .success(snapshots)
+    }
+    return updated
   }
 
   func deleteSnapshot(snapshotId _: String) async throws {}
