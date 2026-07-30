@@ -58,6 +58,14 @@ jobs:
       # test — including the ones added by review agents that cannot run
       # xcodebuild — went unexecuted, and main accumulated real failures nobody
       # saw. Run the whole bundle.
+      #
+      # Parallel testing is off deliberately. xcodebuild clones the simulator
+      # per worker, and the full bundle on a macos-15 runner aborts during
+      # bootstrap — "Test crashed with signal abrt while preparing to run
+      # tests", with each subsequent test landing on a fresh clone. The same
+      # bundle passes on the same simulator locally, and two classes fit fine
+      # in parallel, so it is runner capacity rather than a test defect.
+      # Serial is slower but is the difference between a signal and a result.
       - name: Run Unit Tests
         run: |
           xcodebuild test \
@@ -65,6 +73,7 @@ jobs:
             -scheme financeplan \
             -destination 'platform=iOS Simulator,name=iPhone 16' \
             -only-testing:financeplanTests \
+            -parallel-testing-enabled NO \
             -quiet
 
       - name: Run UI Smoke Tests
