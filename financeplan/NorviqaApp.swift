@@ -35,6 +35,18 @@ struct NorviqApp: App {
     AppLanguage.from(appLanguageRawValue)
   }
 
+  /// The colour scheme actually in effect.
+  ///
+  /// `appAppearance.colorScheme` is nil for `.system`, which is the default, so
+  /// `?? .light` / `?? .dark` fallbacks silently pick the wrong scheme for most
+  /// users. Fall back to the live system trait instead.
+  private var resolvedColorScheme: ColorScheme {
+    if let scheme = appAppearance.colorScheme {
+      return scheme
+    }
+    return UITraitCollection.current.userInterfaceStyle == .dark ? .dark : .light
+  }
+
   init() {
     #if DEBUG
     Self.applyUITestAppearanceOverride()
@@ -84,23 +96,20 @@ struct NorviqApp: App {
         .environment(sessionManager)
         .environment(\.locale, Locale(identifier: appLanguage.localeIdentifier))
         .preferredColorScheme(appAppearance.colorScheme)
-        .tint(AppTheme.Colors.tint(for: appAppearance.colorScheme ?? .light))
+        // Tint resolves from the environment rather than from the stored
+        // setting, so it tracks the real scheme when appearance is .system and
+        // updates when the device flips light/dark.
+        .modifier(AppTintModifier())
         .onAppear {
           AppLanguage.applyStoredLanguage()
           analytics.track("App Launched")
-          VigilNavigationAppearance.apply(
-            colorScheme: appAppearance.colorScheme ?? .dark
-          )
+          VigilNavigationAppearance.apply(colorScheme: resolvedColorScheme)
         }
         .onChange(of: brandThemeRawValue) { _, _ in
-          VigilNavigationAppearance.apply(
-            colorScheme: appAppearance.colorScheme ?? .dark
-          )
+          VigilNavigationAppearance.apply(colorScheme: resolvedColorScheme)
         }
         .onChange(of: appAppearanceRawValue) { _, _ in
-          VigilNavigationAppearance.apply(
-            colorScheme: appAppearance.colorScheme ?? .dark
-          )
+          VigilNavigationAppearance.apply(colorScheme: resolvedColorScheme)
         }
         .onChange(of: appLanguageRawValue) { _, newValue in
           AppLanguage.applyBundleLanguage(AppLanguage.from(newValue))
@@ -119,6 +128,19 @@ struct NorviqApp: App {
     UserDefaults.standard.set(appearance.rawValue, forKey: AppAppearance.storageKey)
   }
   #endif
+}
+
+/// Applies the brand tint using the *resolved* colour scheme.
+///
+/// Reading `\.colorScheme` from the environment inside the window hierarchy is
+/// what makes this correct: `preferredColorScheme` and the device setting both
+/// land there, whereas the stored `AppAppearance` is nil for `.system`.
+private struct AppTintModifier: ViewModifier {
+  @Environment(\.colorScheme) private var scheme
+
+  func body(content: Content) -> some View {
+    content.tint(AppTheme.Colors.tint(for: scheme))
+  }
 }
 
 #if DEBUG
