@@ -178,5 +178,36 @@ final class BrandThemeParityTests: XCTestCase {
     XCTAssertTrue(integrations.contains("BankingView()"),
                   "bank sync must stay reachable from IntegrationsView")
   }
+
+  // MARK: - Card surfaces
+
+  func testGlassCardKeepsAdaptiveDefaultPadding() throws {
+    let src = try source("financeplan/Components/GlassCard.swift")
+
+    // `.padding()` and `.padding(16)` are NOT equivalent — the no-argument form
+    // is adaptive. All 75 existing call sites render the adaptive one, so the
+    // nil branch must keep calling it with no argument.
+    XCTAssertTrue(src.contains("content.padding()"),
+                  "the default padding branch must stay adaptive, not a fixed value")
+    XCTAssertTrue(src.contains("padding: CGFloat? = nil"),
+                  "padding must be opt-in so existing call sites are unaffected")
+  }
+
+  func testGlassCardStillAppliesAppGlassEffect() throws {
+    let src = try source("financeplan/Components/GlassCard.swift")
+
+    // Guards the consolidation trap: pointing GlassCard at VigilGlassBackground
+    // would drop .appGlassEffect, and VigilGlassBackground's Classic branch is a
+    // flat cardBackground fill with no stroke, shadow or native glass. That
+    // would flatten Classic cards across all 75 sites. Any future change here
+    // needs a screenshot review first.
+    XCTAssertTrue(src.contains(".appGlassEffect("),
+                  "GlassCard must keep the native/fallback glass primitive")
+
+    // Match construction, not any mention: the doc comment in that file
+    // deliberately names VigilGlassBackground to explain why it is NOT used.
+    XCTAssertFalse(src.contains("VigilGlassBackground("),
+                   "swapping in VigilGlassBackground flattens Classic cards; needs visual review")
+  }
 }
 
