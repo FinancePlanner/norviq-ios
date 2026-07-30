@@ -61,8 +61,16 @@
 	<string>appl_WhkrrqIARwWCJUrxETkxkzdZzni</string>
 	<key>SENTRY_DSN</key>
 	<string>https://a8b2cb36518b8be68b0b8f41d7095b05@o4510766840872960.ingest.de.sentry.io/4511577338282064</string>
+	<!-- The launch screen is this dictionary, NOT LaunchScreen.storyboard: that
+	     file is not referenced anywhere in project.pbxproj, so it never enters
+	     the build. An empty dict here rendered plain systemBackground; naming a
+	     colorset matches the app's own page background instead, so launching in
+	     dark mode no longer flashes a lighter panel before #050505. -->
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
