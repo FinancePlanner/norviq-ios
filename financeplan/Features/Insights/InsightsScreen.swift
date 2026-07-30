@@ -8,7 +8,11 @@ struct InsightsScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 18) {
-                    intro
+                    VigilPageHeader(
+                        watch: .intelligence,
+                        title: "Insights",
+                        subtitle: "Educational summaries from your own data"
+                    )
 
                     ForEach(AIInsightKind.allCases, id: \.self) { kind in
                         InsightCardView(
@@ -26,19 +30,9 @@ struct InsightsScreen: View {
                 }
                 .padding()
             }
-            .navigationTitle("Insights")
+            .vigilScreenBackground()
+            .vigilNavigationTitle("Insights")
             .accessibilityIdentifier("insights.screen")
         }
-    }
-
-    private var intro: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("AI Insights")
-                .font(.title2.weight(.bold))
-            Text("Educational summaries generated from your own data. Tap to generate.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

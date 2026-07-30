@@ -32,6 +32,12 @@ struct TaxDashboardScreen: View {
     NavigationStack {
       ScrollView {
         LazyVStack(alignment: .leading, spacing: 16) {
+          VigilPageHeader(
+            watch: .spending,
+            title: "Tax strategy",
+            subtitle: "Jurisdiction-aware estimates from your profile"
+          )
+
           jurisdictionPicker
           supportLevelBanner
           profileStatus
@@ -50,7 +56,9 @@ struct TaxDashboardScreen: View {
         }
         .padding()
       }
-      .navigationTitle("Tax strategy")
+      .vigilScreenBackground()
+      .vigilNavigationTitle("Tax strategy")
+      .vigilInlineNavigationBar()
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
           if model.selectedJurisdiction == .spain {

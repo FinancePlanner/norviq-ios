@@ -46,6 +46,16 @@ struct EconomyHubScreen: View {
     NavigationStack {
       List {
         Section {
+          VigilPageHeader(
+            watch: .intelligence,
+            title: "Economy",
+            subtitle: "Macro snapshots for US, Brazil, and Euro Area"
+          )
+          .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+          .listRowBackground(Color.clear)
+        }
+
+        Section {
           ForEach(EconomyHubSection.allCases) { section in
             NavigationLink(value: section) {
               Label {
@@ -68,7 +78,9 @@ struct EconomyHubScreen: View {
             .font(.caption)
         }
       }
-      .navigationTitle("Economy")
+      .vigilListChrome()
+      .vigilScreenBackground()
+      .vigilNavigationTitle("Economy")
       .navigationDestination(for: EconomyHubSection.self) { section in
         switch section {
         case .inflation:

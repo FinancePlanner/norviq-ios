@@ -35,7 +35,7 @@ struct CryptoHomeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                MeshGradientBackground()
+                AppTheme.Colors.pageBackground(for: colorScheme)
                     .ignoresSafeArea()
 
                 if billingManager.isPro {
@@ -44,7 +44,9 @@ struct CryptoHomeView: View {
                     lockedContent
                 }
             }
-            .navigationTitle("Crypto")
+            .vigilScreenBackground()
+            .vigilNavigationTitle("Crypto")
+            .vigilInlineNavigationBar()
             .navigationDestination(for: CryptoDetailRoute.self) { route in
                 CryptoDetailScreen(route: route)
             }
@@ -116,6 +118,13 @@ struct CryptoHomeView: View {
     private var proContent: some View {
         ScrollView {
             VStack(spacing: 24) {
+                VigilPageHeader(
+                    watch: .wealth,
+                    title: "Crypto",
+                    subtitle: "Digital assets, market data, and holdings"
+                )
+                .padding(.horizontal)
+
                 segmentPicker
 
                 if isShowingLoadingState {
@@ -141,6 +150,13 @@ struct CryptoHomeView: View {
         ProGateView(billingManager: billingManager) {
             ScrollView {
                 VStack(spacing: 24) {
+                    VigilPageHeader(
+                        watch: .wealth,
+                        title: "Crypto",
+                        subtitle: "Digital assets, market data, and holdings"
+                    )
+                    .padding(.horizontal)
+
                     segmentPicker
                     CryptoOverviewSkeleton()
                 }

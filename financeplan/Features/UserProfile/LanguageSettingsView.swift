@@ -7,6 +7,15 @@ struct LanguageSettingsView: View {
     var body: some View {
         List {
             Section {
+                VigilPageHeader(
+                    watch: .settings("Language"),
+                    title: "Language",
+                    subtitle: "App display language"
+                )
+                .listRowBackground(Color.clear)
+            }
+
+            Section {
                 ForEach(AppLanguage.allCases) { language in
                     Button {
                         AppLanguage.apply(language)
@@ -28,11 +37,10 @@ struct LanguageSettingsView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
         }
-        .scrollContentBackground(.hidden)
-        .listStyle(.insetGrouped)
-        .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-        .navigationTitle("Language")
-        .navigationBarTitleDisplayMode(.inline)
+        .vigilListChrome()
+        .vigilScreenBackground()
+        .vigilNavigationTitle("Language")
+        .vigilInlineNavigationBar()
     }
 
     private var selectedLanguage: AppLanguage {

@@ -11,6 +11,12 @@ struct SubscriptionSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
+                VigilPageHeader(
+                    watch: .settings("Subscription"),
+                    title: "Subscription",
+                    subtitle: "Plan status, upgrades, and billing"
+                )
+
                 statusCard
                 changePlanSection
                 actionsSection
@@ -18,9 +24,9 @@ struct SubscriptionSettingsView: View {
             }
             .padding()
         }
-        .background(AppTheme.Colors.pageBackground(for: scheme))
-        .navigationTitle("Subscription")
-        .navigationBarTitleDisplayMode(.inline)
+        .vigilScreenBackground()
+        .vigilNavigationTitle("Subscription")
+        .vigilInlineNavigationBar()
         .disabled(billingManager.isPurchasing || billingManager.isRestoring)
         .sheet(isPresented: $showPaywall) {
             PaywallView(billingManager: billingManager)

@@ -14,6 +14,15 @@ struct DataAvailabilityView: View {
     var body: some View {
         List {
             Section {
+                VigilPageHeader(
+                    watch: .settings("Data"),
+                    title: "Data Availability",
+                    subtitle: "Market data coverage by plan tier"
+                )
+                .listRowBackground(Color.clear)
+            }
+
+            Section {
                 VStack(alignment: .leading, spacing: 8) {
                     Label("Market data coverage", systemImage: "chart.line.uptrend.xyaxis")
                         .typography(.label, weight: .semibold)
@@ -70,11 +79,10 @@ struct DataAvailabilityView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
         }
-        .scrollContentBackground(.hidden)
-        .listStyle(.insetGrouped)
-        .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-        .navigationTitle("Data Availability")
-        .navigationBarTitleDisplayMode(.inline)
+        .vigilListChrome()
+        .vigilScreenBackground()
+        .vigilNavigationTitle("Data Availability")
+        .vigilInlineNavigationBar()
     }
 
     private func coverageRow(title: String, detail: String) -> some View {

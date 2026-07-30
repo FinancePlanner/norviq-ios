@@ -3,6 +3,7 @@ import StockPlanShared
 import SwiftUI
 
 struct GoalDetailScreen: View {
+  @Environment(\.colorScheme) private var colorScheme
   let item: GoalOverviewItem
   @Bindable var model: GoalPlanningViewModel
   @State private var contribution: Double
@@ -22,6 +23,12 @@ struct GoalDetailScreen: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 20) {
+        VigilPageHeader(
+          watch: .wealth,
+          title: LocalizedStringKey(item.goal.name),
+          subtitle: "Track progress, simulate what-if changes, and review linked portfolio allocations"
+        )
+
         progressSummary
         trajectoryChart
         whatIfSimulator
@@ -31,9 +38,10 @@ struct GoalDetailScreen: View {
       .padding(16)
       .maxContentWidth(regularSizeClass: ContentWidth.dense)
     }
-    .background(MeshGradientBackground())
-    .navigationTitle(item.goal.name)
-    .navigationBarTitleDisplayMode(.inline)
+    .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
+    .vigilScreenBackground()
+    .vigilNavigationTitle(item.goal.name)
+    .vigilInlineNavigationBar()
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
         Button("Record contribution", systemImage: "plus.circle") { isAddingContribution = true }

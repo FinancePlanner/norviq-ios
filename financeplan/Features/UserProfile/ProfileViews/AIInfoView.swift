@@ -16,6 +16,15 @@ struct AIModelIntegrationsInfoSheet: View {
         NavigationStack {
             List {
                 Section {
+                    VigilPageHeader(
+                        watch: .intelligence,
+                        title: "AI Model Integrations",
+                        subtitle: "Why and how to connect external AI tools"
+                    )
+                    .listRowBackground(Color.clear)
+                }
+
+                Section {
                     VStack(alignment: .leading, spacing: 12) {
                         Label("Why connect an AI model?", systemImage: "sparkles")
                             .typography(.headline, weight: .semibold)
@@ -52,11 +61,10 @@ struct AIModelIntegrationsInfoSheet: View {
                 }
                 .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
             }
-            .scrollContentBackground(.hidden)
-            .listStyle(.insetGrouped)
-            .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-            .navigationTitle("AI Model Integrations")
-            .navigationBarTitleDisplayMode(.inline)
+            .vigilListChrome()
+            .vigilScreenBackground()
+            .vigilNavigationTitle("AI Model Integrations")
+            .vigilInlineNavigationBar()
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }

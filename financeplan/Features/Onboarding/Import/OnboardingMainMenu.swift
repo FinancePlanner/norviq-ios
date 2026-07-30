@@ -19,6 +19,12 @@ struct OnboardingMainMenu: View {
   var body: some View {
     VStack(spacing: 32) {
       VStack(spacing: 12) {
+        if BrandTheme.current == .vigil {
+          Text(VigilWatch.wealthImport.eyebrow)
+            .vigilOverline()
+            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme).opacity(0.88))
+        }
+
         NorviqFullLogo(width: 190)
           .padding(.bottom, 4)
 
@@ -31,6 +37,8 @@ struct OnboardingMainMenu: View {
           .multilineTextAlignment(.center)
           .padding(.horizontal, 40)
       }
+      .onboardingStepCard(cornerRadius: 24)
+      .padding(.horizontal, 24)
       .padding(.top, 60)
 
       VStack(spacing: 16) {
@@ -89,8 +97,22 @@ struct OnboardingMainMenu: View {
       }
       .padding(.bottom, 40)
     }
-    .background(MeshGradientBackground().ignoresSafeArea())
+    .background {
+      MeshGradientBackground()
+        .vigilScreenBackground()
+        .ignoresSafeArea()
+    }
     .accessibilityIdentifier("onboardingMainMenu")
+  }
+}
+
+private struct OnboardingMenuButtonChrome: ViewModifier {
+  func body(content: Content) -> some View {
+    if BrandTheme.current == .vigil {
+      content.vigilGlassCard(cornerRadius: 20)
+    } else {
+      content.appGlassEffect(.rect(cornerRadius: 20))
+    }
   }
 }
 
@@ -135,7 +157,7 @@ struct OnboardingMenuButton: View {
       }
       .padding(.horizontal, 16)
       .padding(.vertical, 14)
-      .appGlassEffect(.rect(cornerRadius: 20))
+      .modifier(OnboardingMenuButtonChrome())
       .opacity(isDisabled ? 0.6 : 1.0)
     }
     .buttonStyle(PressableStyle())

@@ -15,6 +15,15 @@ struct ConnectView: View {
     var body: some View {
         List {
             Section {
+                VigilPageHeader(
+                    watch: .settings("Connect"),
+                    title: "Connect",
+                    subtitle: "Community and social channels"
+                )
+                .listRowBackground(Color.clear)
+            }
+
+            Section {
                 socialButton(
                     LocalizedStringKey("Follow on Instagram"), systemImage: "camera",
                     url: "https://instagram.com/norviqplan")
@@ -30,11 +39,10 @@ struct ConnectView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
         }
-        .scrollContentBackground(.hidden)
-        .listStyle(.insetGrouped)
-        .background(AppTheme.Colors.pageBackground(for: scheme).ignoresSafeArea())
-        .navigationTitle(LocalizedStringKey("Connect"))
-        .navigationBarTitleDisplayMode(.inline)
+        .vigilListChrome()
+        .vigilScreenBackground()
+        .vigilNavigationTitle(LocalizedStringKey("Connect"))
+        .vigilInlineNavigationBar()
     }
 
     @ViewBuilder

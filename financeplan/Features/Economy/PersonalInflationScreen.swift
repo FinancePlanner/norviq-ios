@@ -9,6 +9,12 @@ struct PersonalInflationScreen: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 20) {
+        VigilPageHeader(
+          watch: .intelligence,
+          title: "Your Inflation",
+          subtitle: "Spending-weighted cost-of-living rate"
+        )
+
         controls
 
         if let response = viewModel.response {
@@ -32,7 +38,8 @@ struct PersonalInflationScreen: View {
       }
       .padding()
     }
-    .navigationTitle("Your Inflation")
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Your Inflation")
     .refreshable { await reload() }
     .task { await reload() }
   }

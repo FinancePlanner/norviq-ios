@@ -46,18 +46,21 @@ struct EarningsCalendarScreen: View {
   }
 
   var body: some View {
-    ZStack {
-      if isShowingLoadingState {
-        ProgressView()
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
-      } else {
-        earningsList
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .refreshable {
-          await refreshCalendar()
+    NavigationStack {
+      ZStack {
+        if isShowingLoadingState {
+          ProgressView()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+          earningsList
+            .vigilListChrome()
+            .refreshable {
+              await refreshCalendar()
+            }
         }
       }
+      .vigilNavigationTitle("Earnings calendar")
+      .vigilInlineNavigationBar()
     }
     .sheet(item: $selectedEvent) { event in
       EarningsDetailView(event: event)
@@ -79,6 +82,16 @@ struct EarningsCalendarScreen: View {
 
   private var earningsList: some View {
     List {
+      Section {
+        VigilPageHeader(
+          watch: .wealth,
+          title: "Earnings calendar",
+          subtitle: "Upcoming earnings dates, EPS estimates, and income statement flow for any tracked company"
+        )
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
+        .listRowBackground(Color.clear)
+      }
+
       upcomingSection
       calendarSection
       selectedDateSection
