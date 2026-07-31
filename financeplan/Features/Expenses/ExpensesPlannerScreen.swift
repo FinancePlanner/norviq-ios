@@ -25,6 +25,7 @@ struct ExpensesPlannerScreen: View {
   @State private var recordSpendInitialPillar: BudgetPillar = .fundamentals
   @State private var destructiveFeedbackTrigger = 0
   @State private var isPaywallPresented = false
+  @State private var isSpreadsheetImportPresented = false
   @State private var driftViewModel = BudgetDriftViewModel()
   @State private var isReallocationPresented = false
   @State private var isAlertPolicyPresented = false
@@ -193,6 +194,11 @@ struct ExpensesPlannerScreen: View {
         editActivitySheet(for: activity)
       }
       .sheet(isPresented: $isPartnerEditorPresented, content: householdPartnerSheet)
+      .sheet(isPresented: $isSpreadsheetImportPresented) {
+        // force: the imported rows are already on the server, so a cached load
+        // would show the planner unchanged right after an import.
+        SpreadsheetImportFlow(onImported: { Task { await viewModel.load(force: true) } })
+      }
       .sheet(item: $recurringTemplateToLog) { template in
         recurringTemplateSheet(for: template)
       }
@@ -312,6 +318,15 @@ struct ExpensesPlannerScreen: View {
           }
         } label: {
           Label("Household partner", systemImage: "person.2")
+        }
+        Button {
+          if billingManager.isPro {
+            isSpreadsheetImportPresented = true
+          } else {
+            isPaywallPresented = true
+          }
+        } label: {
+          Label("Import spreadsheet", systemImage: "tablecells")
         }
         Divider()
         Button("Delete this month plan", systemImage: "trash", role: .destructive, action: viewModel.deleteCurrentSnapshot)
