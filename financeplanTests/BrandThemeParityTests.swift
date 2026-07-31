@@ -209,5 +209,40 @@ final class BrandThemeParityTests: XCTestCase {
     XCTAssertFalse(src.contains("VigilGlassBackground("),
                    "swapping in VigilGlassBackground flattens Classic cards; needs visual review")
   }
+
+  // MARK: - Tab bar chrome
+
+  func testTabBarStrokeFollowsTheBrandInsteadOfHardcodedWhite() throws {
+    let src = try source("financeplan/Components/RevolutTabBar.swift")
+
+    // A white hairline over a light page is barely visible, and it cannot follow
+    // the brand at all — the same defect class as border-white/10 on the web.
+    XCTAssertFalse(
+      src.contains("Color.white.opacity(colorScheme == .dark ? 0.12 : 0.22)"),
+      "the capsule stroke must not be a hardcoded white"
+    )
+    XCTAssertTrue(src.contains("capsuleStroke"),
+                  "the capsule stroke should resolve from AppTheme per brand")
+  }
+
+  func testTabBarDoesNotUseAppGlassEffect() throws {
+    let src = try source("financeplan/Components/RevolutTabBar.swift")
+
+    // Deliberate exception to the glass consolidation: on iOS 26 the native
+    // glassEffect expands to the full ZStack proposal and covers the screen.
+    // The raw .ultraThinMaterial here is load-bearing, and the file says so.
+    //
+    // Comments are stripped first — the file explains WHY it avoids
+    // appGlassEffect, so a naive substring check matches its own documentation.
+    // (The CSS brand-layout checker needed the same fix for the same reason.)
+    let code = src
+      .split(separator: "\n")
+      .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+      .joined(separator: "\n")
+
+    XCTAssertFalse(code.contains(".appGlassEffect("),
+                   "appGlassEffect on the tab capsule covers the screen on iOS 26")
+    XCTAssertTrue(code.contains(".fill(.ultraThinMaterial)"))
+  }
 }
 
