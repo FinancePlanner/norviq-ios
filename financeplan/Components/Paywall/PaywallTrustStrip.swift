@@ -33,6 +33,9 @@ struct PaywallTrustStrip: View {
             .font(.caption)
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
+            // Three equal columns at AX5: without this the strings truncate
+            // instead of wrapping, and "Charged after trial" is a billing term.
+            .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
