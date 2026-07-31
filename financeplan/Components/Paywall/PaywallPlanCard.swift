@@ -22,6 +22,7 @@ struct PaywallPlanCard: View {
           HStack(spacing: 8) {
             Text(title)
               .font(.body.weight(.semibold))
+              .fixedSize(horizontal: false, vertical: true)
 
             if let badge {
               Text(badge)
@@ -36,10 +37,16 @@ struct PaywallPlanCard: View {
           Text(subtitle)
             .font(.subheadline)
             .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
         }
 
         Spacer()
 
+        // The price and its unit are the billing disclosure, so they get layout
+        // priority and are never allowed to compress. At AX5 the title/subtitle
+        // column grows and SwiftUI truncates whichever side loses the
+        // negotiation — on a paywall that must not be the price. Build-31 was
+        // rejected for exactly this class of Dynamic Type failure.
         VStack(alignment: .trailing, spacing: 2) {
           HStack(alignment: .lastTextBaseline, spacing: 1) {
             Text(price)
@@ -49,7 +56,9 @@ struct PaywallPlanCard: View {
               .font(.subheadline)
               .foregroundStyle(.secondary)
           }
+          .fixedSize(horizontal: true, vertical: false)
         }
+        .layoutPriority(1)
       }
       .padding(.horizontal, 20)
       .padding(.vertical, 18)

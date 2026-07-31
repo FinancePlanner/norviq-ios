@@ -298,5 +298,42 @@ final class BrandThemeParityTests: XCTestCase {
       }
     }
   }
+
+// MARK: - Paywall disclosure
+
+  func testAllThreePaywallEntryPointsDiscloseTerms() throws {
+    // Every entry point must independently show price, cancellation and trial
+    // terms — a user can reach any one of them without seeing the others.
+    for path in [
+      "financeplan/Features/UserProfile/PaywallView.swift",
+      "financeplan/Features/Auth/PreLoginPaywallScreen.swift",
+      "financeplan/Features/Onboarding/Questionnaire/Screens/OnboardingQuestionnairePaywallScreen.swift",
+    ] {
+      let src = try source(path)
+      XCTAssertTrue(src.contains("PaywallTrustStrip"),
+                    "\(path) must show the cancellation and trial-charge strip")
+      XCTAssertTrue(src.contains("localizedPriceString"),
+                    "\(path) must show the real StoreKit price, not a hardcoded one")
+    }
+  }
+
+  func testPaywallPriceCannotBeTruncatedAtLargeDynamicType() throws {
+    let card = try source("financeplan/Components/Paywall/PaywallPlanCard.swift")
+
+    // The card is a horizontal HStack: the title/subtitle column and the price
+    // compete for width. At AX5 SwiftUI truncates whichever side loses, and on a
+    // paywall that must never be the price. Build-31 was rejected for exactly
+    // this class of Dynamic Type failure.
+    XCTAssertTrue(card.contains(".layoutPriority(1)"),
+                  "the price column must win the width negotiation")
+    XCTAssertTrue(card.contains(".fixedSize(horizontal: true, vertical: false)"),
+                  "the price must not compress")
+    XCTAssertTrue(card.contains(".fixedSize(horizontal: false, vertical: true)"),
+                  "the title and subtitle must wrap rather than squeeze the price out")
+
+    let strip = try source("financeplan/Components/Paywall/PaywallTrustStrip.swift")
+    XCTAssertTrue(strip.contains(".fixedSize(horizontal: false, vertical: true)"),
+                  "three equal columns at AX5 must wrap, not truncate \"Charged after trial\"")
+  }
 }
 
