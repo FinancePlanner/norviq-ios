@@ -244,5 +244,36 @@ final class BrandThemeParityTests: XCTestCase {
                    "appGlassEffect on the tab capsule covers the screen on iOS 26")
     XCTAssertTrue(code.contains(".fill(.ultraThinMaterial)"))
   }
+
+  // MARK: - Credential autofill
+
+  func testEveryCodeEntryFieldOffersOneTimeCodeAutofill() throws {
+    // Without .oneTimeCode iOS never surfaces the code in the QuickType bar, so
+    // the user leaves the app, memorises six digits and types them back. It
+    // fails nothing and logs nothing; it just quietly costs a sign-in.
+    for path in [
+      "financeplan/Features/Auth/VaultMFAVerificationView.swift",
+      "financeplan/ContentView.swift",
+      "financeplan/Features/UserProfile/ProfileViews/SecurityCodeView.swift",
+    ] {
+      let src = try source(path)
+      XCTAssertTrue(
+        src.contains(".textContentType(.oneTimeCode)"),
+        "\(path) takes a verification code and must opt into one-time-code autofill"
+      )
+    }
+  }
+
+  func testCredentialFieldsDeclareTheirContentType() throws {
+    let signIn = try source("financeplan/Features/Auth/SignInView.swift")
+    let signUp = try source("financeplan/Features/Auth/SignUpView.swift")
+
+    // The web forms shipped with no autocomplete at all (#65). iOS already had
+    // these; this pins them so the same regression cannot happen here.
+    XCTAssertTrue(signIn.contains("textContentType: .emailAddress"))
+    XCTAssertTrue(signIn.contains("textContentType: .password"))
+    XCTAssertTrue(signUp.contains("textContentType: .username"))
+    XCTAssertTrue(signUp.contains("textContentType: .newPassword"))
+  }
 }
 

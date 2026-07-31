@@ -57,6 +57,12 @@ struct VaultMFAVerificationView: View {
     VStack(alignment: .leading, spacing: 18) {
       TextField("123456", text: $viewModel.mfaCode)
         .keyboardType(.numberPad)
+        // Without .oneTimeCode iOS never offers the verification code in the
+        // QuickType bar, so the user has to leave the app for Messages,
+        // memorise six digits and type them back — on the one screen where
+        // that friction costs a sign-in. ContentView and SecurityCodeView
+        // already set it; this field was the outlier.
+        .textContentType(.oneTimeCode)
         .textInputAutocapitalization(.never)
         .autocorrectionDisabled()
         .font(.title3.weight(.semibold).monospaced())
