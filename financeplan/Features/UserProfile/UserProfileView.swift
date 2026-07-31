@@ -17,12 +17,10 @@ private enum UserProfileDestination: Hashable {
     case shareFeedback
     case about
     case language
-    case dataHandling
     case dataAvailability
     case connect
     case integrations
     case integrationsHub
-    case sensitiveActions
     case subscription
 }
 
@@ -632,18 +630,24 @@ public struct UserProfileView: View {
             AboutNorviqView()
         case .language:
             LanguageSettingsView()
-        case .dataHandling:
-            Text("Data handling")
         case .dataAvailability:
             DataAvailabilityView()
         case .connect:
             ConnectView()
+        // Two entry points into connections, deliberately kept:
+        //   .integrations    — Settings > "Connected Accounts", the functional
+        //                      screen (bank sync, IBKR). Kept SHALLOW on purpose;
+        //                      PR #60 had to restore this entry once already.
+        //   .integrationsHub — the informational Vigil "MCP engine room" named in
+        //                      docs/vigil-identity.md.
+        // The hub also links to IntegrationsView, so that screen is reachable two
+        // ways. Collapsing them is a product decision, not a cleanup: it would
+        // bury bank sync a level deeper, which is the reachability regression the
+        // team fixed in #60 and #72.
         case .integrations:
             IntegrationsView()
         case .integrationsHub:
             IntegrationsHubView()
-        case .sensitiveActions:
-            Text("Sensitive actions")
         case .subscription:
             SubscriptionSettingsView()
         }

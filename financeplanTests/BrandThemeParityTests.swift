@@ -103,4 +103,177 @@ final class BrandThemeParityTests: XCTestCase {
       "Nav-bar chrome must follow the resolved colour scheme."
     )
   }
+
+
+  // MARK: - Asset catalog
+
+  func testAccentColorUsesVigilAnchorsNotDeprecatedGold() throws {
+    let json = try source("financeplan/Assets.xcassets/AccentColor.colorset/Contents.json")
+
+    // Asset catalogs are static and cannot brand-switch, so this is a one-value
+    // decision. It is set to the Vigil contrast anchors because Vigil is the
+    // default brand: #0891B2 light, #00F2FF dark (docs/vigil-identity.md).
+    //
+    // It matters despite no Swift code reading it: UIKit and the system use the
+    // catalog accent where SwiftUI's .tint cannot reach — LaunchScreen,
+    // share sheets, SFSafariViewController — via
+    // ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME.
+    XCTAssertFalse(
+      json.contains("\"red\" : \"0x8F\""),
+      "AccentColor light must not be the deprecated gold #8F5E1C."
+    )
+    XCTAssertFalse(
+      json.contains("\"red\" : \"0xE8\""),
+      "AccentColor dark must not be the deprecated gold #E8A33D."
+    )
+    XCTAssertTrue(json.contains("\"blue\" : \"0xB2\""), "expected Vigil light anchor #0891B2")
+    XCTAssertTrue(json.contains("\"green\" : \"0xF2\""), "expected Vigil dark anchor #00F2FF")
+  }
+
+  func testLaunchScreenBackgroundAdaptsToAppearance() throws {
+    let plist = try source("Info.plist")
+
+    // The launch screen is the UILaunchScreen dictionary, NOT
+    // LaunchScreen.storyboard — that file is not referenced anywhere in
+    // project.pbxproj, so it never enters the build. An empty dict rendered
+    // plain systemBackground; naming a colorset matches the app's own page
+    // background so a dark launch no longer flashes a lighter panel.
+    XCTAssertTrue(
+      plist.contains("<key>UIColorName</key>"),
+      "UILaunchScreen must name a background colorset."
+    )
+    XCTAssertTrue(
+      plist.contains("<string>LaunchBackground</string>"),
+      "the launch background should be the LaunchBackground colorset."
+    )
+
+    let colorset = try source("financeplan/Assets.xcassets/LaunchBackground.colorset/Contents.json")
+    XCTAssertTrue(colorset.contains("\"value\" : \"dark\""),
+                  "LaunchBackground needs a dark variant or the launch screen cannot adapt.")
+  }
+
+  // MARK: - Dead navigation
+
+  func testNoPlaceholderSettingsDestinationsRemain() throws {
+    let src = try source("financeplan/Features/UserProfile/UserProfileView.swift")
+
+    // .dataHandling and .sensitiveActions had no push sites anywhere, so they
+    // were unreachable enum cases whose bodies were bare Text placeholders.
+    XCTAssertFalse(src.contains("Text(\"Data handling\")"),
+                   "unreachable placeholder destination should be removed, not shipped")
+    XCTAssertFalse(src.contains("Text(\"Sensitive actions\")"),
+                   "unreachable placeholder destination should be removed, not shipped")
+    XCTAssertFalse(src.contains("case dataHandling"))
+    XCTAssertFalse(src.contains("case sensitiveActions"))
+  }
+
+  func testBankSyncStaysReachableFromSettingsInTwoTaps() throws {
+    let profile = try source("financeplan/Features/UserProfile/UserProfileView.swift")
+    let integrations = try source("financeplan/Features/Integrations/IntegrationsView.swift")
+
+    // Settings > Connected Accounts > Bank Sync. PR #60 had to restore this
+    // entry once; keep the shallow path intact.
+    XCTAssertTrue(profile.contains("UserProfileDestination.integrations"),
+                  "Settings must keep a direct row to the functional integrations screen")
+    XCTAssertTrue(integrations.contains("BankingView()"),
+                  "bank sync must stay reachable from IntegrationsView")
+  }
+
+  // MARK: - Card surfaces
+
+  func testGlassCardKeepsAdaptiveDefaultPadding() throws {
+    let src = try source("financeplan/Components/GlassCard.swift")
+
+    // `.padding()` and `.padding(16)` are NOT equivalent — the no-argument form
+    // is adaptive. All 75 existing call sites render the adaptive one, so the
+    // nil branch must keep calling it with no argument.
+    XCTAssertTrue(src.contains("content.padding()"),
+                  "the default padding branch must stay adaptive, not a fixed value")
+    XCTAssertTrue(src.contains("padding: CGFloat? = nil"),
+                  "padding must be opt-in so existing call sites are unaffected")
+  }
+
+  func testGlassCardStillAppliesAppGlassEffect() throws {
+    let src = try source("financeplan/Components/GlassCard.swift")
+
+    // Guards the consolidation trap: pointing GlassCard at VigilGlassBackground
+    // would drop .appGlassEffect, and VigilGlassBackground's Classic branch is a
+    // flat cardBackground fill with no stroke, shadow or native glass. That
+    // would flatten Classic cards across all 75 sites. Any future change here
+    // needs a screenshot review first.
+    XCTAssertTrue(src.contains(".appGlassEffect("),
+                  "GlassCard must keep the native/fallback glass primitive")
+
+    // Match construction, not any mention: the doc comment in that file
+    // deliberately names VigilGlassBackground to explain why it is NOT used.
+    XCTAssertFalse(src.contains("VigilGlassBackground("),
+                   "swapping in VigilGlassBackground flattens Classic cards; needs visual review")
+  }
+
+  // MARK: - Tab bar chrome
+
+  func testTabBarStrokeFollowsTheBrandInsteadOfHardcodedWhite() throws {
+    let src = try source("financeplan/Components/RevolutTabBar.swift")
+
+    // A white hairline over a light page is barely visible, and it cannot follow
+    // the brand at all — the same defect class as border-white/10 on the web.
+    XCTAssertFalse(
+      src.contains("Color.white.opacity(colorScheme == .dark ? 0.12 : 0.22)"),
+      "the capsule stroke must not be a hardcoded white"
+    )
+    XCTAssertTrue(src.contains("capsuleStroke"),
+                  "the capsule stroke should resolve from AppTheme per brand")
+  }
+
+  func testTabBarDoesNotUseAppGlassEffect() throws {
+    let src = try source("financeplan/Components/RevolutTabBar.swift")
+
+    // Deliberate exception to the glass consolidation: on iOS 26 the native
+    // glassEffect expands to the full ZStack proposal and covers the screen.
+    // The raw .ultraThinMaterial here is load-bearing, and the file says so.
+    //
+    // Comments are stripped first — the file explains WHY it avoids
+    // appGlassEffect, so a naive substring check matches its own documentation.
+    // (The CSS brand-layout checker needed the same fix for the same reason.)
+    let code = src
+      .split(separator: "\n")
+      .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+      .joined(separator: "\n")
+
+    XCTAssertFalse(code.contains(".appGlassEffect("),
+                   "appGlassEffect on the tab capsule covers the screen on iOS 26")
+    XCTAssertTrue(code.contains(".fill(.ultraThinMaterial)"))
+  }
+
+  // MARK: - Credential autofill
+
+  func testEveryCodeEntryFieldOffersOneTimeCodeAutofill() throws {
+    // Without .oneTimeCode iOS never surfaces the code in the QuickType bar, so
+    // the user leaves the app, memorises six digits and types them back. It
+    // fails nothing and logs nothing; it just quietly costs a sign-in.
+    for path in [
+      "financeplan/Features/Auth/VaultMFAVerificationView.swift",
+      "financeplan/ContentView.swift",
+      "financeplan/Features/UserProfile/ProfileViews/SecurityCodeView.swift",
+    ] {
+      let src = try source(path)
+      XCTAssertTrue(
+        src.contains(".textContentType(.oneTimeCode)"),
+        "\(path) takes a verification code and must opt into one-time-code autofill"
+      )
+    }
+  }
+
+  func testCredentialFieldsDeclareTheirContentType() throws {
+    let signIn = try source("financeplan/Features/Auth/SignInView.swift")
+    let signUp = try source("financeplan/Features/Auth/SignUpView.swift")
+
+    // The web forms shipped with no autocomplete at all (#65). iOS already had
+    // these; this pins them so the same regression cannot happen here.
+    XCTAssertTrue(signIn.contains("textContentType: .emailAddress"))
+    XCTAssertTrue(signIn.contains("textContentType: .password"))
+    XCTAssertTrue(signUp.contains("textContentType: .username"))
+    XCTAssertTrue(signUp.contains("textContentType: .newPassword"))
+  }
 }
+

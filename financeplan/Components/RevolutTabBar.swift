@@ -40,6 +40,23 @@ struct RevolutTabBar: View {
   @Environment(\.colorScheme) private var colorScheme
   @Namespace private var pillNamespace
 
+  /// Hairline around the floating capsule.
+  ///
+  /// Was `Color.white.opacity(dark ? 0.12 : 0.22)` — a hardcoded white that
+  /// cannot follow the brand and, in light mode, is a white hairline over a
+  /// light page, so the capsule's edge was barely visible. Now it follows the
+  /// brand tint under Vigil and the separator token otherwise.
+  private var capsuleStroke: Color {
+    switch BrandTheme.current {
+    case .vigil:
+      return AppTheme.Colors.tint(for: colorScheme)
+        .opacity(colorScheme == .dark ? 0.34 : 0.28)
+    case .classic:
+      return AppTheme.Colors.separator(for: colorScheme)
+        .opacity(colorScheme == .dark ? 0.45 : 0.65)
+    }
+  }
+
   private var moreIsActive: Bool {
     moreTabs.contains(selection)
   }
@@ -76,15 +93,14 @@ struct RevolutTabBar: View {
         .fill(.ultraThinMaterial)
         .overlay {
           Capsule(style: .continuous)
-            .strokeBorder(
-              Color.white.opacity(colorScheme == .dark ? 0.12 : 0.22),
-              lineWidth: 0.8
-            )
+            .strokeBorder(capsuleStroke, lineWidth: 0.8)
         }
         .shadow(color: .black.opacity(colorScheme == .dark ? 0.45 : 0.12), radius: 18, y: 8)
     }
     // Avoid .appGlassEffect(.capsule) here — on iOS 26 native glassEffect
     // expands to the full ZStack proposal and covers the screen.
+    // (Phase 0 proposed routing this through appGlassEffect; that would
+    // reintroduce exactly that bug, so the raw material is deliberate.)
     .scaleEffect(isMinimized ? 0.94 : 1, anchor: .bottom)
   }
 
