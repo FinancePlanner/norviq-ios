@@ -275,5 +275,28 @@ final class BrandThemeParityTests: XCTestCase {
     XCTAssertTrue(signUp.contains("textContentType: .username"))
     XCTAssertTrue(signUp.contains("textContentType: .newPassword"))
   }
+
+// MARK: - Reduce Motion
+
+  func testOnboardingAnimationsRespectReduceMotion() throws {
+    // .appAnimation swaps in AppMotion.reduced when accessibilityReduceMotion is
+    // on; a raw .animation(...) does not, so the spring plays anyway. Onboarding
+    // is the conversion-critical flow and the worst place to ignore the setting.
+    //
+    // A raw call is acceptable ONLY when the line itself branches on
+    // reduceMotion, which the questionnaire paywall does explicitly.
+    let files = [
+      "financeplan/Features/Onboarding/InitialStockImportScreen.swift",
+      "financeplan/Features/Onboarding/Questionnaire/Screens/OnboardingGoalScreen.swift",
+    ]
+    for path in files {
+      let src = try source(path)
+      for (i, line) in src.split(separator: "\n").enumerated() {
+        let l = line.trimmingCharacters(in: .whitespaces)
+        guard l.hasPrefix(".animation(") else { continue }
+        XCTFail("\(path):\(i + 1) uses a raw .animation(...) — use .appAnimation so Reduce Motion is honored")
+      }
+    }
+  }
 }
 

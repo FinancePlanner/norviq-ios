@@ -355,7 +355,7 @@ private struct ImportMethodCard: View {
             .transition(.scale.combined(with: .opacity))
         }
       }
-      .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+      .appAnimation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 14)
@@ -365,6 +365,6 @@ private struct ImportMethodCard: View {
         ? AppTheme.Colors.tintSoft(for: colorScheme).opacity(colorScheme == .dark ? 0.55 : 0.45)
         : nil
     )
-    .animation(.easeInOut(duration: 0.2), value: isSelected)
+    .appAnimation(.easeInOut(duration: 0.2), value: isSelected)
   }
 }

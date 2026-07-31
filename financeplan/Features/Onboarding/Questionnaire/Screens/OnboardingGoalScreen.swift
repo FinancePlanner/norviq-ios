@@ -39,6 +39,6 @@ struct OnboardingGoalScreen: View {
         .transition(.move(edge: .bottom).combined(with: .opacity))
       }
     }
-    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: selectedGoal)
+    .appAnimation(.spring(response: 0.35, dampingFraction: 0.85), value: selectedGoal)
   }
 }
