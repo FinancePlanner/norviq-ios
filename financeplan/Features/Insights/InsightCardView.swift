@@ -7,13 +7,13 @@ struct InsightCardView: View {
     let onGenerate: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            header
-            content
+        GlassCard(cornerRadius: 18, padding: 18) {
+            VStack(alignment: .leading, spacing: 14) {
+                header
+                content
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
     }
 
     private var header: some View {

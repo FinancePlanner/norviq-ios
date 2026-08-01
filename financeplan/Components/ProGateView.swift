@@ -38,30 +38,30 @@ struct ProGateView<Content: View>: View {
     }
 
     private var overlay: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "lock.fill")
-                .font(.largeTitle)
-                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+        GlassCard(cornerRadius: 20, padding: 32) {
+            VStack(spacing: 16) {
+                Image(systemName: "lock.fill")
+                    .font(.largeTitle)
+                    .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
 
-            Text("Post all three guards.")
-                .typography(.title, weight: .bold)
-                .multilineTextAlignment(.center)
-                .accessibilityIdentifier("proGate.title")
+                Text("Post all three guards.")
+                    .typography(.title, weight: .bold)
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("proGate.title")
 
-            Text(billingManager.selectedPlanHasFreeTrial
-                 ? "Subscribe to unlock this view.\nFree trial available."
-                 : "Subscribe to unlock this view.")
-                .typography(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+                Text(billingManager.selectedPlanHasFreeTrial
+                     ? "Subscribe to unlock this view.\nFree trial available."
+                     : "Subscribe to unlock this view.")
+                    .typography(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
 
-            Button("Unlock Pro") { showPaywall = true }
-                .buttonStyle(.borderedProminent)
-                .tint(AppTheme.Colors.tint(for: colorScheme))
-                .accessibilityIdentifier("proGate.unlockButton")
+                Button("Unlock Pro") { showPaywall = true }
+                    .buttonStyle(.borderedProminent)
+                    .tint(AppTheme.Colors.tint(for: colorScheme))
+                    .accessibilityIdentifier("proGate.unlockButton")
+            }
         }
-        .padding(32)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
         .allowsHitTesting(true)
         .accessibilityIdentifier("proGate.overlay")
     }
