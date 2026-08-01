@@ -125,7 +125,7 @@ struct WhyMovedCard: View {
         .foregroundStyle(mover.changePercent >= 0 ? WhyMovedPalette.gain(for: scheme) : WhyMovedPalette.loss(for: scheme))
       if let sentiment = mover.sentiment {
         Text("\(sentiment.label) · \(sentiment.postCount)")
-          .font(.system(size: 9, weight: .bold).monospaced())
+          .font(.caption2.weight(.bold).monospaced())
           .textCase(.uppercase)
           .padding(.horizontal, 6)
           .padding(.vertical, 2)
@@ -147,16 +147,17 @@ struct WhyMovedCard: View {
 }
 
 enum WhyMovedPalette {
+  // These defer entirely to the app-wide status tokens, which already switch on
+  // both BrandTheme and ColorScheme. The brand check that used to live here only
+  // intercepted Classic and substituted a fixed literal, so Classic rendered the
+  // same colour in light and dark — gains and losses picked for a light card,
+  // drawn on a dark one.
   static func gain(for scheme: ColorScheme) -> Color {
-    BrandTheme.current == .vigil
-      ? AppTheme.Colors.successText(for: scheme)
-      : Color(red: 0.03, green: 0.60, blue: 0.51)
+    AppTheme.Colors.successText(for: scheme)
   }
 
   static func loss(for scheme: ColorScheme) -> Color {
-    BrandTheme.current == .vigil
-      ? AppTheme.Colors.dangerText(for: scheme)
-      : Color(red: 0.95, green: 0.21, blue: 0.27)
+    AppTheme.Colors.dangerText(for: scheme)
   }
 
   static func sentimentTone(_ label: String, scheme: ColorScheme) -> Color {
