@@ -95,7 +95,7 @@ struct StockPressureCard: View {
           Spacer()
           Text("Buying")
         }
-        .font(.system(size: 9, weight: .semibold))
+        .font(.caption2.weight(.semibold))
         .foregroundStyle(.tertiary)
         .textCase(.uppercase)
       }

@@ -1062,7 +1062,7 @@ private struct PlannerSalaryCard: View {
           // Household Total Section
           VStack(alignment: .leading, spacing: 12) {
             Text("HOUSEHOLD TOTAL")
-              .font(.system(size: 10, weight: .bold))
+              .font(.caption2.weight(.bold))
               .tracking(0.5)
               .foregroundStyle(.secondary)
 
@@ -1100,7 +1100,7 @@ private struct PlannerSalaryCard: View {
           // Your Spending Section
           VStack(alignment: .leading, spacing: 12) {
             Text("YOUR SPENDING")
-              .font(.system(size: 10, weight: .bold))
+              .font(.caption2.weight(.bold))
               .tracking(0.5)
               .foregroundStyle(.secondary)
 
@@ -1138,7 +1138,7 @@ private struct PlannerSalaryCard: View {
           // Partner Spending Section
           VStack(alignment: .leading, spacing: 12) {
             Text("\(partnerName.uppercased())'S SPENDING")
-              .font(.system(size: 10, weight: .bold))
+              .font(.caption2.weight(.bold))
               .tracking(0.5)
               .foregroundStyle(.secondary)
 
@@ -1176,7 +1176,7 @@ private struct PlannerSalaryCard: View {
           // Budget Remaining
           VStack(alignment: .leading, spacing: 12) {
             Text("AVAILABLE")
-              .font(.system(size: 10, weight: .bold))
+              .font(.caption2.weight(.bold))
               .tracking(0.5)
               .foregroundStyle(.secondary)
 

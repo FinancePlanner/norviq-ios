@@ -91,18 +91,18 @@ struct UserMenuDrawer: View {
           .overlay {
             Image(systemName: "person.fill")
               .accessibilityHidden(true)
-              .font(.system(size: 16, weight: .semibold))
+              .font(.callout.weight(.semibold))
               .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
           }
 
         VStack(alignment: .leading, spacing: 2) {
           Text(username)
-            .font(.system(size: 18, weight: .bold))
+            .font(.headline.weight(.bold))
             .foregroundStyle(.primary)
 
           if let email {
             Text(email)
-              .font(.system(size: 13, weight: .medium))
+              .font(.footnote.weight(.medium))
               .foregroundStyle(.secondary)
               .lineLimit(1)
           }
@@ -124,7 +124,7 @@ struct UserMenuDrawer: View {
           .foregroundStyle(.primary.opacity(0.85))
 
         Text(title)
-          .font(.system(size: 14, weight: .semibold))
+          .font(.subheadline.weight(.semibold))
           .foregroundStyle(.primary)
 
         Spacer()
