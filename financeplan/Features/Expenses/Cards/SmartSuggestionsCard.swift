@@ -233,7 +233,7 @@ struct ExpensesByCategoryCard: View {
                 VStack(alignment: .leading, spacing: 0) {
                   HStack(alignment: .top, spacing: 12) {
                     Text("│")
-                      .font(.system(size: 16, weight: .regular, design: .monospaced))
+                      .font(.system(.callout, design: .monospaced))
                       .foregroundStyle(pillar.color(for: colorScheme).opacity(0.4))
                       .frame(width: 20)
 
@@ -264,7 +264,7 @@ struct ExpensesByCategoryCard: View {
 
                   if activity.id != pillarActivities.last?.id {
                       Text("│")
-                        .font(.system(size: 16, weight: .regular, design: .monospaced))
+                        .font(.system(.callout, design: .monospaced))
                         .foregroundStyle(pillar.color(for: colorScheme).opacity(0.4))
                         .frame(width: 20)
                         .padding(.vertical, 4)

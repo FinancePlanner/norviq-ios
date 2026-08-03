@@ -1007,6 +1007,10 @@ private struct BudgetMetricPair: View {
 }
 
 private struct PlannerSalaryCard: View {
+  // @ScaledMetric rather than a text style: keeps the exact 40pt and the
+  // rounded design while growing with Dynamic Type. .largeTitle is 34pt.
+  @ScaledMetric(relativeTo: .largeTitle) private var salarySize: CGFloat = 40
+
   let monthTitle: String
   let netSalary: Double
   let allocated: Double
@@ -1041,7 +1045,7 @@ private struct PlannerSalaryCard: View {
           VStack(spacing: 12) {
             VStack(spacing: 4) {
               Text(netSalary.currency)
-                .font(.system(size: 40, weight: .bold, design: .rounded))
+                .font(.system(size: salarySize, weight: .bold, design: .rounded))
                 .contentTransition(.numericText())
               Text("salary + side income")
                 .font(.subheadline)
@@ -1438,7 +1442,7 @@ private struct MonthlyPlanItemsCard: View {
                 VStack(alignment: .leading, spacing: 0) {
                   HStack(alignment: .top, spacing: 12) {
                     Text("│")
-                      .font(.system(size: 16, weight: .regular, design: .monospaced))
+                      .font(.system(.callout, design: .monospaced))
                       .foregroundStyle(pillar.color(for: colorScheme).opacity(0.4))
                       .frame(width: 20)
                     
@@ -1511,7 +1515,7 @@ private struct MonthlyPlanItemsCard: View {
                   
                   if item.id != pillarItems.last?.id {
                       Text("│")
-                        .font(.system(size: 16, weight: .regular, design: .monospaced))
+                        .font(.system(.callout, design: .monospaced))
                         .foregroundStyle(pillar.color(for: colorScheme).opacity(0.4))
                         .frame(width: 20)
                         .padding(.vertical, 4)

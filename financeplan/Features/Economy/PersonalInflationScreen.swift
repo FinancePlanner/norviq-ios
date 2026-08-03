@@ -71,6 +71,11 @@ struct PersonalInflationScreen: View {
 }
 
 private struct PersonalInflationHero: View {
+  // @ScaledMetric rather than a text style: this keeps the exact 50pt
+  // and the rounded design while still growing with Dynamic Type. The
+  // nearest style (.largeTitle) is 34pt, which would shrink the figure.
+  @ScaledMetric(relativeTo: .largeTitle) private var heroSize: CGFloat = 50
+
   let response: PersonalInflationResponse
 
   var body: some View {
@@ -82,7 +87,7 @@ private struct PersonalInflationHero: View {
 
       if let rate = response.personalRate {
         Text(rate, format: .number.precision(.fractionLength(2)))
-          .font(.system(size: 50, weight: .bold, design: .rounded))
+          .font(.system(size: heroSize, weight: .bold, design: .rounded))
           .foregroundStyle(.tint)
           .contentTransition(.numericText(value: rate))
           .overlay(alignment: .trailing) {
