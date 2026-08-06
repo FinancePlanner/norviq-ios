@@ -89,6 +89,11 @@ struct MacroScreen: View {
 // MARK: - Cards
 
 private struct MacroHeroCard: View {
+  // @ScaledMetric rather than a text style: this keeps the exact 48pt
+  // and the rounded design while still growing with Dynamic Type. The
+  // nearest style (.largeTitle) is 34pt, which would shrink the figure.
+  @ScaledMetric(relativeTo: .largeTitle) private var heroSize: CGFloat = 48
+
   let snapshot: InflationSnapshotResponse
 
   var body: some View {
@@ -98,7 +103,7 @@ private struct MacroHeroCard: View {
 
       HStack(alignment: .firstTextBaseline, spacing: 12) {
         Text("\(snapshot.headline.nowValue, specifier: "%.2f")%")
-          .font(.system(size: 48, weight: .bold, design: .rounded))
+          .font(.system(size: heroSize, weight: .bold, design: .rounded))
           .foregroundStyle(.tint)
           .contentTransition(.numericText(value: snapshot.headline.nowValue))
           .appAnimation(AppMotion.state, value: snapshot.headline.nowValue)

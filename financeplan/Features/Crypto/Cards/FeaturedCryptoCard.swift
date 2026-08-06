@@ -45,7 +45,7 @@ struct FeaturedCryptoCard: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(asset.price.formatted(.currency(code: "USD")))
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .font(.system(.largeTitle, design: .rounded).weight(.bold))
                         .contentTransition(.numericText(value: asset.price))
                         .appAnimation(AppMotion.state, value: asset.price)
 

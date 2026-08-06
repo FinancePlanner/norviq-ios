@@ -60,7 +60,7 @@ struct StockPressureCard: View {
     HStack(spacing: 14) {
       VStack(alignment: .leading, spacing: 0) {
         Text("\(pressure.temperature, specifier: "%.0f")")
-          .font(.system(size: 34, weight: .bold, design: .rounded))
+          .font(.system(.largeTitle, design: .rounded).weight(.bold))
           .contentTransition(.numericText(value: pressure.temperature))
         Text("/100")
           .font(.caption2)
