@@ -22,30 +22,34 @@ struct VigilCommandMetricsBar: View {
   }
 
   var body: some View {
-    HStack(alignment: .center, spacing: 14) {
-      metricColumn(label: "NET WORTH", value: netWorth.currency)
+    // Only ever rendered under Vigil (callers gate on BrandTheme), so this
+    // GlassCard call has no Classic-side effect — it purely retires
+    // vigilGlassCard in favour of the same background every other card uses.
+    GlassCard(cornerRadius: 14, padding: 0) {
+      HStack(alignment: .center, spacing: 14) {
+        metricColumn(label: "NET WORTH", value: netWorth.currency)
 
-      if let periodDeltaPercent {
-        metricColumn(
-          label: "PERIOD MOVE",
-          value: String(format: "%+.1f%%", periodDeltaPercent * 100),
-          valueColor: periodDeltaPercent >= 0
-            ? AppTheme.Colors.successText(for: colorScheme)
-            : AppTheme.Colors.dangerText(for: colorScheme)
-        )
+        if let periodDeltaPercent {
+          metricColumn(
+            label: "PERIOD MOVE",
+            value: String(format: "%+.1f%%", periodDeltaPercent * 100),
+            valueColor: periodDeltaPercent >= 0
+              ? AppTheme.Colors.successText(for: colorScheme)
+              : AppTheme.Colors.dangerText(for: colorScheme)
+          )
+        }
+
+        if let spendingThisMonth {
+          metricColumn(label: "SPEND · MONTH", value: spendingThisMonth.currency)
+        }
+
+        Spacer(minLength: 8)
+
+        agenticPill
       }
-
-      if let spendingThisMonth {
-        metricColumn(label: "SPEND · MONTH", value: spendingThisMonth.currency)
-      }
-
-      Spacer(minLength: 8)
-
-      agenticPill
+      .padding(.horizontal, 14)
+      .padding(.vertical, 12)
     }
-    .padding(.horizontal, 14)
-    .padding(.vertical, 12)
-    .vigilGlassCard(cornerRadius: 14)
   }
 
   private func metricColumn(

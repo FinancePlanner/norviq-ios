@@ -21,6 +21,14 @@ struct WhyMovedCard: View {
   }
 
   private func card(_ response: WhyMovedResponse) -> some View {
+    GlassCard(cornerRadius: 16, padding: 0) {
+      cardContent(response)
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+  }
+
+  private func cardContent(_ response: WhyMovedResponse) -> some View {
     VStack(alignment: .leading, spacing: 10) {
       HStack(spacing: 6) {
         Text("AGENTIC INTELLIGENCE FEED")
@@ -101,9 +109,6 @@ struct WhyMovedCard: View {
         }
       }
     }
-    .padding()
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .vigilGlassCard(cornerRadius: 16)
   }
 
   private func sentimentSourceLine(_ source: WhyMovedSentimentSource) -> String {

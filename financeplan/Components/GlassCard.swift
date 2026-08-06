@@ -1,32 +1,22 @@
 import SwiftUI
 
-/// The card surface for the app.
+/// The card surface for the app. CANONICAL — every card-shaped surface should
+/// go through this type.
 ///
-/// FOUR SYSTEMS, ONE CANONICAL
-/// There are currently four ways to get a glassy surface, and they do not agree:
+/// `.vigilGlassCard()` (AppTheme.swift) was the other glass system: it rendered
+/// as a FLAT `cardBackground` fill under Classic, with no stroke, shadow or
+/// native glass, disagreeing with what this type already gave every other card.
+/// It has been retired — all 11 of its former call sites now go through
+/// `GlassCard`, most inside `if BrandTheme.current == .vigil` branches whose
+/// Classic side was left untouched, so this only changed Vigil's background
+/// recipe plus the handful of sites where `.vigilGlassCard()` ran unconditionally.
 ///
-///   1. `GlassCard`              — this type. 75 call sites. CANONICAL.
-///   2. `.vigilGlassCard()`      — 11 sites (AppTheme.swift). Background modifier,
-///                                 adds no padding. Renders differently: under
-///                                 Classic it is a FLAT `cardBackground` fill,
-///                                 with no stroke, shadow or native glass.
-///   3. `.appGlassEffect()`      — the primitive underneath this type. On iOS 26
-///                                 it is the native `.glassEffect`; below that a
-///                                 fill + separator stroke + shadow fallback.
-///                                 Should be called from surface types, not from
-///                                 feature code.
-///   4. raw `.ultraThinMaterial` — 12 sites, but most are Circles, sheets and the
-///                                 tab-bar capsule rather than cards, so they are
-///                                 NOT candidates for this type.
+/// `.appGlassEffect()` is the primitive underneath this type: the native
+/// `.glassEffect` on iOS 26, a fill + separator stroke + shadow fallback below
+/// it. Call it from surface types like this one, not from feature code.
 ///
-/// Consolidating 1 and 2 is a VISUAL decision, not a mechanical one: swapping
-/// this type's background to `VigilGlassBackground` (as was originally proposed)
-/// would drop `appGlassEffect` and flatten Classic cards across all 75 sites —
-/// on the brand docs/vigil-identity.md says must stay fully functional. That
-/// change needs a screenshot comparison and is deliberately not made here.
-///
-/// This file's job for now is to make the migration *possible* without a layout
-/// shift — see `padding`.
+/// Raw `.ultraThinMaterial` still has ~10 sites, but they are Circles, sheets
+/// and the tab-bar capsule rather than cards, so they are not candidates here.
 public struct GlassCard<Content: View>: View {
   @Environment(\.colorScheme) private var colorScheme
   private let cornerRadius: CGFloat

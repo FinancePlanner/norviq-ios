@@ -37,9 +37,10 @@ struct OnboardingComparisonScreen: View {
   private var comparisonTable: some View {
     Group {
       if BrandTheme.current == .vigil {
-        comparisonTableContent
-          .padding(20)
-          .vigilGlassCard(cornerRadius: 22)
+        GlassCard(cornerRadius: 22, padding: 0) {
+          comparisonTableContent
+            .padding(20)
+        }
       } else {
         GlassCard(cornerRadius: 22) {
           comparisonTableContent

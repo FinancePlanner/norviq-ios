@@ -39,9 +39,10 @@ struct VaultMFAVerificationView: View {
 
         Group {
           if BrandTheme.current == .vigil {
-            mfaFields
-              .padding(20)
-              .vigilGlassCard(cornerRadius: AppTheme.Radius.card)
+            GlassCard(cornerRadius: AppTheme.Radius.card, padding: 0) {
+              mfaFields
+                .padding(20)
+            }
           } else {
             mfaFields
           }

@@ -446,56 +446,13 @@ enum AppTheme {
 }
 
 // MARK: - Vigil glass surface
-
-/// Glassmorphic card chrome for the Vigil command-center brand.
-/// Classic brand falls back to a solid elevated card (no neon glow).
-struct VigilGlassBackground: View {
-  @Environment(\.colorScheme) private var scheme
-  var cornerRadius: CGFloat = AppTheme.Radius.card
-
-  var body: some View {
-    let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-    switch BrandTheme.current {
-    case .classic:
-      shape.fill(AppTheme.Colors.cardBackground(for: scheme))
-    case .vigil:
-      shape
-        .fill(.ultraThinMaterial)
-        .background(
-          shape.fill(
-            LinearGradient(
-              colors: [
-                AppTheme.Colors.tint(for: scheme).opacity(scheme == .dark ? 0.10 : 0.08),
-                AppTheme.Colors.secondaryTint(for: scheme).opacity(scheme == .dark ? 0.04 : 0.03),
-                AppTheme.Colors.cardBackground(for: scheme).opacity(0.92)
-              ],
-              startPoint: .topLeading,
-              endPoint: .bottomTrailing
-            )
-          )
-        )
-        .overlay(
-          shape.stroke(
-            AppTheme.Colors.tint(for: scheme).opacity(scheme == .dark ? 0.32 : 0.22),
-            lineWidth: 1
-          )
-        )
-        .shadow(
-          color: AppTheme.Colors.tint(for: scheme).opacity(scheme == .dark ? 0.22 : 0.10),
-          radius: scheme == .dark ? 16 : 10,
-          x: 0,
-          y: 0
-        )
-    }
-  }
-}
+//
+// VigilGlassBackground and .vigilGlassCard() were retired here: every call site
+// now goes through GlassCard, which resolves through appGlassEffect for both
+// brands (native .glassEffect on iOS 26, a fill+stroke+shadow fallback below
+// it) instead of this hand-rolled ultraThinMaterial recipe. See GlassCard.swift.
 
 extension View {
-  /// Applies Vigil glass card chrome (or classic solid card).
-  func vigilGlassCard(cornerRadius: CGFloat = AppTheme.Radius.card) -> some View {
-    self.background(VigilGlassBackground(cornerRadius: cornerRadius))
-  }
-
   /// Monospaced kicker label used for WATCH / MCP / command headers.
   func vigilOverline() -> some View {
     self
