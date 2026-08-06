@@ -94,9 +94,10 @@ struct VaultForgotPasswordView: View {
   private var formSection: some View {
     Group {
       if BrandTheme.current == .vigil {
-        formContent
-          .padding(24)
-          .vigilGlassCard(cornerRadius: AppTheme.Radius.hero)
+        GlassCard(cornerRadius: AppTheme.Radius.hero, padding: 0) {
+          formContent
+            .padding(24)
+        }
       } else {
         formContent
       }

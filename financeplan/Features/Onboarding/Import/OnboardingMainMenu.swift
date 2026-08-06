@@ -108,10 +108,12 @@ struct OnboardingMainMenu: View {
 
 private struct OnboardingMenuButtonChrome: ViewModifier {
   func body(content: Content) -> some View {
-    if BrandTheme.current == .vigil {
-      content.vigilGlassCard(cornerRadius: 20)
-    } else {
-      content.appGlassEffect(.rect(cornerRadius: 20))
+    // Both branches already resolved to appGlassEffect — Vigil via
+    // vigilGlassCard, Classic directly — so GlassCard is a proven no-op
+    // collapse: same background for both, plus the Vigil-only stroke that
+    // vigilGlassCard already applied.
+    GlassCard(cornerRadius: 20, padding: 0) {
+      content
     }
   }
 }

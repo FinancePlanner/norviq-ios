@@ -55,9 +55,10 @@ struct SignInView: View {
   private var formCard: some View {
     Group {
       if BrandTheme.current == .vigil {
-        formFields
-          .padding(24)
-          .vigilGlassCard(cornerRadius: AppTheme.Radius.hero)
+        GlassCard(cornerRadius: AppTheme.Radius.hero, padding: 0) {
+          formFields
+            .padding(24)
+        }
       } else {
         GlassCard(cornerRadius: AppTheme.Radius.hero) {
           formFields

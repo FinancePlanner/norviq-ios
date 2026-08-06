@@ -48,9 +48,10 @@ extension View {
   func onboardingStepCard(cornerRadius: CGFloat = 24) -> some View {
     Group {
       if BrandTheme.current == .vigil {
-        self
-          .padding(20)
-          .vigilGlassCard(cornerRadius: cornerRadius)
+        GlassCard(cornerRadius: cornerRadius, padding: 0) {
+          self
+            .padding(20)
+        }
       } else {
         self
       }

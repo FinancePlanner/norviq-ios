@@ -70,10 +70,11 @@ struct PrivacyWelcomeScreen: View {
   private var privacyCard: some View {
     Group {
       if BrandTheme.current == .vigil {
-        privacyBullets
-          .padding(.vertical, 8)
-          .padding(.horizontal, 8)
-          .vigilGlassCard(cornerRadius: 24)
+        GlassCard(cornerRadius: 24, padding: 0) {
+          privacyBullets
+            .padding(.vertical, 8)
+            .padding(.horizontal, 8)
+        }
       } else {
         GlassCard(cornerRadius: 24) {
           privacyBullets
