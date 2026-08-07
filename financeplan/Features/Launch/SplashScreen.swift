@@ -103,45 +103,17 @@ private struct SplashBrandStage: View {
   @Environment(\.colorScheme) private var colorScheme
 
   private let stageSize: CGFloat = 280
-  private let outerGlowSize: CGFloat = 218
-  private let innerGlowSize: CGFloat = 180
+  private let ringSize: CGFloat = 200
   private let logoWidth: CGFloat = 236
 
   var body: some View {
     ZStack {
-      // Outer gold ring glow
+      // Plain accent ring — no blurred glow.
       Circle()
-        .fill(
-          RadialGradient(
-            colors: [
-              AppTheme.Colors.splashRing,
-              AppTheme.Colors.splashRing.opacity(0.0)
-            ],
-            center: .center,
-            startRadius: 54,
-            endRadius: 116
-          )
-        )
-        .frame(width: outerGlowSize, height: outerGlowSize)
-        .scaleEffect(pulseAnimation ? 1.1 : 0.9)
-        .opacity(pulseAnimation ? 0.6 : 0.3)
-
-      // Inner ember core glow
-      Circle()
-        .fill(
-          RadialGradient(
-            colors: [
-              AppTheme.Colors.splashCore.opacity(0.4),
-              AppTheme.Colors.splashCore.opacity(0.0)
-            ],
-            center: .center,
-            startRadius: 36,
-            endRadius: 96
-          )
-        )
-        .frame(width: innerGlowSize, height: innerGlowSize)
-        .scaleEffect(pulseAnimation ? 0.95 : 1.05)
-        .opacity(pulseAnimation ? 0.4 : 0.2)
+        .stroke(AppTheme.Colors.tint(for: colorScheme).opacity(0.25), lineWidth: 1.5)
+        .frame(width: ringSize, height: ringSize)
+        .scaleEffect(pulseAnimation ? 1.03 : 0.97)
+        .opacity(pulseAnimation ? 0.9 : 0.6)
 
       Image("CerberusMarkFull")
         .renderingMode(.template)

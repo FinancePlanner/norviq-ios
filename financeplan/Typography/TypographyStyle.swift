@@ -26,15 +26,12 @@ public struct TypographyStyle {
     case .metricNumber, .title: 24
     case .headline: 20
     case .body, .numeric: 17
-    case .small: 16
-    case .mini: 15
-    case .nano, .numericSmall: 13
-    case .tiny: 13
+    case .small, .mini: 16
+    case .nano, .numericSmall, .tiny, .code: 13
     case .caption: 12
     case .footnote, .overline: 11
     case .button: 17
     case .label: 16
-    case .code: 14
     case .link: 16
     }
   }
@@ -72,20 +69,11 @@ public struct TypographyStyle {
     type == .code
   }
 
-  /// Font *design* axis per role (Vigil identity). Display-tier roles render in
-  /// the serif design (New York); numeric roles keep their monospaced/tabular
-  /// treatment; everything else stays on the default SF design. Only the design
-  /// axis varies here — sizes, weights, and Dynamic Type scaling are untouched.
+  /// Font *design* axis per role. One SF default design for both brands —
+  /// no serif accent. Numeric/code roles keep their monospaced treatment as
+  /// Vigil's one remaining typographic signature.
   public var fontDesign: UIFontDescriptor.SystemDesign {
-    if isMonospaced {
-      return .monospaced
-    }
-    switch type {
-    case .display, .hero, .heading:
-      return .serif
-    default:
-      return .default
-    }
+    isMonospaced ? .monospaced : .default
   }
 
   public var usesTabularNumbers: Bool {

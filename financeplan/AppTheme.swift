@@ -146,32 +146,16 @@ enum AppTheme {
       }
     }
 
+    /// Near-duplicate of `secondaryTint` — folded into it rather than carrying
+    /// a fourth near-identical hue per brand/scheme.
     static func ember(for scheme: ColorScheme) -> Color {
-      switch BrandTheme.current {
-      case .classic:
-        // Classic maps ember to the original teal secondary-tint family.
-        scheme == .dark
-          ? Color(red: 0.35, green: 0.82, blue: 0.80) // teal
-          : Color(red: 0.04, green: 0.63, blue: 0.67) // teal
-      case .vigil:
-        scheme == .dark
-          ? Color(red: 0.404, green: 0.965, blue: 1.000) // #67F6FF
-          : Color(red: 0.024, green: 0.714, blue: 0.831) // #06B6D4
-      }
+      secondaryTint(for: scheme)
     }
 
+    /// Near-duplicate of `secondaryTint` — folded into it rather than carrying
+    /// a fourth near-identical hue per brand/scheme.
     static func bronze(for scheme: ColorScheme) -> Color {
-      switch BrandTheme.current {
-      case .classic:
-        // Classic maps bronze to a deeper teal/blue.
-        scheme == .dark
-          ? Color(red: 0.22, green: 0.58, blue: 0.60) // deep teal
-          : Color(red: 0.02, green: 0.44, blue: 0.48) // deep teal
-      case .vigil:
-        scheme == .dark
-          ? Color(red: 0.000, green: 0.722, blue: 0.769) // #00B8C4
-          : Color(red: 0.055, green: 0.455, blue: 0.565) // #0E7490
-      }
+      secondaryTint(for: scheme)
     }
 
     // MARK: - Surfaces (classic cool / Vigil near-black command center)
@@ -345,24 +329,6 @@ enum AppTheme {
 
     static let scrim = Color.black.opacity(0.5)
 
-    static var splashRing: Color {
-      switch BrandTheme.current {
-      case .classic:
-        Color.blue.opacity(0.25)
-      case .vigil:
-        Color(red: 0.000, green: 0.949, blue: 1.000).opacity(0.30) // cyan
-      }
-    }
-
-    static var splashCore: Color {
-      switch BrandTheme.current {
-      case .classic:
-        Color.teal.opacity(0.8)
-      case .vigil:
-        Color(red: 0.000, green: 1.000, blue: 0.580).opacity(0.75) // emerald
-      }
-    }
-
     // MARK: - Premium / Paywall
 
     static func premiumGradient(for scheme: ColorScheme) -> LinearGradient {
@@ -379,18 +345,10 @@ enum AppTheme {
   }
 
   static func avatarGradient(for scheme: ColorScheme) -> [Color] {
-    switch BrandTheme.current {
-    case .classic:
-      [
-        Colors.tint(for: scheme).opacity(scheme == .dark ? 0.9 : 0.8),
-        Colors.secondaryTint(for: scheme).opacity(scheme == .dark ? 0.85 : 0.75)
-      ]
-    case .vigil:
-      [
-        Colors.tint(for: scheme).opacity(scheme == .dark ? 0.9 : 0.8),
-        Colors.secondaryTint(for: scheme).opacity(scheme == .dark ? 0.85 : 0.75)
-      ]
-    }
+    [
+      Colors.tint(for: scheme).opacity(scheme == .dark ? 0.9 : 0.8),
+      Colors.secondaryTint(for: scheme).opacity(scheme == .dark ? 0.85 : 0.75)
+    ]
   }
 
   static func heroGradient(for scheme: ColorScheme) -> [Color] {
@@ -400,48 +358,13 @@ enum AppTheme {
     ]
   }
 
+  /// Flat 2-stop wash from page background to card background — same shape
+  /// for both brands, only the underlying colors (and therefore hue) differ.
   static func splashGradient(for scheme: ColorScheme) -> [Color] {
-    switch BrandTheme.current {
-    case .classic:
-      switch scheme {
-      case .dark:
-        return [
-          Color(red: 0.05, green: 0.08, blue: 0.14),
-          Color(red: 0.03, green: 0.04, blue: 0.08)
-        ]
-      case .light:
-        return [
-          Color(red: 0.95, green: 0.97, blue: 1.00),
-          Color(red: 0.88, green: 0.93, blue: 0.99)
-        ]
-      @unknown default:
-        return [
-          Color(red: 0.05, green: 0.08, blue: 0.14),
-          Color(red: 0.03, green: 0.04, blue: 0.08)
-        ]
-      }
-    case .vigil:
-      switch scheme {
-      case .dark:
-        // Near-black → deep cyan well → emerald bloom.
-        return [
-          Color(red: 0.020, green: 0.020, blue: 0.020), // #050505
-          Color(red: 0.020, green: 0.090, blue: 0.120),
-          Color(red: 0.000, green: 0.949, blue: 1.000).opacity(0.28)
-        ]
-      case .light:
-        return [
-          Color(red: 0.933, green: 0.965, blue: 0.973), // #EEF6F8
-          Color(red: 0.878, green: 0.969, blue: 0.980) // #E0F7FA
-        ]
-      @unknown default:
-        return [
-          Color(red: 0.020, green: 0.020, blue: 0.020),
-          Color(red: 0.020, green: 0.090, blue: 0.120),
-          Color(red: 0.000, green: 0.949, blue: 1.000).opacity(0.28)
-        ]
-      }
-    }
+    [
+      Colors.pageBackground(for: scheme),
+      Colors.cardBackground(for: scheme)
+    ]
   }
 }
 

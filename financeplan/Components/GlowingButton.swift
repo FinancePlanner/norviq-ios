@@ -9,11 +9,8 @@ public struct GlowingButtonStyle: ButtonStyle {
       .foregroundStyle(.white)
       .frame(maxWidth: .infinity)
       .padding(.vertical, 15)
-      .appGlassEffect(
-        .rect(cornerRadius: 16),
-        tint: AppTheme.Colors.tint(for: colorScheme),
-        interactive: true
-      )
+      .background(AppTheme.Colors.tint(for: colorScheme))
+      .clipShape(.rect(cornerRadius: 16))
       .scaleEffect(reduceMotion ? 1 : configuration.isPressed ? 0.98 : 1)
       .opacity(configuration.isPressed ? 0.9 : 1.0)
       .animation(AppMotion.press, value: configuration.isPressed)

@@ -65,15 +65,13 @@ public struct GlassCard<Content: View>: View {
       .clipShape(.rect(cornerRadius: cornerRadius))
       .appGlassEffect(.rect(cornerRadius: cornerRadius))
       .overlay {
+        // Vigil differs from Classic by a tint-colored border only — same flat
+        // card shape, no glow shadow.
         if BrandTheme.current == .vigil {
           RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             .stroke(
               AppTheme.Colors.tint(for: colorScheme).opacity(colorScheme == .dark ? 0.30 : 0.20),
               lineWidth: 1
-            )
-            .shadow(
-              color: AppTheme.Colors.tint(for: colorScheme).opacity(colorScheme == .dark ? 0.18 : 0.08),
-              radius: 12
             )
         }
       }
