@@ -262,7 +262,7 @@ struct ExpensesPlannerScreen: View {
       EmptyStateView(
         icon: "chart.bar.doc.horizontal",
         title: "No budget posted",
-        message: "Set your first monthly budget. The watch starts there.",
+        message: "Set your first monthly budget. Start here.",
         ctaLabel: "Add Budget",
         onCTA: presentSalaryEditor,
         usesBrandIcon: true

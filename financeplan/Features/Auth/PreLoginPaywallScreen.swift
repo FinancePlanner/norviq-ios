@@ -20,14 +20,14 @@ struct PreLoginPaywallScreen: View {
           if BrandTheme.current == .vigil {
             VigilPageHeader(
               watch: .auth("Pro vigil"),
-              title: "Post all three guards.",
-              subtitle: "Wealth, spending, and the signals between — Pro keeps every watch posted."
+              title: "Everything you need.",
+              subtitle: "Wealth tracking, spending insights, and market intelligence — all in one place."
             )
             .frame(maxWidth: .infinity, alignment: .leading)
           } else {
             PaywallHeroSection(
-              headline: "Post all three guards.",
-              subtitle: "Wealth, spending, and the signals between — Pro keeps every watch posted."
+              headline: "Everything you need.",
+              subtitle: "Wealth tracking, spending insights, and market intelligence — all in one place."
             )
           }
 

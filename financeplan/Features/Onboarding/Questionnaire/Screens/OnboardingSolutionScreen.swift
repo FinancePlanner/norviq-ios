@@ -6,19 +6,19 @@ struct OnboardingSolutionScreen: View {
   private static let rows: [SolutionRow] = [
     SolutionRow(
       icon: "chart.line.uptrend.xyaxis",
-      pain: "WATCH I — WEALTH",
+      pain: "Wealth",
       solution: "Every holding, watched.",
       stat: "Portfolio, crypto, chart builder, scenarios, and research — one place, 10-year projections on every position."
     ),
     SolutionRow(
       icon: "creditcard.fill",
-      pain: "WATCH II — SPENDING",
+      pain: "Spending",
       solution: "Every expense, accounted for.",
       stat: "Expenses, budgets, receipt scanning, bank sync, and tax. People who start tracking save $2,000+ a year."
     ),
     SolutionRow(
       icon: "sparkles",
-      pain: "WATCH III — INTELLIGENCE",
+      pain: "Intelligence",
       solution: "Every signal, heard.",
       stat: "AI assistant, sentiment insights, macro data, news, and MCP integrations. Nothing slips past."
     )
@@ -30,8 +30,8 @@ struct OnboardingSolutionScreen: View {
         VStack(spacing: 18) {
           OnboardingQuestionHeader(
             watch: .wealth,
-            title: "One guardian. Three watches.",
-            subtitle: "You told us what's broken. Norviq stands watch over all of it."
+            title: "One app. Three pillars.",
+            subtitle: "You told us what matters. Norviq covers all of it."
           )
 
           ForEach(Self.rows) { row in

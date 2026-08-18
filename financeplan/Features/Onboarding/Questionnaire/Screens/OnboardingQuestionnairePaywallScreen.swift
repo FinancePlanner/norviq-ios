@@ -75,7 +75,7 @@ struct OnboardingQuestionnairePaywallScreen: View {
 
   private var headlineBlock: some View {
     VStack(spacing: 8) {
-      Text("Post all three guards.")
+      Text("Everything you need.")
         .font(.title.bold())
         .multilineTextAlignment(.center)
 
@@ -252,19 +252,19 @@ struct OnboardingQuestionnairePaywallScreen: View {
     FeatureInfo(
       icon: "chart.line.uptrend.xyaxis",
       title: "Unlimited holdings, watchlists & alerts",
-      kicker: "WATCH I — WEALTH"
+      kicker: "Wealth"
     ),
     FeatureInfo(icon: "chart.xyaxis.line", title: "10-year projections, chart builder & scenarios"),
     FeatureInfo(
       icon: "creditcard.fill",
       title: "Auto-categorised expenses, budgets & receipt scanning",
-      kicker: "WATCH II — SPENDING"
+      kicker: "Spending"
     ),
     FeatureInfo(icon: "building.columns", title: "Read-only bank sync"),
     FeatureInfo(
       icon: "sparkles",
       title: "AI assistant, sentiment insights & macro data",
-      kicker: "WATCH III — INTELLIGENCE"
+      kicker: "Intelligence"
     ),
     FeatureInfo(icon: "icloud.and.arrow.up", title: "MCP integrations & live syncing across devices"),
   ]

@@ -7,7 +7,7 @@ enum PaywallFeatureBadge {
 }
 
 /// Kicker header that groups paywall feature rows under one of the three
-/// Vigil watches (WATCH I — WEALTH / WATCH II — SPENDING / WATCH III — INTELLIGENCE).
+/// Vigil domain groups (Wealth / Spending / Intelligence).
 struct PaywallWatchHeader: View {
   let title: String
 

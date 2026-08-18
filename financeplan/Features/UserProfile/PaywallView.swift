@@ -16,8 +16,8 @@ struct PaywallView: View {
         ScrollView {
           VStack(spacing: 0) {
             PaywallHeroSection(
-              headline: "Post all three guards.",
-              subtitle: "Wealth, spending, and the signals between — Pro keeps every watch posted."
+              headline: "Everything you need.",
+              subtitle: "Wealth tracking, spending insights, and market intelligence — all in one place."
             )
             .padding(.top, 32)
             .padding(.horizontal, 20)
@@ -178,7 +178,7 @@ struct PaywallView: View {
 
   private static let watches: [WatchGroup] = [
     WatchGroup(
-      title: "WATCH I — WEALTH",
+      title: "Wealth",
       features: [
         FeatureInfo(icon: "chart.bar.fill", title: "Real fundamentals & financial statements"),
         FeatureInfo(icon: "arrow.up.arrow.down", title: "Bear/base/bull projections & chart builder"),
@@ -186,14 +186,14 @@ struct PaywallView: View {
       ]
     ),
     WatchGroup(
-      title: "WATCH II — SPENDING",
+      title: "Spending",
       features: [
         FeatureInfo(icon: "creditcard.fill", title: "Budgets, expenses & receipt scanning"),
         FeatureInfo(icon: "building.columns", title: "Read-only bank sync"),
       ]
     ),
     WatchGroup(
-      title: "WATCH III — INTELLIGENCE",
+      title: "Intelligence",
       features: [
         FeatureInfo(icon: "sparkles", title: "AI assistant & sentiment insights"),
         FeatureInfo(icon: "point.3.connected.trianglepath.dotted", title: "MCP-backed intelligence & integrations"),

@@ -227,8 +227,8 @@ public struct UserProfileView: View {
                 if let days = billingManager.trialDaysRemaining {
                     Label(
                         days == 1
-                            ? "Trial watch ends in 1 day."
-                            : "Trial watch ends in \(days) days.",
+                            ? "Trial ends in 1 day."
+                            : "Trial ends in \(days) days.",
                         systemImage: "calendar.badge.clock")
                         .foregroundStyle(.secondary)
                         .accessibilityIdentifier("settings.subscription.trial")
