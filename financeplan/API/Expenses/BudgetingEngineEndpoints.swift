@@ -101,6 +101,42 @@ nonisolated struct BudgetPortfolioListWire: Codable, Sendable, Identifiable, Equ
   let isDefault: Bool
 }
 
+nonisolated struct SpendToUnitsCategoryWire: Codable, Sendable, Equatable, Identifiable {
+  var id: String { title }
+  let title: String
+  let overspendAmount: Double
+  let units: Double?
+}
+
+nonisolated struct SpendToUnitsCapacityWire: Codable, Sendable, Equatable {
+  let symbol: String
+  let resolvedFrom: String
+  let price: Double?
+  let priceCurrency: String?
+  let quoteAsOf: String?
+  let quoteStale: Bool
+  let surplusAmount: Double
+  let surplusUnits: Double?
+  let currencyCode: String
+  let categories: [SpendToUnitsCategoryWire]
+  let disclaimer: String
+}
+
+nonisolated struct GetDcaCapacityEndpoint: Endpoint {
+  typealias Response = SpendToUnitsCapacityWire
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/budget/dca-capacity" }
+  func asParameters() throws -> Parameters { [:] }
+}
+
+nonisolated struct UpdateDcaCapacityEndpoint: Endpoint {
+  typealias Response = SpendToUnitsCapacityWire
+  let symbol: String
+  var method: HTTPMethod { .put }
+  var path: String { "/v1/budget/dca-capacity" }
+  func asParameters() throws -> Parameters { ["symbol": symbol] }
+}
+
 nonisolated struct GetBudgetDriftEndpoint: Endpoint {
   typealias Response = BudgetDriftDashboardWire
   let snapshotId: String

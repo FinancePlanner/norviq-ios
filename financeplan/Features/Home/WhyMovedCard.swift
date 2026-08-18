@@ -54,6 +54,12 @@ struct WhyMovedCard: View {
           .foregroundStyle(AppTheme.Colors.secondaryText(for: scheme))
       }
 
+      if let capacity = viewModel.capacity, let units = capacity.surplusUnits {
+        Text("Leftover \(capacity.surplusAmount.formatted(.currency(code: capacity.currencyCode))) → \(units.formatted(.number.precision(.fractionLength(2)))) \(capacity.symbol). Equivalent at last price — not an order.")
+          .font(.caption)
+          .foregroundStyle(AppTheme.Colors.secondaryText(for: scheme))
+      }
+
       if let summary = response.aiSummary {
         HStack(alignment: .top, spacing: 8) {
           Image(systemName: "sparkles")
@@ -178,17 +184,26 @@ enum WhyMovedPalette {
 @Observable
 final class WhyMovedViewModel {
   var response: WhyMovedResponse?
+  var capacity: SpendToUnitsCapacityWire?
   private var hasLoaded = false
 
   private let dashboardService: any DashboardServicing
+  private let expensesService: any ExpensesServicing
 
-  init(dashboardService: any DashboardServicing = Container.shared.dashboardService()) {
+  init(
+    dashboardService: any DashboardServicing = Container.shared.dashboardService(),
+    expensesService: any ExpensesServicing = Container.shared.expensesService()
+  ) {
     self.dashboardService = dashboardService
+    self.expensesService = expensesService
   }
 
   func loadIfNeeded() async {
     guard !hasLoaded else { return }
     hasLoaded = true
-    response = try? await dashboardService.getWhyMoved()
+    async let why = dashboardService.getWhyMoved()
+    async let units = expensesService.getDcaCapacity()
+    response = try? await why
+    capacity = try? await units
   }
 }
