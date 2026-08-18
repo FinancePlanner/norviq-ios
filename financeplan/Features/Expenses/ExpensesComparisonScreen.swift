@@ -63,8 +63,7 @@ struct ExpensesComparisonScreen: View {
         VStack(spacing: 0) {
           VigilPageHeader(
             watch: .reports,
-            title: "Reports",
-            subtitle: "Portfolio, spending, and trend snapshots"
+            title: "Reports"
           )
           .padding(.horizontal, 16)
           .padding(.top, 8)

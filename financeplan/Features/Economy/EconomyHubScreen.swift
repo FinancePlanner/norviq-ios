@@ -48,8 +48,7 @@ struct EconomyHubScreen: View {
         Section {
           VigilPageHeader(
             watch: .intelligence,
-            title: "Economy",
-            subtitle: "Macro snapshots for US, Brazil, and Euro Area"
+            title: "Economy"
           )
           .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
           .listRowBackground(Color.clear)

@@ -341,8 +341,7 @@ struct PortfolioScreen: View {
       VStack(spacing: 16) {
         VigilPageHeader(
           watch: .wealth,
-          title: "Portfolio",
-          subtitle: "Your stock, ETF, and crypto positions"
+          title: "Portfolio"
         )
 
         PortfolioHeroCard(

@@ -18,8 +18,7 @@ struct BankingView: View {
       Section {
         VigilPageHeader(
           watch: .spending,
-          title: "Bank sync",
-          subtitle: "Read-only transaction import via Plaid"
+          title: "Bank sync"
         )
         .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
         .listRowBackground(Color.clear)

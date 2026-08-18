@@ -25,8 +25,7 @@ struct GoalDetailScreen: View {
       VStack(alignment: .leading, spacing: 20) {
         VigilPageHeader(
           watch: .wealth,
-          title: LocalizedStringKey(item.goal.name),
-          subtitle: "Track progress, simulate what-if changes, and review linked portfolio allocations"
+          title: LocalizedStringKey(item.goal.name)
         )
 
         progressSummary

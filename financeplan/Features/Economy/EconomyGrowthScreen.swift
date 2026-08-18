@@ -35,8 +35,7 @@ struct EconomyGrowthScreen: View {
       VStack(alignment: .leading, spacing: 16) {
         VigilPageHeader(
           watch: .intelligence,
-          title: "Growth & Jobs",
-          subtitle: "Jobs, GDP, and recession risk"
+          title: "Growth & Jobs"
         )
 
         EconomyCountryPicker(selection: $selectedCountry)

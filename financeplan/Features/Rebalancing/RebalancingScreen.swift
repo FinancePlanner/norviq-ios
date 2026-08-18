@@ -18,8 +18,7 @@ struct RebalancingScreen: View {
       Section {
         VigilPageHeader(
           watch: .wealth,
-          title: "Rebalancing",
-          subtitle: "Policy targets, drift monitoring, and reviewable trade plans"
+          title: "Rebalancing"
         )
         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
         .listRowBackground(Color.clear)

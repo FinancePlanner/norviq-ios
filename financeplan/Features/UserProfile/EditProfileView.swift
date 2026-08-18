@@ -46,8 +46,7 @@ struct EditProfileView: View {
                 Section {
                     VigilPageHeader(
                         watch: .settings("Profile"),
-                        title: "Edit profile",
-                        subtitle: "Username, email, and password"
+                        title: "Edit profile"
                     )
                     .listRowBackground(Color.clear)
                 }

@@ -13,8 +13,7 @@ struct PortfolioWorkspaceScreen: View {
       Section {
         VigilPageHeader(
           watch: .wealth,
-          title: "Portfolios",
-          subtitle: "Personal, retirement, joint, and hypothetical workspaces"
+          title: "Portfolios"
         )
         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
         .listRowBackground(Color.clear)

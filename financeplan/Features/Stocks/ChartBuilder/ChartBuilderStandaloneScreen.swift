@@ -54,8 +54,7 @@ struct ChartBuilderStandaloneScreen: View {
   private var chartBuilderHeader: some View {
     VigilPageHeader(
       watch: .wealth,
-      title: "Chart Builder",
-      subtitle: "Search for a stock, then combine up to 20 financial metrics with peer tickers"
+      title: "Chart Builder"
     )
   }
 

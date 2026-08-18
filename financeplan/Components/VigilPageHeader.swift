@@ -1,6 +1,9 @@
 import SwiftUI
 
-/// Command Center page chrome mirroring web `modern-page-header`.
+/// Page chrome that renders the domain eyebrow and screen title.
+/// The subtitle is optional — only use it when it carries genuinely
+/// new information (e.g. a dynamic value like a period or asset name).
+/// Static descriptions that restate the title should be omitted.
 struct VigilPageHeader<Trailing: View>: View {
   @Environment(\.colorScheme) private var scheme
 

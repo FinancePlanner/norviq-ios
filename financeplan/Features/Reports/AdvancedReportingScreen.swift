@@ -15,8 +15,7 @@ struct AdvancedReportingScreen: View {
       Section {
         VigilPageHeader(
           watch: .reports,
-          title: "Reporting Center",
-          subtitle: "Build, schedule, and export PDF and Excel reports"
+          title: "Reporting Center"
         )
         .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
         .listRowBackground(Color.clear)

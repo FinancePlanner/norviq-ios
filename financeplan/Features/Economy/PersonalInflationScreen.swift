@@ -11,8 +11,7 @@ struct PersonalInflationScreen: View {
       VStack(alignment: .leading, spacing: 20) {
         VigilPageHeader(
           watch: .intelligence,
-          title: "Your Inflation",
-          subtitle: "Spending-weighted cost-of-living rate"
+          title: "Your Inflation"
         )
 
         controls

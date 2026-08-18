@@ -37,8 +37,7 @@ struct AssistantView: View {
                 LazyVStack(alignment: .leading, spacing: 12) {
                     VigilPageHeader(
                         watch: .intelligence,
-                        title: "Assistant",
-                        subtitle: "Ask. The third head is listening."
+                        title: "Assistant"
                     )
                     .padding(.horizontal, 4)
 

@@ -24,8 +24,7 @@ struct AboutNorviqView: View {
             Section {
                 VigilPageHeader(
                     watch: .settings("About"),
-                    title: "About Norviq",
-                    subtitle: "Product scope, legal, and community links"
+                    title: "About Norviq"
                 )
                 .listRowBackground(Color.clear)
             }

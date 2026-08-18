@@ -14,8 +14,7 @@ struct GoalPlanningScreen: View {
       VStack(alignment: .leading, spacing: 20) {
         VigilPageHeader(
           watch: .wealth,
-          title: "Financial goals",
-          subtitle: "Connect portfolios, contribution habits, and spending choices to measurable outcomes"
+          title: "Financial goals"
         )
 
         overviewHeader

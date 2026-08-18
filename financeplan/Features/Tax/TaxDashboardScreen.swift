@@ -34,8 +34,7 @@ struct TaxDashboardScreen: View {
         LazyVStack(alignment: .leading, spacing: 16) {
           VigilPageHeader(
             watch: .spending,
-            title: "Tax strategy",
-            subtitle: "Jurisdiction-aware estimates from your profile"
+            title: "Tax strategy"
           )
 
           jurisdictionPicker
