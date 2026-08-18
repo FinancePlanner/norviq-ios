@@ -56,6 +56,8 @@ protocol ExpensesServicing: ExpenseBudgetSetupServicing, Sendable {
 
     // Rule-based budgeting engine
     func getBudgetDrift(snapshotId: String) async throws -> BudgetDriftDashboardWire
+    func getDcaCapacity() async throws -> SpendToUnitsCapacityWire
+    func updateDcaCapacity(symbol: String) async throws -> SpendToUnitsCapacityWire
     func getBudgetDiscipline(months: Int) async throws -> BudgetDisciplineSummaryWire
     func updateBudgetAlertPolicy(snapshotId: String, policy: BudgetAlertPolicy) async throws -> BudgetSnapshotResponse
     func getBudgetFinancialGoals() async throws -> [BudgetFinancialGoalWire]
@@ -76,6 +78,14 @@ extension ExpensesServicing {
     }
 
     func getBudgetDrift(snapshotId _: String) async throws -> BudgetDriftDashboardWire {
+        throw BudgetingEngineServiceError.unavailable
+    }
+
+    func getDcaCapacity() async throws -> SpendToUnitsCapacityWire {
+        throw BudgetingEngineServiceError.unavailable
+    }
+
+    func updateDcaCapacity(symbol _: String) async throws -> SpendToUnitsCapacityWire {
         throw BudgetingEngineServiceError.unavailable
     }
 
@@ -248,6 +258,14 @@ struct ExpensesHTTPService: ExpensesServicing {
 
     func getBudgetDrift(snapshotId: String) async throws -> BudgetDriftDashboardWire {
         try await client.getBudgetDrift(snapshotId: snapshotId)
+    }
+
+    func getDcaCapacity() async throws -> SpendToUnitsCapacityWire {
+        try await client.getDcaCapacity()
+    }
+
+    func updateDcaCapacity(symbol: String) async throws -> SpendToUnitsCapacityWire {
+        try await client.updateDcaCapacity(symbol: symbol)
     }
 
     func getBudgetDiscipline(months: Int) async throws -> BudgetDisciplineSummaryWire {

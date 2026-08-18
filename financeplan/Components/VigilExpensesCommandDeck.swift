@@ -59,31 +59,67 @@ struct VigilExpensesCommandDeck: View {
   private var dcaPanel: some View {
     GlassCard(cornerRadius: AppTheme.Radius.card) {
       VStack(alignment: .leading, spacing: 10) {
-        Text("DCA capacity · surplus cashflow")
+        Text("This month in \(driftViewModel.capacity?.symbol ?? "your ticker")")
           .font(.subheadline.weight(.semibold))
-        if let dashboard = driftViewModel.dashboard {
-          let surplus = max(dashboard.investmentContributionTarget - dashboard.lostInvestmentCapital, 0)
-          Text("+\(surplus.formatted(.currency(code: currencyCode))) DCA ready")
+        if let capacity = driftViewModel.capacity {
+          Text(capacityHero(capacity))
             .font(.title3.weight(.bold).monospacedDigit())
             .foregroundStyle(AppTheme.Colors.successText(for: scheme))
-          let deployPct = dashboard.investmentContributionTarget > 0
-            ? min(surplus / dashboard.investmentContributionTarget, 1)
-            : 0
-          ProgressView(value: deployPct)
-            .tint(AppTheme.Colors.secondaryTint(for: scheme))
-          Text("Deployment target · \(dashboard.investmentContributionTarget.formatted(.currency(code: currencyCode)))")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-          Button("Review reallocation", action: onOpenReallocation)
+          if let price = capacity.price {
+            Text("at last \(capacity.priceCurrency ?? capacity.currencyCode) \(price.formatted(.number.precision(.fractionLength(2))))")
+              .font(.caption)
+              .foregroundStyle(.secondary)
+          }
+          ForEach(capacity.categories.prefix(3)) { row in
+            Text("\(row.title) · \(overspendLine(row, symbol: capacity.symbol, currency: capacity.currencyCode))")
+              .font(.caption)
+              .foregroundStyle(.secondary)
+          }
+          HStack {
+            TextField("VWCE", text: Bindable(driftViewModel).dcaSymbolDraft)
+              .textInputAutocapitalization(.characters)
+              .autocorrectionDisabled()
+              .font(.body.monospaced())
+            Button("Set") {
+              Task { await driftViewModel.saveDcaSymbol() }
+            }
             .buttonStyle(.borderedProminent)
             .tint(AppTheme.Colors.tint(for: scheme))
+          }
+          Text(capacity.disclaimer)
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+          Button("Review reallocation", action: onOpenReallocation)
+            .buttonStyle(.bordered)
+            .tint(AppTheme.Colors.tint(for: scheme))
+        } else if let dashboard = driftViewModel.dashboard {
+          let surplus = max(dashboard.investmentContributionTarget - dashboard.lostInvestmentCapital, 0)
+          Text("+\(surplus.formatted(.currency(code: currencyCode))) leftover")
+            .font(.title3.weight(.bold).monospacedDigit())
+            .foregroundStyle(AppTheme.Colors.successText(for: scheme))
         } else {
-          Text("Set salary and pillar targets to calculate deploy capacity.")
+          Text("Set salary and pillar targets to calculate leftover cash as units of a holding.")
             .font(.caption)
             .foregroundStyle(.secondary)
         }
       }
     }
+  }
+
+  private func capacityHero(_ capacity: SpendToUnitsCapacityWire) -> String {
+    let cash = capacity.surplusAmount.formatted(.currency(code: capacity.currencyCode))
+    if let units = capacity.surplusUnits {
+      return "\(cash) → \(units.formatted(.number.precision(.fractionLength(2)))) \(capacity.symbol)"
+    }
+    return "\(cash) leftover"
+  }
+
+  private func overspendLine(_ row: SpendToUnitsCategoryWire, symbol: String, currency: String) -> String {
+    let cash = row.overspendAmount.formatted(.currency(code: currency))
+    if let units = row.units {
+      return "\(cash) → \(units.formatted(.number.precision(.fractionLength(2)))) \(symbol) not bought"
+    }
+    return "\(cash) over plan"
   }
 
   private var taxPanel: some View {

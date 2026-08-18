@@ -6,6 +6,8 @@ import SwiftUI
 @Observable @MainActor
 final class BudgetDriftViewModel {
   private(set) var dashboard: BudgetDriftDashboardWire?
+  private(set) var capacity: SpendToUnitsCapacityWire?
+  var dcaSymbolDraft = ""
   private(set) var discipline: BudgetDisciplineSummaryWire?
   private(set) var history: [BudgetReallocationEventWire] = []
   private(set) var preview: BudgetReallocationPreviewWire?
@@ -52,8 +54,13 @@ final class BudgetDriftViewModel {
     do {
       async let drift = service.getBudgetDrift(snapshotId: snapshotID)
       async let score = service.getBudgetDiscipline(months: 6)
+      async let units = service.getDcaCapacity()
       dashboard = try await drift
       discipline = try await score
+      if let loaded = try? await units {
+        capacity = loaded
+        dcaSymbolDraft = loaded.symbol
+      }
       seedSuggestedAdjustments()
       history = includePro ? (try? await service.getBudgetReallocationHistory()) ?? [] : []
       if let snapshots = try? await service.getSnapshots(year: nil, month: nil),
@@ -74,6 +81,18 @@ final class BudgetDriftViewModel {
       errorMessage = error.localizedDescription
     }
     isLoading = false
+  }
+
+  func saveDcaSymbol() async {
+    let symbol = dcaSymbolDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !symbol.isEmpty else { return }
+    do {
+      let updated = try await service.updateDcaCapacity(symbol: symbol)
+      capacity = updated
+      dcaSymbolDraft = updated.symbol
+    } catch {
+      errorMessage = error.localizedDescription
+    }
   }
 
   var eligibleCategories: [BudgetCategoryDriftWire] {

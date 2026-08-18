@@ -189,6 +189,14 @@ struct ExpensesHTTPClient: Sendable {
         try await client.call(GetBudgetDriftEndpoint(snapshotId: snapshotId), errorType: Error.self)
     }
 
+    func getDcaCapacity() async throws -> SpendToUnitsCapacityWire {
+        try await client.call(GetDcaCapacityEndpoint(), errorType: Error.self)
+    }
+
+    func updateDcaCapacity(symbol: String) async throws -> SpendToUnitsCapacityWire {
+        try await client.call(UpdateDcaCapacityEndpoint(symbol: symbol), errorType: Error.self)
+    }
+
     func getBudgetDiscipline(months: Int = 6) async throws -> BudgetDisciplineSummaryWire {
         try await client.call(GetBudgetDisciplineEndpoint(months: months), errorType: Error.self)
     }
