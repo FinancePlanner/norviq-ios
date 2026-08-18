@@ -115,8 +115,7 @@ struct NetWorthForecastScreen: View {
       Section {
         VigilPageHeader(
           watch: .businessRules("Forecast"),
-          title: "Net Worth Forecast",
-          subtitle: "Monte Carlo paths and cash-flow assumptions."
+          title: "Net Worth Forecast"
         )
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
@@ -401,8 +400,7 @@ struct SmartScreeningScreen: View {
       Section {
         VigilPageHeader(
           watch: .businessRules("Smart screen"),
-          title: "Smart Screens",
-          subtitle: "Fundamental filters and entry alerts across your lists."
+          title: "Smart Screens"
         )
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
@@ -632,8 +630,7 @@ struct RebalancingRulesScreen: View {
       Section {
         VigilPageHeader(
           watch: .businessRules("Rebalancing"),
-          title: "Rebalancing Rules",
-          subtitle: "Drift thresholds and review-only trade drafts."
+          title: "Rebalancing Rules"
         )
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
@@ -759,8 +756,7 @@ struct NotificationInboxScreen: View {
       Section {
         VigilPageHeader(
           watch: .businessRules("Alerts"),
-          title: "Notifications",
-          subtitle: "Price, budget, earnings, tax, screen, and rebalance alerts."
+          title: "Notifications"
         )
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)

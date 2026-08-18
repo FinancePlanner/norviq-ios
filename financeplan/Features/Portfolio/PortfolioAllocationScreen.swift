@@ -190,8 +190,7 @@ struct PortfolioAllocationScreen: View {
                     VStack(spacing: 20) {
                         VigilPageHeader(
                             watch: .wealth,
-                            title: "Allocation",
-                            subtitle: "Latest portfolio snapshot"
+                            title: "Allocation"
                         )
 
                         Picker("Allocation view", selection: $selectedMode) {

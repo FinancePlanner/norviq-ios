@@ -44,7 +44,7 @@ struct ProGateView<Content: View>: View {
                     .font(.largeTitle)
                     .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
 
-                Text("Post all three guards.")
+                Text("Upgrade to Pro")
                     .typography(.title, weight: .bold)
                     .multilineTextAlignment(.center)
                     .accessibilityIdentifier("proGate.title")

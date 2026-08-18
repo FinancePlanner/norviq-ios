@@ -14,8 +14,7 @@ struct ChartBuilderScreen: View {
     VStack(spacing: 16) {
       VigilPageHeader(
         watch: .wealth,
-        title: "Chart builder",
-        subtitle: "Combine statement line items, ratios, growth metrics, and derived cash-flow measures on one timeline"
+        title: "Chart builder"
       )
 
       ChartBuilderControlsView(viewModel: viewModel)

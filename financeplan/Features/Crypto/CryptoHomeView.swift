@@ -120,8 +120,7 @@ struct CryptoHomeView: View {
             VStack(spacing: 24) {
                 VigilPageHeader(
                     watch: .wealth,
-                    title: "Crypto",
-                    subtitle: "Digital assets, market data, and holdings"
+                    title: "Crypto"
                 )
                 .padding(.horizontal)
 
@@ -152,8 +151,7 @@ struct CryptoHomeView: View {
                 VStack(spacing: 24) {
                     VigilPageHeader(
                         watch: .wealth,
-                        title: "Crypto",
-                        subtitle: "Digital assets, market data, and holdings"
+                        title: "Crypto"
                     )
                     .padding(.horizontal)
 

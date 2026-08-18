@@ -51,8 +51,7 @@ struct SectorGainsScreen: View {
       VStack(spacing: 20) {
         VigilPageHeader(
           watch: .wealth,
-          title: "Sector Gains",
-          subtitle: "Unrealized P/L grouped by sector"
+          title: "Sector Gains"
         )
 
         GlassCard(backgroundColor: pnlTint(totalUnrealizedPnl)) {

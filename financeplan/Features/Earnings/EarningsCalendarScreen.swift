@@ -85,8 +85,7 @@ struct EarningsCalendarScreen: View {
       Section {
         VigilPageHeader(
           watch: .wealth,
-          title: "Earnings calendar",
-          subtitle: "Upcoming earnings dates, EPS estimates, and income statement flow for any tracked company"
+          title: "Earnings calendar"
         )
         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
         .listRowBackground(Color.clear)

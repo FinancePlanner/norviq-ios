@@ -19,29 +19,29 @@ enum VigilWatch: Equatable {
   var eyebrow: String {
     switch self {
     case .wealth:
-      "WATCH I — WEALTH"
+      "Wealth"
     case .wealthPlan:
-      "WATCH I — WEALTH · PLAN"
+      "Wealth · Plan"
     case .wealthImport:
-      "WATCH I — WEALTH · IMPORT"
+      "Wealth · Import"
     case .spending:
-      "WATCH II — SPENDING"
+      "Spending"
     case .spendingDCA:
-      "WATCH II — SPENDING & DCA CAPACITY"
+      "Spending · DCA"
     case .intelligence:
-      "WATCH III — INTELLIGENCE"
+      "Intelligence"
     case .settings(let section):
-      "Settings — \(section)"
+      "Settings · \(section)"
     case .businessRules(let section):
-      "Business rules — \(section)"
+      "Rules · \(section)"
     case .reports:
-      "WATCH I — REPORTS"
+      "Reports"
     case .account:
       "Account"
     case .auth(let label):
       label
     case .vigilActive:
-      "Vigil active"
+      "Vigil"
     }
   }
 }

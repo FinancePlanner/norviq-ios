@@ -14,8 +14,7 @@ struct MacroScreen: View {
       VStack(alignment: .leading, spacing: 20) {
         VigilPageHeader(
           watch: .intelligence,
-          title: "Inflation",
-          subtitle: "CPI gauges, movers, and everyday prices"
+          title: "Inflation"
         )
 
         countryPicker

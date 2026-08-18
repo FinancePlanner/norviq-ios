@@ -35,8 +35,7 @@ struct HousingHubScreen: View {
       VStack(alignment: .leading, spacing: 16) {
         VigilPageHeader(
           watch: .intelligence,
-          title: "Housing",
-          subtitle: "Prices, rents, mortgages, and supply"
+          title: "Housing"
         )
 
         EconomyCountryPicker(selection: $selectedCountry)

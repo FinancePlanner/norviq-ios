@@ -14,8 +14,7 @@ struct BudgetCategoryDetailsScreen: View {
       VStack(spacing: 20) {
         VigilPageHeader(
           watch: .spending,
-          title: "Budget categories",
-          subtitle: "Pillar targets and recorded spend"
+          title: "Budget categories"
         )
 
         ForEach(viewModel.selectedMonthPillars, id: \.self) { pillar in

@@ -109,7 +109,7 @@ struct OnboardingValueRevealScreen: View {
   private var allocationCard: some View {
     GlassCard(cornerRadius: 22) {
       VStack(alignment: .leading, spacing: 14) {
-        Text("WATCH I — WEALTH")
+        Text("Wealth")
           .typography(.nano, weight: .semibold)
           .tracking(1.2)
           .foregroundStyle(AppTheme.Colors.bronze(for: colorScheme))
@@ -182,7 +182,7 @@ struct OnboardingValueRevealScreen: View {
   private var leakCard: some View {
     GlassCard(cornerRadius: 22) {
       VStack(alignment: .leading, spacing: 10) {
-        Text("WATCH II — SPENDING")
+        Text("Spending")
           .typography(.nano, weight: .semibold)
           .tracking(1.2)
           .foregroundStyle(AppTheme.Colors.bronze(for: colorScheme))

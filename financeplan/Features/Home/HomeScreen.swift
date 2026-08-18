@@ -205,8 +205,7 @@ struct HomeScreen: View {
           Section {
             VigilPageHeader(
               watch: .intelligence,
-              title: "More",
-              subtitle: "Markets, economy, reports, and tax"
+              title: "More"
             )
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)

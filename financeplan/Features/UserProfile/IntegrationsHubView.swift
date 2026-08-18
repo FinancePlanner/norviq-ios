@@ -72,7 +72,7 @@ struct IntegrationsHubView: View {
         }
         .padding(.vertical, 4)
       } header: {
-        Text("WATCH III — INTELLIGENCE")
+        Text("Intelligence")
           .vigilOverline()
           .foregroundStyle(AppTheme.Colors.bronze(for: scheme))
       }
@@ -101,7 +101,7 @@ struct IntegrationsHubView: View {
         }
         .padding(.vertical, 4)
       } header: {
-        Text("WATCH I & II — WEALTH, SPENDING")
+        Text("Wealth & Spending")
           .vigilOverline()
           .foregroundStyle(AppTheme.Colors.bronze(for: scheme))
       } footer: {

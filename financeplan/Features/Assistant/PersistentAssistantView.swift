@@ -51,8 +51,7 @@ struct PersistentAssistantView: View {
                 LazyVStack(spacing: 16) {
                     VigilPageHeader(
                         watch: .intelligence,
-                        title: "Assistant",
-                        subtitle: "Agentic actions and conversation history"
+                        title: "Assistant"
                     )
                     .padding(.horizontal, 16)
 

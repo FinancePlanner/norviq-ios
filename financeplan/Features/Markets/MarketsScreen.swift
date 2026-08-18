@@ -13,8 +13,7 @@ struct MarketsScreen: View {
         VStack(alignment: .leading, spacing: 20) {
           VigilPageHeader(
             watch: .wealth,
-            title: "Markets",
-            subtitle: "Indices, movers, and the market heat-map at a glance"
+            title: "Markets"
           )
 
           if let overview = viewModel.overview {

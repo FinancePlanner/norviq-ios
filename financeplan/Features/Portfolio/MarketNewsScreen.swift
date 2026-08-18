@@ -13,8 +13,7 @@ struct MarketNewsScreen: View {
       LazyVStack(spacing: 16) {
         VigilPageHeader(
           watch: .wealth,
-          title: "Thesis Watch",
-          subtitle: "Market news ranked by your holdings, exposure, and investment thesis"
+          title: "Thesis Watch"
         )
 
         introduction

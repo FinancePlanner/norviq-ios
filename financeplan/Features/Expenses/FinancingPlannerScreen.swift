@@ -105,8 +105,7 @@ struct FinancingPlannerScreen: View {
       VStack(spacing: 0) {
         VigilPageHeader(
           watch: .spending,
-          title: "Plan a purchase",
-          subtitle: "Simulate financing before it hits the ledger"
+          title: "Plan a purchase"
         )
         .padding(.horizontal, 16)
         .padding(.top, 8)

@@ -35,8 +35,7 @@ struct PolicyWatchScreen: View {
       VStack(alignment: .leading, spacing: 16) {
         VigilPageHeader(
           watch: .intelligence,
-          title: "Policy Watch",
-          subtitle: "Central bank stance and rates"
+          title: "Policy Watch"
         )
 
         EconomyCountryPicker(selection: $selectedCountry)

@@ -10,8 +10,7 @@ struct InsightsScreen: View {
                 VStack(spacing: 18) {
                     VigilPageHeader(
                         watch: .intelligence,
-                        title: "Insights",
-                        subtitle: "Educational summaries from your own data"
+                        title: "Insights"
                     )
 
                     ForEach(AIInsightKind.allCases, id: \.self) { kind in

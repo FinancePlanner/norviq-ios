@@ -411,8 +411,7 @@ private struct DashboardContentSection: View {
       if BrandTheme.current == .vigil {
         VigilPageHeader(
           watch: .intelligence,
-          title: LocalizedStringKey(greetingText),
-          subtitle: "Norviq · Unified Command Center"
+          title: LocalizedStringKey(greetingText)
         )
       }
 

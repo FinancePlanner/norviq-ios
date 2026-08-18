@@ -240,8 +240,7 @@ struct ScenarioPlanningScreen: View {
       LazyVStack(alignment: .leading, spacing: 24) {
         VigilPageHeader(
           watch: .wealth,
-          title: "Scenario planning",
-          subtitle: "Stress-test an immutable portfolio snapshot with repeatable assumptions"
+          title: "Scenario planning"
         )
 
         if model.isLoading && model.catalog == nil {
