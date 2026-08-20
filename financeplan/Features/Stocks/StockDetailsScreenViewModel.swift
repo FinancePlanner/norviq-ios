@@ -63,6 +63,10 @@ final class StockDetailsViewModel: ObservableObject {
     @Published private(set) var isEarningsLoading = false
     @Published private(set) var tickerSentiment: TickerSentimentResponse?
     @Published private(set) var isSentimentLoading = false
+    /// The broad daily aggregate. A separate population and window from
+    /// `tickerSentiment` above, which samples notable accounts only.
+    @Published private(set) var dailySentiment: SymbolSentiment?
+    @Published private(set) var sentimentHistory: [SymbolSentiment] = []
     @Published private(set) var selectedEarningsTranscript: EarningsTranscript?
     @Published private(set) var earningsTranscriptMessage: String?
     @Published private(set) var isEarningsTranscriptLoading = false
@@ -467,8 +471,26 @@ final class StockDetailsViewModel: ObservableObject {
     }
 
     private func loadTickerSentiment(symbol: String) async -> TickerSentimentResponse? {
+        let client = Container.shared.insightsHTTPClient()
+
+        // Fetched alongside the notable-post sample because the tab shows both.
+        // Each failure is independent: losing the history chart must not cost
+        // the reader the score.
         do {
-            return try await Container.shared.insightsHTTPClient().getTickerSentiment(symbol: symbol)
+            dailySentiment = try await client.getSymbolSentiment(symbols: [symbol])[symbol.uppercased()]
+        } catch {
+            dailySentiment = nil
+        }
+
+        do {
+            // Pro-gated upstream: a 402 simply leaves the chart out.
+            sentimentHistory = try await client.getSentimentHistory(symbol: symbol)
+        } catch {
+            sentimentHistory = []
+        }
+
+        do {
+            return try await client.getTickerSentiment(symbol: symbol)
         } catch {
             // No sentiment yet / transient failure — surface the empty state, not an error.
             return nil

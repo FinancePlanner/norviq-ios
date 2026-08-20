@@ -8,6 +8,9 @@ struct PortfolioPositionsSection: View {
   let liveQuotes: [String: QuoteResponse]
   let pnlProvider: (String) -> PnlBySymbol?
   let targetAlertProvider: (String) -> TargetResponse?
+  /// Defaults to "no reading" so callers that do not supply sentiment keep
+  /// compiling and simply render the absence treatment.
+  var sentimentProvider: (String) -> SymbolSentiment? = { _ in nil }
   let onAddPosition: () -> Void
   let onEditStock: (StockResponse) -> Void
   let onDeleteStock: (String) -> Void
@@ -34,6 +37,7 @@ struct PortfolioPositionsSection: View {
             targetAlert: targetAlertProvider(stock.symbol),
             liveQuote: liveQuotes[stock.symbol.uppercased()],
             pnl: pnlProvider(stock.symbol),
+            sentiment: sentimentProvider(stock.symbol),
             onEdit: onEditStock,
             onDelete: onDeleteStock,
             onPresentTargetAlert: onPresentTargetAlert
@@ -58,6 +62,7 @@ struct PortfolioStockLinkRow: View {
   let targetAlert: TargetResponse?
   let liveQuote: QuoteResponse?
   let pnl: PnlBySymbol?
+  var sentiment: SymbolSentiment?
   let onEdit: (StockResponse) -> Void
   let onDelete: (String) -> Void
   let onPresentTargetAlert: (SDPortfolioStock) -> Void
@@ -70,7 +75,7 @@ struct PortfolioStockLinkRow: View {
     NavigationLink {
       StockDetailScreen(stockId: stock.id, initialSymbol: stock.symbol)
     } label: {
-      PortfolioRow(stock: stock, targetAlert: targetAlert, liveQuote: liveQuote, pnl: pnl)
+      PortfolioRow(stock: stock, targetAlert: targetAlert, liveQuote: liveQuote, pnl: pnl, sentiment: sentiment)
         .accessibilityIdentifier("portfolio.stockRow.\(stock.symbol)")
     }
     .buttonStyle(PressableStyle())
@@ -100,6 +105,7 @@ struct PortfolioRow: View {
   let targetAlert: TargetResponse?
   let liveQuote: QuoteResponse?
   let pnl: PnlBySymbol?
+  var sentiment: SymbolSentiment?
 
   private var displayPrice: Double? {
     pnl?.currentPrice ?? liveQuote?.currentPrice
@@ -179,9 +185,12 @@ struct PortfolioRow: View {
       VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
         HStack(alignment: .top, spacing: AppTheme.Spacing.md) {
           VStack(alignment: .leading, spacing: 4) {
-            Text(stock.symbol)
-              .font(.headline)
-              .foregroundStyle(.primary)
+            HStack(spacing: 6) {
+              Text(stock.symbol)
+                .font(.headline)
+                .foregroundStyle(.primary)
+              RetailSentimentBadge(display: RetailSentimentDisplay(sentiment), showsScore: false)
+            }
 
             Text(sharesLine)
               .font(.caption)

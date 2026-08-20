@@ -22,6 +22,9 @@ final class WatchlistViewModel: ObservableObject {
   @Published private(set) var watchlistLists: [WatchlistListDTOResponse] = []
   @Published var selectedWatchlistListId: String?
   @Published private(set) var liveQuotes: [String: QuoteResponse] = [:]
+  /// Daily retail sentiment keyed by uppercased symbol, matching `liveQuotes`.
+  @Published private(set) var sentimentBySymbol: [String: SymbolSentiment] = [:]
+  @Published private(set) var watchlistSentiment: PortfolioSentimentResponse?
 
   private let service: StockServicing
   private let marketDataService: MarketDataServicing
@@ -74,6 +77,9 @@ final class WatchlistViewModel: ObservableObject {
           .filter { !$0.isEmpty }
       )
       await fetchAndMergeQuotes(for: Array(trackedSymbols), replace: true)
+      // Daily aggregate: fetched once per load, deliberately not on the 20s
+      // quote timer.
+      await fetchSentiment(for: Array(trackedSymbols))
 
       hasLoadedOnce = true
     } catch {
@@ -88,6 +94,45 @@ final class WatchlistViewModel: ObservableObject {
     } catch {
       watchlistViewModelLogger.error("SwiftData watchlist sync failed: \(error.localizedDescription, privacy: .public)")
     }
+  }
+
+  /// Loads badge data and the watchlist roll-up.
+  ///
+  /// Failures are logged, never surfaced: the watchlist must render either way,
+  /// and a failed lookup looks the same to the reader as a quiet symbol.
+  private func fetchSentiment(for symbols: [String]) async {
+    let cleaned = symbols
+      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
+      .filter { !$0.isEmpty }
+    guard !cleaned.isEmpty else {
+      sentimentBySymbol = [:]
+      watchlistSentiment = nil
+      return
+    }
+
+    let client = Container.shared.insightsHTTPClient()
+
+    do {
+      sentimentBySymbol = try await client.getSymbolSentiment(symbols: cleaned)
+    } catch {
+      watchlistViewModelLogger.warning(
+        "watchlist sentiment batch failed: \(error.localizedDescription, privacy: .public)"
+      )
+    }
+
+    do {
+      watchlistSentiment = try await client.getWatchlistSentiment(
+        watchlistListId: selectedWatchlistListId
+      )
+    } catch {
+      watchlistViewModelLogger.warning(
+        "watchlist sentiment rollup failed: \(error.localizedDescription, privacy: .public)"
+      )
+    }
+  }
+
+  func sentiment(for symbol: String) -> SymbolSentiment? {
+    sentimentBySymbol[symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()]
   }
 
   private var trackedSymbols: Set<String> = []

@@ -290,6 +290,8 @@ struct StockDetailScreen: View {
                         StockSentimentTab(
                             symbol: viewModel.details?.symbol ?? initialSymbol,
                             response: viewModel.tickerSentiment,
+                            daily: viewModel.dailySentiment,
+                            history: viewModel.sentimentHistory,
                             isLoading: viewModel.isSentimentLoading
                         )
                     }

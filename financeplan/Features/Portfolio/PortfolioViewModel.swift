@@ -67,6 +67,10 @@ final class PortfolioViewModel: ObservableObject {
   @Published private(set) var targetAlertsBySymbol: [String: TargetResponse] = [:]
   @Published private(set) var isSavingTargetAlert = false
   @Published private(set) var liveQuotes: [String: QuoteResponse] = [:]
+  /// Daily retail sentiment, keyed by normalized symbol. Same keying as
+  /// `liveQuotes`, which is what lets rows join on it.
+  @Published private(set) var sentimentBySymbol: [String: SymbolSentiment] = [:]
+  @Published private(set) var portfolioSentiment: PortfolioSentimentResponse?
   @Published private(set) var pnlBySymbol: [String: PnlBySymbol] = [:]
 
   private let service: StockServicing
@@ -153,6 +157,9 @@ final class PortfolioViewModel: ObservableObject {
       // Seed live quotes so row metrics + the 20s refresh timer have symbols to poll.
       trackedSymbols = Set(fullSnapshot.items.map { Self.normalizedSymbol($0.symbol) }.filter { !$0.isEmpty })
       await fetchAndMergeQuotes(for: Array(trackedSymbols))
+      // Sentiment is a daily aggregate, so it is fetched once per load and
+      // deliberately left off the 20s quote timer.
+      await fetchSentiment(for: Array(trackedSymbols))
 
       hasLoadedOnce = true
     } catch {
@@ -204,6 +211,46 @@ final class PortfolioViewModel: ObservableObject {
         "fetchAndMergeQuotes failed: \(error.localizedDescription, privacy: .public)"
       )
     }
+  }
+
+  /// Loads badge data and the portfolio roll-up.
+  ///
+  /// Never surfaces an error: sentiment decorates a screen that must render
+  /// either way, and a failed fetch is indistinguishable to the reader from a
+  /// symbol nobody is talking about.
+  private func fetchSentiment(for symbols: [String]) async {
+    let cleaned = symbols
+      .map { Self.normalizedSymbol($0) }
+      .filter { !$0.isEmpty }
+    guard !cleaned.isEmpty else {
+      sentimentBySymbol = [:]
+      portfolioSentiment = nil
+      return
+    }
+
+    let client = Container.shared.insightsHTTPClient()
+
+    do {
+      sentimentBySymbol = try await client.getSymbolSentiment(symbols: cleaned)
+    } catch {
+      portfolioViewModelLogger.warning(
+        "fetchSentiment batch failed: \(error.localizedDescription, privacy: .public)"
+      )
+    }
+
+    do {
+      portfolioSentiment = try await client.getPortfolioSentiment(
+        portfolioListId: selectedPortfolioListId
+      )
+    } catch {
+      portfolioViewModelLogger.warning(
+        "fetchSentiment rollup failed: \(error.localizedDescription, privacy: .public)"
+      )
+    }
+  }
+
+  func sentiment(for symbol: String) -> SymbolSentiment? {
+    sentimentBySymbol[Self.normalizedSymbol(symbol)]
   }
 
   func pnl(for symbol: String) -> PnlBySymbol? {

@@ -16,6 +16,23 @@ struct MarketsScreen: View {
             title: "Markets"
           )
 
+          NavigationLink {
+            MarketSentimentScreen()
+          } label: {
+            HStack {
+              Label("Retail sentiment", systemImage: "bubble.left.and.bubble.right")
+                .font(.subheadline.weight(.semibold))
+              Spacer()
+              Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+            }
+            .padding()
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+          }
+          .buttonStyle(.plain)
+          .accessibilityIdentifier("markets.retailSentimentLink")
+
           if let overview = viewModel.overview {
             if !overview.indices.isEmpty {
               indexStrip(overview.indices)
