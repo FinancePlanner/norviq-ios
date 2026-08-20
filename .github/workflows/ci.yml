@@ -90,6 +90,7 @@ jobs:
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
             -only-testing:financeplanTests/StockComparisonFormattingTests \
             -only-testing:financeplanTests/StockComparisonSortingTests \
+            -only-testing:financeplanTests/TelegramLinkViewModelTests \
             -parallel-testing-enabled NO \
             -quiet
 
