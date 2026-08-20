@@ -21,6 +21,7 @@ private enum UserProfileDestination: Hashable {
     case connect
     case integrations
     case integrationsHub
+    case telegram
     case subscription
 }
 
@@ -495,6 +496,16 @@ public struct UserProfileView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                NavigationLink(value: UserProfileDestination.telegram) {
+                    HStack {
+                        Label(LocalizedStringKey("Telegram"), systemImage: "paperplane")
+                        Spacer()
+                        Text("Ask Norviq from a chat")
+                            .typography(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityIdentifier("integrations.telegram.row")
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
@@ -648,6 +659,8 @@ public struct UserProfileView: View {
             IntegrationsView()
         case .integrationsHub:
             IntegrationsHubView()
+        case .telegram:
+            TelegramConnectView()
         case .subscription:
             SubscriptionSettingsView()
         }
