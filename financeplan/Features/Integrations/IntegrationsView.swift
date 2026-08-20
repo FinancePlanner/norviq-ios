@@ -118,10 +118,10 @@ struct IntegrationsView: View {
       ProgressView("Loading connection…")
     }
 
-    Text("Under development — IBKR statement sync is not live yet. Connect and Sync stay disabled until the feed is ready.")
+    Text("Holdings import is coming soon — your credentials are saved and Sync fetches your daily IBKR statement, but those holdings are not imported into your portfolio yet.")
       .font(.caption)
-      .foregroundStyle(.orange)
-      .accessibilityIdentifier("integrations.ibkr.underDevelopment")
+      .foregroundStyle(.secondary)
+      .accessibilityIdentifier("integrations.ibkr.notice")
 
     if let message = viewModel.brokerStatusMessage, !message.isEmpty {
       Text(message)
@@ -140,7 +140,7 @@ struct IntegrationsView: View {
       } label: {
         buttonLabel("Sync Now", isBusy: viewModel.isSyncingBroker)
       }
-      .disabled(true)
+      .disabled(viewModel.isSyncingBroker)
       .accessibilityIdentifier("integrations.ibkr.sync")
 
       Button(role: .destructive) {
@@ -157,7 +157,7 @@ struct IntegrationsView: View {
       } label: {
         buttonLabel("Connect IBKR", isBusy: viewModel.isConnectingBroker)
       }
-      .disabled(true)
+      .disabled(viewModel.isConnectingBroker)
       .accessibilityIdentifier("integrations.ibkr.connect")
     }
   }

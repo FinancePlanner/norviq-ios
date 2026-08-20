@@ -197,9 +197,9 @@ struct PortfolioCSVImportSheet: View {
         Text(brokerSubtitle)
           .font(.subheadline)
           .foregroundStyle(.secondary)
-        Text("Under development — statement sync is not live yet.")
+        Text("Holdings import is coming soon — Sync fetches your IBKR statement but does not import it yet.")
           .font(.caption)
-          .foregroundStyle(.orange)
+          .foregroundStyle(.secondary)
       }
 
       if viewModel.isLoadingProviders {
