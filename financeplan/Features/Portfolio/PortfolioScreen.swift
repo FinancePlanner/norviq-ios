@@ -462,11 +462,17 @@ struct PortfolioScreen: View {
         .buttonStyle(.plain)
         .accessibilityIdentifier("portfolio.sectorGainsLink")
 
+        if let sentiment = viewModel.portfolioSentiment, sentiment.symbolsTotal > 0 {
+          PortfolioSentimentCard(response: sentiment)
+            .accessibilityIdentifier("portfolio.sentimentCard")
+        }
+
         PortfolioPositionsSection(
           stocks: filteredStocks,
           liveQuotes: viewModel.liveQuotes,
           pnlProvider: viewModel.pnl(for:),
           targetAlertProvider: viewModel.targetAlert(for:),
+          sentimentProvider: viewModel.sentiment(for:),
           onAddPosition: presentAddPositionSheet,
           onEditStock: beginEditing,
           onDeleteStock: deleteStock,

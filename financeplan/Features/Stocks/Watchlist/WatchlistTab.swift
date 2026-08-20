@@ -107,6 +107,7 @@ struct WatchlistTab: View {
           item: item,
           liveQuote: live,
           portfolioWeightPercent: weight,
+          sentiment: viewModel.sentiment(for: item.symbol),
           onAddToPortfolio: { convertingItem = item },
           onQuickTrade: { selectedTradingSymbol = item.symbol }
         )
@@ -369,6 +370,7 @@ private struct WatchlistRow: View {
   let item: SDWatchlistItem
   let liveQuote: QuoteResponse?
   let portfolioWeightPercent: Double?
+  var sentiment: SymbolSentiment?
   let onAddToPortfolio: () -> Void
   let onQuickTrade: (() -> Void)?
 
@@ -408,6 +410,8 @@ private struct WatchlistRow: View {
             Text(item.symbol)
               .font(.headline)
               .foregroundStyle(.primary)
+
+            RetailSentimentBadge(display: RetailSentimentDisplay(sentiment), showsScore: false)
 
             Text(item.status.capitalized)
               .font(.caption2.weight(.semibold))
