@@ -45,13 +45,7 @@ struct PersonalInflationScreen: View {
 
   private var controls: some View {
     VStack(spacing: 12) {
-      Picker("Country", selection: $selectedCountry) {
-        Text("🇺🇸 US").tag("US")
-        Text("🇧🇷 Brazil").tag("BR")
-        Text("🇵🇹 Portugal").tag("PT")
-        Text("🇪🇺 Euro Area").tag("EA")
-      }
-      .pickerStyle(.segmented)
+      EconomyCountryPicker(selection: $selectedCountry)
 
       Picker("Expense history", selection: $selectedMonths) {
         Text("6 months").tag(6)

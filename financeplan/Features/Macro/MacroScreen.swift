@@ -72,16 +72,10 @@ struct MacroScreen: View {
   }
 
   private var countryPicker: some View {
-    Picker("Country", selection: $selectedCountry) {
-      Text("🇺🇸 US").tag("US")
-      Text("🇧🇷 Brazil").tag("BR")
-      Text("🇵🇹 Portugal").tag("PT")
-      Text("🇪🇺 Euro Area").tag("EA")
-    }
-    .pickerStyle(.segmented)
-    .onChange(of: selectedCountry) { _, newValue in
-      Task { await viewModel.load(country: newValue) }
-    }
+    EconomyCountryPicker(selection: $selectedCountry)
+      .onChange(of: selectedCountry) { _, newValue in
+        Task { await viewModel.load(country: newValue) }
+      }
   }
 }
 
