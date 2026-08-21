@@ -73,7 +73,7 @@ struct EconomyHubScreen: View {
             .accessibilityIdentifier("economy.section.\(section.rawValue)")
           }
         } footer: {
-          Text("Macro snapshots for US, Brazil, and Euro Area. Inflation also supports Portugal.")
+          Text("Macro snapshots for the US, Brazil, the Euro Area, and every supported tax jurisdiction: Portugal, Spain, Germany, France and Italy.")
             .font(.caption)
         }
       }

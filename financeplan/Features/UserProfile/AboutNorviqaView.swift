@@ -81,6 +81,21 @@ struct AboutNorviqView: View {
                     Label("Terms of Use", systemImage: "doc.text.fill")
                 }
                 .foregroundStyle(.primary)
+
+                // FRED's API Terms of Use require apps built on it to show a
+                // link to those terms.
+                if let fredTermsURL = URL(string: "https://fred.stlouisfed.org/docs/api/terms_of_use.html") {
+                    Link(destination: fredTermsURL) {
+                        Label("FRED® API Terms of Use", systemImage: "chart.line.uptrend.xyaxis")
+                    }
+                    .foregroundStyle(.primary)
+                }
+
+                Text(
+                    "Economy data comes from Eurostat, the European Central Bank, FRED® (Federal Reserve Bank of St. Louis), IBGE and Banco Central do Brasil. Those institutions publish the figures and do not endorse Norviq."
+                )
+                .font(.footnote)
+                .foregroundStyle(.secondary)
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
