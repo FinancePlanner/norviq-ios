@@ -5,6 +5,7 @@ import SwiftUI
 
 struct ExpenseBudgetSetupScreen: View {
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @StateObject private var viewModel = ExpenseBudgetSetupViewModel()
   @State private var errorMessage: String?
   var headerNamespace: Namespace.ID?
@@ -49,7 +50,7 @@ struct ExpenseBudgetSetupScreen: View {
       guard let current = errorMessage else { return }
       try? await Task.sleep(for: .seconds(3))
       guard errorMessage == current else { return }
-      withAnimation(.easeInOut(duration: 0.2)) {
+      withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
         errorMessage = nil
       }
     }
@@ -145,7 +146,7 @@ struct ExpenseBudgetSetupScreen: View {
         Spacer()
 
         Button {
-          withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+          withAnimation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.75)) {
             viewModel.addExpense()
           }
         } label: {
@@ -168,7 +169,7 @@ struct ExpenseBudgetSetupScreen: View {
                   expense: $expense,
                   index: index + 1,
                   onDelete: {
-                      withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                      withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.8)) {
                           viewModel.expenses.removeAll(where: { $0.id == expense.id })
                       }
                   }

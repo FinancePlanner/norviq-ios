@@ -14,7 +14,7 @@ struct OnboardingWelcomeScreen: View {
         if BrandTheme.current == .vigil {
           Text(VigilWatch.wealth.eyebrow)
             .vigilOverline()
-            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme).opacity(0.88))
+            .foregroundStyle(.secondary)
         }
 
         Image("CerberusMarkFull")

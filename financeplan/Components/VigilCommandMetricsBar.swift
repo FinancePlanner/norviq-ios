@@ -60,7 +60,7 @@ struct VigilCommandMetricsBar: View {
     VStack(alignment: .leading, spacing: 2) {
       Text(label)
         .vigilOverline()
-        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme).opacity(0.85))
+        .foregroundStyle(.secondary)
       Text(value)
         .font(.subheadline.weight(.bold).monospacedDigit())
         .foregroundStyle(valueColor ?? AppTheme.Colors.foreground(for: colorScheme))

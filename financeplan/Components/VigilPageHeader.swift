@@ -34,7 +34,10 @@ struct VigilPageHeader<Trailing: View>: View {
         VStack(alignment: .leading, spacing: 6) {
           Text(watch.eyebrow)
             .vigilOverline()
-            .foregroundStyle(AppTheme.Colors.tint(for: scheme).opacity(0.88))
+            // Not the accent tint: this eyebrow renders on 60 screens, and
+            // colouring all of them made the WATCH label compete with the title
+            // it introduces. It is a label, so it reads as one.
+            .foregroundStyle(.secondary)
           Text(title)
             .font(.title2.bold())
             .foregroundStyle(AppTheme.Colors.foreground(for: scheme))

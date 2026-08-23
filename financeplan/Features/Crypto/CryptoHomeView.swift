@@ -62,7 +62,7 @@ struct CryptoHomeView: View {
                     if billingManager.isPro, selectedSegment == .portfolio {
                         Button(action: presentAddHoldingSheet) {
                             Image(systemName: "plus")
-                                .font(.system(size: 16, weight: .semibold))
+                                .typography(.small, weight: .semibold)
                                 .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
                                 .padding(6)
                                 .appGlassEffect(.capsule)
@@ -73,7 +73,7 @@ struct CryptoHomeView: View {
                     if selectedSegment == .watchlist {
                         Button(action: presentAddWatchlistSheet) {
                             Image(systemName: "plus")
-                                .font(.system(size: 16, weight: .semibold))
+                                .typography(.small, weight: .semibold)
                                 .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
                                 .padding(6)
                                 .appGlassEffect(.capsule)
@@ -83,7 +83,7 @@ struct CryptoHomeView: View {
 
                     Button(action: presentBubbles) {
                         Image(systemName: "circle.hexagongrid.fill")
-                            .font(.system(size: 16, weight: .semibold))
+                            .typography(.small, weight: .semibold)
                             .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
                             .padding(6)
                             .appGlassEffect(.capsule)
@@ -92,7 +92,7 @@ struct CryptoHomeView: View {
 
                     Button(action: openSettings) {
                         Image(systemName: "gearshape")
-                            .font(.system(size: 16, weight: .semibold))
+                            .typography(.small, weight: .semibold)
                             .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
                             .padding(6)
                             .appGlassEffect(.capsule)

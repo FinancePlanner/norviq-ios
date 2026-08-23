@@ -11,6 +11,7 @@ struct OnboardingValueRevealScreen: View {
 
   @State private var revealed = false
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   private var pickedTickers: [OnboardingDemoTicker] {
     demoPicks.compactMap { symbol in
@@ -31,7 +32,7 @@ struct OnboardingValueRevealScreen: View {
     .onAppear {
       Task { @MainActor in
         try? await Task.sleep(for: .milliseconds(1500))
-        withAnimation(.easeInOut(duration: 0.4)) {
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.4)) {
           revealed = true
         }
       }

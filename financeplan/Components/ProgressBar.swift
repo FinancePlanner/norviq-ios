@@ -7,7 +7,7 @@ struct ProgressBar: View {
   let height: CGFloat
   let showPattern: Bool
   
-  init(value: Double, total: Double, color: Color = .blue, height: CGFloat = 6, showPattern: Bool = true) {
+  init(value: Double, total: Double, color: Color = AppTheme.Colors.tint, height: CGFloat = 6, showPattern: Bool = true) {
     self.value = value
     self.total = total
     self.color = color
@@ -15,35 +15,46 @@ struct ProgressBar: View {
     self.showPattern = showPattern
   }
   
-  private var progress: Double {
+  /// Unclamped, so `isOverBudget` can actually become true.
+  private var rawProgress: Double {
     guard total > 0 else { return 0 }
-    return min(value / total, 1.0)
+    return value / total
   }
-  
+
+  /// Clamped, for drawing.
+  private var progress: Double {
+    min(max(rawProgress, 0), 1.0)
+  }
+
   private var isOverBudget: Bool {
-    progress > 1.0
+    rawProgress > 1.0
   }
-  
+
   var body: some View {
-    ZStack(alignment: .leading) {
-      Capsule()
-        .fill(Color.white.opacity(0.1))
-        .frame(height: height)
-      
-      Capsule()
-        .fill(color)
-        .frame(height: height)
-        .scaleEffect(x: progress, y: 1.0, anchor: .leading)
-        .overlay {
-          if showPattern && isOverBudget {
-            DiagonalStripes()
-              .stroke(Color.white.opacity(0.3), lineWidth: 1)
-              .clipShape(.capsule)
+    // Width-based rather than scaleEffect: scaling a Capsule on x squashes its
+    // end caps into ellipses, so a bar at 20% had visibly flatter ends than one
+    // at 90%.
+    GeometryReader { proxy in
+      ZStack(alignment: .leading) {
+        Capsule()
+          // Was Color.white.opacity(0.1) — invisible against a light page, so in
+          // light mode every bar in the app rendered with no track at all.
+          .fill(AppTheme.Colors.tertiaryFill)
+
+        Capsule()
+          .fill(color)
+          .frame(width: max(proxy.size.width * progress, progress > 0 ? height : 0))
+          .overlay {
+            if showPattern && isOverBudget {
+              DiagonalStripes()
+                .stroke(AppTheme.Colors.onTint.opacity(0.35), lineWidth: 1)
+                .clipShape(.capsule)
+            }
           }
-        }
+      }
     }
     .frame(height: height)
-    .accessibilityLabel("Progress: \(Int(progress * 100))%")
+    .accessibilityLabel("Progress: \(Int(rawProgress * 100))%")
     .accessibilityValue(isOverBudget ? "Over budget" : "\(Int((1 - progress) * 100))% remaining")
   }
 }

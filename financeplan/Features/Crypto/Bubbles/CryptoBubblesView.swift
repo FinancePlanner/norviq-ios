@@ -40,6 +40,8 @@ final class CryptoBubblesViewModel: ObservableObject {
 struct CryptoBubblesView: View {
     @StateObject private var viewModel = CryptoBubblesViewModel()
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var engine = BubbleEngine()
     @State private var metric: BubbleSizeMetric = .marketCap
@@ -89,7 +91,7 @@ struct CryptoBubblesView: View {
 
     private var bubbleField: some View {
         GeometryReader { proxy in
-            TimelineView(.animation) { timeline in
+            TimelineView(.animation(paused: reduceMotion || scenePhase != .active)) { timeline in
                 Canvas { context, size in
                     engine.updateBounds(size)
                     engine.step(to: timeline.date.timeIntervalSinceReferenceDate)

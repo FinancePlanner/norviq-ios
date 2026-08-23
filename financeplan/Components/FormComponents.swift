@@ -30,7 +30,7 @@ struct FormSheetHeader: View {
       HStack {
         Button("Dismiss", systemImage: "xmark", action: onDismiss)
           .labelStyle(.iconOnly)
-          .font(.system(size: 12, weight: .bold))
+          .typography(.caption, weight: .bold)
           .foregroundStyle(.secondary)
           .frame(width: 44, height: 44)
           .contentShape(.circle)

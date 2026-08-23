@@ -96,11 +96,21 @@ final class BrandThemeParityTests: XCTestCase {
     // tint defaulted to .light, so the two disagreed on a light system device.
     XCTAssertFalse(
       src.contains("colorScheme: appAppearance.colorScheme ?? .dark"),
-      "VigilNavigationAppearance must use resolvedColorScheme, not a hardcoded fallback."
+      "VigilNavigationAppearance must use the resolved scheme, not a hardcoded fallback."
     )
+
+    // Stronger than the previous `resolvedColorScheme` spelling, which read the
+    // live trait once per stored-value change. The appearance proxy now re-applies
+    // from \.colorScheme inside AppTintModifier, so it also follows a device
+    // light/dark flip while appearance is .system — the case the old imperative
+    // onAppear/onChange trio missed.
     XCTAssertTrue(
-      src.contains("VigilNavigationAppearance.apply(colorScheme: resolvedColorScheme)"),
+      src.contains("VigilNavigationAppearance.apply(colorScheme: newScheme)"),
       "Nav-bar chrome must follow the resolved colour scheme."
+    )
+    XCTAssertFalse(
+      src.contains("resolvedColorScheme"),
+      "Nav-bar chrome must resolve \\.colorScheme from the environment, not a computed property."
     )
   }
 
@@ -128,6 +138,58 @@ final class BrandThemeParityTests: XCTestCase {
     )
     XCTAssertTrue(json.contains("\"blue\" : \"0xB2\""), "expected Vigil light anchor #0891B2")
     XCTAssertTrue(json.contains("\"green\" : \"0xF2\""), "expected Vigil dark anchor #00F2FF")
+  }
+
+  /// Every colour the app actually renders now comes from `Assets.xcassets/Theme`,
+  /// not from `AccentColor` — so until this existed, `docs/vigil-identity.md`'s
+  /// "web and iOS both derive from this file, do not fork values" was unenforced
+  /// on the values that ship.
+  ///
+  /// Hex is taken verbatim from that file's palette table.
+  func testThemeColorsetsMatchTheSharedBrandSpec() throws {
+    let expected: [String: (light: String, dark: String)] = [
+      "VigilTint": (light: "0x08,0x91,0xB2", dark: "0x00,0xF2,0xFF"),
+      "VigilSecondaryTint": (light: "0x0D,0x94,0x88", dark: "0x00,0xFF,0x94"),
+      "VigilPageBackground": (light: "0xEE,0xF6,0xF8", dark: "0x05,0x05,0x05"),
+      "VigilCardBackground": (light: "0xF7,0xFC,0xFD", dark: "0x0A,0x11,0x16"),
+      "VigilElevatedCard": (light: "0xE2,0xEE,0xF2", dark: "0x0F,0x1A,0x21"),
+      "VigilForeground": (light: "0x0B,0x1C,0x22", dark: "0xD7,0xF6,0xFA"),
+      // The `border` token. This is deliberately NOT the accent tint: it used to
+      // be #00F2FF at 18% opacity, which put neon cyan on the outline of every
+      // surface in the app.
+      "VigilSeparator": (light: "0xC5,0xDB,0xE2", dark: "0x14,0x30,0x3A"),
+    ]
+
+    for (name, hex) in expected {
+      let json = try source("financeplan/Assets.xcassets/Theme/\(name).colorset/Contents.json")
+        .replacingOccurrences(of: " ", with: "")
+      for (label, value) in [("light", hex.light), ("dark", hex.dark)] {
+        let parts = value.split(separator: ",")
+        for (channel, component) in zip(["red", "green", "blue"], parts) {
+          XCTAssertTrue(
+            json.contains("\"\(channel)\":\"\(component)\""),
+            "\(name) \(label) must keep its docs/vigil-identity.md value; expected \(channel) \(component)."
+          )
+        }
+      }
+    }
+  }
+
+  /// The tint is bright enough that white on it fails contrast badly — 1.39:1 in
+  /// dark. `OnTint` is what stops that, so it must stay dark-on-light-tint and
+  /// light-on-dark-tint, i.e. inverted relative to every other colorset here.
+  func testOnTintInvertsSoLabelsStayReadableOnTheAccent() throws {
+    let json = try source("financeplan/Assets.xcassets/Theme/OnTint.colorset/Contents.json")
+      .replacingOccurrences(of: " ", with: "")
+
+    guard let darkRange = json.range(of: "\"luminosity\"") else {
+      return XCTFail("OnTint must declare a dark appearance variant.")
+    }
+    let light = String(json[..<darkRange.lowerBound])
+    let dark = String(json[darkRange.lowerBound...])
+
+    XCTAssertTrue(light.contains("\"red\":\"0xFB\""), "OnTint light must be near-white for the darker light tint.")
+    XCTAssertTrue(dark.contains("\"red\":\"0x05\""), "OnTint dark must be near-black — white on #00F2FF is 1.39:1.")
   }
 
   func testLaunchScreenBackgroundAdaptsToAppearance() throws {
@@ -285,16 +347,35 @@ final class BrandThemeParityTests: XCTestCase {
     //
     // A raw call is acceptable ONLY when the line itself branches on
     // reduceMotion, which the questionnaire paywall does explicitly.
-    let files = [
-      "financeplan/Features/Onboarding/InitialStockImportScreen.swift",
-      "financeplan/Features/Onboarding/Questionnaire/Screens/OnboardingGoalScreen.swift",
-    ]
-    for path in files {
-      let src = try source(path)
+    // Previously this named two files and matched only lines *starting* with
+    // `.animation(`, so it never saw `withAnimation(` — the form the onboarding
+    // import funnel actually uses — and passed while three screens ran ungated
+    // springs. It now walks the whole tree and covers both spellings.
+    let root = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .appendingPathComponent("financeplan/Features/Onboarding")
+
+    let files = FileManager.default
+      .enumerator(at: root, includingPropertiesForKeys: nil)?
+      .compactMap { $0 as? URL }
+      .filter { $0.pathExtension == "swift" } ?? []
+
+    XCTAssertFalse(files.isEmpty, "expected to find onboarding sources under \(root.path)")
+
+    for url in files {
+      let src = try String(contentsOf: url, encoding: .utf8)
+      // A file that consults reduceMotion anywhere is trusted to gate its own
+      // animations; the check is for files that never consider it at all.
+      guard !src.contains("reduceMotion") else { continue }
+
+      let name = url.lastPathComponent
       for (i, line) in src.split(separator: "\n").enumerated() {
         let l = line.trimmingCharacters(in: .whitespaces)
-        guard l.hasPrefix(".animation(") else { continue }
-        XCTFail("\(path):\(i + 1) uses a raw .animation(...) — use .appAnimation so Reduce Motion is honored")
+        guard l.hasPrefix(".animation(") || l.contains("withAnimation(") else { continue }
+        // Static transitions carry no duration and are unaffected by the setting.
+        guard l.contains("spring") || l.contains("ease") || l.contains("duration") else { continue }
+        XCTFail("\(name):\(i + 1) animates without consulting reduceMotion — gate it or use .appAnimation")
       }
     }
   }

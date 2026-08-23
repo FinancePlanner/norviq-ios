@@ -39,7 +39,7 @@ struct SignUpView: View {
         viewModel.hideSignup()
       }
       .labelStyle(.iconOnly)
-      .font(.system(size: 16, weight: .medium))
+      .typography(.small, weight: .medium)
       .foregroundStyle(.secondary)
       .frame(width: 44, height: 44)
       .contentShape(.rect)

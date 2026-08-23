@@ -20,7 +20,7 @@ struct OnboardingHeader: View {
       if BrandTheme.current == .vigil, let watch {
         Text(watch.eyebrow)
           .vigilOverline()
-          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme).opacity(0.88))
+          .foregroundStyle(.secondary)
           .multilineTextAlignment(.center)
       }
 

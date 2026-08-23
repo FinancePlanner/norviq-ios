@@ -22,7 +22,7 @@ struct IntegrationsHubView: View {
             .accessibilityHidden(true)
           Text("MCP ENGINE ROOM")
             .vigilOverline()
-            .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+            .foregroundStyle(.secondary)
           Text("Speaks to your tools.")
             .font(.headline)
           Text("Norviq reads from your accounts and answers to your tools. It never places trades or moves funds.")

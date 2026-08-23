@@ -832,31 +832,52 @@ struct StockCurrentMetricsCard: View {
         ]
     }
 
+    @State private var selectedCaption: MetricCaption?
+
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 16) {
+                // One explanatory line for the whole card. The per-row benchmark
+                // sentences that used to sit under every value are the same text
+                // for every ticker, so they are behind the row's ⓘ instead.
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Current metrics")
                         .typography(.small, weight: .semibold)
 
                     Text("A current snapshot of valuation, growth, and profitability before moving into forecasts or peer comparison.")
-                        .typography(.nano)
+                        .typography(.caption)
                         .foregroundStyle(.secondary)
                 }
 
-                ForEach(Array(keyMetrics.enumerated()), id: \.element.id) { index, metric in
-                    CurrentMetricRow(
-                        title: metric.title,
-                        value: StockMetricFormatter.formattedValue(for: metric, value: profile.metrics[metric]),
-                        detail: metric.benchmarkText
-                    )
+                // spacing: 0 so the dividers sit tight against the rows. The
+                // outer stack's 16pt would otherwise apply on both sides of every
+                // divider, spacing a twelve-row list out over two screens.
+                VStack(spacing: 0) {
+                    ForEach(Array(keyMetrics.enumerated()), id: \.element.id) { index, metric in
+                        let value = StockMetricFormatter.formattedValue(for: metric, value: profile.metrics[metric])
 
-                    if index < keyMetrics.count - 1 {
-                        Divider()
+                        MetricRow(
+                            title: metric.title,
+                            value: value,
+                            caption: metric.benchmarkText,
+                            onShowCaption: {
+                                selectedCaption = MetricCaption(
+                                    id: metric.id,
+                                    title: metric.title,
+                                    value: value,
+                                    caption: metric.benchmarkText
+                                )
+                            }
+                        )
+
+                        if index < keyMetrics.count - 1 {
+                            Divider()
+                        }
                     }
                 }
             }
         }
+        .sheet(item: $selectedCaption) { MetricCaptionSheet(metric: $0) }
     }
 }
 
@@ -1072,34 +1093,6 @@ struct StockThesisCard: View {
 private extension String {
     var nilIfEmpty: String? {
         isEmpty ? nil : self
-    }
-}
-
-struct CurrentMetricRow: View {
-    let title: String
-    let value: String
-    let detail: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .typography(.nano, weight: .semibold)
-                    .foregroundStyle(.primary)
-
-                Text(detail)
-                    .typography(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 12)
-
-            Text(value)
-                .typography(.small, weight: .semibold)
-                .monospacedDigit()
-                .foregroundStyle(.primary)
-        }
     }
 }
 

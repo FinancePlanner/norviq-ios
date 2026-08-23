@@ -44,17 +44,14 @@ struct RevolutTabBar: View {
   ///
   /// Was `Color.white.opacity(dark ? 0.12 : 0.22)` — a hardcoded white that
   /// cannot follow the brand and, in light mode, is a white hairline over a
-  /// light page, so the capsule's edge was barely visible. Now it follows the
-  /// brand tint under Vigil and the separator token otherwise.
+  /// light page, so the capsule's edge was barely visible.
+  ///
+  /// It then became the accent tint under Vigil, which put a cyan ring around
+  /// the tab bar on every screen. It is a border, so it uses the border token;
+  /// the selected-tab pill is what carries the accent here.
   private var capsuleStroke: Color {
-    switch BrandTheme.current {
-    case .vigil:
-      return AppTheme.Colors.tint(for: colorScheme)
-        .opacity(colorScheme == .dark ? 0.34 : 0.28)
-    case .classic:
-      return AppTheme.Colors.separator(for: colorScheme)
-        .opacity(colorScheme == .dark ? 0.45 : 0.65)
-    }
+    AppTheme.Colors.separator
+      .opacity(colorScheme == .dark ? 0.45 : 0.65)
   }
 
   private var moreIsActive: Bool {
@@ -131,7 +128,7 @@ struct RevolutTabBar: View {
 
         if isActive, !isMinimized {
           Text(item.title)
-            .font(.system(size: 12, weight: .semibold))
+            .typography(.caption, weight: .semibold)
             .lineLimit(1)
             .transition(.opacity.combined(with: .move(edge: .trailing)))
         }
@@ -162,12 +159,15 @@ struct RevolutTabBar: View {
     } label: {
       Image(systemName: "plus")
         .font(.system(size: isMinimized ? 16 : 20, weight: .bold))
-        .foregroundStyle(Color.white)
+        .foregroundStyle(AppTheme.Colors.onTint)
         .frame(width: isMinimized ? 40 : 52, height: isMinimized ? 40 : 52)
         .background {
+          // The fill stays accent — this is the primary action. The coloured
+          // glow underneath it does not: it bled tint onto the page background
+          // behind the tab bar on every screen.
           Circle()
-            .fill(AppTheme.Colors.tint(for: colorScheme).gradient)
-            .shadow(color: AppTheme.Colors.tint(for: colorScheme).opacity(0.45), radius: 12, y: 4)
+            .fill(AppTheme.Colors.tint.gradient)
+            .shadow(color: .black.opacity(colorScheme == .dark ? 0.45 : 0.18), radius: 12, y: 4)
         }
         .overlay {
           Circle()

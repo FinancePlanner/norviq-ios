@@ -72,7 +72,7 @@ private struct FallbackGlassModifier: ViewModifier {
   }
 
   private var strokeColor: Color {
-    AppTheme.Colors.separator(for: colorScheme)
+    AppTheme.Colors.separator
       .opacity(colorScheme == .dark ? 0.38 : 0.18)
   }
 

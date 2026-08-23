@@ -159,7 +159,7 @@ struct OnboardingAccountCreationScreen: View {
       } label: {
         HStack(spacing: 10) {
           Image(systemName: "envelope.fill")
-            .font(.system(size: 16, weight: .semibold))
+            .typography(.small, weight: .semibold)
           Text("Continue with email")
             .font(.subheadline.weight(.semibold))
         }

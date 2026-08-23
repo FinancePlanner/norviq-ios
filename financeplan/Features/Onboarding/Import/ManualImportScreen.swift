@@ -7,6 +7,7 @@ import SwiftUI
 
 struct ManualImportScreen: View {
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @StateObject private var viewModel = ManualImportViewModel()
   @State private var errorToast: ToastData?
   @State private var entriesVisible = false
@@ -46,12 +47,17 @@ struct ManualImportScreen: View {
           .padding(.top, 16)
 
           // Entry cards
-          ForEach(Array(viewModel.entries.enumerated()), id: \.element.id) { index, _ in
-            ManualEntryCard(entry: $viewModel.entries[index], index: index + 1) {
-              if viewModel.entries.count > 1 {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                  viewModel.removeRows(at: IndexSet(integer: index))
-                }
+          ForEach($viewModel.entries) { $entry in
+            let entryID = entry.id
+            let displayNumber = (viewModel.entries.firstIndex { $0.id == entryID } ?? 0) + 1
+
+            ManualEntryCard(entry: $entry, index: displayNumber) {
+              guard viewModel.entries.count > 1,
+                    let offset = viewModel.entries.firstIndex(where: { $0.id == entryID })
+              else { return }
+
+              withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.8)) {
+                viewModel.removeRows(at: IndexSet(integer: offset))
               }
             }
             .padding(.horizontal, 20)
@@ -63,7 +69,7 @@ struct ManualImportScreen: View {
 
           // Add row button
           Button {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.75)) {
               viewModel.addRow()
             }
           } label: {

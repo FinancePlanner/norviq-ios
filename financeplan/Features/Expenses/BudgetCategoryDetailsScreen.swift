@@ -123,7 +123,7 @@ private struct BudgetCategoryCard: View {
             .font(.subheadline.weight(.semibold))
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(Color.white.opacity(0.1))
+            .background(AppTheme.Colors.tertiaryFill)
             .cornerRadius(8)
             .foregroundStyle(.primary)
           }
@@ -132,7 +132,7 @@ private struct BudgetCategoryCard: View {
       .padding(16)
 
       Divider()
-        .background(Color.white.opacity(0.1))
+        .background(AppTheme.Colors.tertiaryFill)
 
       VStack(spacing: 12) {
         HStack(spacing: 12) {
@@ -155,7 +155,7 @@ private struct BudgetCategoryCard: View {
     .clipShape(.rect(cornerRadius: 16))
     .overlay {
       RoundedRectangle(cornerRadius: 16)
-        .stroke(Color.white.opacity(0.05), lineWidth: 1)
+        .stroke(AppTheme.Colors.separator, lineWidth: 1)
     }
   }
 }
@@ -178,7 +178,7 @@ private struct MetricItem: View {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(12)
-    .background(Color.white.opacity(0.04))
+    .background(AppTheme.Colors.tertiaryFill)
     .cornerRadius(10)
   }
 }
@@ -252,7 +252,6 @@ private struct RecordedSpendCard: View {
 
             if activity.id != activities.prefix(5).last?.id {
               Divider()
-                .background(Color.white.opacity(0.1))
                 .padding(.leading, 60)
             }
           }
@@ -264,7 +263,7 @@ private struct RecordedSpendCard: View {
     .clipShape(.rect(cornerRadius: 16))
     .overlay(
       RoundedRectangle(cornerRadius: 16)
-        .stroke(Color.white.opacity(0.05), lineWidth: 1)
+        .stroke(AppTheme.Colors.separator, lineWidth: 1)
     )
   }
 }

@@ -112,7 +112,7 @@ struct OnboardingStepScaffold<TopAccessory: View, Content: View, Footer: View>: 
                 .font(.subheadline.weight(.bold))
             }
           }
-          .foregroundStyle(.white)
+          .foregroundStyle(AppTheme.Colors.onTint)
           .padding(.horizontal, 24)
           .padding(.vertical, 12)
           .background(

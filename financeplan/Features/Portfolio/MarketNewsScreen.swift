@@ -232,6 +232,7 @@ private struct ThesisWatchStoryCard: View {
           Button("Challenges thesis", systemImage: "exclamationmark.triangle") { onFeedback(.challenges) }
         } label: {
           Image(systemName: "ellipsis.circle")
+            .accessibilityLabel("More actions")
         }
         Button("Read source") {
           guard let url = URL(string: story.url) else { return }

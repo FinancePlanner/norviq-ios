@@ -35,22 +35,16 @@ struct NorviqApp: App {
     AppLanguage.from(appLanguageRawValue)
   }
 
-  /// The colour scheme actually in effect.
-  ///
-  /// `appAppearance.colorScheme` is nil for `.system`, which is the default, so
-  /// `?? .light` / `?? .dark` fallbacks silently pick the wrong scheme for most
-  /// users. Fall back to the live system trait instead.
-  private var resolvedColorScheme: ColorScheme {
-    if let scheme = appAppearance.colorScheme {
-      return scheme
-    }
-    return UITraitCollection.current.userInterfaceStyle == .dark ? .dark : .light
-  }
-
   init() {
     #if DEBUG
     Self.applyUITestAppearanceOverride()
     #endif
+
+    // Hard-hide native TabView chrome while the floating Revolut bar is in use.
+    // This is an appearance proxy — process-wide and read when a UITabBar is
+    // created — so it belongs at launch, not in HomeScreen's init, which SwiftUI
+    // re-runs every time the view is re-evaluated.
+    UITabBar.appearance().isHidden = true
 
     TelemetryDeck.initialize(config: .init(appID: "C2B05381-D641-4BE4-B418-5AE02A8DB85F"))
     
@@ -103,13 +97,6 @@ struct NorviqApp: App {
         .onAppear {
           AppLanguage.applyStoredLanguage()
           analytics.track("App Launched")
-          VigilNavigationAppearance.apply(colorScheme: resolvedColorScheme)
-        }
-        .onChange(of: brandThemeRawValue) { _, _ in
-          VigilNavigationAppearance.apply(colorScheme: resolvedColorScheme)
-        }
-        .onChange(of: appAppearanceRawValue) { _, _ in
-          VigilNavigationAppearance.apply(colorScheme: resolvedColorScheme)
         }
         .onChange(of: appLanguageRawValue) { _, newValue in
           AppLanguage.applyBundleLanguage(AppLanguage.from(newValue))
@@ -139,7 +126,15 @@ private struct AppTintModifier: ViewModifier {
   @Environment(\.colorScheme) private var scheme
 
   func body(content: Content) -> some View {
-    content.tint(AppTheme.Colors.tint(for: scheme))
+    content
+      .tint(AppTheme.Colors.tint(for: scheme))
+      // UIKit chrome is configured through an appearance proxy, so it has to be
+      // re-applied whenever the resolved scheme changes. Driving it from the
+      // environment (rather than from the stored setting) is what makes it
+      // follow a live device light/dark flip while appearance is .system.
+      .onChange(of: scheme, initial: true) { _, newScheme in
+        VigilNavigationAppearance.apply(colorScheme: newScheme)
+      }
   }
 }
 

@@ -415,8 +415,14 @@ private struct SpendingInsightsSection: View {
   let pillarSummaries: [PillarPlanningSummaryResponse]
   let partnerName: String
   @Environment(\.colorScheme) private var colorScheme
-  @State private var selectedPillar: BudgetPillar?
-  @State private var showingPillarDetail = false
+  @State private var selectedPillar: PillarSelection?
+
+  /// BudgetPillar is Hashable but not Identifiable, so it is wrapped rather than
+  /// presented through a bool alongside a separate optional.
+  private struct PillarSelection: Identifiable {
+    let pillar: BudgetPillar
+    var id: BudgetPillar { pillar }
+  }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
@@ -438,9 +444,9 @@ private struct SpendingInsightsSection: View {
           }
           .padding(20)
         }
-        .sheet(isPresented: $showingPillarDetail) {
-          if let pillar = selectedPillar,
-             let summary = pillarSummaries.first(where: { $0.pillar == pillar }) {
+        .sheet(item: $selectedPillar) { selection in
+          if let summary = pillarSummaries.first(where: { $0.pillar == selection.pillar }) {
+            let pillar = selection.pillar
             PillarDetailSheet(
               pillar: pillar,
               summary: summary,
@@ -486,9 +492,9 @@ private struct SpendingInsightsSection: View {
                       Text("\(Int(percent))%")
                           .typography(.nano)
                   }
-                  .foregroundStyle(.white)
+                  .foregroundStyle(.primary)
                   .padding(4)
-                  .background(Color.black.opacity(0.3), in: .rect(cornerRadius: 4))
+                  .background(AppTheme.Colors.tertiaryFill, in: .rect(cornerRadius: 4))
               }
           }
         }
@@ -513,8 +519,7 @@ private struct SpendingInsightsSection: View {
         let percentage = summary.plannedAmount > 0 ? (summary.actualAmount / summary.plannedAmount) * 100 : 0
 
         Button {
-          selectedPillar = summary.pillar
-          showingPillarDetail = true
+          selectedPillar = PillarSelection(pillar: summary.pillar)
         } label: {
           HStack(spacing: 16) {
             Circle()
@@ -582,7 +587,7 @@ private struct SpendingInsightsSection: View {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(12)
-    .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    .background(AppTheme.Colors.tertiaryFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
   }
 }
 

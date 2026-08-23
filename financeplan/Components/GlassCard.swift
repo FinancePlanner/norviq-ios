@@ -18,7 +18,6 @@ import SwiftUI
 /// Raw `.ultraThinMaterial` still has ~10 sites, but they are Circles, sheets
 /// and the tab-bar capsule rather than cards, so they are not candidates here.
 public struct GlassCard<Content: View>: View {
-  @Environment(\.colorScheme) private var colorScheme
   private let cornerRadius: CGFloat
   private let padding: CGFloat?
   private let content: Content
@@ -65,14 +64,16 @@ public struct GlassCard<Content: View>: View {
       .clipShape(.rect(cornerRadius: cornerRadius))
       .appGlassEffect(.rect(cornerRadius: cornerRadius))
       .overlay {
-        // Vigil differs from Classic by a tint-colored border only — same flat
-        // card shape, no glow shadow.
+        // Vigil differs from Classic by a bordered card — same flat shape, no
+        // glow shadow.
+        //
+        // This used to stroke with the accent tint at 0.30/0.20. Across 143 call
+        // sites that made neon cyan the outline of every surface in the app,
+        // which is not what docs/vigil-identity.md asks for: it gives borders
+        // their own token (#C5DBE2 / #14303A). `separator` is that token.
         if BrandTheme.current == .vigil {
           RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .stroke(
-              AppTheme.Colors.tint(for: colorScheme).opacity(colorScheme == .dark ? 0.30 : 0.20),
-              lineWidth: 1
-            )
+            .stroke(AppTheme.Colors.separator, lineWidth: 1)
         }
       }
   }

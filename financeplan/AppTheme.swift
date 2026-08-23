@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Brand + Appearance
 
@@ -105,186 +106,81 @@ enum AppTheme {
   }
 
   enum Colors {
+    // MARK: - Palette
+    //
+    // Every role below resolves from `Assets.xcassets/Theme`, so each colour is a
+    // dynamic UIColor that adapts to the trait collection on its own. That is what
+    // makes light mode work without threading `\.colorScheme` through 121 view
+    // files — see the deprecated shims at the bottom of this enum.
+    //
+    // The brand still has to be picked in Swift: a colorset carries light/dark
+    // appearance variants, but has no notion of Classic vs Vigil.
+
+    private static func brandColor(_ role: String) -> Color {
+      Color("\(BrandTheme.current == .vigil ? "Vigil" : "Classic")\(role)", bundle: .main)
+    }
+
     // MARK: - Accent (classic blue / Vigil neon cyan)
 
-    static func tint(for scheme: ColorScheme) -> Color {
-      switch BrandTheme.current {
-      case .classic:
-        scheme == .dark
-          ? Color(red: 0.36, green: 0.67, blue: 0.98) // #5CABFA
-          : Color(red: 0.00, green: 0.48, blue: 1.00) // #007AFF
-      case .vigil:
-        scheme == .dark
-          ? Color(red: 0.000, green: 0.949, blue: 1.000) // #00F2FF
-          : Color(red: 0.031, green: 0.569, blue: 0.698) // #0891B2
-      }
-    }
-
-    static func tintSoft(for scheme: ColorScheme) -> Color {
-      switch BrandTheme.current {
-      case .classic:
-        scheme == .dark
-          ? Color(red: 0.15, green: 0.18, blue: 0.24)
-          : Color(red: 0.92, green: 0.95, blue: 1.00)
-      case .vigil:
-        scheme == .dark
-          ? Color(red: 0.000, green: 0.949, blue: 1.000).opacity(0.10)
-          : Color(red: 0.878, green: 0.969, blue: 0.980) // #E0F7FA
-      }
-    }
-
-    static func secondaryTint(for scheme: ColorScheme) -> Color {
-      switch BrandTheme.current {
-      case .classic:
-        scheme == .dark
-          ? Color(red: 0.35, green: 0.82, blue: 0.80) // teal
-          : Color(red: 0.04, green: 0.63, blue: 0.67) // teal
-      case .vigil:
-        scheme == .dark
-          ? Color(red: 0.000, green: 1.000, blue: 0.580) // #00FF94
-          : Color(red: 0.051, green: 0.580, blue: 0.533) // #0D9488
-      }
-    }
+    static var tint: Color { brandColor("Tint") }
+    static var tintSoft: Color { brandColor("TintSoft") }
+    static var secondaryTint: Color { brandColor("SecondaryTint") }
 
     /// Near-duplicate of `secondaryTint` — folded into it rather than carrying
     /// a fourth near-identical hue per brand/scheme.
-    static func ember(for scheme: ColorScheme) -> Color {
-      secondaryTint(for: scheme)
-    }
+    static var ember: Color { secondaryTint }
 
     /// Near-duplicate of `secondaryTint` — folded into it rather than carrying
     /// a fourth near-identical hue per brand/scheme.
-    static func bronze(for scheme: ColorScheme) -> Color {
-      secondaryTint(for: scheme)
-    }
+    static var bronze: Color { secondaryTint }
+
+    /// Foreground for content sitting ON the accent tint.
+    ///
+    /// White fails badly here. The Vigil dark tint is `#00F2FF`, a near-maximally
+    /// bright cyan, so white-on-tint measures **1.39:1** — below even the 3:1
+    /// large-text floor. Dark ink on the same fill measures ~12.9:1.
+    ///
+    /// Light and dark therefore invert: the light tint is dark enough to carry
+    /// white, the dark tint is far too bright to. This mirrors the web's
+    /// `--primary-foreground`, which already encodes exactly this inversion
+    /// (`theme.css:136/227/318/404`).
+    ///
+    /// Not a brand change — docs/vigil-identity.md pins the tint itself, not what
+    /// sits on top of it.
+    static let onTint = Color("OnTint", bundle: .main)
 
     // MARK: - Surfaces (classic cool / Vigil near-black command center)
 
-    static func pageBackground(for scheme: ColorScheme) -> Color {
-      switch BrandTheme.current {
-      case .classic:
-        scheme == .dark
-          ? Color(red: 0.06, green: 0.07, blue: 0.10)
-          : Color(red: 0.95, green: 0.96, blue: 0.98)
-      case .vigil:
-        scheme == .dark
-          ? Color(red: 0.020, green: 0.020, blue: 0.020) // #050505
-          : Color(red: 0.933, green: 0.965, blue: 0.973) // #EEF6F8
-      }
-    }
-
-    static func cardBackground(for scheme: ColorScheme) -> Color {
-      switch BrandTheme.current {
-      case .classic:
-        scheme == .dark
-          ? Color(red: 0.10, green: 0.11, blue: 0.15)
-          : Color.white
-      case .vigil:
-        scheme == .dark
-          ? Color(red: 0.039, green: 0.067, blue: 0.086) // #0A1116
-          : Color(red: 0.969, green: 0.988, blue: 0.992) // #F7FCFD
-      }
-    }
-
-    static func elevatedCardBackground(for scheme: ColorScheme) -> Color {
-      switch BrandTheme.current {
-      case .classic:
-        scheme == .dark
-          ? Color(red: 0.14, green: 0.16, blue: 0.20)
-          : Color(red: 0.93, green: 0.94, blue: 0.97)
-      case .vigil:
-        scheme == .dark
-          ? Color(red: 0.059, green: 0.102, blue: 0.129) // #0F1A21
-          : Color(red: 0.886, green: 0.933, blue: 0.949) // #E2EEF2
-      }
-    }
-
-    static func topBarBackground(for scheme: ColorScheme) -> Color {
-      switch BrandTheme.current {
-      case .classic:
-        scheme == .dark
-          ? Color(red: 0.08, green: 0.09, blue: 0.12)
-          : Color(red: 0.98, green: 0.99, blue: 1.00)
-      case .vigil:
-        scheme == .dark
-          ? Color(red: 0.027, green: 0.051, blue: 0.067) // #070D11
-          : Color(red: 0.957, green: 0.980, blue: 0.984) // #F4FAFB
-      }
-    }
+    static var pageBackground: Color { brandColor("PageBackground") }
+    static var cardBackground: Color { brandColor("CardBackground") }
+    static var elevatedCardBackground: Color { brandColor("ElevatedCard") }
+    static var topBarBackground: Color { brandColor("TopBarBackground") }
 
     // MARK: - Text (classic cool slate / Vigil cool cyan-slate)
 
-    static func foreground(for scheme: ColorScheme) -> Color {
-      switch BrandTheme.current {
-      case .classic:
-        scheme == .dark
-          ? Color(red: 0.93, green: 0.95, blue: 0.97) // cool near-white
-          : Color(red: 0.09, green: 0.11, blue: 0.15) // cool slate near-black
-      case .vigil:
-        scheme == .dark
-          ? Color(red: 0.843, green: 0.965, blue: 0.980) // #D7F6FA
-          : Color(red: 0.043, green: 0.110, blue: 0.133) // #0B1C22
-      }
-    }
+    static var foreground: Color { brandColor("Foreground") }
+    static var secondaryText: Color { brandColor("SecondaryText") }
+    static var tertiaryText: Color { brandColor("TertiaryText") }
 
-    static func secondaryText(for scheme: ColorScheme) -> Color {
-      switch BrandTheme.current {
-      case .classic:
-        scheme == .dark
-          ? Color(red: 0.612, green: 0.639, blue: 0.686) // #9CA3AF (cool gray)
-          : Color(red: 0.294, green: 0.333, blue: 0.388) // #4B5563 (cool gray)
-      case .vigil:
-        scheme == .dark
-          ? Color(red: 0.498, green: 0.604, blue: 0.639) // #7F9AA3
-          : Color(red: 0.294, green: 0.396, blue: 0.439) // #4B6570
-      }
-    }
+    // MARK: - Lines and fills
 
-    static func tertiaryText(for scheme: ColorScheme) -> Color {
-      switch BrandTheme.current {
-      case .classic:
-        scheme == .dark
-          ? Color(red: 0.420, green: 0.447, blue: 0.502) // #6B7280 (cool gray)
-          : Color(red: 0.420, green: 0.447, blue: 0.502) // #6B7280 (cool gray)
-      case .vigil:
-        scheme == .dark
-          ? Color(red: 0.420, green: 0.486, blue: 0.525) // muted cyan-slate
-          : Color(red: 0.420, green: 0.486, blue: 0.525)
-      }
-    }
+    static let tertiaryFill = Color("TertiaryFill", bundle: .main)
 
-    static func tertiaryFill(for scheme: ColorScheme) -> Color {
-      scheme == .dark
-        ? Color.white.opacity(0.08)
-        : Color.black.opacity(0.05)
-    }
-
-    static func separator(for scheme: ColorScheme) -> Color {
-      switch BrandTheme.current {
-      case .classic:
-        return scheme == .dark
-          ? Color.white.opacity(0.10)
-          : Color.black.opacity(0.10)
-      case .vigil:
-        return scheme == .dark
-          ? Color(red: 0.000, green: 0.949, blue: 1.000).opacity(0.18)
-          : Color(red: 0.031, green: 0.569, blue: 0.698).opacity(0.22)
-      }
-    }
+    /// The `border` token from `docs/vigil-identity.md`.
+    ///
+    /// This used to be neon cyan at 18% opacity, which was drift from the spec
+    /// and the single largest source of ambient blue: it is the hairline on every
+    /// card, and `GlassEffect+Compat` reuses it as the pre-iOS-26 glass stroke, so
+    /// most surfaces picked up the tint twice.
+    static var separator: Color { brandColor("Separator") }
 
     // MARK: - Nav bar
 
-    static func navBarBackground(for scheme: ColorScheme) -> Color {
-      topBarBackground(for: scheme)
-    }
+    static var navBarBackground: Color { topBarBackground }
 
-    static func navBarForeground(for scheme: ColorScheme) -> Color {
-      .primary
-    }
+    static var navBarForeground: Color { .primary }
 
-    static func tabBarBackground(for scheme: ColorScheme) -> Color {
-      topBarBackground(for: scheme)
-    }
+    static var tabBarBackground: Color { topBarBackground }
 
     // MARK: - Status
 
@@ -324,6 +220,83 @@ enum AppTheme {
         ? Color(red: 1.0, green: 0.80, blue: 0.42)
         : Color.orange
     }
+
+    // MARK: - UIKit bridge
+    //
+    // `UIColor(someDynamicColor)` resolves against whatever trait collection is
+    // current at the moment it is called and freezes the result, which is exactly
+    // wrong for the appearance proxies (they are configured once, off-screen, and
+    // then applied globally). Resolving the named asset directly keeps the UIColor
+    // dynamic, so UIKit chrome follows light/dark on its own.
+
+    private static func brandUIColor(_ role: String) -> UIColor {
+      UIColor(named: "\(BrandTheme.current == .vigil ? "Vigil" : "Classic")\(role)") ?? .clear
+    }
+
+    static var uiTopBarBackground: UIColor { brandUIColor("TopBarBackground") }
+    static var uiNavBarBackground: UIColor { uiTopBarBackground }
+    static var uiForeground: UIColor { brandUIColor("Foreground") }
+    static var uiSeparator: UIColor { brandUIColor("Separator") }
+    static var uiOnTint: UIColor { UIColor(named: "OnTint") ?? .label }
+
+    // MARK: - Deprecated scheme-taking shims
+    //
+    // The colours above are dynamic, so the scheme argument no longer does
+    // anything. These overloads exist purely so the ~236 existing call sites keep
+    // compiling untouched; the deprecation warnings are the cleanup backlog.
+    //
+    // Delete a shim once its call sites are gone — do not add new ones.
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.tint.")
+    static func tint(for _: ColorScheme) -> Color { tint }
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.tintSoft.")
+    static func tintSoft(for _: ColorScheme) -> Color { tintSoft }
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.secondaryTint.")
+    static func secondaryTint(for _: ColorScheme) -> Color { secondaryTint }
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.ember.")
+    static func ember(for _: ColorScheme) -> Color { ember }
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.bronze.")
+    static func bronze(for _: ColorScheme) -> Color { bronze }
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.pageBackground.")
+    static func pageBackground(for _: ColorScheme) -> Color { pageBackground }
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.cardBackground.")
+    static func cardBackground(for _: ColorScheme) -> Color { cardBackground }
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.elevatedCardBackground.")
+    static func elevatedCardBackground(for _: ColorScheme) -> Color { elevatedCardBackground }
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.topBarBackground.")
+    static func topBarBackground(for _: ColorScheme) -> Color { topBarBackground }
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.foreground.")
+    static func foreground(for _: ColorScheme) -> Color { foreground }
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.secondaryText.")
+    static func secondaryText(for _: ColorScheme) -> Color { secondaryText }
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.tertiaryText.")
+    static func tertiaryText(for _: ColorScheme) -> Color { tertiaryText }
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.tertiaryFill.")
+    static func tertiaryFill(for _: ColorScheme) -> Color { tertiaryFill }
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.separator.")
+    static func separator(for _: ColorScheme) -> Color { separator }
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.navBarBackground.")
+    static func navBarBackground(for _: ColorScheme) -> Color { navBarBackground }
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.navBarForeground.")
+    static func navBarForeground(for _: ColorScheme) -> Color { navBarForeground }
+
+    @available(*, deprecated, message: "Colours are dynamic; use AppTheme.Colors.tabBarBackground.")
+    static func tabBarBackground(for _: ColorScheme) -> Color { tabBarBackground }
 
     // MARK: - Overlays
 

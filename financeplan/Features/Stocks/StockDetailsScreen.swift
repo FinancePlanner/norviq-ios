@@ -14,7 +14,6 @@ import StockPlanShared
 struct StockDetailScreen: View {
     let stockId: String
     let initialSymbol: String
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.modelContext) private var modelContext
@@ -321,13 +320,14 @@ struct StockDetailScreen: View {
             .maxContentWidth(regularSizeClass: ContentWidth.dense)
             .accessibilityIdentifier("stockDetailsScreen")
         }
-        .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
-        .vigilScreenBackground()
+        // One background, not two: `vigilScreenBackground` draws
+        // MeshGradientBackground, which is itself a flat `pageBackground` fill.
+        // The tint likewise comes from AppTintModifier at the root.
+        .background(AppTheme.Colors.pageBackground.ignoresSafeArea())
         .refreshable {
             await viewModel.load(stockId: stockId, force: true)
             await viewModel.loadSupplementaryDataIfNeeded(for: selectedTab)
         }
-        .tint(AppTheme.Colors.tint(for: colorScheme))
     }
 
     @ViewBuilder

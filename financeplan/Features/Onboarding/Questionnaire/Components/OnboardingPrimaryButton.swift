@@ -26,7 +26,7 @@ struct OnboardingPrimaryButton: View {
             .font(.subheadline.weight(.bold))
         }
       }
-      .foregroundStyle(.white)
+      .foregroundStyle(AppTheme.Colors.onTint)
       .frame(maxWidth: .infinity)
       .padding(.vertical, 14)
       .background(

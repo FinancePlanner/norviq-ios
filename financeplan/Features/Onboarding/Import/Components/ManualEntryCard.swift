@@ -27,8 +27,11 @@ struct ManualEntryCard: View {
         Button(action: onDelete) {
           Image(systemName: "xmark.circle.fill")
             .font(.title3)
-            .foregroundStyle(.secondary.opacity(0.5))
+            .foregroundStyle(.secondary)
+            .frame(width: 44, height: 44)
+            .contentShape(.rect)
         }
+        .accessibilityLabel("Remove entry")
       }
       .padding(.horizontal, 16)
       .padding(.top, 14)

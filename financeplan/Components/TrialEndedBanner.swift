@@ -34,7 +34,7 @@ struct TrialEndedBanner: View {
       Button(action: onSubscribe) {
         Text("Subscribe")
           .font(.footnote.weight(.bold))
-          .foregroundStyle(.white)
+          .foregroundStyle(AppTheme.Colors.onTint)
           .padding(.horizontal, 14)
           .padding(.vertical, 8)
           .background(AppTheme.Colors.tint(for: colorScheme), in: Capsule())
@@ -48,8 +48,8 @@ struct TrialEndedBanner: View {
     .appGlassEffect(.rect(cornerRadius: 16), tint: AppTheme.Colors.warning.opacity(0.14))
     .clipShape(.rect(cornerRadius: 16))
     .padding(.horizontal, 12)
-    .accessibilityElement(children: .combine)
-    .accessibilityLabel("Your trial has ended. Subscribe to unlock all features.")
+    .accessibilityElement(children: .contain)
+    .accessibilityLabel("Your trial has ended.")
     .accessibilityIdentifier("trialEndedBanner")
   }
 }

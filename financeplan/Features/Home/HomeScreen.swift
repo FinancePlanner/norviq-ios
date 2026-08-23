@@ -28,8 +28,6 @@ struct HomeScreen: View {
 
   init(onLogout: @escaping () async -> Void) {
     self.onLogout = onLogout
-    // Hard-hide native TabView chrome while the floating Revolut bar is in use.
-    UITabBar.appearance().isHidden = true
   }
 
   private var appLanguage: AppLanguage {

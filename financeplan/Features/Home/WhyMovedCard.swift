@@ -33,7 +33,7 @@ struct WhyMovedCard: View {
       HStack(spacing: 6) {
         Text("AGENTIC INTELLIGENCE FEED")
           .vigilOverline()
-          .foregroundStyle(AppTheme.Colors.tint(for: scheme))
+          .foregroundStyle(.secondary)
         Spacer()
         if let change = response.portfolioChangePercent {
           Text("\(change >= 0 ? "+" : "")\(change, specifier: "%.2f")% today")

@@ -131,6 +131,7 @@ struct AssistantView: View {
                     .foregroundStyle(viewModel.canSend ? AppTheme.Colors.tint(for: scheme) : .secondary)
             }
             .disabled(!viewModel.canSend)
+            .accessibilityLabel("Send message")
         }
         .padding(12)
         .background(.ultraThinMaterial)

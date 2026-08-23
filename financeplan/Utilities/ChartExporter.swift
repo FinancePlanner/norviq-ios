@@ -17,8 +17,14 @@ class ChartExporter {
 struct ShareableChartView<Content: View>: View {
   let title: String
   let content: Content
-  @State private var showingShareSheet = false
-  @State private var exportedImage: UIImage?
+  @State private var exportedChart: ExportedChart?
+
+  /// The rendered image, as a presentation payload rather than a bool plus a
+  /// separately-managed optional.
+  private struct ExportedChart: Identifiable {
+    let id = UUID()
+    let image: UIImage
+  }
   
   init(title: String, @ViewBuilder content: () -> Content) {
     self.title = title
@@ -39,17 +45,15 @@ struct ShareableChartView<Content: View>: View {
         .font(.subheadline.weight(.semibold))
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(Color.white.opacity(0.1))
+        .background(AppTheme.Colors.tertiaryFill)
         .clipShape(.rect(cornerRadius: 8))
       }
       .padding(.top, 12)
     }
-    .sheet(isPresented: $showingShareSheet) {
-      if let image = exportedImage {
-        ShareSheet(items: [
-          LPLinkMetadataActivityItemSource(title: title, item: image, icon: image)
-        ])
-      }
+    .sheet(item: $exportedChart) { chart in
+      ShareSheet(items: [
+        LPLinkMetadataActivityItemSource(title: title, item: chart.image, icon: chart.image)
+      ])
     }
   }
 
@@ -63,8 +67,8 @@ struct ShareableChartView<Content: View>: View {
     .padding(24)
     .background(Color(uiColor: .systemBackground))
 
-    exportedImage = ChartExporter.exportToImage(exportView)
-    showingShareSheet = true
+    guard let image = ChartExporter.exportToImage(exportView) else { return }
+    exportedChart = ExportedChart(image: image)
   }
 }
 

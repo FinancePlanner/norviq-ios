@@ -26,13 +26,13 @@ struct SmartSuggestionsCard: View {
           Text("Loading suggestion")
             .font(.subheadline)
           RoundedRectangle(cornerRadius: 10)
-            .fill(Color.white.opacity(0.18))
+            .fill(AppTheme.Colors.tertiaryFill)
             .frame(height: 12)
           RoundedRectangle(cornerRadius: 10)
-            .fill(Color.white.opacity(0.18))
+            .fill(AppTheme.Colors.tertiaryFill)
             .frame(height: 12)
           RoundedRectangle(cornerRadius: 12)
-            .fill(Color.white.opacity(0.14))
+            .fill(AppTheme.Colors.tertiaryFill)
             .frame(height: 42)
         }
         .redacted(reason: .placeholder)
@@ -74,9 +74,9 @@ struct SmartSuggestionsCard: View {
               .font(.subheadline.weight(.semibold))
               .frame(maxWidth: .infinity)
               .padding(.vertical, 12)
-              .background(Color.white.opacity(0.1))
+              .background(AppTheme.Colors.tertiaryFill)
               .clipShape(.rect(cornerRadius: 12))
-              .foregroundStyle(.white)
+              .foregroundStyle(.primary)
           }
 
           Button {
@@ -86,9 +86,9 @@ struct SmartSuggestionsCard: View {
               .font(.subheadline.weight(.semibold))
               .frame(maxWidth: .infinity)
               .padding(.vertical, 12)
-              .background(Color.white.opacity(0.1))
+              .background(AppTheme.Colors.tertiaryFill)
               .clipShape(.rect(cornerRadius: 12))
-              .foregroundStyle(.white)
+              .foregroundStyle(.primary)
           }
         }
       } else {
@@ -258,6 +258,7 @@ struct ExpensesByCategoryCard: View {
                       Image(systemName: "ellipsis.circle")
                         .font(.body)
                         .foregroundStyle(.secondary)
+                        .accessibilityLabel("More actions")
                     }
                   }
                   .padding(.vertical, 6)
@@ -276,7 +277,6 @@ struct ExpensesByCategoryCard: View {
 
             if pillar != groupedActivities.last?.0 {
               Divider()
-                .background(Color.white.opacity(0.1))
                 .padding(.vertical, 8)
             }
           }

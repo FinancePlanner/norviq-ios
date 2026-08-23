@@ -21,7 +21,7 @@ struct SuccessImportScreen: View {
         if BrandTheme.current == .vigil {
           Text(VigilWatch.vigilActive.eyebrow)
             .vigilOverline()
-            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme).opacity(0.88))
+            .foregroundStyle(.secondary)
         }
 
         ZStack {

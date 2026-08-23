@@ -289,7 +289,7 @@ struct ExpensesPlannerScreen: View {
     .clipShape(.rect(cornerRadius: 16))
     .overlay(
       RoundedRectangle(cornerRadius: 16)
-        .stroke(Color.white.opacity(0.05), lineWidth: 1)
+        .stroke(AppTheme.Colors.separator, lineWidth: 1)
     )
   }
 
@@ -297,7 +297,7 @@ struct ExpensesPlannerScreen: View {
     HStack(spacing: 8) {
       Button(action: presentRecordSpend) {
         Image(systemName: "plus.circle")
-          .font(.system(size: 16, weight: .semibold))
+          .typography(.small, weight: .semibold)
       }
       .buttonStyle(.borderedProminent)
       .tint(AppTheme.Colors.tint(for: colorScheme))
@@ -332,14 +332,15 @@ struct ExpensesPlannerScreen: View {
         Button("Delete this month plan", systemImage: "trash", role: .destructive, action: viewModel.deleteCurrentSnapshot)
       } label: {
         Image(systemName: "ellipsis.circle")
-          .font(.system(size: 16, weight: .semibold))
+          .typography(.small, weight: .semibold)
+          .accessibilityLabel("More actions")
       }
       .buttonStyle(.bordered)
       .accessibilityLabel("Expense actions")
 
       Button(action: openSettings) {
         Image(systemName: "gearshape")
-          .font(.system(size: 16, weight: .semibold))
+          .typography(.small, weight: .semibold)
       }
       .buttonStyle(.bordered)
       .accessibilityLabel("Open settings")
@@ -1061,7 +1062,7 @@ private struct PlannerSalaryCard: View {
           }
           .padding(16)
 
-          Divider().background(Color.white.opacity(0.1))
+          Divider()
 
           // Household Total Section
           VStack(alignment: .leading, spacing: 12) {
@@ -1099,7 +1100,7 @@ private struct PlannerSalaryCard: View {
           }
           .padding(16)
 
-          Divider().background(Color.white.opacity(0.1))
+          Divider()
 
           // Your Spending Section
           VStack(alignment: .leading, spacing: 12) {
@@ -1137,7 +1138,7 @@ private struct PlannerSalaryCard: View {
           }
           .padding(16)
 
-          Divider().background(Color.white.opacity(0.1))
+          Divider()
 
           // Partner Spending Section
           VStack(alignment: .leading, spacing: 12) {
@@ -1175,7 +1176,7 @@ private struct PlannerSalaryCard: View {
           }
           .padding(16)
 
-          Divider().background(Color.white.opacity(0.1))
+          Divider()
 
           // Budget Remaining
           VStack(alignment: .leading, spacing: 12) {
@@ -1277,7 +1278,7 @@ private struct PillarSummaryCard: View {
       .padding(16)
 
       Divider()
-        .background(Color.white.opacity(0.1))
+        .background(AppTheme.Colors.tertiaryFill)
 
       VStack(spacing: 12) {
         HStack(spacing: 12) {
@@ -1317,7 +1318,7 @@ private struct PillarSummaryCard: View {
           GeometryReader { geo in
             ZStack(alignment: .leading) {
               RoundedRectangle(cornerRadius: 4)
-                .fill(Color.white.opacity(0.05))
+                .fill(AppTheme.Colors.tertiaryFill)
                 .frame(height: 8)
 
               RoundedRectangle(cornerRadius: 4)
@@ -1337,7 +1338,7 @@ private struct PillarSummaryCard: View {
     .cornerRadius(16)
     .overlay(
       RoundedRectangle(cornerRadius: 16)
-        .stroke(Color.white.opacity(0.05), lineWidth: 1)
+        .stroke(AppTheme.Colors.separator, lineWidth: 1)
     )
   }
 }
@@ -1360,7 +1361,7 @@ private struct PillarMetricItem: View {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(12)
-    .background(Color.white.opacity(0.04))
+    .background(AppTheme.Colors.tertiaryFill)
     .cornerRadius(10)
   }
 }
@@ -1486,6 +1487,7 @@ private struct MonthlyPlanItemsCard: View {
                             Image(systemName: "ellipsis.circle")
                               .font(.body)
                               .foregroundStyle(.secondary)
+                              .accessibilityLabel("More actions")
                           }
                         }
                       }
@@ -1527,7 +1529,6 @@ private struct MonthlyPlanItemsCard: View {
             
             if pillar != groupedItems.last?.0 {
               Divider()
-                .background(Color.white.opacity(0.1))
                 .padding(.vertical, 8)
             }
           }
@@ -1535,7 +1536,7 @@ private struct MonthlyPlanItemsCard: View {
 
         // Recurring Templates Section
         if !recurringTemplates.isEmpty {
-          Divider().background(Color.white.opacity(0.2)).padding(.vertical, 4)
+          Divider().padding(.vertical, 4)
 
           HStack(spacing: 6) {
             Image(systemName: "arrow.clockwise")
@@ -1593,7 +1594,7 @@ private struct MonthlyPlanItemsCard: View {
             .padding(.vertical, 6)
 
             if template.id != recurringTemplates.last?.id {
-              Divider().background(Color.white.opacity(0.1)).padding(.leading, 15)
+              Divider().padding(.leading, 15)
             }
           }
         }
@@ -1752,6 +1753,7 @@ private struct PlannerItemRow: View {
           Image(systemName: "ellipsis.circle")
             .font(.body)
             .foregroundStyle(.secondary)
+            .accessibilityLabel("More actions")
         }
       }
       .contentShape(Rectangle())
@@ -2740,6 +2742,7 @@ struct RecentTransactionsList: View {
                 Image(systemName: "ellipsis.circle")
                   .font(.body)
                   .foregroundStyle(.secondary)
+                  .accessibilityLabel("More actions")
               }
             }
             .padding(.vertical, 14)
@@ -2747,7 +2750,6 @@ struct RecentTransactionsList: View {
 
             if activity.id != activities.prefix(5).last?.id {
               Divider()
-                .background(Color.white.opacity(0.1))
                 .padding(.leading, 80)
             }
           }
@@ -2804,11 +2806,13 @@ private struct MonthPickerHeader: View {
       HStack(spacing: 12) {
         Button(action: selectPreviousMonth) {
           Image(systemName: "chevron.left")
-            .font(.system(size: 16, weight: .semibold))
-            .frame(width: 32, height: 32)
-            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+            .typography(.small, weight: .semibold)
+            .frame(width: 44, height: 44)
+            .contentShape(.rect)
+            .foregroundStyle(AppTheme.Colors.tint)
         }
         .disabled(currentIndex == 0)
+        .accessibilityLabel("Previous month")
 
         VStack(spacing: 4) {
           Text(monthDisplayText)
@@ -2822,11 +2826,13 @@ private struct MonthPickerHeader: View {
 
         Button(action: selectNextMonth) {
           Image(systemName: "chevron.right")
-            .font(.system(size: 16, weight: .semibold))
-            .frame(width: 32, height: 32)
-            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+            .typography(.small, weight: .semibold)
+            .frame(width: 44, height: 44)
+            .contentShape(.rect)
+            .foregroundStyle(AppTheme.Colors.tint)
         }
         .disabled(currentIndex >= availableMonths.count - 1)
+        .accessibilityLabel("Next month")
       }
 
       Divider()
@@ -2834,7 +2840,7 @@ private struct MonthPickerHeader: View {
     }
     .padding(.vertical, 8)
     .padding(.horizontal, 8)
-    .background(Color.white.opacity(0.04))
+    .background(AppTheme.Colors.tertiaryFill)
     .cornerRadius(12)
   }
 

@@ -27,7 +27,7 @@ struct VaultTextField<RightAccessory: View>: View {
       HStack(spacing: 12) {
         if let icon {
           Image(systemName: icon)
-            .font(.system(size: 16, weight: .medium))
+            .typography(.small, weight: .medium)
             .foregroundStyle(.secondary)
             .frame(width: 20)
         }

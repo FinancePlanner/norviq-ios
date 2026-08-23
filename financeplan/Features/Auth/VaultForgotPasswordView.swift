@@ -38,7 +38,7 @@ struct VaultForgotPasswordView: View {
         dismiss()
       }
       .labelStyle(.iconOnly)
-      .font(.system(size: 20, weight: .medium))
+      .typography(.headline, weight: .medium)
       .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
       .frame(width: 44, height: 44)
       .contentShape(.rect)

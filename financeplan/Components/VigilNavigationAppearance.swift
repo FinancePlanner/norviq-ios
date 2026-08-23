@@ -2,19 +2,21 @@ import SwiftUI
 import UIKit
 
 enum VigilNavigationAppearance {
-  static func apply(colorScheme: ColorScheme) {
+  /// - Note: `colorScheme` is no longer read. The appearance is built from
+  ///   dynamic `UIColor`s, so UIKit resolves light/dark itself. The parameter and
+  ///   the re-apply on scheme change are kept because the *brand* still has to be
+  ///   resolved in Swift, and that is not something UIKit can track.
+  static func apply(colorScheme _: ColorScheme) {
     let nav = UINavigationBarAppearance()
     nav.configureWithOpaqueBackground()
-    nav.backgroundColor = UIColor(AppTheme.Colors.navBarBackground(for: colorScheme))
-    nav.titleTextAttributes = [
-      .foregroundColor: UIColor(AppTheme.Colors.foreground(for: colorScheme))
-    ]
-    nav.largeTitleTextAttributes = [
-      .foregroundColor: UIColor(AppTheme.Colors.foreground(for: colorScheme))
-    ]
+    nav.backgroundColor = AppTheme.Colors.uiNavBarBackground
+    nav.titleTextAttributes = [.foregroundColor: AppTheme.Colors.uiForeground]
+    nav.largeTitleTextAttributes = [.foregroundColor: AppTheme.Colors.uiForeground]
 
+    // The nav bar's bottom rule is a separator, not an accent. It used to be
+    // tint at 12%, which put a cyan line under every navigation bar.
     if BrandTheme.current == .vigil {
-      nav.shadowColor = UIColor(AppTheme.Colors.tint(for: colorScheme).opacity(0.12))
+      nav.shadowColor = AppTheme.Colors.uiSeparator
     }
 
     UINavigationBar.appearance().standardAppearance = nav

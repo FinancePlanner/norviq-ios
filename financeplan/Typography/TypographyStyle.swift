@@ -26,13 +26,17 @@ public struct TypographyStyle {
     case .metricNumber, .title: 24
     case .headline: 20
     case .body, .numeric: 17
-    case .small, .mini: 16
+    // 15, not 16. The ladder used to run 17/16/16/16 at the top and
+    // 13/13/13/13/12/11 at the bottom, so "one step quieter than body" was a 1pt
+    // difference nobody could see — which is how a 13pt title ended up above a
+    // 12pt subtitle in the stock metric rows. 17/15/13/12/11 reads as steps.
+    case .small, .mini: 15
     case .nano, .numericSmall, .tiny, .code: 13
     case .caption: 12
     case .footnote, .overline: 11
     case .button: 17
-    case .label: 16
-    case .link: 16
+    case .label: 15
+    case .link: 15
     }
   }
 
@@ -91,6 +95,11 @@ public struct TypographyStyle {
   /// accessibility scaling (Apple Guideline 4 — legible typography) without altering
   /// the design at the default setting. The clamp at the app root bounds extreme sizes.
   public var font: Font {
+    TypographyFontCache.shared.font(for: self)
+  }
+
+  /// Builds the font from scratch. Only `TypographyFontCache` should call this.
+  fileprivate var uncachedFont: Font {
     let uiWeight: UIFont.Weight = isMonospaced ? .regular : weight.uiFontWeight
     let design: UIFontDescriptor.SystemDesign = fontDesign
 
@@ -108,6 +117,46 @@ public struct TypographyStyle {
     let baseFont = UIFont(descriptor: descriptor, size: size)
     let scaled = UIFontMetrics(forTextStyle: relativeTextStyle.uiTextStyle).scaledFont(for: baseFont)
     return Font(scaled)
+  }
+}
+
+/// Memoises resolved fonts.
+///
+/// `font` used to rebuild a `UIFontDescriptor`, apply a design trait and run
+/// `UIFontMetrics.scaledFont(for:)` on *every* access, across ~660 `.typography(…)`
+/// call sites — once per `Text` per body pass. Descriptor construction and metric
+/// scaling are both meaningfully more expensive than a dictionary lookup.
+///
+/// The key includes the content size category because `scaledFont` resolves
+/// against it; when the user changes text size the whole cache is dropped rather
+/// than returning fonts scaled for the previous setting.
+@MainActor
+private final class TypographyFontCache {
+  static let shared = TypographyFontCache()
+
+  private struct Key: Hashable {
+    let type: Typography
+    let weight: TypographyFontWeight
+    let isItalic: Bool
+  }
+
+  private var cache: [Key: Font] = [:]
+  private var category: UIContentSizeCategory = .unspecified
+
+  func font(for style: TypographyStyle) -> Font {
+    let current = UITraitCollection.current.preferredContentSizeCategory
+    if current != category {
+      category = current
+      cache.removeAll(keepingCapacity: true)
+    }
+
+    let key = Key(type: style.type, weight: style.weight, isItalic: style.isItalic)
+    if let cached = cache[key] {
+      return cached
+    }
+    let resolved = style.uncachedFont
+    cache[key] = resolved
+    return resolved
   }
 }
 

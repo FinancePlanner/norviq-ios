@@ -131,7 +131,7 @@ struct UserMenuDrawer: View {
 
         Image(systemName: "chevron.right")
           .accessibilityHidden(true)
-          .font(.system(size: 12, weight: .semibold))
+          .typography(.caption, weight: .semibold)
           .foregroundStyle(.secondary)
       }
       .padding(.horizontal, 12)
