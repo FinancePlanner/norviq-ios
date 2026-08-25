@@ -13,6 +13,22 @@ struct TaxDashboardScreen: View {
   @State private var isFundClassificationPresented = false
   @State private var isFundAnnualInputPresented = false
   @State private var isProfilePresented = false
+
+  /// profileContext is ambient model data (it also feeds the instrument lists
+  /// below), so the sheet cannot simply present on it — it would open itself
+  /// whenever a load completed. This requires both the user's intent and the
+  /// data, which is what the bool-plus-guard was approximating.
+  private struct ProfileSetup: Identifiable {
+    let id = "tax-profile-setup"
+    let context: TaxProfileContextResponse
+  }
+
+  private var profileSetup: Binding<ProfileSetup?> {
+    Binding(
+      get: { isProfilePresented ? model.profileContext.map(ProfileSetup.init) : nil },
+      set: { if $0 == nil { isProfilePresented = false } }
+    )
+  }
   @State private var isCarryforwardPresented = false
   @State private var isPaywallPresented = false
   @State private var selectedOpportunity: TaxOpportunityResponse?
@@ -118,11 +134,9 @@ struct TaxDashboardScreen: View {
       .sheet(isPresented: $isSettingsPresented) { TaxSettingsSheet(service: service) }
       .sheet(isPresented: $isReportsPresented) { TaxReportsSheet(service: service) }
       .sheet(isPresented: $isPaywallPresented) { PaywallView(billingManager: billingManager) }
-      .sheet(isPresented: $isProfilePresented) {
-        if let context = model.profileContext {
-          TaxProfileSetupSheet(service: service, context: context) {
-            Task { await model.load() }
-          }
+      .sheet(item: profileSetup) { setup in
+        TaxProfileSetupSheet(service: service, context: setup.context) {
+          Task { await model.load() }
         }
       }
       .sheet(isPresented: $isCarryforwardPresented) {

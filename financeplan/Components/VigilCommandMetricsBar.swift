@@ -22,7 +22,7 @@ struct VigilCommandMetricsBar: View {
   }
 
   var body: some View {
-    // Only ever rendered under Vigil (callers gate on BrandTheme), so this
+    // Only ever rendered inside the command deck, so this
     // GlassCard call has no Classic-side effect — it purely retires
     // vigilGlassCard in favour of the same background every other card uses.
     GlassCard(cornerRadius: 14, padding: 0) {

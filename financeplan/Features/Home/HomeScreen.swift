@@ -22,8 +22,6 @@ struct HomeScreen: View {
   @State private var pendingThesisWatchOpen = false
   @State private var pendingAutomationDestination: AutomationNavigationDestination?
   @State private var budgetPlannerViewModel = BudgetPlannerViewModel()
-  @State private var tabBarChrome = TabBarChromeController()
-  @State private var isMorePresented = false
   @State private var isCapturePresented = false
 
   init(onLogout: @escaping () async -> Void) {
@@ -32,16 +30,6 @@ struct HomeScreen: View {
 
   private var appLanguage: AppLanguage {
     AppLanguage.from(appLanguageRawValue)
-  }
-
-  private var chromeItems: [RevolutTabBar.Item] {
-    HomeTab.primaryTabs.map { tab in
-      .init(kind: .tab(tab), title: tab.title, systemImage: tab.systemImage)
-    } + [.init(kind: .more, title: String(localized: "More"), systemImage: "ellipsis")]
-  }
-
-  private var moreTabs: Set<HomeTab> {
-    Set(HomeTab.moreMenuTabs)
   }
 
   var body: some View {
@@ -53,34 +41,8 @@ struct HomeScreen: View {
           .transition(AppTransition.move(edge: .top, reduceMotion: reduceMotion))
       }
 
-      ZStack(alignment: .bottom) {
-        tabView
-
-        RevolutTabBar(
-          selection: $selectedTab,
-          items: chromeItems,
-          moreTabs: moreTabs,
-          showsCapture: true,
-          isMinimized: tabBarChrome.isMinimized,
-          onSelect: { tab in
-            tabBarChrome.expand()
-            selectedTab = tab
-          },
-          onMore: {
-            tabBarChrome.expand()
-            isMorePresented = true
-          },
-          onCapture: {
-            tabBarChrome.expand()
-            isCapturePresented = true
-          }
-        )
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.horizontal, 16)
-        .padding(.bottom, 10)
-      }
+      tabView
     }
-    .environment(\.tabBarChrome, tabBarChrome)
     .appAnimation(AppMotion.structural, value: billingManager.shouldShowTrialEndedBanner)
   }
 
@@ -90,9 +52,9 @@ struct HomeScreen: View {
         DashboardRoot(
           selectedTab: $selectedTab,
           isSettingsPresented: $isSettingsPresented,
+          isCapturePresented: $isCapturePresented,
           budgetStore: budgetPlannerViewModel
         )
-        .toolbar(.hidden, for: .tabBar)
       }
 
       Tab(HomeTab.portfolio.title, systemImage: HomeTab.portfolio.systemImage, value: .portfolio) {
@@ -102,65 +64,56 @@ struct HomeScreen: View {
           pendingThesisWatchOpen: $pendingThesisWatchOpen,
           pendingAutomationDestination: $pendingAutomationDestination
         )
-        .toolbar(.hidden, for: .tabBar)
       }
 
       Tab(HomeTab.markets.title, systemImage: HomeTab.markets.systemImage, value: .markets) {
         MarketsScreen()
           .accessibilityIdentifier("tab.markets")
-          .toolbar(.hidden, for: .tabBar)
       }
 
       Tab(HomeTab.economy.title, systemImage: HomeTab.economy.systemImage, value: .economy) {
         EconomyHubScreen()
           .accessibilityIdentifier("tab.economy")
-          .toolbar(.hidden, for: .tabBar)
       }
 
       Tab(HomeTab.crypto.title, systemImage: HomeTab.crypto.systemImage, value: .crypto) {
         CryptoHomeView(isSettingsPresented: $isSettingsPresented)
           .accessibilityIdentifier("tab.crypto")
-          .toolbar(.hidden, for: .tabBar)
       }
 
       Tab(HomeTab.expenses.title, systemImage: HomeTab.expenses.systemImage, value: .expenses) {
         ExpensesPlannerScreen(isSettingsPresented: $isSettingsPresented, viewModel: budgetPlannerViewModel)
           .accessibilityIdentifier("tab.expenses")
-          .toolbar(.hidden, for: .tabBar)
       }
 
       Tab(HomeTab.reports.title, systemImage: HomeTab.reports.systemImage, value: .reports) {
         ExpensesComparisonScreen()
           .accessibilityIdentifier("tab.reports")
-          .toolbar(.hidden, for: .tabBar)
       }
 
       Tab(HomeTab.tax.title, systemImage: HomeTab.tax.systemImage, value: .tax) {
         TaxDashboardScreen()
           .accessibilityIdentifier("tab.tax")
-          .toolbar(.hidden, for: .tabBar)
       }
 
       Tab(HomeTab.insights.title, systemImage: HomeTab.insights.systemImage, value: .insights) {
         InsightsScreen()
           .accessibilityIdentifier("tab.insights")
-          .toolbar(.hidden, for: .tabBar)
       }
     }
     .id(appLanguage.rawValue)
-    .tint(AppTheme.Colors.tint(for: colorScheme))
-    .toolbar(.hidden, for: .tabBar)
-    .safeAreaInset(edge: .bottom, spacing: 0) {
-      Color.clear.frame(height: tabBarChrome.isMinimized ? 70 : 98)
-    }
+    .tint(AppTheme.Colors.tint)
+    // Adapts to a sidebar on iPad, where a 361pt capsule centred in a 1024pt
+    // canvas never made sense. The manual safeAreaInset that reserved space for
+    // that capsule is gone with it: it was a hardcoded 70/98pt that did not grow
+    // with Dynamic Type, and it animated during scroll, shifting content under
+    // the finger.
+    .tabViewStyle(.sidebarAdaptable)
     .sheet(isPresented: $isSettingsPresented) {
       settingsSheet
     }
     .sheet(isPresented: $isPaywallPresented) {
       PaywallView(billingManager: billingManager)
-    }
-    .sheet(isPresented: $isMorePresented) {
-      moreSheet
     }
     .sheet(isPresented: $isCapturePresented) {
       HomeQuickExpenseSheet { draft in
@@ -194,44 +147,6 @@ struct HomeScreen: View {
   private var settingsSheet: some View {
     UserProfileView()
       .environment(\.locale, Locale(identifier: appLanguage.localeIdentifier))
-  }
-
-  private var moreSheet: some View {
-    NavigationStack {
-      List {
-        if BrandTheme.current == .vigil {
-          Section {
-            VigilPageHeader(
-              watch: .intelligence,
-              title: "More"
-            )
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-          }
-        }
-
-        ForEach([HomeTab.markets, .economy, .reports, .tax, .insights], id: \.self) { tab in
-          Button {
-            isMorePresented = false
-            selectedTab = tab
-          } label: {
-            Label(tab.title, systemImage: tab.systemImage)
-          }
-          .accessibilityIdentifier("tabBar.more.\(tab)")
-        }
-      }
-      .vigilListChrome()
-      .vigilNavigationTitle(String(localized: "More"))
-      .vigilInlineNavigationBar()
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(String(localized: "Done")) {
-            isMorePresented = false
-          }
-        }
-      }
-    }
-    .presentationDetents([.medium])
   }
 
   private func handleCaptureSave(_ draft: HomeQuickExpenseDraft) async -> String? {

@@ -29,59 +29,30 @@ struct VigilPageHeader<Trailing: View>: View {
   private var hasTrailing: Bool { Trailing.self != EmptyView.self }
 
   var body: some View {
-    if BrandTheme.current == .vigil {
-      HStack(alignment: .top, spacing: 12) {
-        VStack(alignment: .leading, spacing: 6) {
-          Text(watch.eyebrow)
-            .vigilOverline()
-            // Not the accent tint: this eyebrow renders on 60 screens, and
-            // colouring all of them made the WATCH label compete with the title
-            // it introduces. It is a label, so it reads as one.
-            .foregroundStyle(.secondary)
-          Text(title)
-            .font(.title2.bold())
-            .foregroundStyle(AppTheme.Colors.foreground(for: scheme))
-            .fixedSize(horizontal: false, vertical: true)
-          if let subtitle {
-            Text(subtitle)
-              .font(.subheadline)
-              .foregroundStyle(AppTheme.Colors.secondaryText(for: scheme))
-              .fixedSize(horizontal: false, vertical: true)
-          }
-        }
-        Spacer(minLength: 8)
-        trailing
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .accessibilityElement(children: .combine)
-    } else if subtitle != nil || hasTrailing {
-      // Classic previously fell through to an implicit EmptyView, so 49 of the
-      // 59 call sites silently lost their subtitle (and any trailing view)
-      // whenever the user selected the Classic brand.
-      //
-      // The title is deliberately NOT rendered here. Under Classic
-      // `vigilNavigationTitle` resolves to the real title, so every unguarded
-      // call site already shows it in the navigation bar — including the two
-      // screens that get it from a parent (PortfolioRoot, and
-      // ChartBuilderStandaloneScreen for the embedded builder). Drawing it
-      // again would double the title on all of them.
-      //
-      // The WATCH eyebrow is also omitted: "WATCH I — WEALTH" is Vigil
-      // vocabulary from docs/vigil-identity.md and would leak that identity
-      // into Classic, which predates it.
-      HStack(alignment: .top, spacing: 12) {
+    HStack(alignment: .top, spacing: 12) {
+      VStack(alignment: .leading, spacing: 6) {
+        Text(watch.eyebrow)
+          .vigilOverline()
+          // Not the accent tint: this eyebrow renders on 60 screens, and
+          // colouring all of them made the WATCH label compete with the title
+          // it introduces. It is a label, so it reads as one.
+          .foregroundStyle(.secondary)
+        Text(title)
+          .font(.title2.bold())
+          .foregroundStyle(AppTheme.Colors.foreground(for: scheme))
+          .fixedSize(horizontal: false, vertical: true)
         if let subtitle {
           Text(subtitle)
             .font(.subheadline)
             .foregroundStyle(AppTheme.Colors.secondaryText(for: scheme))
             .fixedSize(horizontal: false, vertical: true)
         }
-        Spacer(minLength: 8)
-        trailing
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .accessibilityElement(children: .combine)
+      Spacer(minLength: 8)
+      trailing
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .accessibilityElement(children: .combine)
   }
 }
 

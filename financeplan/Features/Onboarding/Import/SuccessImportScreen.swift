@@ -18,11 +18,9 @@ struct SuccessImportScreen: View {
       Spacer()
 
       VStack(spacing: 24) {
-        if BrandTheme.current == .vigil {
-          Text(VigilWatch.vigilActive.eyebrow)
-            .vigilOverline()
-            .foregroundStyle(.secondary)
-        }
+        Text(VigilWatch.vigilActive.eyebrow)
+          .vigilOverline()
+          .foregroundStyle(.secondary)
 
         ZStack {
           Circle()

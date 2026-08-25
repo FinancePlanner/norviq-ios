@@ -15,9 +15,7 @@ enum VigilNavigationAppearance {
 
     // The nav bar's bottom rule is a separator, not an accent. It used to be
     // tint at 12%, which put a cyan line under every navigation bar.
-    if BrandTheme.current == .vigil {
-      nav.shadowColor = AppTheme.Colors.uiSeparator
-    }
+    nav.shadowColor = AppTheme.Colors.uiSeparator
 
     UINavigationBar.appearance().standardAppearance = nav
     UINavigationBar.appearance().scrollEdgeAppearance = nav

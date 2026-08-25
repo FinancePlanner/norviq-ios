@@ -11,11 +11,9 @@ struct OnboardingWelcomeScreen: View {
       Spacer(minLength: 32)
 
       VStack(spacing: 24) {
-        if BrandTheme.current == .vigil {
-          Text(VigilWatch.wealth.eyebrow)
-            .vigilOverline()
-            .foregroundStyle(.secondary)
-        }
+        Text(VigilWatch.wealth.eyebrow)
+          .vigilOverline()
+          .foregroundStyle(.secondary)
 
         Image("CerberusMarkFull")
           .renderingMode(.template)

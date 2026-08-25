@@ -7,7 +7,7 @@ import SwiftUI
 /// as a FLAT `cardBackground` fill under Classic, with no stroke, shadow or
 /// native glass, disagreeing with what this type already gave every other card.
 /// It has been retired — all 11 of its former call sites now go through
-/// `GlassCard`, most inside `if BrandTheme.current == .vigil` branches whose
+/// `GlassCard`, whose
 /// Classic side was left untouched, so this only changed Vigil's background
 /// recipe plus the handful of sites where `.vigilGlassCard()` ran unconditionally.
 ///
@@ -71,10 +71,8 @@ public struct GlassCard<Content: View>: View {
         // sites that made neon cyan the outline of every surface in the app,
         // which is not what docs/vigil-identity.md asks for: it gives borders
         // their own token (#C5DBE2 / #14303A). `separator` is that token.
-        if BrandTheme.current == .vigil {
-          RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .stroke(AppTheme.Colors.separator, lineWidth: 1)
-        }
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+          .stroke(AppTheme.Colors.separator, lineWidth: 1)
       }
   }
 }

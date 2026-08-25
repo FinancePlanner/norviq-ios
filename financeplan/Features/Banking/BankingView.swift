@@ -9,9 +9,22 @@ struct BankingView: View {
   @State private var viewModel = BankViewModel()
   @InjectedObservable(\Container.billingManager) private var billingManager
 
-  @State private var isPresentingLink = false
   @State private var isPresentingGoCardless = false
   @State private var confirmingDisconnect: BankConnectionResponse?
+
+  /// Plaid's link token, as a presentation payload. The token is the reason the
+  /// sheet exists, so it is what drives it.
+  private struct PlaidLink: Identifiable {
+    let token: String
+    var id: String { token }
+  }
+
+  private var plaidLink: Binding<PlaidLink?> {
+    Binding(
+      get: { viewModel.pendingLinkToken.map(PlaidLink.init) },
+      set: { if $0 == nil { viewModel.clearPendingLinkToken() } }
+    )
+  }
 
   var body: some View {
     List {
@@ -48,24 +61,19 @@ struct BankingView: View {
     .vigilInlineNavigationBar()
     .task { await viewModel.load() }
     .refreshable { await viewModel.load() }
-    .onChange(of: viewModel.pendingLinkToken) { _, token in
-      isPresentingLink = token != nil
-    }
     .sheet(isPresented: $isPresentingGoCardless) {
       GoCardlessConnectView(viewModel: viewModel)
     }
-    .sheet(isPresented: $isPresentingLink, onDismiss: { viewModel.clearPendingLinkToken() }) {
-      if let token = viewModel.pendingLinkToken {
-        PlaidLinkView(
-          linkToken: token,
-          onSuccess: { publicToken, institutionId, institutionName in
-            isPresentingLink = false
-            Task { await viewModel.completeConnect(publicToken: publicToken, institutionId: institutionId, institutionName: institutionName) }
-          },
-          onExit: { isPresentingLink = false }
-        )
-        .ignoresSafeArea()
-      }
+    .sheet(item: plaidLink) { link in
+      PlaidLinkView(
+        linkToken: link.token,
+        onSuccess: { publicToken, institutionId, institutionName in
+          viewModel.clearPendingLinkToken()
+          Task { await viewModel.completeConnect(publicToken: publicToken, institutionId: institutionId, institutionName: institutionName) }
+        },
+        onExit: { viewModel.clearPendingLinkToken() }
+      )
+      .ignoresSafeArea()
     }
     .confirmationDialog(
       "Disconnect this bank?",

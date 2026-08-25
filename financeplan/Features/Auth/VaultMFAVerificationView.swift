@@ -12,17 +12,11 @@ struct VaultMFAVerificationView: View {
 
       VStack(alignment: .leading, spacing: 18) {
         HStack(alignment: .top) {
-          if BrandTheme.current == .vigil {
-            VigilPageHeader(
-              watch: .auth("Two-factor"),
-              title: "Two-Factor Verification",
-              subtitle: nil
-            )
-          } else {
-            Text("Two-Factor Verification")
-              .font(.title2.weight(.bold))
-              .foregroundStyle(.primary)
-          }
+          VigilPageHeader(
+            watch: .auth("Two-factor"),
+            title: "Two-Factor Verification",
+            subtitle: nil
+          )
 
           Spacer()
 
@@ -38,13 +32,9 @@ struct VaultMFAVerificationView: View {
           .foregroundStyle(.secondary)
 
         Group {
-          if BrandTheme.current == .vigil {
-            GlassCard(cornerRadius: AppTheme.Radius.card, padding: 0) {
-              mfaFields
-                .padding(20)
-            }
-          } else {
+          GlassCard(cornerRadius: AppTheme.Radius.card, padding: 0) {
             mfaFields
+              .padding(20)
           }
         }
 

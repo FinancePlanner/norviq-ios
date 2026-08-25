@@ -17,11 +17,9 @@ struct SplashScreen: View {
       )
       .ignoresSafeArea()
 
-      if BrandTheme.current == .vigil {
-        MeshGradientBackground(animatesOnAppear: true)
-          .opacity(colorScheme == .dark ? 0.55 : 0.35)
-          .ignoresSafeArea()
-      }
+      MeshGradientBackground(animatesOnAppear: true)
+        .opacity(colorScheme == .dark ? 0.55 : 0.35)
+        .ignoresSafeArea()
 
       VStack(spacing: 0) {
         Spacer()

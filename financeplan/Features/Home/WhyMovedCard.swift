@@ -151,7 +151,7 @@ struct WhyMovedCard: View {
         .fill(AppTheme.Colors.elevatedCardBackground(for: scheme))
         .overlay(
           Capsule()
-            .stroke(AppTheme.Colors.tint(for: scheme).opacity(BrandTheme.current == .vigil ? 0.28 : 0), lineWidth: 1)
+            .stroke(AppTheme.Colors.tint(for: scheme).opacity(0.28), lineWidth: 1)
         )
     )
   }
@@ -159,7 +159,7 @@ struct WhyMovedCard: View {
 
 enum WhyMovedPalette {
   // These defer entirely to the app-wide status tokens, which already switch on
-  // both BrandTheme and ColorScheme. The brand check that used to live here only
+  // ColorScheme. The brand check that used to live here only
   // intercepted Classic and substituted a fixed literal, so Classic rendered the
   // same colour in light and dark — gains and losses picked for a light card,
   // drawn on a dark one.

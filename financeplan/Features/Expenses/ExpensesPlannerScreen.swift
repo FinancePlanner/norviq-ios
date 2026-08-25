@@ -60,119 +60,138 @@ struct ExpensesPlannerScreen: View {
 
   var body: some View {
     NavigationStack {
-      ScrollView {
-        VStack(spacing: 24) {
-          VigilPageHeader(
-            watch: .spendingDCA,
-            title: "Budget planner",
-            subtitle: LocalizedStringKey(viewModel.selectedMonthDisplayTitle)
+      Group {
+        if isShowingLoadingState {
+          ExpensesSkeletonView()
+        } else if let loadErrorMessage {
+          ErrorRetryView(message: loadErrorMessage, onRetry: retryLoad)
+        } else if shouldShowEmptyState {
+          EmptyStateView(
+            icon: "chart.bar.doc.horizontal",
+            title: "No budget posted",
+            message: "Set your first monthly budget. Start here.",
+            ctaLabel: "Add Budget",
+            onCTA: presentSalaryEditor,
+            usesBrandIcon: true
           )
-          .padding(.horizontal, 16)
-          .padding(.top, 4)
+        } else {
+          ScrollView {
+            VStack(spacing: 24) {
+              VigilPageHeader(
+                watch: .spendingDCA,
+                title: "Budget planner",
+                subtitle: LocalizedStringKey(viewModel.selectedMonthDisplayTitle)
+              )
+              .padding(.horizontal, 16)
+              .padding(.top, 4)
 
-          VigilExpensesCommandDeck(
-            activities: viewModel.activities,
-            driftViewModel: driftViewModel,
-            currencyCode: "USD",
-            onOpenTax: { isTaxDashboardPresented = true },
-            onOpenReallocation: { isReallocationPresented = true }
-          )
-          .padding(.horizontal, 16)
-
-          MonthPickerHeader(
-            selectedMonth: selectedMonthBinding,
-            availableMonths: viewModel.availableMonths
-          )
-          .padding(.horizontal, 16)
-          .padding(.top, 8)
-          
-          ExpensesCircularOverviewCard(
-            leftAmount: viewModel.selectedMonthLeftAfterSpending,
-            totalAmount: viewModel.selectedMonthSnapshot?.netSalary ?? 0
-          )
-          .padding(.top, 10)
-
-          BudgetDriftDashboardCard(
-            viewModel: driftViewModel,
-            isPro: billingManager.isPro,
-            onOpenSimulator: { isReallocationPresented = true },
-            onOpenPolicy: { isAlertPolicyPresented = true },
-            onOpenPaywall: { isPaywallPresented = true }
-          )
-          .padding(.horizontal, 16)
-
-          NavigationLink {
-            ExpenseHistoryScreen(activities: viewModel.activities)
-          } label: {
-            Label("View searchable spending log", systemImage: "list.bullet.rectangle")
-              .frame(maxWidth: .infinity, alignment: .leading)
-          }
-          .buttonStyle(.bordered)
-          .padding(.horizontal, 16)
-            
-            MonthlyPlanItemsCard(
-              monthTitle: viewModel.selectedMonthDisplayTitle,
-              items: (viewModel.selectedMonthSnapshot?.items ?? []).sorted(by: planItemSortOrder),
-              recurringTemplates: viewModel.recurringTemplates,
-              onAdd: { presentNewPlanItemDraft(pillar: .fundamentals) },
-              onEdit: { item in presentExistingPlanItemDraft(item) },
-              onDelete: { item in itemToDelete = item },
-              onUpdateAmount: { item, amount in
-                viewModel.addOrUpdatePlanItem(
-                  BudgetPlanItemDraft(
-                    itemID: item.id,
-                    title: item.title,
-                    plannedAmount: amount,
-                    pillar: item.pillar,
-                    categoryId: item.categoryId,
-                    splitMode: item.splitMode,
-                    userSharePercent: item.userSharePercent
-                  )
-                )
-              },
-              onLogRecurring: { template in recurringTemplateToLog = template },
-              onManageRecurring: {
-                if billingManager.isPro {
-                  isRecurringManagerPresented = true
-                } else {
-                  isPaywallPresented = true
-                }
-              }
-            )
-            .padding(.horizontal, 16)
-
-            FinancingCommitmentsCard { isShowingFinancingPlanner = true }
+              VigilExpensesCommandDeck(
+                activities: viewModel.activities,
+                driftViewModel: driftViewModel,
+                currencyCode: "USD",
+                onOpenTax: { isTaxDashboardPresented = true },
+                onOpenReallocation: { isReallocationPresented = true }
+              )
               .padding(.horizontal, 16)
 
-          if (viewModel.selectedMonthSnapshot?.netSalary ?? 0) <= 0 {
-            GlassCard(cornerRadius: 18) {
-              HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                  .foregroundStyle(AppTheme.Colors.warning)
+              MonthPickerHeader(
+                selectedMonth: selectedMonthBinding,
+                availableMonths: viewModel.availableMonths
+              )
+              .padding(.horizontal, 16)
+              .padding(.top, 8)
+          
+              ExpensesCircularOverviewCard(
+                leftAmount: viewModel.selectedMonthLeftAfterSpending,
+                totalAmount: viewModel.selectedMonthSnapshot?.netSalary ?? 0
+              )
+              .padding(.top, 10)
 
-                VStack(alignment: .leading, spacing: 6) {
-                  Text("Set your monthly budget")
-                    .typography(.small, weight: .semibold)
-                  Text(viewModel.selectedMonthSnapshot == nil
-                    ? "No budget plan for \(viewModel.selectedMonthDisplayTitle). Create one or select a different month from the title menu."
-                    : "Your monthly budget is currently 0. Add salary and side income so spending insights can calculate correctly.")
-                    .typography(.nano)
-                    .foregroundStyle(.secondary)
+              BudgetDriftDashboardCard(
+                viewModel: driftViewModel,
+                isPro: billingManager.isPro,
+                onOpenSimulator: { isReallocationPresented = true },
+                onOpenPolicy: { isAlertPolicyPresented = true },
+                onOpenPaywall: { isPaywallPresented = true }
+              )
+              .padding(.horizontal, 16)
+
+              NavigationLink {
+                ExpenseHistoryScreen(activities: viewModel.activities)
+              } label: {
+                Label("View searchable spending log", systemImage: "list.bullet.rectangle")
+                  .frame(maxWidth: .infinity, alignment: .leading)
+              }
+              .buttonStyle(.bordered)
+              .padding(.horizontal, 16)
+            
+                MonthlyPlanItemsCard(
+                  monthTitle: viewModel.selectedMonthDisplayTitle,
+                  items: (viewModel.selectedMonthSnapshot?.items ?? []).sorted(by: planItemSortOrder),
+                  recurringTemplates: viewModel.recurringTemplates,
+                  onAdd: { presentNewPlanItemDraft(pillar: .fundamentals) },
+                  onEdit: { item in presentExistingPlanItemDraft(item) },
+                  onDelete: { item in itemToDelete = item },
+                  onUpdateAmount: { item, amount in
+                    viewModel.addOrUpdatePlanItem(
+                      BudgetPlanItemDraft(
+                        itemID: item.id,
+                        title: item.title,
+                        plannedAmount: amount,
+                        pillar: item.pillar,
+                        categoryId: item.categoryId,
+                        splitMode: item.splitMode,
+                        userSharePercent: item.userSharePercent
+                      )
+                    )
+                  },
+                  onLogRecurring: { template in recurringTemplateToLog = template },
+                  onManageRecurring: {
+                    if billingManager.isPro {
+                      isRecurringManagerPresented = true
+                    } else {
+                      isPaywallPresented = true
+                    }
+                  }
+                )
+                .padding(.horizontal, 16)
+
+                FinancingCommitmentsCard { isShowingFinancingPlanner = true }
+                  .padding(.horizontal, 16)
+
+              if (viewModel.selectedMonthSnapshot?.netSalary ?? 0) <= 0 {
+                GlassCard(cornerRadius: 18) {
+                  HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                      .foregroundStyle(AppTheme.Colors.warning)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                      Text("Set your monthly budget")
+                        .typography(.small, weight: .semibold)
+                      Text(viewModel.selectedMonthSnapshot == nil
+                        ? "No budget plan for \(viewModel.selectedMonthDisplayTitle). Create one or select a different month from the title menu."
+                        : "Your monthly budget is currently 0. Add salary and side income so spending insights can calculate correctly.")
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Button(viewModel.selectedMonthSnapshot == nil ? "Create" : "Set") {
+                      isSalaryEditorPresented = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                  }
                 }
-
-                Spacer()
-
-                Button(viewModel.selectedMonthSnapshot == nil ? "Create" : "Set") {
-                  isSalaryEditorPresented = true
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
+                .padding(.horizontal, 16)
               }
             }
-            .padding(.horizontal, 16)
           }
         }
       }
+      .refreshable { await viewModel.load(force: true) }
+      .task { await viewModel.load() }
       .vigilScreenBackground()
       .vigilNavigationTitle("Expenses and Budgeting")
       .vigilInlineNavigationBar()
@@ -252,26 +271,6 @@ struct ExpensesPlannerScreen: View {
     .appSensoryFeedback(destructive: destructiveFeedbackTrigger)
   }
 
-  @ViewBuilder
-  private var rootContent: some View {
-    if isShowingLoadingState {
-          ExpensesSkeletonView()
-    } else if let loadErrorMessage {
-      ErrorRetryView(message: loadErrorMessage, onRetry: retryLoad)
-    } else if shouldShowEmptyState {
-      EmptyStateView(
-        icon: "chart.bar.doc.horizontal",
-        title: "No budget posted",
-        message: "Set your first monthly budget. Start here.",
-        ctaLabel: "Add Budget",
-        onCTA: presentSalaryEditor,
-        usesBrandIcon: true
-      )
-    } else {
-      mainScrollView
-    }
-  }
-
   private var categoryDetailsNavLabel: some View {
     HStack {
       Image(systemName: "square.grid.2x2.fill")
@@ -347,96 +346,6 @@ struct ExpensesPlannerScreen: View {
     }
   }
 
-  private var mainScrollView: some View {
-    scrollViewCore
-      .sheet(isPresented: $isSettingsPresented) {
-        UserProfileView()
-      }
-      .sheet(isPresented: $isSalaryEditorPresented) {
-        NetSalaryEditorSheet(
-          currentValue: viewModel.selectedMonthSnapshot?.netSalary ?? 0,
-          monthTitle: viewModel.selectedMonthDisplayTitle,
-          onSave: viewModel.updateNetSalary
-        )
-      }
-      .sheet(isPresented: $isTargetEditorPresented) {
-        PillarTargetsEditorSheet(
-          monthTitle: viewModel.selectedMonthDisplayTitle,
-          currentShares: viewModel.selectedMonthSnapshot?.targetShares ?? [:],
-          onSave: viewModel.updateTargetShares
-        )
-      }
-      .sheet(item: $itemDraft, onDismiss: handlePlanItemDismiss) { draft in
-        planItemEditorSheet(for: draft)
-      }
-      .sheet(isPresented: $isActivitySheetPresented, onDismiss: resetRecordSpendInitialPillar) {
-        recordSpendSheet()
-      }
-      .sheet(item: $activityToEdit) { activity in
-        editActivitySheet(for: activity)
-      }
-      .sheet(isPresented: $isPartnerEditorPresented) {
-        HouseholdPartnerEditorSheet(
-          currentName: viewModel.partnerDisplayName == "Partner" ? "" : viewModel.partnerDisplayName
-        ) { name in
-          viewModel.updatePartnerDisplayName(name)
-        }
-      }
-      .confirmationDialog(
-        "Delete planned item?",
-        isPresented: Binding(get: { itemToDelete != nil }, set: { if !$0 { itemToDelete = nil } }),
-        presenting: itemToDelete
-      ) { item in
-        Button("Delete", role: .destructive) {
-          destructiveFeedbackTrigger += 1
-          viewModel.removePlanItem(item.id)
-        }
-      } message: { item in
-        Text("Remove \(item.title) from the \(item.pillar.title) plan for \(viewModel.selectedMonthDisplayTitle).")
-      }
-      .confirmationDialog(
-        "Delete expense?",
-        isPresented: Binding(get: { activityToDelete != nil }, set: { if !$0 { activityToDelete = nil } }),
-        presenting: activityToDelete
-      ) { item in
-        Button("Delete", role: .destructive) {
-          destructiveFeedbackTrigger += 1
-          viewModel.removeExpense(item.id)
-        }
-      } message: { item in
-        Text("Remove \(item.title) from \(viewModel.selectedMonthDisplayTitle).")
-      }
-  }
-
-  private var scrollViewCore: some View {
-    ScrollView {
-      plannerContent
-    }
-    .tracksTabBarMinimize()
-    .refreshable {
-      await viewModel.load(force: true)
-    }
-    .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
-    .navigationTitle("Expenses and Budgeting")
-    .navigationBarTitleDisplayMode(.inline)
-    .overlay(alignment: .top) {
-      if let errorMessage = viewModel.errorMessage {
-        errorBanner(errorMessage)
-      }
-    }
-    .task { await viewModel.load() }
-    .toolbar {
-      ToolbarItem(placement: .topBarLeading) {
-        financingPlannerButton
-      }
-      ToolbarItem(placement: .topBarTrailing) {
-        toolbarActions
-      }
-    }
-    .padding(.vertical, 10)
-    .maxContentWidth(regularSizeClass: ContentWidth.dense)
-  }
-
   private var financingPlannerButton: some View {
     Button {
       isShowingFinancingPlanner = true
@@ -454,127 +363,6 @@ struct ExpensesPlannerScreen: View {
       .background(Color.red)
       .clipShape(.rect(cornerRadius: 8))
       .padding()
-  }
-
-  private var plannerContent: some View {
-    VStack(spacing: 24) {
-      ExpensesCircularOverviewCard(
-        leftAmount: viewModel.selectedMonthLeftAfterSpending,
-        totalAmount: viewModel.selectedMonthSnapshot?.netSalary ?? 0
-      )
-      .padding(.top, 10)
-
-      PlannerSalaryCard(
-        monthTitle: viewModel.selectedMonthDisplayTitle,
-        netSalary: viewModel.selectedMonthSnapshot?.netSalary ?? 0,
-        allocated: viewModel.selectedMonthPlannedTotal,
-        spent: viewModel.selectedMonthActualTotal,
-        myPlanned: viewModel.selectedMonthMyPlannedTotal,
-        partnerPlanned: viewModel.selectedMonthPartnerPlannedTotal,
-        mySpent: viewModel.selectedMonthMyActualTotal,
-        partnerSpent: viewModel.selectedMonthPartnerActualTotal,
-        partnerName: viewModel.partnerDisplayName,
-        leftToAllocate: viewModel.selectedMonthAvailableAfterPillarPlan,
-        leftAfterSpending: viewModel.selectedMonthLeftAfterSpending,
-        onEditMonthlyBudget: { isSalaryEditorPresented = true }
-      )
-      .padding(.horizontal, 16)
-
-      MissingBudgetAlert(
-        netSalary: viewModel.selectedMonthSnapshot?.netSalary ?? 0,
-        hasSnapshot: viewModel.selectedMonthSnapshot != nil,
-        monthTitle: viewModel.selectedMonthDisplayTitle,
-        isSalaryEditorPresented: $isSalaryEditorPresented
-      )
-
-      MonthlyPlanItemsCard(
-        monthTitle: viewModel.selectedMonthDisplayTitle,
-        items: (viewModel.selectedMonthSnapshot?.items ?? []).sorted(by: planItemSortOrder),
-        recurringTemplates: viewModel.recurringTemplates,
-        onAdd: { presentNewPlanItemDraft(pillar: viewModel.preferredInitialPillar) },
-        onEdit: { item in presentExistingPlanItemDraft(item) },
-        onDelete: { item in itemToDelete = item },
-        onUpdateAmount: { item, amount in
-          viewModel.addOrUpdatePlanItem(
-            BudgetPlanItemDraft(
-              itemID: item.id,
-              title: item.title,
-              plannedAmount: amount,
-              pillar: item.pillar,
-              categoryId: item.categoryId,
-              splitMode: item.splitMode,
-              userSharePercent: item.userSharePercent
-            )
-          )
-        },
-        onLogRecurring: { template in recurringTemplateToLog = template },
-        onManageRecurring: {
-          if billingManager.isPro {
-            isRecurringManagerPresented = true
-          } else {
-            isPaywallPresented = true
-          }
-        }
-      )
-      .padding(.horizontal, 16)
-
-      FinancingCommitmentsCard { isShowingFinancingPlanner = true }
-        .padding(.horizontal, 16)
-
-      ProGateView(billingManager: billingManager) {
-        ExpensesYearOverviewCard(
-          selectedYear: selectedYearBinding,
-          availableYears: viewModel.availableYears,
-          totalSpent: viewModel.selectedYearActualTotal,
-          averageSpent: viewModel.selectedYearAverageActual,
-          lastMonthLabel: viewModel.selectedYearLastMonthLabel,
-          chartPoints: viewModel.selectedYearChartPoints
-        )
-        .padding(.horizontal, 16)
-      }
-
-      PillarAllocationTableCard(
-        monthTitle: viewModel.selectedMonthDisplayTitle,
-        summaries: viewModel.selectedMonthSummaries
-      )
-      .padding(.horizontal, 16)
-
-      ProGateView(billingManager: billingManager) {
-        SmartSuggestionsCard(
-          suggestion: viewModel.topReportSuggestion,
-          isLoading: viewModel.isSuggestionsLoading,
-          isUnavailable: viewModel.suggestionsUnavailable,
-          onDismiss: { suggestion in
-            viewModel.dismissSuggestion(suggestion)
-          }
-        )
-        .padding(.horizontal, 16)
-      }
-
-      ExpensesByCategoryCard(
-        monthTitle: viewModel.selectedMonthDisplayTitle,
-        activities: viewModel.selectedMonthActivities,
-        summaries: viewModel.selectedMonthSummaries,
-        onEdit: { activity in activityToEdit = activity },
-        onDelete: { activity in activityToDelete = activity }
-      )
-      .padding(.horizontal, 16)
-
-      NavigationLink {
-        BudgetCategoryDetailsScreen(
-          viewModel: viewModel,
-          isActivitySheetPresented: $isActivitySheetPresented,
-          onAddPlannedItem: { pillar in presentNewPlanItemDraft(pillar: pillar) },
-          onRecordExpense: { pillar in
-            recordSpendInitialPillar = pillar
-            isActivitySheetPresented = true
-          }
-        )
-      } label: {
-        categoryDetailsNavLabel
-      }
-      .padding(.vertical, 10)
-    }
   }
 
   private func initialLoad() async {
@@ -808,185 +596,6 @@ struct ExpensesPlannerScreen: View {
   }
 }
 
-private struct ExpensesYearOverviewCard: View {
-  @Binding var selectedYear: Int
-  let availableYears: [Int]
-  let totalSpent: Double
-  let averageSpent: Double
-  let lastMonthLabel: String
-  let chartPoints: [BudgetMonthChartPoint]
-
-  @Environment(\.colorScheme) private var colorScheme
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-  @State private var chartProgress: Double = 0.0
-
-  var body: some View {
-    GlassCard(cornerRadius: AppTheme.Radius.hero) {
-      VStack(alignment: .leading, spacing: 18) {
-        Picker("Year", selection: $selectedYear) {
-          ForEach(availableYears, id: \.self) { year in
-            Text(String(year)).tag(year)
-          }
-        }
-        .pickerStyle(.menu)
-
-        VStack(alignment: .leading, spacing: 6) {
-          Text("Total")
-            .typography(.caption, weight: .semibold)
-            .foregroundStyle(.secondary)
-
-          Text(totalSpent.currency)
-            .typography(.hero, weight: .bold)
-            .contentTransition(.numericText(value: totalSpent))
-            .appAnimation(AppMotion.state, value: totalSpent)
-
-          Text("Avg \(averageSpent.currency) through \(lastMonthLabel)")
-            .typography(.nano)
-            .foregroundStyle(.secondary)
-            .contentTransition(.numericText())
-            .appAnimation(AppMotion.state, value: averageSpent)
-        }
-
-        VStack(alignment: .leading, spacing: 12) {
-          Text("Overview")
-            .typography(.caption, weight: .semibold)
-            .foregroundStyle(.secondary)
-
-          VStack(alignment: .leading, spacing: 12) {
-            Text("Expenses")
-              .typography(.small, weight: .semibold)
-            Text("Yearly actual spending")
-              .typography(.nano)
-              .foregroundStyle(.secondary)
-
-            Chart(chartPoints) { point in
-              BarMark(
-                x: .value("Month", point.label),
-                y: .value("Spent", point.actual * chartProgress)
-              )
-              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme).gradient)
-              .clipShape(.rect(cornerRadius: 6))
-            }
-            .frame(height: 180)
-            .chartYAxis {
-              AxisMarks(position: .trailing)
-            }
-          }
-          .padding(14)
-          .background(
-            AppTheme.Colors.elevatedCardBackground(for: colorScheme),
-            in: RoundedRectangle(cornerRadius: 20, style: .continuous)
-          )
-        }
-      }
-    }
-    .onAppear {
-      guard !reduceMotion else {
-        chartProgress = 1
-        return
-      }
-      withAnimation(AppMotion.dataReveal) { chartProgress = 1 }
-    }
-  }
-}
-
-private struct ExpensesMonthDetailListCard: View {
-  @Binding var selectedMonthStart: Date
-  let summaries: [BudgetMonthSummary]
-
-  @Environment(\.colorScheme) private var colorScheme
-
-  var body: some View {
-    GlassCard {
-      VStack(alignment: .leading, spacing: 16) {
-        Text("Monthly detail")
-          .typography(.caption, weight: .semibold)
-          .foregroundStyle(.secondary)
-
-        if summaries.isEmpty {
-          Text("No months available for this year yet.")
-            .typography(.small)
-            .foregroundStyle(.secondary)
-        } else {
-          ForEach(summaries) { summary in
-            Button {
-              selectedMonthStart = summary.monthStart
-            } label: {
-              HStack(spacing: 12) {
-                Text(summary.monthStart.formatted(.dateTime.month(.wide)))
-                  .typography(.small, weight: .semibold)
-                  .foregroundStyle(.primary)
-
-                Spacer()
-
-                Text(summary.actual.currency)
-                  .typography(.small, weight: .semibold)
-                  .foregroundStyle(.primary)
-
-                Image(systemName: "chevron.right")
-                  .font(.caption.weight(.semibold))
-                  .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-              }
-              .padding(.horizontal, 12)
-              .padding(.vertical, 12)
-              .background(
-                calendarHighlight(for: summary),
-                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-              )
-            }
-.buttonStyle(.bordered)
-
-            if summary.id != summaries.last?.id {
-              Divider()
-                .padding(.leading, 12)
-            }
-          }
-        }
-      }
-    }
-  }
-
-  private func calendarHighlight(for summary: BudgetMonthSummary) -> Color {
-    Calendar.current.isDate(summary.monthStart, equalTo: selectedMonthStart, toGranularity: .month)
-      ? AppTheme.Colors.tintSoft(for: colorScheme)
-      : .clear
-  }
-}
-
-private struct SelectedMonthPlannerCard: View {
-  let monthTitle: String
-  let onPlanNextMonth: () -> Void
-
-  var body: some View {
-    GlassCard {
-      VStack(alignment: .leading, spacing: 16) {
-        HStack(alignment: .top) {
-          VStack(alignment: .leading, spacing: 4) {
-            Text("Selected month")
-              .typography(.small, weight: .semibold)
-            Text(monthTitle)
-              .typography(.headline, weight: .bold)
-            Text("Tap a month above to switch context, then adjust salary, pillars, and planned items.")
-              .typography(.nano)
-              .foregroundStyle(.secondary)
-          }
-
-          Spacer()
-
-          Button {
-            onPlanNextMonth()
-          } label: {
-            Label("Plan next", systemImage: "calendar.badge.plus")
-          }
-          .buttonStyle(.bordered)
-          .controlSize(.small)
-        }
-      }
-    }
-  }
-}
-
 private struct BudgetMetricPair: View {
   let label: String
   let value: String
@@ -1004,221 +613,6 @@ private struct BudgetMetricPair: View {
         .foregroundStyle(color)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-  }
-}
-
-private struct PlannerSalaryCard: View {
-  // @ScaledMetric rather than a text style: keeps the exact 40pt and the
-  // rounded design while growing with Dynamic Type. .largeTitle is 34pt.
-  @ScaledMetric(relativeTo: .largeTitle) private var salarySize: CGFloat = 40
-
-  let monthTitle: String
-  let netSalary: Double
-  let allocated: Double
-  let spent: Double
-  let myPlanned: Double
-  let partnerPlanned: Double
-  let mySpent: Double
-  let partnerSpent: Double
-  let partnerName: String
-  let leftToAllocate: Double
-  let leftAfterSpending: Double
-  let onEditMonthlyBudget: () -> Void
-
-  var body: some View {
-    GlassCard(cornerRadius: 20) {
-      VStack(alignment: .center, spacing: 0) {
-        HStack {
-          Text("Monthly Budget Plan")
-            .typography(.label, weight: .semibold)
-          Spacer()
-          Text(monthTitle)
-            .typography(.small)
-            .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-
-        Divider()
-
-        VStack(spacing: 0) {
-          // Salary Summary
-          VStack(spacing: 12) {
-            VStack(spacing: 4) {
-              Text(netSalary.currency)
-                .font(.system(size: salarySize, weight: .bold, design: .rounded))
-                .contentTransition(.numericText())
-              Text("salary + side income")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            }
-            .padding(.vertical, 8)
-
-            Button("Edit monthly budget") {
-              onEditMonthlyBudget()
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
-          }
-          .padding(16)
-
-          Divider()
-
-          // Household Total Section
-          VStack(alignment: .leading, spacing: 12) {
-            Text("HOUSEHOLD TOTAL")
-              .font(.caption2.weight(.bold))
-              .tracking(0.5)
-              .foregroundStyle(.secondary)
-
-            HStack(spacing: 12) {
-              BudgetMetricPair(
-                label: "Planned",
-                value: allocated.currency,
-                color: .primary
-              )
-              BudgetMetricPair(
-                label: "Spent",
-                value: spent.currency,
-                color: spent > allocated ? .red : .primary
-              )
-            }
-
-            HStack(spacing: 8) {
-              HStack(spacing: 2) {
-                Image(systemName: spent > allocated ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
-                  .foregroundStyle(spent > allocated ? .red : .green)
-                  .font(.caption2)
-                Text(spent > allocated
-                  ? "Over by \((spent - allocated).currency)"
-                  : "Under by \((allocated - spent).currency)")
-                  .font(.caption2)
-                  .foregroundStyle(spent > allocated ? .red : .green)
-              }
-              Spacer()
-            }
-          }
-          .padding(16)
-
-          Divider()
-
-          // Your Spending Section
-          VStack(alignment: .leading, spacing: 12) {
-            Text("YOUR SPENDING")
-              .font(.caption2.weight(.bold))
-              .tracking(0.5)
-              .foregroundStyle(.secondary)
-
-            HStack(spacing: 12) {
-              BudgetMetricPair(
-                label: "Planned",
-                value: myPlanned.currency,
-                color: .primary
-              )
-              BudgetMetricPair(
-                label: "Spent",
-                value: mySpent.currency,
-                color: mySpent > myPlanned ? .red : .primary
-              )
-            }
-
-            HStack(spacing: 8) {
-              HStack(spacing: 2) {
-                Image(systemName: mySpent > myPlanned ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
-                  .foregroundStyle(mySpent > myPlanned ? .red : .green)
-                  .font(.caption2)
-                Text(mySpent > myPlanned
-                  ? "Over by \((mySpent - myPlanned).currency)"
-                  : "Under by \((myPlanned - mySpent).currency)")
-                  .font(.caption2)
-                  .foregroundStyle(mySpent > myPlanned ? .red : .green)
-              }
-              Spacer()
-            }
-          }
-          .padding(16)
-
-          Divider()
-
-          // Partner Spending Section
-          VStack(alignment: .leading, spacing: 12) {
-            Text("\(partnerName.uppercased())'S SPENDING")
-              .font(.caption2.weight(.bold))
-              .tracking(0.5)
-              .foregroundStyle(.secondary)
-
-            HStack(spacing: 12) {
-              BudgetMetricPair(
-                label: "Planned",
-                value: partnerPlanned.currency,
-                color: .primary
-              )
-              BudgetMetricPair(
-                label: "Spent",
-                value: partnerSpent.currency,
-                color: partnerSpent > partnerPlanned ? .red : .primary
-              )
-            }
-
-            HStack(spacing: 8) {
-              HStack(spacing: 2) {
-                Image(systemName: partnerSpent > partnerPlanned ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
-                  .foregroundStyle(partnerSpent > partnerPlanned ? .red : .green)
-                  .font(.caption2)
-                Text(partnerSpent > partnerPlanned
-                  ? "Over by \((partnerSpent - partnerPlanned).currency)"
-                  : "Under by \((partnerPlanned - partnerSpent).currency)")
-                  .font(.caption2)
-                  .foregroundStyle(partnerSpent > partnerPlanned ? .red : .green)
-              }
-              Spacer()
-            }
-          }
-          .padding(16)
-
-          Divider()
-
-          // Budget Remaining
-          VStack(alignment: .leading, spacing: 12) {
-            Text("AVAILABLE")
-              .font(.caption2.weight(.bold))
-              .tracking(0.5)
-              .foregroundStyle(.secondary)
-
-            HStack(spacing: 12) {
-              BudgetMetricPair(
-                label: "After Plan",
-                value: leftToAllocate.currency,
-                color: leftToAllocate >= 0 ? .green : .red
-              )
-              BudgetMetricPair(
-                label: "After Spend",
-                value: leftAfterSpending.currency,
-                color: leftAfterSpending >= 0 ? .green : .red
-              )
-            }
-          }
-          .padding(16)
-        }
-      }
-    }
-  }
-}
-
-private struct PillarAllocationTableCard: View {
-  let monthTitle: String
-  let summaries: [PillarPlanningSummary]
-  @Environment(\.colorScheme) private var colorScheme
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      Text("Where your salary goes")
-        .font(.headline)
-
-      ForEach(summaries) { summary in
-        PillarSummaryCard(summary: summary)
-      }
-    }
   }
 }
 
@@ -1639,78 +1033,6 @@ private struct MonthlyPlanItemsCard: View {
   }
 }
 
-private struct PillarPlannerCard: View {
-  let pillar: BudgetPillar
-  let items: [BudgetPlanItem]
-  let summary: PillarPlanningSummary
-  let actualAmount: (BudgetPlanItem) -> Double
-  let onEdit: (BudgetPlanItem) -> Void
-  let onAdd: () -> Void
-  let onDelete: (BudgetPlanItem) -> Void
-
-  @Environment(\.colorScheme) private var colorScheme
-
-  var body: some View {
-    GlassCard {
-      VStack(alignment: .leading, spacing: 16) {
-        HStack(alignment: .top) {
-          VStack(alignment: .leading, spacing: 6) {
-            Label(pillar.title, systemImage: pillar.symbol)
-              .typography(.small, weight: .semibold)
-              .foregroundStyle(pillar.color(for: colorScheme))
-
-            Text(pillar.subtitle)
-              .typography(.nano)
-              .foregroundStyle(.secondary)
-          }
-
-          Spacer()
-
-          Button("Add", action: onAdd)
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-        }
-
-        HStack(spacing: 10) {
-          SummaryMetric(title: "Goal", value: summary.targetAmount.currency)
-          SummaryMetric(title: "Planned", value: summary.plannedAmount.currency)
-          SummaryMetric(title: "Actual", value: summary.actualAmount.currency)
-        }
-
-        if items.isEmpty {
-          Text("No planned items yet.")
-            .typography(.small)
-            .foregroundStyle(.secondary)
-        } else {
-          ForEach(items) { item in
-            PlannerItemRow(
-              item: item,
-              actualAmount: actualAmount(item),
-              onEdit: { onEdit(item) },
-              onDelete: { onDelete(item) }
-            )
-
-            if item.id != items.last?.id {
-              Divider()
-            }
-          }
-        }
-
-        if summary.unplannedActualAmount > 0 {
-          HStack {
-            Text("Unplanned")
-              .typography(.nano, weight: .semibold)
-            Spacer()
-            Text(summary.unplannedActualAmount.currency)
-              .typography(.nano, weight: .semibold)
-              .foregroundStyle(AppTheme.Colors.warning)
-          }
-        }
-      }
-    }
-  }
-}
-
 private struct PlannerItemRow: View {
   let item: BudgetPlanItem
   let actualAmount: Double
@@ -1778,71 +1100,6 @@ private struct PlannerItemRow: View {
   }
 }
 
-private struct RecentActivityCard: View {
-  let activities: [BudgetActivity]
-
-  var body: some View {
-    GlassCard {
-      VStack(alignment: .leading, spacing: 16) {
-        Text("Recorded spend")
-          .typography(.small, weight: .semibold)
-
-        if activities.isEmpty {
-          Text("No spending recorded for this month yet.")
-            .typography(.small)
-            .foregroundStyle(.secondary)
-        } else {
-          ForEach(activities.prefix(8)) { activity in
-            HStack(spacing: 12) {
-              // Pillar color indicator
-              Circle()
-                .fill(activity.pillar.color(for: .dark))
-                .frame(width: 8, height: 8)
-
-              VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                  Text(activity.title)
-                    .typography(.small, weight: .semibold)
-                  Spacer()
-                  Text(activity.amount.currency)
-                    .typography(.small, weight: .semibold)
-                    .foregroundStyle(activity.pillar.color(for: .dark))
-                }
-                
-                HStack(spacing: 8) {
-                  Text(activity.occurredOn.formatted(date: .abbreviated, time: .omitted))
-                    .typography(.nano)
-                    .foregroundStyle(.secondary)
-                  
-                  Divider()
-                    .frame(height: 10)
-                  
-                  Text(splitLabel(for: activity))
-                    .typography(.nano)
-                    .foregroundStyle(.secondary)
-                }
-              }
-            }
-
-            if activity.id != activities.prefix(8).last?.id {
-              Divider()
-            }
-          }
-        }
-      }
-    }
-  }
-
-  private func splitLabel(for activity: BudgetActivity) -> String {
-    switch activity.splitMode {
-    case .personal:
-      return "Personal"
-    case .shared:
-      return "Shared \(Int(activity.userSharePercent.rounded()))/\(Int((100 - activity.userSharePercent).rounded()))"
-    }
-  }
-}
-
 private struct SummaryMetric: View {
   let title: String
   let value: String
@@ -1863,20 +1120,6 @@ private struct SummaryMetric: View {
     .accessibilityLabel(Text(title))
     .accessibilityValue(Text(value))
     .frame(maxWidth: .infinity, alignment: .leading)
-  }
-}
-
-private struct PlannerTableHeader: View {
-  let text: String
-
-  init(_ text: String) {
-    self.text = text
-  }
-
-  var body: some View {
-    Text(text)
-      .typography(.caption, weight: .semibold)
-      .foregroundStyle(.secondary)
   }
 }
 
@@ -2658,105 +1901,6 @@ private struct HouseholdPartnerEditorSheet: View {
           }
         }
       }
-    }
-  }
-}
-
-struct RecentTransactionsList: View {
-  let activities: [BudgetActivity]
-  let onEdit: (BudgetActivity) -> Void
-  let onDelete: (BudgetActivity) -> Void
-
-  private func relativeDateString(from date: Date) -> String {
-      let calendar = Calendar.current
-      if calendar.isDateInToday(date) { return "Today" }
-      if calendar.isDateInYesterday(date) { return "Yesterday" }
-      let formatter = DateFormatter()
-      formatter.dateFormat = "MMM d"
-      return formatter.string(from: date)
-  }
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      Text("Recent Transactions")
-        .font(.title2.bold())
-        .padding(.horizontal, 4)
-
-      VStack(spacing: 0) {
-        if activities.isEmpty {
-          Text("No recent transactions.")
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .padding()
-        } else {
-          ForEach(activities.prefix(5)) { activity in
-            HStack(spacing: 16) {
-              // Pillar color circle with icon
-              Circle()
-                .fill(activity.pillar.color(for: .dark))
-                .frame(width: 48, height: 48)
-                .overlay(
-                  Image(systemName: activity.pillar.symbol)
-                    .foregroundStyle(.white)
-                    .font(.title3)
-                )
-
-              VStack(alignment: .leading, spacing: 6) {
-                Text(activity.pillar.title)
-                  .font(.headline)
-                Text(activity.title)
-                  .font(.subheadline)
-                  .foregroundStyle(.secondary)
-                  .lineLimit(1)
-                HStack(spacing: 8) {
-                  Text(relativeDateString(from: activity.occurredOn))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                  
-                  if activity.splitMode == .shared {
-                    Divider()
-                      .frame(height: 10)
-                    Label("\(Int(activity.userSharePercent.rounded()))% yours", systemImage: "person.crop.circle.badge.checkmark")
-                      .font(.caption)
-                      .foregroundStyle(.secondary)
-                  }
-                }
-              }
-
-              Spacer()
-
-              VStack(alignment: .trailing, spacing: 4) {
-                Text("-\(activity.amount.currency)")
-                  .font(.headline)
-                  .foregroundStyle(activity.pillar.color(for: .dark))
-              }
-
-              Menu {
-                Button("Edit", systemImage: "pencil") {
-                  onEdit(activity)
-                }
-                Button("Delete", systemImage: "trash", role: .destructive) {
-                  onDelete(activity)
-                }
-              } label: {
-                Image(systemName: "ellipsis.circle")
-                  .font(.body)
-                  .foregroundStyle(.secondary)
-                  .accessibilityLabel("More actions")
-              }
-            }
-            .padding(.vertical, 14)
-            .padding(.horizontal, 16)
-
-            if activity.id != activities.prefix(5).last?.id {
-              Divider()
-                .padding(.leading, 80)
-            }
-          }
-        }
-      }
-      .background(Color(uiColor: .secondarySystemGroupedBackground))
-      .clipShape(.rect(cornerRadius: 20))
     }
   }
 }

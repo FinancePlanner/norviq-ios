@@ -24,7 +24,7 @@ protocol TaxServiceProtocol: Sendable {
   ) async throws -> TaxLocationScenarioResponse
   func createPlacementPlan(_ request: TaxPlacementPlanRequest) async throws -> TaxActionPlanResponse
   func dismissOpportunity(id: String, jurisdiction: TaxJurisdiction, taxYear: Int) async throws
-  func restoreOpportunity(id: String, taxYear: Int) async throws
+  func restoreOpportunity(id: String, jurisdiction: TaxJurisdiction, taxYear: Int) async throws
   func notificationPreferences() async throws -> TaxNotificationPreferences
   func saveNotificationPreferences(_ request: TaxNotificationPreferences) async throws -> TaxNotificationPreferences
   func reports() async throws -> [TaxReportResponse]
@@ -212,11 +212,14 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     )
   }
 
-  func restoreOpportunity(id: String, taxYear: Int) async throws {
+  func restoreOpportunity(id: String, jurisdiction: TaxJurisdiction, taxYear: Int) async throws {
     try await sendNoContent(
       path: "v1/tax/opportunities/\(id)/dismiss",
       method: "DELETE",
-      queryItems: [URLQueryItem(name: "taxYear", value: String(taxYear))]
+      queryItems: [
+        URLQueryItem(name: "jurisdiction", value: jurisdiction.rawValue),
+        URLQueryItem(name: "taxYear", value: String(taxYear))
+      ]
     )
   }
 

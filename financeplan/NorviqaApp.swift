@@ -24,7 +24,6 @@ struct NorviqApp: App {
   @Injected(\.analytics) private var analytics
   @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system
     .rawValue
-  @AppStorage(BrandTheme.storageKey) private var brandThemeRawValue = BrandTheme.vigil.rawValue
   @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
 
   private var appAppearance: AppAppearance {
@@ -39,12 +38,6 @@ struct NorviqApp: App {
     #if DEBUG
     Self.applyUITestAppearanceOverride()
     #endif
-
-    // Hard-hide native TabView chrome while the floating Revolut bar is in use.
-    // This is an appearance proxy — process-wide and read when a UITabBar is
-    // created — so it belongs at launch, not in HomeScreen's init, which SwiftUI
-    // re-runs every time the view is re-evaluated.
-    UITabBar.appearance().isHidden = true
 
     TelemetryDeck.initialize(config: .init(appID: "C2B05381-D641-4BE4-B418-5AE02A8DB85F"))
     
@@ -86,7 +79,6 @@ struct NorviqApp: App {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .id(appLanguage.localeIdentifier)
         .id(environmentManager.current)
-        .id(brandThemeRawValue)
         .environment(sessionManager)
         .environment(\.locale, Locale(identifier: appLanguage.localeIdentifier))
         .preferredColorScheme(appAppearance.colorScheme)

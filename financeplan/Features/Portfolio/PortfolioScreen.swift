@@ -487,7 +487,6 @@ struct PortfolioScreen: View {
       }
     }
     .vigilScreenBackground()
-    .tracksTabBarMinimize()
   }
 
   private var addPositionSheetContent: some View {

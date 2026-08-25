@@ -22,31 +22,13 @@ struct SignInView: View {
   @ViewBuilder
   private var header: some View {
     VStack(spacing: 16) {
-      if BrandTheme.current != .vigil {
-        NorviqFullLogo(width: 220)
-          .padding(.top, 24)
-
-        VStack(spacing: 8) {
-          Text("Welcome back")
-            .font(.largeTitle.weight(.bold))
-            .foregroundStyle(.primary)
-
-          Text("Review your portfolio, budgets, and financial insights securely.")
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .multilineTextAlignment(.center)
-            .lineSpacing(4)
-        }
-        .padding(.top, 8)
-      } else {
-        VigilPageHeader(
-          watch: .auth("Secure access"),
-          title: "Welcome back",
-          subtitle: "Review your portfolio, budgets, and financial insights securely."
-        )
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 24)
-      }
+      VigilPageHeader(
+        watch: .auth("Secure access"),
+        title: "Welcome back",
+        subtitle: "Review your portfolio, budgets, and financial insights securely."
+      )
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.top, 24)
     }
     .padding(.horizontal, 24)
   }
@@ -54,15 +36,9 @@ struct SignInView: View {
   @ViewBuilder
   private var formCard: some View {
     Group {
-      if BrandTheme.current == .vigil {
-        GlassCard(cornerRadius: AppTheme.Radius.hero, padding: 0) {
-          formFields
-            .padding(24)
-        }
-      } else {
-        GlassCard(cornerRadius: AppTheme.Radius.hero) {
-          formFields
-        }
+      GlassCard(cornerRadius: AppTheme.Radius.hero, padding: 0) {
+        formFields
+          .padding(24)
       }
     }
     .padding(.horizontal, 24)

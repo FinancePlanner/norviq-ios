@@ -17,7 +17,7 @@ struct OnboardingHeader: View {
 
   var body: some View {
     VStack(spacing: 16) {
-      if BrandTheme.current == .vigil, let watch {
+      if let watch {
         Text(watch.eyebrow)
           .vigilOverline()
           .foregroundStyle(.secondary)

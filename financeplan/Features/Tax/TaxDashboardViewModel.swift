@@ -78,6 +78,7 @@ final class TaxDashboardViewModel {
     do {
       try await service.restoreOpportunity(
         id: opportunity.id,
+        jurisdiction: selectedJurisdiction,
         taxYear: Calendar.current.component(.year, from: Date())
       )
       await load()

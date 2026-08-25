@@ -8,31 +8,14 @@ struct PrivacyWelcomeScreen: View {
   var body: some View {
     ZStack {
       VStack(spacing: 24) {
-        if BrandTheme.current == .vigil {
-          VigilPageHeader(
-            watch: .auth("The gate holds"),
-            title: "Your data is yours",
-            subtitle: "We built Norviq around one principle: your financial data belongs to you."
-          )
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, 24)
-          .padding(.top, 60)
-        } else {
-          NorviqFullLogo(width: 220)
-            .padding(.top, 60)
-
-          VStack(spacing: 8) {
-            Text("Your data is yours")
-              .font(.largeTitle.weight(.bold))
-              .multilineTextAlignment(.center)
-
-            Text("We built Norviq around one principle: your financial data belongs to you.")
-              .font(.subheadline)
-              .foregroundStyle(.secondary)
-              .multilineTextAlignment(.center)
-              .padding(.horizontal, 32)
-          }
-        }
+        VigilPageHeader(
+          watch: .auth("The gate holds"),
+          title: "Your data is yours",
+          subtitle: "We built Norviq around one principle: your financial data belongs to you."
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 24)
+        .padding(.top, 60)
 
         Spacer()
 
@@ -69,17 +52,10 @@ struct PrivacyWelcomeScreen: View {
   @ViewBuilder
   private var privacyCard: some View {
     Group {
-      if BrandTheme.current == .vigil {
-        GlassCard(cornerRadius: 24, padding: 0) {
-          privacyBullets
-            .padding(.vertical, 8)
-            .padding(.horizontal, 8)
-        }
-      } else {
-        GlassCard(cornerRadius: 24) {
-          privacyBullets
-            .padding(.vertical, 8)
-        }
+      GlassCard(cornerRadius: 24, padding: 0) {
+        privacyBullets
+          .padding(.vertical, 8)
+          .padding(.horizontal, 8)
       }
     }
     .padding(.horizontal, 24)

@@ -46,11 +46,6 @@ struct VaultForgotPasswordView: View {
 
       Spacer()
 
-      if BrandTheme.current != .vigil {
-        Text("Norviq")
-          .font(.title3.weight(.bold))
-          .foregroundStyle(.primary)
-      }
 
       Spacer()
 
@@ -64,42 +59,21 @@ struct VaultForgotPasswordView: View {
 
   @ViewBuilder
   private var header: some View {
-    if BrandTheme.current == .vigil {
-      VigilPageHeader(
-        watch: .auth("Account recovery"),
-        title: "Reset Password",
-        subtitle: "Enter the email address associated with your account and we'll send a code to reset your password."
-      )
-      .padding(.horizontal, 24)
-      .padding(.top, 16)
-    } else {
-      VStack(spacing: 12) {
-        NorviqFullLogo(width: 220)
-          .padding(.top, 40)
-
-        Text("Reset Password")
-          .font(.title2.weight(.bold))
-          .foregroundStyle(.primary)
-
-        Text("Enter the email address associated with your account and we'll send a code to reset your password.")
-          .font(.subheadline)
-          .foregroundStyle(.secondary)
-          .multilineTextAlignment(.center)
-          .lineSpacing(4)
-      }
-    }
+    VigilPageHeader(
+      watch: .auth("Account recovery"),
+      title: "Reset Password",
+      subtitle: "Enter the email address associated with your account and we'll send a code to reset your password."
+    )
+    .padding(.horizontal, 24)
+    .padding(.top, 16)
   }
 
   @ViewBuilder
   private var formSection: some View {
     Group {
-      if BrandTheme.current == .vigil {
-        GlassCard(cornerRadius: AppTheme.Radius.hero, padding: 0) {
-          formContent
-            .padding(24)
-        }
-      } else {
+      GlassCard(cornerRadius: AppTheme.Radius.hero, padding: 0) {
         formContent
+          .padding(24)
       }
     }
     .padding(.horizontal, 24)

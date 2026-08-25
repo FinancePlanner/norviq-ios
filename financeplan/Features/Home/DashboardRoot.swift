@@ -16,6 +16,7 @@ struct DashboardRoot: View {
   @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
   @Binding var selectedTab: HomeTab
   @Binding var isSettingsPresented: Bool
+  @Binding var isCapturePresented: Bool
   @Bindable var budgetStore: BudgetPlannerViewModel
   @InjectedObservable(\Container.billingManager) private var billingManager
   @State private var searchViewModel = AssetSearchViewModel()
@@ -136,10 +137,9 @@ struct DashboardRoot: View {
         // edge-to-edge (Guideline 4). Background below still fills the screen.
         .maxContentWidth(regularSizeClass: ContentWidth.dense)
       }
-      .tracksTabBarMinimize()
       .vigilScreenBackground()
       .vigilNavigationTitle(greetingText)
-      .navigationBarTitleDisplayMode(BrandTheme.current == .vigil ? .inline : .large)
+      .navigationBarTitleDisplayMode(.inline)
       .navigationDestination(isPresented: $isChartBuilderPresented) {
         ChartBuilderStandaloneScreen()
       }
@@ -162,6 +162,14 @@ struct DashboardRoot: View {
       }
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
+          Button("Capture expense", systemImage: "plus") {
+            isCapturePresented = true
+          }
+          .labelStyle(.iconOnly)
+          .buttonStyle(.borderedProminent)
+          .tint(AppTheme.Colors.tint)
+          .accessibilityLabel(LocalizedStringKey("Capture expense"))
+
           Button("Scenario planning", systemImage: "chart.xyaxis.line") {
             isScenarioPlanningPresented = true
           }
@@ -408,20 +416,16 @@ private struct DashboardContentSection: View {
 
   var body: some View {
     VStack(spacing: 20) {
-      if BrandTheme.current == .vigil {
-        VigilPageHeader(
-          watch: .intelligence,
-          title: LocalizedStringKey(greetingText)
-        )
-      }
+      VigilPageHeader(
+        watch: .intelligence,
+        title: LocalizedStringKey(greetingText)
+      )
 
-      if BrandTheme.current == .vigil {
-        VigilCommandMetricsBar(
-          netWorth: portfolioTotalValue,
-          periodDeltaPercent: portfolioDeltaPercent,
-          spendingThisMonth: spendingTotalValue > 0 ? spendingTotalValue : nil
-        )
-      }
+      VigilCommandMetricsBar(
+        netWorth: portfolioTotalValue,
+        periodDeltaPercent: portfolioDeltaPercent,
+        spendingThisMonth: spendingTotalValue > 0 ? spendingTotalValue : nil
+      )
 
       WhyMovedCard()
 
@@ -527,11 +531,9 @@ private struct DashboardHeroCard: View {
   }
 
   private var currentColor: Color {
-    if BrandTheme.current == .vigil {
-      return showingPortfolio
-        ? AppTheme.Colors.tint(for: colorScheme)
-        : AppTheme.Colors.secondaryTint(for: colorScheme)
-    }
+    return showingPortfolio
+      ? AppTheme.Colors.tint(for: colorScheme)
+      : AppTheme.Colors.secondaryTint(for: colorScheme)
     return showingPortfolio ? .green : .orange
   }
 

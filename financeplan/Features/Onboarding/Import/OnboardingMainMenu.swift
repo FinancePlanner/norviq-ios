@@ -19,11 +19,9 @@ struct OnboardingMainMenu: View {
   var body: some View {
     VStack(spacing: 32) {
       VStack(spacing: 12) {
-        if BrandTheme.current == .vigil {
-          Text(VigilWatch.wealthImport.eyebrow)
-            .vigilOverline()
-            .foregroundStyle(.secondary)
-        }
+        Text(VigilWatch.wealthImport.eyebrow)
+          .vigilOverline()
+          .foregroundStyle(.secondary)
 
         NorviqFullLogo(width: 190)
           .padding(.bottom, 4)

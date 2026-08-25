@@ -29,11 +29,6 @@ struct SignUpView: View {
 
   private var topBar: some View {
     HStack {
-      if BrandTheme.current != .vigil {
-        Text("Norviq")
-          .font(.title3.weight(.bold))
-          .foregroundStyle(.primary)
-      }
       Spacer()
       Button("Close", systemImage: "xmark") {
         viewModel.hideSignup()
@@ -51,49 +46,22 @@ struct SignUpView: View {
 
   @ViewBuilder
   private var heroHeader: some View {
-    if BrandTheme.current == .vigil {
-      VigilPageHeader(
-        watch: .auth("New vigil"),
-        title: "Create your account",
-        subtitle: "Bring your portfolio and budgets together in one secure place."
-      )
-      .padding(.horizontal, 24)
-      .padding(.top, 8)
-      .padding(.bottom, 24)
-    } else {
-      VStack(alignment: .center, spacing: 16) {
-        NorviqFullLogo(width: 220)
-          .padding(.top, 24)
-
-        Text("Create your\naccount")
-          .font(.largeTitle.weight(.bold))
-          .foregroundStyle(.primary)
-          .multilineTextAlignment(.center)
-
-        Text("Bring your portfolio and budgets together in one secure place.")
-          .font(.subheadline)
-          .foregroundStyle(.secondary)
-          .multilineTextAlignment(.center)
-          .lineSpacing(4)
-      }
-      .frame(maxWidth: .infinity)
-      .padding(.horizontal, 32)
-      .padding(.bottom, 40)
-    }
+    VigilPageHeader(
+      watch: .auth("New vigil"),
+      title: "Create your account",
+      subtitle: "Bring your portfolio and budgets together in one secure place."
+    )
+    .padding(.horizontal, 24)
+    .padding(.top, 8)
+    .padding(.bottom, 24)
   }
 
   @ViewBuilder
   private var formCard: some View {
     Group {
-      if BrandTheme.current == .vigil {
-        GlassCard(cornerRadius: AppTheme.Radius.hero, padding: 0) {
-          formFields
-            .padding(24)
-        }
-      } else {
-        GlassCard(cornerRadius: AppTheme.Radius.hero) {
-          formFields
-        }
+      GlassCard(cornerRadius: AppTheme.Radius.hero, padding: 0) {
+        formFields
+          .padding(24)
       }
     }
     .padding(.horizontal, 24)

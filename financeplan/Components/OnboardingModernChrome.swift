@@ -20,12 +20,10 @@ struct OnboardingQuestionHeader: View {
 
   var body: some View {
     VStack(spacing: 10) {
-      if BrandTheme.current == .vigil {
-        Text(watch.eyebrow)
-          .vigilOverline()
-          .foregroundStyle(.secondary)
-          .multilineTextAlignment(.center)
-      }
+      Text(watch.eyebrow)
+        .vigilOverline()
+        .foregroundStyle(.secondary)
+        .multilineTextAlignment(.center)
 
       Text(title)
         .typography(.title, weight: .bold)
@@ -47,13 +45,9 @@ extension View {
   /// Glass step card on Vigil; unchanged on Classic.
   func onboardingStepCard(cornerRadius: CGFloat = 24) -> some View {
     Group {
-      if BrandTheme.current == .vigil {
-        GlassCard(cornerRadius: cornerRadius, padding: 0) {
-          self
-            .padding(20)
-        }
-      } else {
+      GlassCard(cornerRadius: cornerRadius, padding: 0) {
         self
+          .padding(20)
       }
     }
   }

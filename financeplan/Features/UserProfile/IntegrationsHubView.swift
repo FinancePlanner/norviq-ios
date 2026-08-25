@@ -121,7 +121,7 @@ struct IntegrationsHubView: View {
       .overlay(
         RoundedRectangle(cornerRadius: 12, style: .continuous)
           .stroke(
-            AppTheme.Colors.tint(for: scheme).opacity(BrandTheme.current == .vigil ? 0.22 : 0),
+            AppTheme.Colors.tint(for: scheme).opacity(0.22),
             lineWidth: 1
           )
       )
@@ -135,20 +135,20 @@ struct IntegrationsHubView: View {
       .padding(.horizontal, 8)
       .padding(.vertical, 4)
       .foregroundStyle(
-        BrandTheme.current == .vigil && scheme == .dark
+        scheme == .dark
           ? AppTheme.Colors.secondaryTint(for: scheme)
           : AppTheme.Colors.tint(for: scheme)
       )
       .background(
         Capsule()
           .fill(
-            BrandTheme.current == .vigil && scheme == .dark
+            scheme == .dark
               ? AppTheme.Colors.secondaryTint(for: scheme).opacity(0.12)
               : AppTheme.Colors.tint(for: scheme).opacity(0.12)
           )
           .overlay(
             Capsule().stroke(
-              BrandTheme.current == .vigil && scheme == .dark
+              scheme == .dark
                 ? AppTheme.Colors.secondaryTint(for: scheme).opacity(0.45)
                 : AppTheme.Colors.tint(for: scheme).opacity(0.35),
               lineWidth: 1

@@ -17,19 +17,12 @@ struct PreLoginPaywallScreen: View {
 
       ScrollView {
         VStack(spacing: 24) {
-          if BrandTheme.current == .vigil {
-            VigilPageHeader(
-              watch: .auth("Pro vigil"),
-              title: "Everything you need.",
-              subtitle: "Wealth tracking, spending insights, and market intelligence — all in one place."
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-          } else {
-            PaywallHeroSection(
-              headline: "Everything you need.",
-              subtitle: "Wealth tracking, spending insights, and market intelligence — all in one place."
-            )
-          }
+          VigilPageHeader(
+            watch: .auth("Pro vigil"),
+            title: "Everything you need.",
+            subtitle: "Wealth tracking, spending insights, and market intelligence — all in one place."
+          )
+          .frame(maxWidth: .infinity, alignment: .leading)
 
           featuresList
 
@@ -76,39 +69,21 @@ struct PreLoginPaywallScreen: View {
 
   private var featuresList: some View {
     Group {
-      if BrandTheme.current == .vigil {
-        GlassCard(cornerRadius: 20, padding: 0) {
-          VStack(spacing: 16) {
-            ForEach(Array(PreLoginPaywallScreen.features.enumerated()), id: \.element.title) { index, feature in
-              featureRow(feature: feature)
-                .opacity(featuresAppeared ? 1 : 0)
-                .offset(y: featuresAppeared ? 0 : 12)
-                .animation(
-                  reduceMotion
-                    ? .easeOut(duration: 0.15)
-                    : .spring(response: 0.4, dampingFraction: 0.8).delay(Double(index) * 0.08),
-                  value: featuresAppeared
-                )
-            }
-          }
-          .padding(20)
-        }
-      } else {
-        GlassCard(cornerRadius: 20) {
-          VStack(spacing: 16) {
-            ForEach(Array(PreLoginPaywallScreen.features.enumerated()), id: \.element.title) { index, feature in
-              featureRow(feature: feature)
-                .opacity(featuresAppeared ? 1 : 0)
-                .offset(y: featuresAppeared ? 0 : 12)
-                .animation(
-                  reduceMotion
-                    ? .easeOut(duration: 0.15)
-                    : .spring(response: 0.4, dampingFraction: 0.8).delay(Double(index) * 0.08),
-                  value: featuresAppeared
-                )
-            }
+      GlassCard(cornerRadius: 20, padding: 0) {
+        VStack(spacing: 16) {
+          ForEach(Array(PreLoginPaywallScreen.features.enumerated()), id: \.element.title) { index, feature in
+            featureRow(feature: feature)
+              .opacity(featuresAppeared ? 1 : 0)
+              .offset(y: featuresAppeared ? 0 : 12)
+              .animation(
+                reduceMotion
+                  ? .easeOut(duration: 0.15)
+                  : .spring(response: 0.4, dampingFraction: 0.8).delay(Double(index) * 0.08),
+                value: featuresAppeared
+              )
           }
         }
+        .padding(20)
       }
     }
     .onAppear { featuresAppeared = true }

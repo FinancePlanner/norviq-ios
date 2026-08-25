@@ -50,45 +50,6 @@ enum AppAppearance: String, CaseIterable, Identifiable {
   }
 }
 
-enum BrandTheme: String, CaseIterable, Identifiable {
-  case classic
-  case vigil
-
-  static let storageKey = "app_brand_theme"
-
-  var id: String { rawValue }
-
-  var title: LocalizedStringKey {
-    switch self {
-    case .classic:
-      "Classic"
-    case .vigil:
-      "Vigil"
-    }
-  }
-
-  var subtitle: LocalizedStringKey {
-    switch self {
-    case .classic:
-      "The original blue and teal palette."
-    case .vigil:
-      "Neon command center — cyan and emerald on near-black."
-    }
-  }
-
-  static func from(_ rawValue: String) -> BrandTheme {
-    // Empty / unknown storage defaults to Vigil (Command Center).
-    if rawValue.isEmpty { return .vigil }
-    return BrandTheme(rawValue: rawValue) ?? .vigil
-  }
-
-  /// The currently selected brand theme, read from UserDefaults.
-  /// Views re-render on change via the root `.id(brandThemeRawValue)` in `NorviqApp`.
-  static var current: BrandTheme {
-    from(UserDefaults.standard.string(forKey: storageKey) ?? "")
-  }
-}
-
 enum AppTheme {
   enum Radius {
     static let control: CGFloat = 12
@@ -112,19 +73,20 @@ enum AppTheme {
     // dynamic UIColor that adapts to the trait collection on its own. That is what
     // makes light mode work without threading `\.colorScheme` through 121 view
     // files — see the deprecated shims at the bottom of this enum.
-    //
-    // The brand still has to be picked in Swift: a colorset carries light/dark
-    // appearance variants, but has no notion of Classic vs Vigil.
 
-    private static func brandColor(_ role: String) -> Color {
-      Color("\(BrandTheme.current == .vigil ? "Vigil" : "Classic")\(role)", bundle: .main)
+    /// The "Vigil" prefix is not vestigial brand-switching: bare role names make
+    /// the asset catalog generate `Color.tint`, `Color.separator` and friends,
+    /// which collide with SwiftUI's own `ShapeStyle` members and make every
+    /// `foregroundStyle(.tint)` in the app ambiguous.
+    private static func themeColor(_ role: String) -> Color {
+      Color("Vigil\(role)", bundle: .main)
     }
 
     // MARK: - Accent (classic blue / Vigil neon cyan)
 
-    static var tint: Color { brandColor("Tint") }
-    static var tintSoft: Color { brandColor("TintSoft") }
-    static var secondaryTint: Color { brandColor("SecondaryTint") }
+    static var tint: Color { themeColor("Tint") }
+    static var tintSoft: Color { themeColor("TintSoft") }
+    static var secondaryTint: Color { themeColor("SecondaryTint") }
 
     /// Near-duplicate of `secondaryTint` — folded into it rather than carrying
     /// a fourth near-identical hue per brand/scheme.
@@ -151,16 +113,16 @@ enum AppTheme {
 
     // MARK: - Surfaces (classic cool / Vigil near-black command center)
 
-    static var pageBackground: Color { brandColor("PageBackground") }
-    static var cardBackground: Color { brandColor("CardBackground") }
-    static var elevatedCardBackground: Color { brandColor("ElevatedCard") }
-    static var topBarBackground: Color { brandColor("TopBarBackground") }
+    static var pageBackground: Color { themeColor("PageBackground") }
+    static var cardBackground: Color { themeColor("CardBackground") }
+    static var elevatedCardBackground: Color { themeColor("ElevatedCard") }
+    static var topBarBackground: Color { themeColor("TopBarBackground") }
 
     // MARK: - Text (classic cool slate / Vigil cool cyan-slate)
 
-    static var foreground: Color { brandColor("Foreground") }
-    static var secondaryText: Color { brandColor("SecondaryText") }
-    static var tertiaryText: Color { brandColor("TertiaryText") }
+    static var foreground: Color { themeColor("Foreground") }
+    static var secondaryText: Color { themeColor("SecondaryText") }
+    static var tertiaryText: Color { themeColor("TertiaryText") }
 
     // MARK: - Lines and fills
 
@@ -172,7 +134,7 @@ enum AppTheme {
     /// and the single largest source of ambient blue: it is the hairline on every
     /// card, and `GlassEffect+Compat` reuses it as the pre-iOS-26 glass stroke, so
     /// most surfaces picked up the tint twice.
-    static var separator: Color { brandColor("Separator") }
+    static var separator: Color { themeColor("Separator") }
 
     // MARK: - Nav bar
 
@@ -190,29 +152,15 @@ enum AppTheme {
     static let disabled = Color.gray.opacity(0.65)
 
     static func dangerText(for scheme: ColorScheme) -> Color {
-      switch BrandTheme.current {
-      case .classic:
-        return scheme == .dark
-          ? Color(red: 1.0, green: 0.60, blue: 0.55)
-          : Color.red
-      case .vigil:
-        return scheme == .dark
-          ? Color(red: 1.0, green: 0.302, blue: 0.427) // #FF4D6D
-          : Color(red: 0.86, green: 0.15, blue: 0.28)
-      }
+      scheme == .dark
+        ? Color(red: 1.0, green: 0.302, blue: 0.427) // #FF4D6D
+        : Color(red: 0.86, green: 0.15, blue: 0.28)
     }
 
     static func successText(for scheme: ColorScheme) -> Color {
-      switch BrandTheme.current {
-      case .classic:
-        return scheme == .dark
-          ? Color(red: 0.65, green: 0.95, blue: 0.68)
-          : Color.green
-      case .vigil:
-        return scheme == .dark
-          ? Color(red: 0.000, green: 1.000, blue: 0.580) // #00FF94
-          : Color(red: 0.020, green: 0.588, blue: 0.412)
-      }
+      scheme == .dark
+        ? Color(red: 0.000, green: 1.000, blue: 0.580) // #00FF94
+        : Color(red: 0.020, green: 0.588, blue: 0.412)
     }
 
     static func warningText(for scheme: ColorScheme) -> Color {
@@ -229,14 +177,14 @@ enum AppTheme {
     // then applied globally). Resolving the named asset directly keeps the UIColor
     // dynamic, so UIKit chrome follows light/dark on its own.
 
-    private static func brandUIColor(_ role: String) -> UIColor {
-      UIColor(named: "\(BrandTheme.current == .vigil ? "Vigil" : "Classic")\(role)") ?? .clear
+    private static func themeUIColor(_ role: String) -> UIColor {
+      UIColor(named: "Vigil\(role)") ?? .clear
     }
 
-    static var uiTopBarBackground: UIColor { brandUIColor("TopBarBackground") }
+    static var uiTopBarBackground: UIColor { themeUIColor("TopBarBackground") }
     static var uiNavBarBackground: UIColor { uiTopBarBackground }
-    static var uiForeground: UIColor { brandUIColor("Foreground") }
-    static var uiSeparator: UIColor { brandUIColor("Separator") }
+    static var uiForeground: UIColor { themeUIColor("Foreground") }
+    static var uiSeparator: UIColor { themeUIColor("Separator") }
     static var uiOnTint: UIColor { UIColor(named: "OnTint") ?? .label }
 
     // MARK: - Deprecated scheme-taking shims
@@ -321,13 +269,6 @@ enum AppTheme {
     [
       Colors.tint(for: scheme).opacity(scheme == .dark ? 0.9 : 0.8),
       Colors.secondaryTint(for: scheme).opacity(scheme == .dark ? 0.85 : 0.75)
-    ]
-  }
-
-  static func heroGradient(for scheme: ColorScheme) -> [Color] {
-    [
-      Colors.tintSoft(for: scheme),
-      Colors.pageBackground(for: scheme)
     ]
   }
 

@@ -12,12 +12,10 @@ struct VigilExpensesCommandDeck: View {
   let onOpenReallocation: () -> Void
 
   var body: some View {
-    if BrandTheme.current == .vigil {
-      VStack(spacing: 12) {
-        activityPanel
-        dcaPanel
-        taxPanel
-      }
+    VStack(spacing: 12) {
+      activityPanel
+      dcaPanel
+      taxPanel
     }
   }
 

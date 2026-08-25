@@ -3,12 +3,13 @@ import XCTest
 
 @testable import financeplan
 
-/// Guards brand parity between Vigil and Classic.
+/// Guards the Vigil design system against silent regressions.
 ///
-/// `docs/vigil-identity.md` requires Classic to stay fully functional and
-/// selectable, but the failures here are all silent: a screen simply renders
-/// less, or renders in the wrong colour, with nothing crashing or logging.
-final class BrandThemeParityTests: XCTestCase {
+/// Classic was retired: it was never the default, and carrying two brands meant
+/// every screen had a second rendering path that nothing exercised. What is left
+/// here are the invariants whose failures are invisible — a screen renders in
+/// the wrong colour, or loses a control, with nothing crashing or logging.
+final class VigilDesignSystemTests: XCTestCase {
 
   private func source(_ relativePath: String) throws -> String {
     let url = URL(fileURLWithPath: #filePath)
@@ -16,60 +17,6 @@ final class BrandThemeParityTests: XCTestCase {
       .deletingLastPathComponent()
       .appendingPathComponent(relativePath)
     return try String(contentsOf: url, encoding: .utf8)
-  }
-
-  // MARK: - VigilPageHeader
-
-  func testVigilPageHeaderRendersSomethingUnderClassic() throws {
-    let src = try source("financeplan/Components/VigilPageHeader.swift")
-
-    // The body used to be a bare `if BrandTheme.current == .vigil { … }` with no
-    // else, so 49 of 59 call sites silently dropped their subtitle under Classic.
-    XCTAssertTrue(
-      src.contains("} else if subtitle != nil || hasTrailing {"),
-      "VigilPageHeader must render a Classic branch, not fall through to EmptyView."
-    )
-  }
-
-  func testVigilPageHeaderClassicBranchDoesNotDuplicateTheTitle() throws {
-    let src = try source("financeplan/Components/VigilPageHeader.swift")
-
-    guard let elseRange = src.range(of: "} else if subtitle != nil || hasTrailing {") else {
-      return XCTFail("Classic branch missing; see testVigilPageHeaderRendersSomethingUnderClassic.")
-    }
-    let classicBranch = String(src[elseRange.lowerBound...])
-
-    // Under Classic `vigilNavigationTitle` resolves to the real title, so every
-    // unguarded call site already shows it in the navigation bar. Drawing
-    // Text(title) here would double the title on ~49 screens.
-    XCTAssertFalse(
-      classicBranch.contains("Text(title)"),
-      "Classic already shows the title in the nav bar; the in-content header must not repeat it."
-    )
-
-    // "WATCH I — WEALTH" is Vigil vocabulary and must not leak into Classic.
-    XCTAssertFalse(
-      classicBranch.contains("watch.eyebrow"),
-      "The WATCH eyebrow is Vigil-only vocabulary and must not render under Classic."
-    )
-
-    XCTAssertTrue(
-      classicBranch.contains("Text(subtitle)"),
-      "Classic must render the subtitle — that is the content it was losing."
-    )
-  }
-
-  // BrandTheme.current and VigilNavigationTitle.display are @MainActor-isolated
-  // under Swift 6 strict concurrency, so this case must hop to the main actor.
-  @MainActor
-  func testVigilNavigationTitleStillBlanksOnlyUnderVigil() throws {
-    // The Classic branch above depends on this being true. If the nav title ever
-    // blanks under Classic too, Classic screens lose their title entirely and
-    // VigilPageHeader must start rendering it.
-    XCTAssertEqual(
-      VigilNavigationTitle.display("Portfolio"),
-      BrandTheme.current == .vigil ? "" : "Portfolio"
-    )
   }
 
   // MARK: - Root tint
@@ -259,53 +206,45 @@ final class BrandThemeParityTests: XCTestCase {
     let src = try source("financeplan/Components/GlassCard.swift")
 
     // Guards the consolidation trap: pointing GlassCard at VigilGlassBackground
-    // would drop .appGlassEffect, and VigilGlassBackground's Classic branch is a
-    // flat cardBackground fill with no stroke, shadow or native glass. That
-    // would flatten Classic cards across all 75 sites. Any future change here
-    // needs a screenshot review first.
+    // would drop .appGlassEffect and leave a flat cardBackground fill with no
+    // stroke, shadow or native glass, flattening cards across all 75 sites. Any
+    // future change here needs a screenshot review first.
     XCTAssertTrue(src.contains(".appGlassEffect("),
                   "GlassCard must keep the native/fallback glass primitive")
 
     // Match construction, not any mention: the doc comment in that file
     // deliberately names VigilGlassBackground to explain why it is NOT used.
     XCTAssertFalse(src.contains("VigilGlassBackground("),
-                   "swapping in VigilGlassBackground flattens Classic cards; needs visual review")
+                   "swapping in VigilGlassBackground flattens the cards; needs visual review")
   }
 
   // MARK: - Tab bar chrome
 
-  func testTabBarStrokeFollowsTheBrandInsteadOfHardcodedWhite() throws {
-    let src = try source("financeplan/Components/RevolutTabBar.swift")
+  /// The app used to hide the native tab bar process-wide and draw its own
+  /// floating capsule. That cost iPad sidebar adaptation, the accessibility
+  /// rotor, scroll-edge behaviour and correct safe-area handling, and the
+  /// capsule overflowed at the *default* Dynamic Type size.
+  ///
+  /// Re-hiding the bar is the one edit that would silently undo all of it, so it
+  /// is what this guards.
+  func testNativeTabBarIsNotHiddenAgain() throws {
+    let home = try source("financeplan/Features/Home/HomeScreen.swift")
+    let app = try source("financeplan/NorviqaApp.swift")
 
-    // A white hairline over a light page is barely visible, and it cannot follow
-    // the brand at all — the same defect class as border-white/10 on the web.
     XCTAssertFalse(
-      src.contains("Color.white.opacity(colorScheme == .dark ? 0.12 : 0.22)"),
-      "the capsule stroke must not be a hardcoded white"
+      home.contains(".toolbar(.hidden, for: .tabBar)"),
+      "hiding the tab bar brings back the custom capsule and everything it cost."
     )
-    XCTAssertTrue(src.contains("capsuleStroke"),
-                  "the capsule stroke should resolve from AppTheme per brand")
+    XCTAssertFalse(
+      app.contains("UITabBar.appearance().isHidden"),
+      "this appearance proxy is process-wide — it also hides tab bars inside UIKit SDK flows."
+    )
+    XCTAssertTrue(
+      home.contains(".tabViewStyle(.sidebarAdaptable)"),
+      "iPad should adapt to a sidebar rather than centre a phone-width bar."
+    )
   }
 
-  func testTabBarDoesNotUseAppGlassEffect() throws {
-    let src = try source("financeplan/Components/RevolutTabBar.swift")
-
-    // Deliberate exception to the glass consolidation: on iOS 26 the native
-    // glassEffect expands to the full ZStack proposal and covers the screen.
-    // The raw .ultraThinMaterial here is load-bearing, and the file says so.
-    //
-    // Comments are stripped first — the file explains WHY it avoids
-    // appGlassEffect, so a naive substring check matches its own documentation.
-    // (The CSS brand-layout checker needed the same fix for the same reason.)
-    let code = src
-      .split(separator: "\n")
-      .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
-      .joined(separator: "\n")
-
-    XCTAssertFalse(code.contains(".appGlassEffect("),
-                   "appGlassEffect on the tab capsule covers the screen on iOS 26")
-    XCTAssertTrue(code.contains(".fill(.ultraThinMaterial)"))
-  }
 
   // MARK: - Credential autofill
 

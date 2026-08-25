@@ -49,6 +49,6 @@ enum VigilWatch: Equatable {
 enum VigilNavigationTitle {
   /// Empty nav title under Vigil (in-content header carries the label); classic keeps `title`.
   static func display(_ title: String) -> String {
-    BrandTheme.current == .vigil ? "" : title
+    ""
   }
 }
