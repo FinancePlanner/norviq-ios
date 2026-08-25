@@ -15,7 +15,7 @@ struct InitialCryptoImportScreen: View {
     let onDone: () -> Void
     let onBack: () -> Void
     var headerNamespace: Namespace.ID?
-
+    
     @State private var assets: [CryptoAssetResponse] = []
     @State private var selected: Set<String> = []
     @State private var isLoading = false
