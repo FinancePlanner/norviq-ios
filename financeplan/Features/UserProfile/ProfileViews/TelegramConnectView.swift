@@ -98,7 +98,14 @@ struct TelegramConnectView: View {
         .accessibilityIdentifier("integrations.telegram.connect")
       }
     } header: {
-      Text(LocalizedStringKey("Telegram"))
+      HStack(spacing: 8) {
+        Image("VigIcon")
+          .resizable()
+          .scaledToFit()
+          .frame(width: 20, height: 20)
+          .accessibilityHidden(true)
+        Text(LocalizedStringKey("Telegram"))
+      }
     } footer: {
       Text(LocalizedStringKey("Ask Q from Telegram — the same assistant and the same conversation as in the app. Proposed changes still wait for you to confirm them."))
     }

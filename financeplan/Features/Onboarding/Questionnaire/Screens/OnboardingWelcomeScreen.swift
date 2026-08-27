@@ -13,6 +13,12 @@ struct OnboardingWelcomeScreen: View {
           .vigilOverline()
           .foregroundStyle(.secondary)
 
+        Image("VigFull")
+          .resizable()
+          .scaledToFit()
+          .frame(height: 200)
+          .accessibilityHidden(true)
+
         NorviqFullLogo(width: 236)
           .accessibilityHidden(true)
 
@@ -22,7 +28,7 @@ struct OnboardingWelcomeScreen: View {
             .multilineTextAlignment(.center)
             .padding(.horizontal, 24)
 
-          Text("Norviq keeps the vigil — wealth, spending, and the signals between. Nothing slips past.")
+          Text("Norviq keeps the vigil — wealth, spending, and the signals between.")
             .typography(.label)
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
