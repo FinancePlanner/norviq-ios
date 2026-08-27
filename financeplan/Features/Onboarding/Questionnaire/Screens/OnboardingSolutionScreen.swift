@@ -30,7 +30,7 @@ struct OnboardingSolutionScreen: View {
         VStack(spacing: 18) {
           OnboardingQuestionHeader(
             watch: .wealth,
-            title: "One app. Three pillars.",
+            title: "One app. Every angle.",
             subtitle: "You told us what matters. Norviq covers all of it."
           )
 

@@ -100,7 +100,7 @@ struct TelegramConnectView: View {
     } header: {
       Text(LocalizedStringKey("Telegram"))
     } footer: {
-      Text(LocalizedStringKey("Ask Norviq from Telegram — the same assistant and the same conversation as in the app. Proposed changes still wait for you to confirm them."))
+      Text(LocalizedStringKey("Ask Q from Telegram — the same assistant and the same conversation as in the app. Proposed changes still wait for you to confirm them."))
     }
   }
 

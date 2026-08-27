@@ -55,7 +55,7 @@ enum PaywallCatalog {
     Row(id: "year_overview", title: "Year-over-year expense history", watch: .spending, includedInFree: false, includedInPro: true),
     Row(id: "smart_suggestions", title: "Smart spending suggestions", watch: .spending, includedInFree: false, includedInPro: true),
     Row(id: "reports", title: "Basic reports", watch: .intelligence, includedInFree: true, includedInPro: true),
-    Row(id: "ai_insights", title: "AI assistant and insights", watch: .intelligence, includedInFree: false, includedInPro: true),
+    Row(id: "ai_insights", title: "Q and insights", watch: .intelligence, includedInFree: false, includedInPro: true),
     Row(id: "mcp_access", title: "MCP integrations", watch: .intelligence, includedInFree: false, includedInPro: true),
     Row(id: "tax_optimization", title: "Tax strategy", watch: .intelligence, includedInFree: false, includedInPro: true),
     Row(id: "advanced_report_runs", title: "Advanced and scheduled reports", watch: .intelligence, includedInFree: false, includedInPro: true),

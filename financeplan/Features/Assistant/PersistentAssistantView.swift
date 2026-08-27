@@ -19,7 +19,7 @@ struct PersistentAssistantView: View {
                 }
             }
             .vigilScreenBackground()
-            .vigilNavigationTitle("Assistant")
+            .vigilNavigationTitle("Q")
             .vigilInlineNavigationBar()
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -36,7 +36,7 @@ struct PersistentAssistantView: View {
             .task { await viewModel.load() }
             .sheet(isPresented: $showsConversations) { conversationsSheet }
             .sheet(isPresented: $showsPreferences) { preferencesSheet }
-            .alert("Assistant", isPresented: Binding(
+            .alert("Q", isPresented: Binding(
                 get: { viewModel.errorMessage != nil },
                 set: { if !$0 { viewModel.clearMessage() } }
             )) { Button("OK", role: .cancel) { viewModel.clearMessage() } } message: {
@@ -51,7 +51,7 @@ struct PersistentAssistantView: View {
                 LazyVStack(spacing: 16) {
                     VigilPageHeader(
                         watch: .intelligence,
-                        title: "Assistant"
+                        title: "Q"
                     )
                     .padding(.horizontal, 16)
 
@@ -80,15 +80,12 @@ struct PersistentAssistantView: View {
 
     private var idleState: some View {
         VStack(spacing: 12) {
-            Image("CerberusHeadIcon")
-                .renderingMode(.template)
+            Image("VigIcon")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 56, height: 56)
-                .foregroundStyle(AppTheme.Colors.tint(for: scheme))
-                .shadow(color: AppTheme.Colors.tint(for: scheme).opacity(0.25), radius: 14, x: 0, y: 6)
+                .frame(width: 96, height: 96)
                 .accessibilityHidden(true)
-            Text("Ask. The third head is listening.")
+            Text("Ask Q. Nothing slips past.")
                 .font(.headline)
                 .multilineTextAlignment(.center)
             Text("Add an expense, review your spending, or look up a stock.")

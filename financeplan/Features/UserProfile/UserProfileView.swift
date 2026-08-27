@@ -89,7 +89,7 @@ public struct UserProfileView: View {
                             Image(systemName: "sparkles")
                         }
                         .foregroundStyle(AppTheme.Colors.tint(for: scheme))
-                        .accessibilityLabel("Assistant")
+                        .accessibilityLabel("Q")
                     }
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Done") { dismiss() }
@@ -483,7 +483,7 @@ public struct UserProfileView: View {
                     HStack {
                         Label(LocalizedStringKey("Telegram"), systemImage: "paperplane")
                         Spacer()
-                        Text("Ask Norviq from a chat")
+                        Text("Ask Q from a chat")
                             .typography(.caption)
                             .foregroundStyle(.secondary)
                     }

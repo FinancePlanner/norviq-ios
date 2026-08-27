@@ -17,7 +17,7 @@ struct OnboardingWelcomeScreen: View {
           .accessibilityHidden(true)
 
         VStack(spacing: 12) {
-          Text("Three heads. Every angle of your money.")
+          Text("Nothing slips past.")
             .typography(.hero, weight: .bold)
             .multilineTextAlignment(.center)
             .padding(.horizontal, 24)

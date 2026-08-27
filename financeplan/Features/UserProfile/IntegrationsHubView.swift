@@ -12,13 +12,10 @@ struct IntegrationsHubView: View {
     List {
       Section {
         VStack(alignment: .leading, spacing: 8) {
-          Image("CerberusHeadIcon")
-            .renderingMode(.template)
+          Image("VigIcon")
             .resizable()
             .scaledToFit()
             .frame(width: 48, height: 48)
-            .foregroundStyle(AppTheme.Colors.tint(for: scheme))
-            .shadow(color: AppTheme.Colors.tint(for: scheme).opacity(0.45), radius: 10)
             .accessibilityHidden(true)
           Text("MCP ENGINE ROOM")
             .vigilOverline()

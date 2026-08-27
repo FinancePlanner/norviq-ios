@@ -139,7 +139,7 @@ final class VigilDesignSystemTests: XCTestCase {
     XCTAssertTrue(dark.contains("\"red\":\"0x05\""), "OnTint dark must be near-black — white on #00F2FF is 1.39:1.")
   }
 
-  func testSplashUsesNorviqWordmarkNotCerberus() throws {
+  func testSplashUsesNorviqWordmarkNotTheMascot() throws {
     let splash = try source("financeplan/Features/Launch/SplashScreen.swift")
     let logo = try source("financeplan/Features/Auth/NorviqaLogo.swift")
 
@@ -152,8 +152,8 @@ final class VigilDesignSystemTests: XCTestCase {
       "The load screen tagline is the original Norviq line, not Vigil copy."
     )
     XCTAssertFalse(
-      splash.contains("CerberusMarkFull"),
-      "Cerberus is not the product mark on the load screen."
+      splash.contains("Vig"),
+      "Vig is content art. The load screen carries the Norviq wordmark alone."
     )
     XCTAssertFalse(
       splash.contains("The vigil begins."),
@@ -161,11 +161,11 @@ final class VigilDesignSystemTests: XCTestCase {
     )
     XCTAssertTrue(
       logo.contains("Image(\"NorviqIcon\")"),
-      "NorviqLogo is the N mark, not the Cerberus head."
+      "NorviqLogo is the N mark, not the mascot."
     )
     XCTAssertFalse(
-      logo.contains("CerberusHeadIcon"),
-      "The shared logo component must not render Cerberus."
+      logo.contains("Vig"),
+      "The shared logo component must not render the mascot."
     )
   }
 

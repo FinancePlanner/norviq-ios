@@ -21,7 +21,7 @@ struct AssistantView: View {
             }
             .background(AppTheme.Colors.pageBackground(for: scheme))
             .vigilScreenBackground()
-            .vigilNavigationTitle("Assistant")
+            .vigilNavigationTitle("Q")
             .vigilInlineNavigationBar()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -37,7 +37,7 @@ struct AssistantView: View {
                 LazyVStack(alignment: .leading, spacing: 12) {
                     VigilPageHeader(
                         watch: .intelligence,
-                        title: "Assistant"
+                        title: "Q"
                     )
                     .padding(.horizontal, 4)
 
@@ -67,18 +67,12 @@ struct AssistantView: View {
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Image("CerberusHeadIcon")
-                .renderingMode(.template)
+            Image("VigIcon")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 56, height: 56)
-                .foregroundStyle(AppTheme.Colors.tint(for: scheme))
-                .shadow(
-                    color: AppTheme.Colors.ember(for: scheme).opacity(0.25),
-                    radius: 14, x: 0, y: 6
-                )
+                .frame(width: 96, height: 96)
                 .accessibilityHidden(true)
-            Text("Ask. The third head is listening.")
+            Text("Ask Q. Nothing slips past.")
                 .typography(.headline, weight: .semibold)
                 .multilineTextAlignment(.center)
             Text("Add an expense, review your spending, or look up a stock.")
