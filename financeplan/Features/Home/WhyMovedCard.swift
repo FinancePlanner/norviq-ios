@@ -21,18 +21,15 @@ struct WhyMovedCard: View {
   }
 
   private func card(_ response: WhyMovedResponse) -> some View {
-    GlassCard(cornerRadius: 16, padding: 0) {
-      cardContent(response)
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
+    cardContent(response)
+      .frame(maxWidth: .infinity, alignment: .leading)
   }
 
   private func cardContent(_ response: WhyMovedResponse) -> some View {
     VStack(alignment: .leading, spacing: 10) {
       HStack(spacing: 6) {
-        Text("AGENTIC INTELLIGENCE FEED")
-          .vigilOverline()
+        Text("Today")
+          .font(.subheadline.weight(.semibold))
           .foregroundStyle(.secondary)
         Spacer()
         if let change = response.portfolioChangePercent {
@@ -61,30 +58,9 @@ struct WhyMovedCard: View {
       }
 
       if let summary = response.aiSummary {
-        HStack(alignment: .top, spacing: 8) {
-          Image(systemName: "sparkles")
-            .font(.footnote)
-            .foregroundStyle(AppTheme.Colors.tint(for: scheme))
-            .shadow(color: AppTheme.Colors.tint(for: scheme).opacity(0.55), radius: 6)
-          Text(summary.text)
-            .font(.subheadline)
-            .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.leading, 4)
-        .overlay(alignment: .leading) {
-          Rectangle()
-            .fill(
-              LinearGradient(
-                colors: [
-                  AppTheme.Colors.tint(for: scheme),
-                  AppTheme.Colors.secondaryTint(for: scheme)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-              )
-            )
-            .frame(width: 2)
-        }
+        Text(summary.text)
+          .font(.subheadline)
+          .fixedSize(horizontal: false, vertical: true)
       }
 
       if !response.movers.isEmpty {

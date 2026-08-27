@@ -12,13 +12,10 @@ private let homePerformanceLogger = Logger(
 
 @MainActor
 struct DashboardRoot: View {
-  @Environment(\.colorScheme) private var colorScheme
-  @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
   @Binding var selectedTab: HomeTab
   @Binding var isSettingsPresented: Bool
   @Binding var isCapturePresented: Bool
   @Bindable var budgetStore: BudgetPlannerViewModel
-  @InjectedObservable(\Container.billingManager) private var billingManager
   @State private var searchViewModel = AssetSearchViewModel()
   @State private var activityViewModel = ActivityViewModel()
   @State private var focusPointsViewModel = FocusPointsViewModel()
@@ -32,19 +29,13 @@ struct DashboardRoot: View {
   @State private var spendingDeltaPercent: Double?
   @State private var portfolioChartPoints: [ChartDataPoint] = []
   @State private var spendingChartPoints: [ChartDataPoint] = []
-  @State private var isQuickAddPresented = false
   @State private var isChartBuilderPresented = false
-  @State private var isScenarioPlanningPresented = false
   @State private var isGoalPlanningPresented = false
   @State private var hasLoadedContent = false
 
   private let dashboardService: any DashboardServicing = Container.shared.dashboardService()
   private let expensesService: any ExpensesServicing = Container.shared.expensesService()
   private let stockService: any StockServicing = Container.shared.stockService()
-
-  private var appLanguage: AppLanguage {
-    AppLanguage.from(appLanguageRawValue)
-  }
 
   private var insightCards: [InsightCard] {
     guard let insights = dashboardInsights else {
@@ -106,7 +97,6 @@ struct DashboardRoot: View {
       ScrollView {
         Group {
           DashboardContentSection(
-            greetingText: greetingText,
             portfolioTotalValue: portfolioTotalValue,
             spendingTotalValue: spendingTotalValue,
             portfolioDeltaPercent: portfolioDeltaPercent,
@@ -123,12 +113,8 @@ struct DashboardRoot: View {
             financialHealthUnavailable: insightsLoadFailed,
             insightCards: insightCards,
             focusPointsViewModel: focusPointsViewModel,
-            onPortfolioTap: showPortfolioTab,
-            onExpensesTap: showExpensesTab,
-            onReportsTap: showReportsTab,
             onChartBuilderTap: presentChartBuilder,
-            onGoalPlanningTap: { isGoalPlanningPresented = true },
-            onQuickAddTap: presentQuickAdd
+            onGoalPlanningTap: { isGoalPlanningPresented = true }
           )
         }
         .padding(.horizontal, 16)
@@ -138,15 +124,10 @@ struct DashboardRoot: View {
         .maxContentWidth(regularSizeClass: ContentWidth.dense)
       }
       .vigilScreenBackground()
-      .vigilNavigationTitle(greetingText)
-      .navigationBarTitleDisplayMode(.inline)
+      .navigationTitle(greetingText)
+      .navigationBarTitleDisplayMode(.large)
       .navigationDestination(isPresented: $isChartBuilderPresented) {
         ChartBuilderStandaloneScreen()
-      }
-      .navigationDestination(isPresented: $isScenarioPlanningPresented) {
-        ProGateView(billingManager: billingManager) {
-          ScenarioPlanningScreen()
-        }
       }
       .task {
         await handleInitialTask()
@@ -161,29 +142,18 @@ struct DashboardRoot: View {
         handleHomeDataDidChange()
       }
       .toolbar {
-        ToolbarItemGroup(placement: .topBarTrailing) {
+        ToolbarItem(placement: .primaryAction) {
           Button("Capture expense", systemImage: "plus") {
             isCapturePresented = true
           }
           .labelStyle(.iconOnly)
-          .buttonStyle(.borderedProminent)
-          .tint(AppTheme.Colors.tint)
           .accessibilityLabel(LocalizedStringKey("Capture expense"))
-
-          Button("Scenario planning", systemImage: "chart.xyaxis.line") {
-            isScenarioPlanningPresented = true
-          }
-          .labelStyle(.iconOnly)
-          .buttonStyle(.bordered)
-          .tint(AppTheme.Colors.tint(for: colorScheme))
-          .accessibilityLabel(LocalizedStringKey("Open scenario planning"))
-
+        }
+        ToolbarItem(placement: .topBarTrailing) {
           Button("Settings", systemImage: "gearshape") {
             openSettings()
           }
           .labelStyle(.iconOnly)
-          .buttonStyle(.bordered)
-          .tint(AppTheme.Colors.tint(for: colorScheme))
           .accessibilityLabel(LocalizedStringKey("Open settings"))
         }
       }
@@ -197,11 +167,6 @@ struct DashboardRoot: View {
       }
       .onSubmit(of: .search) {
         handleSearchSubmit()
-      }
-      .sheet(isPresented: $isQuickAddPresented) {
-        HomeQuickExpenseSheet { draft in
-          await handleQuickExpenseSave(draft)
-        }
       }
       .fullScreenCover(isPresented: $isGoalPlanningPresented) {
         NavigationStack {
@@ -231,22 +196,6 @@ struct DashboardRoot: View {
     isSettingsPresented = true
   }
 
-  private func showPortfolioTab() {
-    selectedTab = .portfolio
-  }
-
-  private func showExpensesTab() {
-    selectedTab = .expenses
-  }
-
-  private func showReportsTab() {
-    selectedTab = .reports
-  }
-
-  private func presentQuickAdd() {
-    isQuickAddPresented = true
-  }
-
   private func presentChartBuilder() {
     isChartBuilderPresented = true
   }
@@ -257,10 +206,6 @@ struct DashboardRoot: View {
 
   private func handleSearchSubmit() {
     Task { await searchViewModel.searchNow() }
-  }
-
-  private func handleQuickExpenseSave(_ draft: HomeQuickExpenseDraft) async -> String? {
-    await saveQuickExpense(draft)
   }
 
   private func loadContent(force: Bool = false) async {
@@ -317,7 +262,9 @@ struct DashboardRoot: View {
       insightsLoadFailed = false
 
       do {
-          dashboardInsights = try await dashboardService.getInsights()
+          let insights = try await dashboardService.getInsights()
+          dashboardInsights = insights
+          await considerBudgetStreakReview(insights.budgetStreak)
       } catch {
           dashboardInsights = nil
           insightsLoadFailed = true
@@ -327,25 +274,20 @@ struct DashboardRoot: View {
       isInsightsLoading = false
   }
 
-  private func saveQuickExpense(_ draft: HomeQuickExpenseDraft) async -> String? {
-      let didSave = await budgetStore.recordExpenseAndWait(
-          BudgetActivityDraft(
-              title: draft.title,
-              amount: draft.amount,
-              pillar: draft.pillar,
-              occurredOn: draft.occurredOn,
-              linkedPlanItemID: nil,
-              splitMode: draft.splitMode,
-              userSharePercent: draft.userSharePercent,
-              receiptMetadata: draft.receiptMetadata
-          )
-      )
-      guard didSave else {
-          return budgetStore.errorMessage ?? "Could not save expense. Please try again."
+  /// Closing out a compliant budget month is the clearest "this app worked for me"
+  /// moment the product has.
+  ///
+  /// Only milestone lengths qualify, not every month — the trigger is keyed by month
+  /// count, so without this filter a long streak would offer a fresh candidate every
+  /// single month and lean entirely on the cooldown to stay quiet.
+  private func considerBudgetStreakReview(_ streakMonths: Int) async {
+      guard ReviewPromptCoordinator.Policy.budgetStreakMilestones.contains(streakMonths) else {
+          return
       }
-      await loadHomeMetrics()
-      await activityViewModel.loadActivities()
-      return nil
+      let userID = await Container.shared.authSessionStore().currentUserID
+      guard !userID.isEmpty else { return }
+      Container.shared.reviewPromptCoordinator()
+          .consider(.budgetStreakReached(months: streakMonths), userID: userID)
   }
 
   private static let apiDateFormatter: DateFormatter = {
@@ -388,7 +330,6 @@ struct DashboardRoot: View {
 }
 
 private struct DashboardContentSection: View {
-  let greetingText: String
   let portfolioTotalValue: Double
   let spendingTotalValue: Double
   let portfolioDeltaPercent: Double?
@@ -405,40 +346,20 @@ private struct DashboardContentSection: View {
   let financialHealthUnavailable: Bool
   let insightCards: [InsightCard]
   let focusPointsViewModel: FocusPointsViewModel
-  let onPortfolioTap: () -> Void
-  let onExpensesTap: () -> Void
-  let onReportsTap: () -> Void
   let onChartBuilderTap: () -> Void
   let onGoalPlanningTap: () -> Void
-  let onQuickAddTap: () -> Void
 
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
     VStack(spacing: 20) {
-      VigilPageHeader(
-        watch: .intelligence,
-        title: LocalizedStringKey(greetingText)
-      )
-
-      VigilCommandMetricsBar(
-        netWorth: portfolioTotalValue,
-        periodDeltaPercent: portfolioDeltaPercent,
-        spendingThisMonth: spendingTotalValue > 0 ? spendingTotalValue : nil
-      )
-
-      WhyMovedCard()
-
       DashboardHeroCard(
         totalValue: portfolioTotalValue,
         totalSpending: spendingTotalValue,
         portfolioDeltaPercent: portfolioDeltaPercent,
         spendingDeltaPercent: spendingDeltaPercent,
         portfolioPoints: portfolioChartPoints,
-        spendingPoints: spendingChartPoints,
-        onPortfolioTap: onPortfolioTap,
-        onExpensesTap: onExpensesTap,
-        onReportsTap: onReportsTap
+        spendingPoints: spendingChartPoints
       )
       .redacted(reason: isHomeMetricsRedacted ? .placeholder : [])
       .appAnimation(AppMotion.state, value: isHomeMetricsRedacted)
@@ -447,6 +368,8 @@ private struct DashboardContentSection: View {
         AssetSearchCard(viewModel: searchViewModel)
           .transition(.opacity.combined(with: .move(edge: .top)))
       }
+
+      WhyMovedCard()
 
       UnifiedActivityFeed(
         viewModel: activityViewModel,
@@ -462,8 +385,6 @@ private struct DashboardContentSection: View {
 
       ChartBuilderDashboardCard(onOpen: onChartBuilderTap)
 
-      QuickAddEntryButton(action: onQuickAddTap)
-
       DisclosureGroup(LocalizedStringKey("More Insights")) {
         VStack(spacing: 20) {
           InsightsGrid(cards: insightCards)
@@ -477,20 +398,6 @@ private struct DashboardContentSection: View {
   }
 }
 
-private struct QuickAddEntryButton: View {
-  @Environment(\.colorScheme) private var colorScheme
-  let action: () -> Void
-
-  var body: some View {
-    Button("Add Entry", systemImage: "plus.circle.fill", action: action)
-      .font(.headline)
-      .frame(maxWidth: .infinity)
-      .padding()
-      .buttonStyle(.borderedProminent)
-      .tint(AppTheme.Colors.tint(for: colorScheme))
-  }
-}
-
 private struct DashboardHeroCard: View {
   let totalValue: Double
   let totalSpending: Double
@@ -498,17 +405,9 @@ private struct DashboardHeroCard: View {
   let spendingDeltaPercent: Double?
   let portfolioPoints: [ChartDataPoint]
   let spendingPoints: [ChartDataPoint]
-  let onPortfolioTap: () -> Void
-  let onExpensesTap: () -> Void
-  let onReportsTap: () -> Void
 
   @Environment(\.colorScheme) private var colorScheme
-  @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
   @State private var showingPortfolio = true
-
-  private var appLanguage: AppLanguage {
-    AppLanguage.from(appLanguageRawValue)
-  }
 
   private var currentTitle: String {
     if showingPortfolio {
@@ -531,10 +430,9 @@ private struct DashboardHeroCard: View {
   }
 
   private var currentColor: Color {
-    return showingPortfolio
+    showingPortfolio
       ? AppTheme.Colors.tint(for: colorScheme)
       : AppTheme.Colors.secondaryTint(for: colorScheme)
-    return showingPortfolio ? .green : .orange
   }
 
   private var deltaSymbol: String {
@@ -564,39 +462,37 @@ private struct DashboardHeroCard: View {
   }
 
   var body: some View {
-    GlassCard(cornerRadius: 28) {
-      VStack(alignment: .leading, spacing: 18) {
-        Text(currentTitle)
-          .typography(.small, weight: .semibold)
-          .foregroundStyle(.secondary)
+    VStack(alignment: .leading, spacing: 18) {
+      Text(currentTitle)
+        .typography(.small, weight: .semibold)
+        .foregroundStyle(.secondary)
 
-        VStack(alignment: .leading, spacing: 8) {
-          Text(currentValue.currency)
-            .typography(.displayNumber)
-            .lineLimit(1)
-            .contentTransition(.numericText(value: currentValue))
-            .appAnimation(AppMotion.state, value: currentValue)
+      VStack(alignment: .leading, spacing: 8) {
+        Text(currentValue.currency)
+          .typography(.displayNumber)
+          .lineLimit(1)
+          .contentTransition(.numericText(value: currentValue))
+          .appAnimation(AppMotion.state, value: currentValue)
 
-          HStack(spacing: 4) {
-            Image(systemName: deltaSymbol).accessibilityHidden(true)
-            Text(deltaText)
-          }
-          .font(.subheadline.weight(.semibold))
-          .foregroundStyle(deltaColor)
+        HStack(spacing: 4) {
+          Image(systemName: deltaSymbol).accessibilityHidden(true)
+          Text(deltaText)
         }
-
-        InteractiveLineChart(data: currentPoints, color: currentColor)
-          .padding(.horizontal, -12)
-
-        Picker("View", selection: $showingPortfolio) {
-          Text(LocalizedStringKey("Portfolio")).tag(true)
-          Text(LocalizedStringKey("Spending")).tag(false)
-        }
-        .pickerStyle(.segmented)
-        .frame(maxWidth: 220)
-        .padding(.top, 4)
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(deltaColor)
       }
+
+      InteractiveLineChart(data: currentPoints, color: currentColor)
+
+      Picker("View", selection: $showingPortfolio) {
+        Text(LocalizedStringKey("Portfolio")).tag(true)
+        Text(LocalizedStringKey("Spending")).tag(false)
+      }
+      .pickerStyle(.segmented)
+      .frame(maxWidth: 220)
+      .padding(.top, 4)
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
 

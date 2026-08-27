@@ -1,3 +1,4 @@
+import Factory
 import Foundation
 import Observation
 import StockPlanShared
@@ -35,9 +36,22 @@ final class GoalPlanningViewModel {
       overview = try await overviewRequest
       templates = try await templateRequest
       portfolios = try await portfolioRequest
+      await considerGoalCompletionReview()
     } catch {
       errorMessage = "Goal planning is temporarily unavailable."
     }
+  }
+
+  /// Reaching a savings or investment target is the single strongest moment this app
+  /// has. Each goal is keyed separately, so a second goal can still earn its own prompt
+  /// once the cooldown has passed.
+  private func considerGoalCompletionReview() async {
+    guard let completed = overview?.items.first(where: { $0.progress.percentComplete >= 1 })
+    else { return }
+    let userID = await Container.shared.authSessionStore().currentUserID
+    guard !userID.isEmpty else { return }
+    Container.shared.reviewPromptCoordinator()
+      .consider(.goalCompleted(goalID: completed.id), userID: userID)
   }
 
   func loadDetails(goalId: String) async {

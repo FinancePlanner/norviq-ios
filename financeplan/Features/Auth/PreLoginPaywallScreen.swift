@@ -3,13 +3,9 @@ import RevenueCat
 import SwiftUI
 
 struct PreLoginPaywallScreen: View {
-  @Environment(\.colorScheme) private var scheme
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @InjectedObservable(\Container.billingManager) private var billingManager
 
   var onContinue: () -> Void
-
-  @State private var featuresAppeared = false
 
   var body: some View {
     ZStack {
@@ -19,12 +15,12 @@ struct PreLoginPaywallScreen: View {
         VStack(spacing: 24) {
           VigilPageHeader(
             watch: .auth("Pro vigil"),
-            title: "Everything you need.",
-            subtitle: "Wealth tracking, spending insights, and market intelligence — all in one place."
+            title: "Norviq Pro",
+            subtitle: "Unlock research, bank sync, the assistant, tax, and advanced reports."
           )
           .frame(maxWidth: .infinity, alignment: .leading)
 
-          featuresList
+          PaywallComparisonTable()
 
           planCards
 
@@ -63,67 +59,6 @@ struct PreLoginPaywallScreen: View {
     .task {
       await billingManager.loadOfferings()
     }
-  }
-
-  // MARK: - Features
-
-  private var featuresList: some View {
-    Group {
-      GlassCard(cornerRadius: 20, padding: 0) {
-        VStack(spacing: 16) {
-          ForEach(Array(PreLoginPaywallScreen.features.enumerated()), id: \.element.title) { index, feature in
-            featureRow(feature: feature)
-              .opacity(featuresAppeared ? 1 : 0)
-              .offset(y: featuresAppeared ? 0 : 12)
-              .animation(
-                reduceMotion
-                  ? .easeOut(duration: 0.15)
-                  : .spring(response: 0.4, dampingFraction: 0.8).delay(Double(index) * 0.08),
-                value: featuresAppeared
-              )
-          }
-        }
-        .padding(20)
-      }
-    }
-    .onAppear { featuresAppeared = true }
-  }
-
-  private func featureRow(feature: FeatureInfo) -> some View {
-    HStack(alignment: .top, spacing: 16) {
-      Image(systemName: feature.icon)
-        .font(.title2)
-        .foregroundStyle(
-          feature.isPro
-            ? AppTheme.Colors.secondaryTint(for: scheme)
-            : .secondary
-        )
-        .frame(width: 32)
-        .accessibilityHidden(true)
-
-      VStack(alignment: .leading, spacing: 4) {
-        HStack {
-          Text(feature.title)
-            .font(.subheadline.weight(.semibold))
-          if feature.isPro {
-            Text("PRO")
-              .font(.caption.weight(.bold))
-              .padding(.horizontal, 6)
-              .padding(.vertical, 2)
-              .background(
-                AppTheme.Colors.premiumGradient(for: scheme),
-                in: Capsule()
-              )
-              .foregroundStyle(.white)
-          }
-        }
-        Text(feature.subtitle)
-          .font(.caption)
-          .foregroundStyle(.secondary)
-      }
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .accessibilityElement(children: .combine)
   }
 
   // MARK: - Plan Cards
@@ -166,19 +101,4 @@ struct PreLoginPaywallScreen: View {
     }
   }
 
-  // MARK: - Feature Data
-
-  private struct FeatureInfo: Hashable {
-    let icon: String
-    let title: String
-    let subtitle: String
-    let isPro: Bool
-  }
-
-  private static let features: [FeatureInfo] = [
-    FeatureInfo(icon: "chart.line.uptrend.xyaxis", title: "Unlimited Syncing", subtitle: "Connect all your brokers for real-time updates.", isPro: true),
-    FeatureInfo(icon: "waveform.path.ecg", title: "Advanced Projections", subtitle: "See where your money is going years ahead.", isPro: true),
-    FeatureInfo(icon: "bolt.fill", title: "Real-time Market Data", subtitle: "Instant quotes without delays.", isPro: true),
-    FeatureInfo(icon: "lock.shield", title: "Basic Portfolio", subtitle: "Track your main assets manually.", isPro: false),
-  ]
 }

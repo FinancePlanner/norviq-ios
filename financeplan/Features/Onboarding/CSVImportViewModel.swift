@@ -1,4 +1,5 @@
 import Combine
+import Factory
 import Foundation
 import PostHog
 
@@ -22,6 +23,17 @@ final class CSVImportViewModel: ObservableObject {
     } catch {
       errorMessage = "Failed to read CSV: \(error.localizedDescription)"
       previewRows = []
+      noteImportFriction()
+    }
+  }
+
+  /// A failed import is the worst possible moment to be asked for a five-star review.
+  private func noteImportFriction() {
+    let coordinator = Container.shared.reviewPromptCoordinator()
+    Task {
+      let userID = await Container.shared.authSessionStore().currentUserID
+      guard !userID.isEmpty else { return }
+      coordinator.noteFriction(.importFailed, userID: userID)
     }
   }
 

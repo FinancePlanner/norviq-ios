@@ -260,7 +260,7 @@ struct FormActionBar: View {
           HStack(spacing: 6) {
             if isLoading {
               ProgressView()
-                .tint(.white)
+                .tint(Color(.systemBackground))
                 .scaleEffect(0.8)
             }
             Text(primaryLabel)
@@ -271,12 +271,15 @@ struct FormActionBar: View {
                 .font(.subheadline.weight(.bold))
             }
           }
-          .foregroundStyle(.white)
+          .foregroundStyle(Color(.systemBackground))
           .padding(.horizontal, 24)
           .padding(.vertical, 12)
+          .background(
+            (isDisabled ? AppTheme.Colors.disabled : AppTheme.Colors.tint(for: colorScheme)),
+            in: Capsule()
+          )
         }
-        .buttonStyle(.borderedProminent)
-        .tint(isDisabled ? AppTheme.Colors.disabled : AppTheme.Colors.tint(for: colorScheme))
+        .buttonStyle(PressableStyle())
         .disabled(isDisabled || isLoading)
         .animation(.easeInOut(duration: 0.2), value: isDisabled)
         .accessibilityIdentifier(accessibilityIdentifier ?? "")

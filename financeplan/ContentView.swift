@@ -175,6 +175,7 @@ public struct ContentView: View {
       case .background:
         appLockManager.appDidEnterBackground()
       case .active:
+        recordReviewPromptAppOpen()
         Task {
           await pushNotificationsCoordinator.refreshAuthorizationStatus()
           if isAuthenticated {
@@ -301,6 +302,19 @@ public struct ContentView: View {
       pushNotificationsCoordinator.handleAuthenticatedSessionBecameActive()
       await enforceAppLockIfNeeded()
       deliverPendingPushNotificationRouteIfPossible()
+    }
+  }
+
+  /// Feeds the review-prompt coordinator one "the user opened the app today" signal per
+  /// foreground. Distinct *days* are what count, so calling this on every `.active` is
+  /// harmless — the store de-duplicates within a day.
+  private func recordReviewPromptAppOpen() {
+    guard isAuthenticated else { return }
+    let coordinator = Container.shared.reviewPromptCoordinator()
+    Task {
+      let userID = await sessionStore.currentUserID
+      guard !userID.isEmpty else { return }
+      coordinator.recordAppOpen(userID: userID)
     }
   }
 

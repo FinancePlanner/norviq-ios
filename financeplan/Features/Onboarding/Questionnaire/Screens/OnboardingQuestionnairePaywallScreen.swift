@@ -10,9 +10,6 @@ struct OnboardingQuestionnairePaywallScreen: View {
 
   @InjectedObservable(\Container.billingManager) private var billingManager
   @Environment(\.colorScheme) private var colorScheme
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-  @State private var featuresAppeared = false
 
   var body: some View {
     ScrollView {
@@ -20,7 +17,7 @@ struct OnboardingQuestionnairePaywallScreen: View {
         logoBlock
         headlineBlock
         testimonialCard
-        featuresCard
+        PaywallComparisonTable()
         planCards
 
         OnboardingPrimaryButton(
@@ -75,7 +72,7 @@ struct OnboardingQuestionnairePaywallScreen: View {
 
   private var headlineBlock: some View {
     VStack(spacing: 8) {
-      Text("Everything you need.")
+      Text("Norviq Pro")
         .font(.title.bold())
         .multilineTextAlignment(.center)
 
@@ -120,49 +117,6 @@ struct OnboardingQuestionnairePaywallScreen: View {
       .padding(.vertical, 4)
       .frame(maxWidth: .infinity, alignment: .leading)
     }
-  }
-
-  // MARK: - Features
-
-  private var featuresCard: some View {
-    GlassCard(cornerRadius: 20) {
-      VStack(alignment: .leading, spacing: 12) {
-        ForEach(Array(OnboardingQuestionnairePaywallScreen.features.enumerated()), id: \.element.title) { index, feature in
-          Group {
-            if let kicker = feature.kicker {
-              Text(kicker)
-                .font(.caption2.weight(.semibold))
-                .tracking(1.2)
-                .foregroundStyle(AppTheme.Colors.bronze(for: colorScheme))
-                .padding(.top, index == 0 ? 0 : 6)
-            }
-
-            HStack(spacing: 12) {
-              Image(systemName: feature.icon)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme))
-                .frame(width: 24)
-                .accessibilityHidden(true)
-              Text(feature.title)
-                .font(.subheadline.weight(.medium))
-                .fixedSize(horizontal: false, vertical: true)
-            }
-            .accessibilityElement(children: .combine)
-          }
-          .opacity(featuresAppeared ? 1 : 0)
-          .offset(y: featuresAppeared ? 0 : 10)
-          .animation(
-            reduceMotion
-              ? .easeOut(duration: 0.15)
-              : .spring(response: 0.4, dampingFraction: 0.8).delay(Double(index) * 0.06),
-            value: featuresAppeared
-          )
-        }
-      }
-      .padding(.vertical, 4)
-      .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    .onAppear { featuresAppeared = true }
   }
 
   // MARK: - Plan Cards
@@ -240,32 +194,4 @@ struct OnboardingQuestionnairePaywallScreen: View {
     }
   }
 
-  // MARK: - Feature Data
-
-  private struct FeatureInfo: Hashable {
-    let icon: String
-    let title: String
-    var kicker: String? = nil
-  }
-
-  private static let features: [FeatureInfo] = [
-    FeatureInfo(
-      icon: "chart.line.uptrend.xyaxis",
-      title: "Unlimited holdings, watchlists & alerts",
-      kicker: "Wealth"
-    ),
-    FeatureInfo(icon: "chart.xyaxis.line", title: "10-year projections, chart builder & scenarios"),
-    FeatureInfo(
-      icon: "creditcard.fill",
-      title: "Auto-categorised expenses, budgets & receipt scanning",
-      kicker: "Spending"
-    ),
-    FeatureInfo(icon: "building.columns", title: "Read-only bank sync"),
-    FeatureInfo(
-      icon: "sparkles",
-      title: "AI assistant, sentiment insights & macro data",
-      kicker: "Intelligence"
-    ),
-    FeatureInfo(icon: "icloud.and.arrow.up", title: "MCP integrations & live syncing across devices"),
-  ]
 }

@@ -9,7 +9,19 @@ enum Constants {
 
     static let shareBaseUrl = URL(string: "https://share.norviqa.io")!
 
-    static let appStoreUrl = URL(string: "https://apps.apple.com/us/app/norviqa/id6745227236")!
+    /// Norviq on the App Store. The numeric id is the source of truth — the slug in the
+    /// path is cosmetic and Apple ignores it.
+    static let appStoreID = "6765849578"
+
+    static let appStoreUrl = URL(string: "https://apps.apple.com/app/id\(appStoreID)")!
+
+    /// Deep link that opens the App Store listing with the write-a-review sheet already
+    /// presented. Use this for any deliberate "rate us" affordance: unlike
+    /// `requestReview()` it always works and never consumes the system's yearly prompt
+    /// allowance.
+    static let writeReviewUrl = URL(
+      string: "https://apps.apple.com/app/id\(appStoreID)?action=write-review"
+    )!
 
     static let webAppBaseUrl = URL(string: "https://www.norviqaapp.com")!
 

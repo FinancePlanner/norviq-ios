@@ -8,11 +8,10 @@ final class HomeDashboardTests: XCTestCase {
 
     // MARK: - Tab reachability
 
-    /// The native tab bar is hidden, so the only ways into a screen are the
-    /// custom bottom bar and the More sheet. A tab in neither list compiles,
-    /// renders, and ships completely unreachable — which is exactly how the
+    /// HomeScreen registers `primaryTabs` then `moreMenuTabs`. A tab in neither
+    /// list compiles, renders, and ships unreachable — which is exactly how the
     /// Markets tab shipped invisible. This asserts every HomeTab case has a
-    /// way in, so adding a tab without a menu entry fails here instead of in
+    /// way in, so adding a tab without a list entry fails here instead of in
     /// the App Store build.
     // HomeTab is main-actor isolated (the app target defaults to MainActor
     // isolation), so its statics and Hashable conformance are only usable here.
@@ -30,8 +29,27 @@ final class HomeDashboardTests: XCTestCase {
     func testMoreMenuIncludesMarketsTab() {
         XCTAssertTrue(
             HomeTab.moreMenuTabs.contains(.markets),
-            "Markets must remain reachable from the custom More menu."
+            "Markets must remain reachable from More / the iPad sidebar."
         )
+    }
+
+    func testHomeScreenRegistersPrimaryTabsBeforeOverflow() throws {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("financeplan/Features/Home/HomeScreen.swift")
+        let src = try String(contentsOf: url, encoding: .utf8)
+        let primary = src.range(of: "HomeTab.primaryTabs")
+        let more = src.range(of: "HomeTab.moreMenuTabs")
+        XCTAssertNotNil(primary, "HomeScreen must register primaryTabs so iPhone shows Home/Portfolio/Expenses/Crypto.")
+        XCTAssertNotNil(more, "HomeScreen must register moreMenuTabs after the primary four.")
+        if let primary, let more {
+            XCTAssertLessThan(
+                primary.lowerBound,
+                more.lowerBound,
+                "primaryTabs must be registered first or Expenses/Crypto fall into More."
+            )
+        }
     }
 
     @MainActor

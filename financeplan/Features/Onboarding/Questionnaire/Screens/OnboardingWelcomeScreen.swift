@@ -4,8 +4,6 @@ struct OnboardingWelcomeScreen: View {
   let onGetStarted: () -> Void
   let onLogIn: () -> Void
 
-  @Environment(\.colorScheme) private var colorScheme
-
   var body: some View {
     VStack(spacing: 0) {
       Spacer(minLength: 32)
@@ -15,12 +13,7 @@ struct OnboardingWelcomeScreen: View {
           .vigilOverline()
           .foregroundStyle(.secondary)
 
-        Image("CerberusMarkFull")
-          .renderingMode(.template)
-          .resizable()
-          .scaledToFit()
-          .frame(maxHeight: 220)
-          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+        NorviqFullLogo(width: 236)
           .accessibilityHidden(true)
 
         VStack(spacing: 12) {

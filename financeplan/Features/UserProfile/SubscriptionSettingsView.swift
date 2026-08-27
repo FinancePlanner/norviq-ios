@@ -18,6 +18,7 @@ struct SubscriptionSettingsView: View {
                 )
 
                 statusCard
+                PaywallComparisonTable()
                 changePlanSection
                 actionsSection
                 retentionNote
@@ -87,7 +88,7 @@ struct SubscriptionSettingsView: View {
                     .font(.title2).fontWeight(.bold)
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("subscription.status.free")
-                Text("Upgrade to Pro to unlock all features.")
+                Text("Upgrade to unlock research, bank sync, the assistant, tax, and advanced reports.")
                     .typography(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -160,8 +161,11 @@ struct SubscriptionSettingsView: View {
                     Label("Manage or Cancel Subscription", systemImage: "ellipsis.circle")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(AppTheme.Colors.tint(for: scheme))
+                .buttonStyle(PressableStyle())
+                .foregroundStyle(Color(.systemBackground))
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity)
+                .background(AppTheme.Colors.tint(for: scheme), in: Capsule())
             } else {
                 Button {
                     showPaywall = true
@@ -169,7 +173,10 @@ struct SubscriptionSettingsView: View {
                     Label("Upgrade to Pro", systemImage: "arrow.right")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(PressableStyle())
+                .foregroundStyle(Color(.systemBackground))
+                .padding(.vertical, 12)
+                .background(AppTheme.Colors.tint(for: scheme), in: Capsule())
             }
 
             Button {
@@ -183,7 +190,9 @@ struct SubscriptionSettingsView: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(PressableStyle())
+            .padding(.vertical, 12)
+            .background(Color(.secondarySystemBackground), in: Capsule())
             .disabled(billingManager.isRestoring || billingManager.isPurchasing)
 
             restoreStatusMessage

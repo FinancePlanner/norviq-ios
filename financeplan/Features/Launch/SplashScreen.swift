@@ -17,10 +17,6 @@ struct SplashScreen: View {
       )
       .ignoresSafeArea()
 
-      MeshGradientBackground(animatesOnAppear: true)
-        .opacity(colorScheme == .dark ? 0.55 : 0.35)
-        .ignoresSafeArea()
-
       VStack(spacing: 0) {
         Spacer()
 
@@ -30,11 +26,10 @@ struct SplashScreen: View {
         )
         .padding(.bottom, 40)
 
-        // Tagline
-        Text("The vigil begins.")
-          .typography(.hero)
-          .foregroundStyle(AppTheme.Colors.foreground(for: colorScheme))
-          .opacity(isAnimating ? 0.9 : 0.0)
+        Text("Your wealth, wisely managed")
+          .font(.system(size: 16, weight: .medium))
+          .foregroundStyle(.secondary)
+          .opacity(isAnimating ? 0.8 : 0.0)
           .offset(y: isAnimating ? 0 : 20)
           .padding(.top, 8)
 
@@ -101,25 +96,45 @@ private struct SplashBrandStage: View {
   @Environment(\.colorScheme) private var colorScheme
 
   private let stageSize: CGFloat = 280
-  private let ringSize: CGFloat = 200
+  private let outerGlowSize: CGFloat = 218
+  private let innerGlowSize: CGFloat = 180
   private let logoWidth: CGFloat = 236
 
   var body: some View {
     ZStack {
-      // Plain accent ring — no blurred glow.
       Circle()
-        .stroke(AppTheme.Colors.tint(for: colorScheme).opacity(0.25), lineWidth: 1.5)
-        .frame(width: ringSize, height: ringSize)
-        .scaleEffect(pulseAnimation ? 1.03 : 0.97)
-        .opacity(pulseAnimation ? 0.9 : 0.6)
+        .fill(
+          RadialGradient(
+            colors: [
+              AppTheme.Colors.tint(for: colorScheme).opacity(0.3),
+              AppTheme.Colors.tint(for: colorScheme).opacity(0.0)
+            ],
+            center: .center,
+            startRadius: 54,
+            endRadius: 116
+          )
+        )
+        .frame(width: outerGlowSize, height: outerGlowSize)
+        .scaleEffect(pulseAnimation ? 1.1 : 0.9)
+        .opacity(pulseAnimation ? 0.6 : 0.3)
 
-      Image("CerberusMarkFull")
-        .renderingMode(.template)
-        .resizable()
-        .scaledToFit()
-        .frame(width: logoWidth)
-        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-        .accessibilityLabel("Norviq")
+      Circle()
+        .fill(
+          RadialGradient(
+            colors: [
+              AppTheme.Colors.secondaryTint(for: colorScheme).opacity(0.4),
+              AppTheme.Colors.secondaryTint(for: colorScheme).opacity(0.0)
+            ],
+            center: .center,
+            startRadius: 36,
+            endRadius: 96
+          )
+        )
+        .frame(width: innerGlowSize, height: innerGlowSize)
+        .scaleEffect(pulseAnimation ? 0.95 : 1.05)
+        .opacity(pulseAnimation ? 0.4 : 0.2)
+
+      NorviqFullLogo(width: logoWidth)
         .scaleEffect(isAnimating ? 1.0 : 0.8)
         .opacity(isAnimating ? 1.0 : 0.0)
     }

@@ -11,14 +11,13 @@ enum HomeTab: Hashable, CaseIterable {
   case tax
   case insights
 
-  /// Tabs with their own slot in the custom bottom bar.
+  /// Always-visible iPhone tabs, registered first so the system bar shows
+  /// these before overflow. iPad sidebar still lists every destination.
   static let primaryTabs: [HomeTab] = [.dashboard, .portfolio, .expenses, .crypto]
 
-  /// Single source of truth for the custom More menu. The native tab bar is
-  /// hidden, so a tab in neither `primaryTabs` nor here is unreachable — which
-  /// is how Markets shipped invisible once already. Both the More sheet rows
-  /// and the More-tab active indicator read from here so the two cannot drift
-  /// apart.
+  /// Destinations that sit after the primary four. On iPhone they land in
+  /// More; on iPad they appear in the sidebar. A tab in neither list is
+  /// unreachable — which is how Markets shipped invisible once already.
   static let moreMenuTabs: [HomeTab] = [.markets, .economy, .reports, .tax, .insights]
 
   var title: String {
@@ -47,21 +46,21 @@ enum HomeTab: Hashable, CaseIterable {
   var systemImage: String {
     switch self {
     case .dashboard:
-      return "house"
+      return "house.fill"
     case .portfolio:
       return "chart.line.uptrend.xyaxis"
     case .economy:
-      return "chart.bar.xaxis"
+      return "chart.bar.fill"
     case .markets:
       return "square.grid.3x3.fill"
     case .crypto:
-      return "bitcoinsign.circle"
+      return "bitcoinsign.circle.fill"
     case .expenses:
-      return "creditcard"
+      return "creditcard.fill"
     case .reports:
-      return "chart.bar.doc.horizontal"
+      return "chart.bar.doc.horizontal.fill"
     case .tax:
-      return "building.columns"
+      return "building.columns.fill"
     case .insights:
       return "sparkles"
     }

@@ -8,7 +8,6 @@
 import Factory
 import PostHog
 import StockPlanShared
-import StoreKit
 import SwiftUI
 
 private enum UserProfileDestination: Hashable {
@@ -32,7 +31,6 @@ public struct UserProfileView: View {
     @StateObject private var pushNotificationsCoordinator: PushNotificationsCoordinator
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.requestReview) private var requestReview
     @InjectedObservable(\Container.appEnvironment) private var environmentManager
     @InjectedObservable(\Container.billingManager) private var billingManager
     @State private var path: [UserProfileDestination] = []
@@ -434,9 +432,11 @@ public struct UserProfileView: View {
                             .foregroundStyle(.primary)
                     }
                 }
-                Button {
-                    requestReview()
-                } label: {
+                // A deliberate "rate us" tap opens the App Store write-review sheet
+                // directly. `requestReview()` is the wrong call here: Apple reserves it
+                // for unprompted moments, it silently spends one of the ~3 system prompts
+                // a user gets per year, and it may show nothing at all.
+                Link(destination: Constants.Norviq.writeReviewUrl) {
                     Label("Rate on App Store", systemImage: "star.fill")
                         .foregroundStyle(.primary)
                 }

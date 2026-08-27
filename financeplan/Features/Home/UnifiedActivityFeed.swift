@@ -104,125 +104,118 @@ struct UnifiedActivityFeed: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
-      Text("Activity Feed")
+      Text("Activity")
         .font(.title2.bold())
-        .padding(.horizontal, 4)
 
-      GlassCard(cornerRadius: AppTheme.Radius.hero) {
-        VStack(spacing: 0) {
-          if viewModel.isLoading && viewModel.activities.isEmpty {
-            ProgressView()
-              .padding()
-              .frame(maxWidth: .infinity, minHeight: 160)
-          } else if viewModel.activities.isEmpty {
-            Text("No recent activity")
-              .font(.subheadline)
-              .foregroundStyle(.secondary)
-              .padding()
-              .frame(maxWidth: .infinity, minHeight: 160)
-          } else {
-            ForEach(viewModel.activities) { activity in
-              HStack(spacing: 16) {
-                Circle()
-                  .fill(activity.isGrowth ? Color.green.opacity(0.2) : Color.red.opacity(0.2))
-                  .frame(width: 44, height: 44)
-                  .overlay(
-                    Image(systemName: activity.symbol)
-                      .foregroundStyle(activity.isGrowth ? .green : .red)
-                      .font(.title3)
-                      .accessibilityHidden(true)
-                  )
+      VStack(spacing: 0) {
+        if viewModel.isLoading && viewModel.activities.isEmpty {
+          ProgressView()
+            .padding()
+            .frame(maxWidth: .infinity, minHeight: 160)
+        } else if viewModel.activities.isEmpty {
+          Text("No recent activity")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .padding()
+            .frame(maxWidth: .infinity, minHeight: 160)
+        } else {
+          ForEach(viewModel.activities) { activity in
+            HStack(spacing: 16) {
+              Circle()
+                .fill(activity.isGrowth ? Color.green.opacity(0.2) : Color.red.opacity(0.2))
+                .frame(width: 44, height: 44)
+                .overlay(
+                  Image(systemName: activity.symbol)
+                    .foregroundStyle(activity.isGrowth ? .green : .red)
+                    .font(.title3)
+                    .accessibilityHidden(true)
+                )
 
-                VStack(alignment: .leading, spacing: 4) {
-                  Text(activity.title)
+              VStack(alignment: .leading, spacing: 4) {
+                Text(activity.title)
+                  .font(.headline)
+                Text(activity.subtitle)
+                  .font(.subheadline)
+                  .foregroundStyle(.secondary)
+              }
+
+              Spacer()
+
+              VStack(alignment: .trailing, spacing: 4) {
+                if let amount = activity.amount {
+                  Text(amount > 0 ? "+\(amount.currency)" : "-\(abs(amount).currency)")
                     .font(.headline)
-                  Text(activity.subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(activity.isGrowth ? .green : .red)
                 }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 4) {
-                  if let amount = activity.amount {
-                    Text(amount > 0 ? "+\(amount.currency)" : "-\(abs(amount).currency)")
-                      .font(.headline)
-                      .foregroundStyle(activity.isGrowth ? .green : .red)
-                  }
-                  Text(activity.createdAt.formatted(date: .abbreviated, time: .shortened))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
+                Text(activity.createdAt.formatted(date: .abbreviated, time: .shortened))
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
               }
-              .padding(.vertical, 12)
+            }
+            .padding(.vertical, 12)
 
-              if activity.id != viewModel.activities.last?.id {
-                Divider()
-                  .padding(.leading, 60)
-              }
+            if activity.id != viewModel.activities.last?.id {
+              Divider()
+                .padding(.leading, 60)
             }
           }
         }
       }
 
       if !recentExpenses.isEmpty {
-        GlassCard(cornerRadius: AppTheme.Radius.hero) {
-          VStack(alignment: .leading, spacing: 12) {
-            Text("Recent spend")
-              .font(.headline)
+        VStack(alignment: .leading, spacing: 12) {
+          Text("Recent spend")
+            .font(.headline)
 
-            ForEach(recentExpenses.prefix(3)) { activity in
-              HStack(spacing: 10) {
-                Image(systemName: activity.pillar.symbol)
-                  .foregroundStyle(activity.pillar.color(for: .dark))
-                  .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                  Text(activity.title)
-                    .font(.subheadline.weight(.semibold))
-                  Text(activity.occurredOn.formatted(date: .abbreviated, time: .omitted))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Text("-\(activity.amount.currency)")
+          ForEach(recentExpenses.prefix(3)) { activity in
+            HStack(spacing: 10) {
+              Image(systemName: activity.pillar.symbol)
+                .foregroundStyle(activity.pillar.color(for: .dark))
+                .accessibilityHidden(true)
+              VStack(alignment: .leading, spacing: 2) {
+                Text(activity.title)
                   .font(.subheadline.weight(.semibold))
+                Text(activity.occurredOn.formatted(date: .abbreviated, time: .omitted))
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
               }
-              if activity.id != recentExpenses.prefix(3).last?.id {
-                Divider()
-              }
+              Spacer()
+              Text("-\(activity.amount.currency)")
+                .font(.subheadline.weight(.semibold))
+            }
+            if activity.id != recentExpenses.prefix(3).last?.id {
+              Divider()
             }
           }
         }
       }
 
-      GlassCard(cornerRadius: AppTheme.Radius.hero) {
-        HStack(spacing: 16) {
-          ZStack {
-            Circle()
-              .stroke(Color.gray.opacity(0.2), lineWidth: 6)
-            Circle()
-              .trim(from: 0, to: financialHealthCardState.ringProgress)
-              .stroke(healthTint, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-              .rotationEffect(.degrees(-90))
-              .animation(reduceMotion ? nil : AppMotion.dataReveal, value: financialHealthCardState.ringProgress)
-            Text(financialHealthCardState.scoreText)
-              .font(.headline)
-          }
-          .frame(width: 50, height: 50)
-
-          VStack(alignment: .leading, spacing: 4) {
-            Text(financialHealthCardState.summaryText)
-              .font(.headline)
-              .foregroundStyle(healthTint)
-            Text("Financial Health")
-              .font(.subheadline)
-              .foregroundStyle(.secondary)
-          }
-          Spacer()
+      HStack(spacing: 16) {
+        ZStack {
+          Circle()
+            .stroke(Color.gray.opacity(0.2), lineWidth: 6)
+          Circle()
+            .trim(from: 0, to: financialHealthCardState.ringProgress)
+            .stroke(healthTint, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+            .rotationEffect(.degrees(-90))
+            .animation(reduceMotion ? nil : AppMotion.dataReveal, value: financialHealthCardState.ringProgress)
+          Text(financialHealthCardState.scoreText)
+            .font(.headline)
         }
-        .padding(.vertical, 4)
+        .frame(width: 50, height: 50)
+
+        VStack(alignment: .leading, spacing: 4) {
+          Text(financialHealthCardState.summaryText)
+            .font(.headline)
+            .foregroundStyle(healthTint)
+          Text("Financial Health")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+        Spacer()
       }
-      .frame(maxWidth: .infinity, minHeight: 112)
+      .padding(.vertical, 4)
+      .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
       .redacted(reason: isFinancialHealthLoading ? .placeholder : [])
       .scaleEffect(reduceMotion ? 1 : isFinancialHealthLoading ? 0.99 : 1)
       .opacity(isFinancialHealthLoading ? 0.9 : 1)

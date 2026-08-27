@@ -1,3 +1,4 @@
+import Factory
 import Foundation
 import StockPlanShared
 
@@ -21,11 +22,23 @@ final class FeedbackService: FeedbackServicing, @unchecked Sendable {
   }
 
   func submitFeedback(topic: String, message: String) async throws -> FeedbackResponse {
-    try await performAuthenticated { client in
+    let response = try await performAuthenticated { client in
       let payload = FeedbackRequest(topic: topic, message: message)
       let endpoint = SubmitFeedbackEndpoint(payload: payload)
       return try await client.call(endpoint)
     }
+
+    // Someone who just wrote to us is mid-conversation, not mid-delight. Asking them to
+    // rate the app in the days after this is how a neutral user becomes a one-star.
+    let userID = await Container.shared.authSessionStore().currentUserID
+    if !userID.isEmpty {
+      await MainActor.run {
+        Container.shared.reviewPromptCoordinator()
+          .noteFriction(.feedbackSubmitted, userID: userID)
+      }
+    }
+
+    return response
   }
 
   private func makeClient(forceRefresh: Bool = false) async throws -> StockHTTPClient {

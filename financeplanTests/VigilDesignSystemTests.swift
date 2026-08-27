@@ -139,6 +139,36 @@ final class VigilDesignSystemTests: XCTestCase {
     XCTAssertTrue(dark.contains("\"red\":\"0x05\""), "OnTint dark must be near-black — white on #00F2FF is 1.39:1.")
   }
 
+  func testSplashUsesNorviqWordmarkNotCerberus() throws {
+    let splash = try source("financeplan/Features/Launch/SplashScreen.swift")
+    let logo = try source("financeplan/Features/Auth/NorviqaLogo.swift")
+
+    XCTAssertTrue(
+      splash.contains("NorviqFullLogo"),
+      "The load screen must show the Norviq wordmark from Assets."
+    )
+    XCTAssertTrue(
+      splash.contains("Your wealth, wisely managed"),
+      "The load screen tagline is the original Norviq line, not Vigil copy."
+    )
+    XCTAssertFalse(
+      splash.contains("CerberusMarkFull"),
+      "Cerberus is not the product mark on the load screen."
+    )
+    XCTAssertFalse(
+      splash.contains("The vigil begins."),
+      "Vigil tagline must not replace the Norviq load-screen line."
+    )
+    XCTAssertTrue(
+      logo.contains("Image(\"NorviqIcon\")"),
+      "NorviqLogo is the N mark, not the Cerberus head."
+    )
+    XCTAssertFalse(
+      logo.contains("CerberusHeadIcon"),
+      "The shared logo component must not render Cerberus."
+    )
+  }
+
   func testLaunchScreenBackgroundAdaptsToAppearance() throws {
     let plist = try source("Info.plist")
 
@@ -245,6 +275,43 @@ final class VigilDesignSystemTests: XCTestCase {
     )
   }
 
+  /// Home is content + system chrome. Command-center kickers, a second net-worth
+  /// strip, and bordered toolbar blobs are the LLM glass look this screen dropped.
+  func testHomeDropsCommandCenterTheater() throws {
+    let dashboard = try source("financeplan/Features/Home/DashboardRoot.swift")
+    XCTAssertFalse(
+      dashboard.contains("VigilPageHeader"),
+      "Home uses the system large title, not an Intelligence eyebrow."
+    )
+    XCTAssertFalse(
+      dashboard.contains("VigilCommandMetricsBar"),
+      "The metrics strip duplicated net worth and shipped an AGENTIC pill."
+    )
+    XCTAssertFalse(
+      dashboard.contains("AGENTIC"),
+      "Home must not advertise AGENTIC chrome."
+    )
+    XCTAssertTrue(
+      dashboard.contains("navigationTitle(greetingText)"),
+      "Greeting belongs in the system navigation title."
+    )
+    XCTAssertFalse(
+      dashboard.contains(".buttonStyle(.bordered"),
+      "Toolbar items should be system symbols, not bordered glass blobs."
+    )
+    XCTAssertTrue(
+      dashboard.contains("placement: .primaryAction"),
+      "Capture expense is the one prominent toolbar action."
+    )
+
+    let why = try source("financeplan/Features/Home/WhyMovedCard.swift")
+    XCTAssertFalse(why.contains("AGENTIC"), "Why-it-moved copy must stay plain language.")
+    XCTAssertFalse(why.contains("GlassCard"), "Why-it-moved is content, not a glass card.")
+
+    let feed = try source("financeplan/Features/Home/UnifiedActivityFeed.swift")
+    XCTAssertFalse(feed.contains("GlassCard"), "Activity rows sit on the page, not in glass cards.")
+  }
+
 
   // MARK: - Credential autofill
 
@@ -320,6 +387,42 @@ final class VigilDesignSystemTests: XCTestCase {
   }
 
 // MARK: - Paywall disclosure
+
+  @MainActor
+  func testPaywallCatalogMatchesPaidFeaturesAndKeepsReportsFree() {
+    let ids = Set(PaywallCatalog.rows.map(\.id))
+    for key in [
+      "broker_sync", "target_alerts", "market_fundamentals", "valuation_cases",
+      "scenario_planning", "net_worth_forecasting", "smart_screening",
+      "rebalancing_rules", "advanced_portfolios", "crypto", "bank_sync",
+      "receipt_scan", "household_partner", "recurring_templates", "year_overview",
+      "smart_suggestions", "ai_insights", "mcp_access", "tax_optimization",
+      "advanced_report_runs",
+    ] {
+      XCTAssertTrue(ids.contains(key), "catalog missing Pro feature \(key)")
+      XCTAssertFalse(
+        PaywallCatalog.rows.first { $0.id == key }?.includedInFree ?? true,
+        "\(key) must not be sold as Free"
+      )
+    }
+
+    let reports = PaywallCatalog.rows.first { $0.id == "reports" }
+    XCTAssertEqual(reports?.includedInFree, true)
+    XCTAssertEqual(reports?.includedInPro, true)
+  }
+
+  func testPaywallScreensNoLongerAdvertiseBannedCopy() throws {
+    for path in [
+      "financeplan/Features/UserProfile/PaywallView.swift",
+      "financeplan/Features/Auth/PreLoginPaywallScreen.swift",
+      "financeplan/Features/Onboarding/Questionnaire/Screens/OnboardingQuestionnairePaywallScreen.swift",
+    ] {
+      let src = try source(path)
+      XCTAssertFalse(src.contains("Unlimited Syncing"), "\(path) still sells Unlimited Syncing")
+      XCTAssertFalse(src.contains("Real-time Market Data"), "\(path) still sells Real-time Market Data")
+      XCTAssertTrue(src.contains("PaywallComparisonTable"), "\(path) must render the shared catalog")
+    }
+  }
 
   func testAllThreePaywallEntryPointsDiscloseTerms() throws {
     // Every entry point must independently show price, cancellation and trial

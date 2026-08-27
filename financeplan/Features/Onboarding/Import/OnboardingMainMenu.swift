@@ -3,11 +3,9 @@
 //  financeplan
 //
 import StockPlanShared
-import StoreKit
 import SwiftUI
 
 struct OnboardingMainMenu: View {
-  @Environment(\.requestReview) private var requestReview
   @Environment(\.colorScheme) private var colorScheme
 
   let onSelectStocks: () -> Void
@@ -71,27 +69,17 @@ struct OnboardingMainMenu: View {
 
       Spacer()
 
-      VStack(spacing: 20) {
-        Button {
-          requestReview()
-        } label: {
-          HStack(spacing: 8) {
-            Image(systemName: "star.fill")
-            Text("Enjoying the app? Leave a review")
-          }
-          .typography(.caption, weight: .semibold)
+      // No review ask here. This is the first onboarding screen — the user has not
+      // imported anything yet, so there is nothing to have an opinion about. Reviews are
+      // now requested from earned moments (see ReviewPromptCoordinator).
+      HStack(spacing: 24) {
+        Button("Sign Out", action: onSignOut)
+          .typography(.caption, weight: .medium)
+          .foregroundStyle(.red)
+
+        Button("Skip for Now", action: onSkip)
+          .typography(.caption, weight: .medium)
           .foregroundStyle(.secondary)
-        }
-
-        HStack(spacing: 24) {
-          Button("Sign Out", action: onSignOut)
-            .typography(.caption, weight: .medium)
-            .foregroundStyle(.red)
-
-          Button("Skip for Now", action: onSkip)
-            .typography(.caption, weight: .medium)
-            .foregroundStyle(.secondary)
-        }
       }
       .padding(.bottom, 40)
     }

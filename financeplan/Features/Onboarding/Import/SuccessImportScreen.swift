@@ -3,11 +3,9 @@
 //  financeplan
 //
 import StockPlanShared
-import StoreKit
 import SwiftUI
 
 struct SuccessImportScreen: View {
-  @Environment(\.requestReview) var requestReview
   @Environment(\.colorScheme) private var colorScheme
   let optionalNextActionTitle: String?
   let onOptionalNextAction: () -> Void
@@ -47,19 +45,6 @@ struct SuccessImportScreen: View {
       .padding(.horizontal, 24)
 
       VStack(spacing: 16) {
-        Button {
-          requestReview()
-        } label: {
-          HStack(spacing: 10) {
-            Image(systemName: "star.fill")
-            Text("Leave a review")
-          }
-          .font(.headline)
-          .fontWeight(.bold)
-        }
-        .buttonStyle(GlowingButtonStyle())
-        .padding(.horizontal, 24)
-
         if let optionalNextActionTitle {
           Button {
             onOptionalNextAction()
@@ -71,13 +56,16 @@ struct SuccessImportScreen: View {
           .padding(.horizontal, 24)
         }
 
+        // "Go to Home" now leads. A review ask used to sit above this as the glowing
+        // primary CTA, before the user had seen a single screen of their own data.
         Button {
           onDone()
         } label: {
           Text("Go to Home")
             .typography(.label, weight: .semibold)
-            .foregroundStyle(.secondary)
         }
+        .buttonStyle(GlowingButtonStyle())
+        .padding(.horizontal, 24)
       }
 
       Spacer()

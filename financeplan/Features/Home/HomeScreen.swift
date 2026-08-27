@@ -2,7 +2,6 @@ import Charts
 import Foundation
 import Observation
 import OSLog
-import StoreKit
 import SwiftUI
 import UIKit
 import StockPlanShared
@@ -48,57 +47,15 @@ struct HomeScreen: View {
 
   private var tabView: some View {
     TabView(selection: $selectedTab) {
-      Tab(HomeTab.dashboard.title, systemImage: HomeTab.dashboard.systemImage, value: .dashboard) {
-        DashboardRoot(
-          selectedTab: $selectedTab,
-          isSettingsPresented: $isSettingsPresented,
-          isCapturePresented: $isCapturePresented,
-          budgetStore: budgetPlannerViewModel
-        )
+      ForEach(HomeTab.primaryTabs, id: \.self) { tab in
+        Tab(tab.title, systemImage: tab.systemImage, value: tab) {
+          root(for: tab)
+        }
       }
-
-      Tab(HomeTab.portfolio.title, systemImage: HomeTab.portfolio.systemImage, value: .portfolio) {
-        PortfolioRoot(
-          isSettingsPresented: $isSettingsPresented,
-          pendingOpenSymbol: $pendingPortfolioOpenSymbol,
-          pendingThesisWatchOpen: $pendingThesisWatchOpen,
-          pendingAutomationDestination: $pendingAutomationDestination
-        )
-      }
-
-      Tab(HomeTab.markets.title, systemImage: HomeTab.markets.systemImage, value: .markets) {
-        MarketsScreen()
-          .accessibilityIdentifier("tab.markets")
-      }
-
-      Tab(HomeTab.economy.title, systemImage: HomeTab.economy.systemImage, value: .economy) {
-        EconomyHubScreen()
-          .accessibilityIdentifier("tab.economy")
-      }
-
-      Tab(HomeTab.crypto.title, systemImage: HomeTab.crypto.systemImage, value: .crypto) {
-        CryptoHomeView(isSettingsPresented: $isSettingsPresented)
-          .accessibilityIdentifier("tab.crypto")
-      }
-
-      Tab(HomeTab.expenses.title, systemImage: HomeTab.expenses.systemImage, value: .expenses) {
-        ExpensesPlannerScreen(isSettingsPresented: $isSettingsPresented, viewModel: budgetPlannerViewModel)
-          .accessibilityIdentifier("tab.expenses")
-      }
-
-      Tab(HomeTab.reports.title, systemImage: HomeTab.reports.systemImage, value: .reports) {
-        ExpensesComparisonScreen()
-          .accessibilityIdentifier("tab.reports")
-      }
-
-      Tab(HomeTab.tax.title, systemImage: HomeTab.tax.systemImage, value: .tax) {
-        TaxDashboardScreen()
-          .accessibilityIdentifier("tab.tax")
-      }
-
-      Tab(HomeTab.insights.title, systemImage: HomeTab.insights.systemImage, value: .insights) {
-        InsightsScreen()
-          .accessibilityIdentifier("tab.insights")
+      ForEach(HomeTab.moreMenuTabs, id: \.self) { tab in
+        Tab(tab.title, systemImage: tab.systemImage, value: tab) {
+          root(for: tab)
+        }
       }
     }
     .id(appLanguage.rawValue)
@@ -109,6 +66,7 @@ struct HomeScreen: View {
     // with Dynamic Type, and it animated during scroll, shifting content under
     // the finger.
     .tabViewStyle(.sidebarAdaptable)
+    .reviewPromptPresenter()
     .sheet(isPresented: $isSettingsPresented) {
       settingsSheet
     }
@@ -124,6 +82,11 @@ struct HomeScreen: View {
       guard newValue == .insights, !billingManager.isPro else { return }
       selectedTab = .dashboard
       isPaywallPresented = true
+    }
+    // Never let the review sheet land on top of a settings, paywall, or capture sheet.
+    .onChange(of: isSettingsPresented || isPaywallPresented || isCapturePresented, initial: true) {
+      _, isCovered in
+      Container.shared.reviewPromptCoordinator().setContextEligible(!isCovered)
     }
     .onReceive(NotificationCenter.default.publisher(for: .openStockFromPushNotification)) { notification in
       handleOpenStockNotification(notification)
@@ -147,6 +110,47 @@ struct HomeScreen: View {
   private var settingsSheet: some View {
     UserProfileView()
       .environment(\.locale, Locale(identifier: appLanguage.localeIdentifier))
+  }
+
+  @ViewBuilder
+  private func root(for tab: HomeTab) -> some View {
+    switch tab {
+    case .dashboard:
+      DashboardRoot(
+        selectedTab: $selectedTab,
+        isSettingsPresented: $isSettingsPresented,
+        isCapturePresented: $isCapturePresented,
+        budgetStore: budgetPlannerViewModel
+      )
+    case .portfolio:
+      PortfolioRoot(
+        isSettingsPresented: $isSettingsPresented,
+        pendingOpenSymbol: $pendingPortfolioOpenSymbol,
+        pendingThesisWatchOpen: $pendingThesisWatchOpen,
+        pendingAutomationDestination: $pendingAutomationDestination
+      )
+    case .markets:
+      MarketsScreen()
+        .accessibilityIdentifier("tab.markets")
+    case .economy:
+      EconomyHubScreen()
+        .accessibilityIdentifier("tab.economy")
+    case .crypto:
+      CryptoHomeView(isSettingsPresented: $isSettingsPresented)
+        .accessibilityIdentifier("tab.crypto")
+    case .expenses:
+      ExpensesPlannerScreen(isSettingsPresented: $isSettingsPresented, viewModel: budgetPlannerViewModel)
+        .accessibilityIdentifier("tab.expenses")
+    case .reports:
+      ExpensesComparisonScreen()
+        .accessibilityIdentifier("tab.reports")
+    case .tax:
+      TaxDashboardScreen()
+        .accessibilityIdentifier("tab.tax")
+    case .insights:
+      InsightsScreen()
+        .accessibilityIdentifier("tab.insights")
+    }
   }
 
   private func handleCaptureSave(_ draft: HomeQuickExpenseDraft) async -> String? {

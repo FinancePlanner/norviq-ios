@@ -6,12 +6,10 @@ struct NorviqLogo: View {
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
-    Image("CerberusHeadIcon")
-      .renderingMode(.template)
+    Image("NorviqIcon")
       .resizable()
       .scaledToFit()
       .frame(width: size, height: size)
-      .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
       .accessibilityLabel("Norviq")
       .shadow(
         color: AppTheme.Colors.tint(for: colorScheme).opacity(0.18),

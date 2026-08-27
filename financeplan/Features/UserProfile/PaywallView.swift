@@ -5,10 +5,7 @@ import SwiftUI
 struct PaywallView: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(\.colorScheme) private var scheme
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let billingManager: BillingManager
-
-  @State private var featuresAppeared = false
 
   var body: some View {
     NavigationStack {
@@ -16,14 +13,14 @@ struct PaywallView: View {
         ScrollView {
           VStack(spacing: 0) {
             PaywallHeroSection(
-              headline: "Everything you need.",
-              subtitle: "Wealth tracking, spending insights, and market intelligence — all in one place."
+              headline: "Norviq Pro",
+              subtitle: "Unlock research, bank sync, the assistant, tax, and advanced reports. Compare Free and Pro below."
             )
             .padding(.top, 32)
             .padding(.horizontal, 20)
             .padding(.bottom, 32)
 
-            featureList
+            PaywallComparisonTable()
               .padding(.horizontal, 20)
               .padding(.bottom, 28)
 
@@ -91,39 +88,6 @@ struct PaywallView: View {
     }
   }
 
-  // MARK: - Feature List
-
-  private var featureList: some View {
-    VStack(spacing: 12) {
-      ForEach(Array(PaywallView.watches.enumerated()), id: \.element.title) { watchIndex, watch in
-        PaywallWatchHeader(title: watch.title)
-          .opacity(featuresAppeared ? 1 : 0)
-          .animation(
-            reduceMotion
-              ? .easeOut(duration: 0.15)
-              : .spring(response: 0.45, dampingFraction: 0.8).delay(Double(watchIndex) * 0.16),
-            value: featuresAppeared
-          )
-
-        ForEach(Array(watch.features.enumerated()), id: \.element.title) { index, feature in
-          PaywallFeatureRow(icon: feature.icon, title: feature.title, badge: .pro)
-            .opacity(featuresAppeared ? 1 : 0)
-            .offset(y: featuresAppeared ? 0 : 16)
-            .animation(
-              reduceMotion
-                ? .easeOut(duration: 0.15)
-                : .spring(response: 0.45, dampingFraction: 0.8)
-                  .delay(Double(watchIndex) * 0.16 + Double(index) * 0.08),
-              value: featuresAppeared
-            )
-        }
-      }
-    }
-    .onAppear {
-      featuresAppeared = true
-    }
-  }
-
   // MARK: - Plan Cards
 
   private var planCards: some View {
@@ -164,41 +128,4 @@ struct PaywallView: View {
     }
   }
 
-  // MARK: - Feature Data
-
-  private struct FeatureInfo: Hashable {
-    let icon: String
-    let title: String
-  }
-
-  private struct WatchGroup {
-    let title: String
-    let features: [FeatureInfo]
-  }
-
-  private static let watches: [WatchGroup] = [
-    WatchGroup(
-      title: "Wealth",
-      features: [
-        FeatureInfo(icon: "chart.bar.fill", title: "Real fundamentals & financial statements"),
-        FeatureInfo(icon: "arrow.up.arrow.down", title: "Bear/base/bull projections & chart builder"),
-        FeatureInfo(icon: "bell.badge.fill", title: "Price, dividend & earnings alerts"),
-      ]
-    ),
-    WatchGroup(
-      title: "Spending",
-      features: [
-        FeatureInfo(icon: "creditcard.fill", title: "Budgets, expenses & receipt scanning"),
-        FeatureInfo(icon: "building.columns", title: "Read-only bank sync"),
-      ]
-    ),
-    WatchGroup(
-      title: "Intelligence",
-      features: [
-        FeatureInfo(icon: "sparkles", title: "AI assistant & sentiment insights"),
-        FeatureInfo(icon: "point.3.connected.trianglepath.dotted", title: "MCP-backed intelligence & integrations"),
-        FeatureInfo(icon: "person.2.fill", title: "Cloud sync across devices"),
-      ]
-    ),
-  ]
 }

@@ -90,16 +90,9 @@ struct PaywallCTAFooter: View {
           .font(.headline.weight(.semibold))
           .frame(maxWidth: .infinity)
       }
-      .padding(.vertical, 16)
-      .foregroundStyle(.white)
-      .background(
-        AppTheme.Colors.premiumGradient(for: colorScheme),
-        in: Capsule()
-      )
-      .shadow(
-        color: AppTheme.Colors.tint(for: colorScheme).opacity(0.3),
-        radius: 10, x: 0, y: 5
-      )
+      .padding(.vertical, 14)
+      .foregroundStyle(Color(.systemBackground))
+      .background(AppTheme.Colors.tint(for: colorScheme), in: Capsule())
     }
     .buttonStyle(PressableStyle())
     .disabled(isLoading || isDisabled)

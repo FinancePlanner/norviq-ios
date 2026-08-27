@@ -60,24 +60,17 @@ struct PaywallPlanCard: View {
         }
         .layoutPriority(1)
       }
-      .padding(.horizontal, 20)
-      .padding(.vertical, 18)
-      .appGlassEffect(
-        .rect(cornerRadius: 20),
-        tint: isSelected
-          ? AppTheme.Colors.tintSoft(for: colorScheme).opacity(colorScheme == .dark ? 0.55 : 0.45)
-          : nil
+      .padding(.horizontal, 16)
+      .padding(.vertical, 14)
+      .background(
+        isSelected
+          ? AppTheme.Colors.tintSoft(for: colorScheme)
+          : Color(.secondarySystemBackground),
+        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
       )
-      .overlay {
-        if isSelected {
-          RoundedRectangle(cornerRadius: 20)
-            .stroke(AppTheme.Colors.tint(for: colorScheme), lineWidth: 2)
-        }
-      }
       .contentShape(Rectangle())
     }
     .buttonStyle(PressableStyle())
-    .scaleEffect(isSelected ? 1.02 : 1.0)
     .appAnimation(AppMotion.state, value: isSelected)
     .sensoryFeedback(.selection, trigger: isSelected)
     .accessibilityElement(children: .combine)
@@ -88,21 +81,13 @@ struct PaywallPlanCard: View {
   private var selectionIndicator: some View {
     ZStack {
       Circle()
-        .strokeBorder(
-          isSelected
-            ? AppTheme.Colors.tint(for: colorScheme)
-            : AppTheme.Colors.separator(for: colorScheme),
-          lineWidth: isSelected ? 0 : 1.5
-        )
-        .background(
-          Circle().fill(isSelected ? AppTheme.Colors.tint(for: colorScheme) : Color.clear)
-        )
-        .frame(width: 24, height: 24)
+        .fill(isSelected ? AppTheme.Colors.tint(for: colorScheme) : Color(.tertiarySystemFill))
+        .frame(width: 22, height: 22)
 
       if isSelected {
         Image(systemName: "checkmark")
           .font(.caption2.weight(.bold))
-          .foregroundStyle(.white)
+          .foregroundStyle(Color(.systemBackground))
           .transition(.scale.combined(with: .opacity))
       }
     }

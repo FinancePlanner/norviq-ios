@@ -5,12 +5,10 @@
 //  Created by Fernando Correia on 11.04.26.
 //
 
-import StoreKit
 import SwiftUI
 
 struct ShareFeedbackView: View {
     @Environment(\.colorScheme) private var scheme
-    @Environment(\.requestReview) private var requestReview
     @State private var feedbackTopic: FeedbackTopic?
 
     var body: some View {

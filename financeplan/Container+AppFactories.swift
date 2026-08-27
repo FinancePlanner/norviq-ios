@@ -89,6 +89,12 @@ extension Container {
     }.singleton
   }
 
+  var reviewPromptCoordinator: Factory<ReviewPromptCoordinator> {
+    self { @MainActor in
+      ReviewPromptCoordinator(analytics: self.analytics())
+    }.singleton
+  }
+
   func reloadEnvironmentConfiguration(for _: AppEnvironment, onUpdate: @escaping () -> Void) {
     manager.reset(scope: .singleton)
     onUpdate()
