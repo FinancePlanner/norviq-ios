@@ -2,6 +2,19 @@ import StockPlanShared
 import SwiftUI
 
 struct PersistentAssistantView: View {
+    /// Prefills the composer without sending.
+    ///
+    /// Used by the per-screen summary sheets' "Continue in Q". Never
+    /// auto-sent: the reader decides whether to ask, and a send would also
+    /// write into the conversation a linked Telegram chat shares, growing that
+    /// scrollback with a message nobody typed. The web app's `seed` query
+    /// parameter behaves the same way.
+    let seed: String?
+
+    init(seed: String? = nil) {
+        self.seed = seed
+    }
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
     @State private var viewModel = PersistentAssistantViewModel()
@@ -33,7 +46,14 @@ struct PersistentAssistantView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) { composer }
-            .task { await viewModel.load() }
+            .task {
+                await viewModel.load()
+                // After `load`, which selects or creates the conversation and
+                // would otherwise clear the field.
+                if let seed, viewModel.draft.isEmpty {
+                    viewModel.draft = seed
+                }
+            }
             .sheet(isPresented: $showsConversations) { conversationsSheet }
             .sheet(isPresented: $showsPreferences) { preferencesSheet }
             .alert("Q", isPresented: Binding(

@@ -74,7 +74,7 @@ struct InsightCardView: View {
                 .foregroundStyle(.primary)
 
             if !card.highlights.isEmpty {
-                FlexibleHighlights(highlights: card.highlights)
+                AIHighlightRows(highlights: card.highlights)
             }
 
             Text(card.disclaimer)
@@ -91,42 +91,6 @@ struct InsightCardView: View {
     }
 }
 
-private struct FlexibleHighlights: View {
-    let highlights: [AIInsightHighlight]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach(highlights) { highlight in
-                HStack {
-                    Text(highlight.label)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    HStack(spacing: 4) {
-                        if let symbol = trendSymbol(highlight.trend) {
-                            Image(systemName: symbol)
-                                .font(.caption2)
-                        }
-                        Text(highlight.value)
-                            .font(.callout.weight(.semibold))
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
-            }
-        }
-    }
-
-    private func trendSymbol(_ trend: String?) -> String? {
-        switch trend?.lowercased() {
-        case "up": "arrow.up.right"
-        case "down": "arrow.down.right"
-        case "flat": "arrow.right"
-        default: nil
-        }
-    }
-}
 
 private extension AIInsightKind {
     var displayTitle: String {

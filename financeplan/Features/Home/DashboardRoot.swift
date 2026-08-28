@@ -126,6 +126,7 @@ struct DashboardRoot: View {
       .vigilScreenBackground()
       .navigationTitle(greetingText)
       .navigationBarTitleDisplayMode(.large)
+      .aiViewSummary(.home)
       .navigationDestination(isPresented: $isChartBuilderPresented) {
         ChartBuilderStandaloneScreen()
       }
