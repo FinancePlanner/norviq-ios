@@ -46,6 +46,7 @@ struct CryptoHomeView: View {
             }
             .vigilScreenBackground()
             .vigilNavigationTitle("Crypto")
+            .aiViewSummary(.crypto)
             .vigilInlineNavigationBar()
             .navigationDestination(for: CryptoDetailRoute.self) { route in
                 CryptoDetailScreen(route: route)

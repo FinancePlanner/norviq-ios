@@ -30,6 +30,7 @@ struct PortfolioRoot: View {
         }
       }
       .vigilNavigationTitle("Portfolio")
+      .aiViewSummary(.portfolio, placement: .topBarLeading)
       .vigilInlineNavigationBar()
       .vigilScreenBackground()
       .toolbar {

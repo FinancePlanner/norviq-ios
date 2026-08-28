@@ -1,0 +1,13 @@
+What's new in Norviq:
+
+• Why it moved — an AI sentence on today's movers, with market context and X-informed sentiment
+• Trading pressure — relative volume and insider flow on each stock
+• Retail sentiment on holdings, watchlist, and stock detail
+• Leftover budget shown as units of your DCA ticker (informational, not an order)
+• Economy hub: inflation, your personal inflation vs CPI, housing, growth, policy
+• Tax strategy dashboard with EU jurisdictions
+• Connect IBKR (read-only)
+• Import spreadsheets
+• Talk to your numbers in Claude, Hermes, Codex, Telegram via MCP
+
+Norviq is an intelligence and organization tool. Not financial advice.

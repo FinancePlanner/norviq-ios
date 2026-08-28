@@ -68,4 +68,14 @@ struct AIInsightsHTTPClient: Sendable {
     func generate(kind: AIInsightKind) async throws -> AIInsightCardResponse {
         try await client.call(GenerateAIInsightEndpoint(kind: kind), errorType: Error.self)
     }
+
+    /// Shares this client's error type and its 401-refresh ladder: the same
+    /// domain, the same auth, so a second client would only mean a second place
+    /// to fix the next auth change.
+    func viewSummary(scope: AIViewScope, refresh: Bool) async throws -> AIViewSummaryResponse {
+        try await client.call(
+            GenerateAIViewSummaryEndpoint(scope: scope, refresh: refresh),
+            errorType: Error.self
+        )
+    }
 }

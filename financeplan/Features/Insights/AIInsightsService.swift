@@ -4,6 +4,7 @@ import StockPlanShared
 @MainActor
 protocol AIInsightsServicing: Sendable {
     func generate(kind: AIInsightKind) async throws -> AIInsightCardResponse
+    func viewSummary(scope: AIViewScope, refresh: Bool) async throws -> AIViewSummaryResponse
 }
 
 final class AIInsightsHTTPService: AIInsightsServicing {
@@ -24,6 +25,12 @@ final class AIInsightsHTTPService: AIInsightsServicing {
     func generate(kind: AIInsightKind) async throws -> AIInsightCardResponse {
         try await performAuthenticated { client in
             try await client.generate(kind: kind)
+        }
+    }
+
+    func viewSummary(scope: AIViewScope, refresh: Bool) async throws -> AIViewSummaryResponse {
+        try await performAuthenticated { client in
+            try await client.viewSummary(scope: scope, refresh: refresh)
         }
     }
 

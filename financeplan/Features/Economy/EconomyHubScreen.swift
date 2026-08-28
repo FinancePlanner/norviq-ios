@@ -80,6 +80,7 @@ struct EconomyHubScreen: View {
       .vigilListChrome()
       .vigilScreenBackground()
       .vigilNavigationTitle("Economy")
+      .aiViewSummary(.economy)
       .navigationDestination(for: EconomyHubSection.self) { section in
         switch section {
         case .inflation:

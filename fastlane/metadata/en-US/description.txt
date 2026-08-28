@@ -1,0 +1,36 @@
+Norviq explains why your money moved and not just that it moved.
+
+Track stocks, ETFs, and crypto next to your real spending. AI joins your holdings, market context, and X-informed sentiment into one sentence you can actually use.
+
+WHY IT MOVED
+• Today's contributors, with price action and market context
+• X-informed sentiment on the names you actually hold
+• Trading pressure: relative volume and insider flow — intensity, not a buy signal
+• A written thesis on each position, so you remember your why when the chart screams
+
+WEALTH
+• Stocks, ETFs, crypto, watchlists, and net worth in one workspace
+• Allocation, chart builder, DCF, financials, earnings, and research
+• Read-only IBKR connect, plus CSV and spreadsheet import
+• Targets, scenarios, rebalancing plans, and 10-year projections — you stay in control
+
+SPENDING
+• Expenses, budgets, receipt scanning, and read-only bank sync
+• Leftover cash shown as units of your DCA ticker (equivalent at last price — not an order)
+• Tax strategy surfaces for how EU retail investors actually file
+• Personal inflation vs official CPI
+
+INTELLIGENCE
+• In-app AI assistant over your real holdings and budget
+• Connect Claude, ChatGPT, or Cursor to your numbers via MCP (you bring the model)
+• Markets heatmap, movers, news, and a country-aware economy hub
+• Telegram connect and cloud sync across devices
+
+BUILT FOR HANDS-ON INVESTORS
+• Privacy controls, export, MFA, and on-device app lock
+• Not a broker. Not financial advice. Intelligence and organization tools only.
+
+Stop juggling a broker app, a budget spreadsheet, and market Twitter. Track, understand, and decide with context.
+
+Privacy Policy: https://norviq.org/privacy
+Terms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
