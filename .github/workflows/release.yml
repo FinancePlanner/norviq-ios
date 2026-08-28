@@ -1,7 +1,18 @@
 # iOS release pipeline.
-#   push to main        -> TestFlight build (beta lane)
-#   manual dispatch     -> App Store release (release/hotfix lane), gated by the
-#                          GitHub environment "app-store" (required reviewer).
+#   "iOS CI" green on main -> TestFlight build (beta lane)
+#   manual dispatch        -> App Store release (release/hotfix lane), gated by
+#                             the GitHub environment "app-store" (required reviewer).
+#
+# The beta lane used to trigger on `push: main` directly, which made it a
+# SIBLING of the iOS CI workflow, not a consumer: both started on the same
+# commit at the same second, so a build shipped to TestFlight regardless of
+# whether the tests went red. `workflow_run` makes it sequential and gated.
+#
+# Two consequences of workflow_run worth knowing:
+#   * GitHub reads this trigger from the workflow file on the DEFAULT branch,
+#     so this change only takes effect once it is on main.
+#   * The event's github.sha/github.ref point at the default branch tip, not
+#     the commit that was tested — hence the explicit head_sha checkout.
 #
 # Required repo secrets:
 #   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (base64 .p8)  — App Store Connect API key
@@ -14,7 +25,9 @@
 name: Release
 
 on:
-  push:
+  workflow_run:
+    workflows: ["iOS CI"]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
     inputs:
@@ -35,12 +48,17 @@ concurrency:
 
 jobs:
   beta:
-    if: github.event_name == 'push'
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success'
     name: TestFlight (beta)
     runs-on: macos-15
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          # workflow_run defaults to the default-branch tip; build what CI tested.
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - uses: maxim-lobanov/setup-xcode@v1
         with:
