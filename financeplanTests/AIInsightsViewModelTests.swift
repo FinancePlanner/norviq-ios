@@ -62,4 +62,19 @@ private final class AIInsightsServiceMock: AIInsightsServicing, @unchecked Senda
       highlights: []
     )
   }
+
+  /// Present only to satisfy the protocol: these tests cover `InsightsViewModel`,
+  /// which does not use view summaries. The summary sheet has its own view model
+  /// and its own double.
+  func viewSummary(scope: AIViewScope, refresh _: Bool) async throws -> AIViewSummaryResponse {
+    AIViewSummaryResponse(
+      scope: scope.rawValue,
+      title: "Title",
+      body: "Body",
+      highlights: [],
+      disclaimer: "",
+      generatedAt: Date(),
+      isCached: false
+    )
+  }
 }
