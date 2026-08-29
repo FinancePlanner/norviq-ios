@@ -295,6 +295,8 @@ struct RecurringTemplatesManagerSheet: View {
   let templates: [RecurringTemplateResponse]
   let availableCategories: [ExpenseCategoryResponse]
   let availablePillars: [BudgetPillar]
+  /// Household default share for a new shared template; 100 when none is set.
+  var defaultSharePercent: Double = 100
   let onSave: (RecurringTemplateRequest, String?) -> Void
   let onDelete: (String) -> Void
 
@@ -353,6 +355,7 @@ struct RecurringTemplatesManagerSheet: View {
           template: nil,
           availablePillars: availablePillars,
           availableCategories: availableCategories,
+          defaultSharePercent: defaultSharePercent,
           onSave: { req in onSave(req, nil) }
         )
       }
@@ -380,6 +383,8 @@ struct RecurringTemplateEditorSheet: View {
     template: RecurringTemplateResponse?,
     availablePillars: [BudgetPillar],
     availableCategories: [ExpenseCategoryResponse],
+    /// Household default share for a new shared template; 100 when none is set.
+    defaultSharePercent: Double = 100,
     onSave: @escaping (RecurringTemplateRequest) -> Void
   ) {
     self.template = template
@@ -392,7 +397,7 @@ struct RecurringTemplateEditorSheet: View {
     _categoryId = State(initialValue: template?.categoryId)
     _frequency = State(initialValue: template?.frequency ?? .monthly)
     _splitMode = State(initialValue: template?.splitMode ?? .personal)
-    _userSharePercent = State(initialValue: template?.userSharePercent ?? 100)
+    _userSharePercent = State(initialValue: template?.userSharePercent ?? defaultSharePercent)
   }
 
   private var filteredCategories: [ExpenseCategoryResponse] {

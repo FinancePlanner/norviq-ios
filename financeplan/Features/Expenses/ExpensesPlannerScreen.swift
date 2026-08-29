@@ -452,7 +452,8 @@ struct ExpensesPlannerScreen: View {
       initialPillar: recordSpendInitialPillar,
       availablePillars: viewModel.selectedMonthPillars,
       availableItems: viewModel.selectedMonthSnapshot?.items ?? [],
-      availableCategories: viewModel.categories
+      availableCategories: viewModel.categories,
+      defaultSharePercent: viewModel.seededUserSharePercent
     ) { draft in
       await viewModel.recordExpenseAndWait(draft)
     }
@@ -474,9 +475,10 @@ struct ExpensesPlannerScreen: View {
 
   private func householdPartnerSheet() -> some View {
     HouseholdPartnerEditorSheet(
-      currentName: viewModel.partnerDisplayName == "Partner" ? "" : viewModel.partnerDisplayName
-    ) { name in
-      viewModel.updatePartnerDisplayName(name)
+      currentName: viewModel.partnerDisplayName == "Partner" ? "" : viewModel.partnerDisplayName,
+      currentDefaultShare: viewModel.householdDefaultSharePercent
+    ) { name, defaultShare in
+      viewModel.updateHouseholdPartner(name: name, defaultSharePercent: defaultShare)
     }
   }
 
@@ -490,7 +492,8 @@ struct ExpensesPlannerScreen: View {
       availablePillars: viewModel.selectedMonthPillars,
       availableItems: viewModel.selectedMonthSnapshot?.items ?? [],
       availableCategories: viewModel.categories,
-      prefillDraft: draft
+      prefillDraft: draft,
+      defaultSharePercent: viewModel.seededUserSharePercent
     ) { saveDraft in
       await viewModel.recordExpenseAndWait(saveDraft)
     }
@@ -501,6 +504,7 @@ struct ExpensesPlannerScreen: View {
       templates: viewModel.recurringTemplates,
       availableCategories: viewModel.categories,
       availablePillars: viewModel.selectedMonthPillars,
+      defaultSharePercent: viewModel.seededUserSharePercent,
       onSave: { req, id in viewModel.saveRecurringTemplate(req, templateId: id) },
       onDelete: { id in viewModel.deleteRecurringTemplate(id) }
     )
@@ -1591,6 +1595,8 @@ private struct RecordSpendSheet: View {
     availableItems: [BudgetPlanItem],
     availableCategories: [ExpenseCategoryResponse] = [],
     prefillDraft: BudgetActivityDraft? = nil,
+    /// Household default share for a new shared expense; 100 when none is set.
+    defaultSharePercent: Double = 100,
     onSave: @escaping @MainActor (BudgetActivityDraft) async -> Bool
   ) {
     self.monthTitle = monthTitle
@@ -1612,7 +1618,7 @@ private struct RecordSpendSheet: View {
     _linkedPlanItemID = State(initialValue: editingActivity?.linkedPlanItemID)
     _categoryId = State(initialValue: editingActivity == nil ? prefill?.categoryId : nil)
     _splitMode = State(initialValue: editingActivity?.splitMode ?? prefill?.splitMode ?? .personal)
-    _userSharePercent = State(initialValue: editingActivity?.userSharePercent ?? prefill?.userSharePercent ?? 100)
+    _userSharePercent = State(initialValue: editingActivity?.userSharePercent ?? prefill?.userSharePercent ?? defaultSharePercent)
   }
 
   var body: some View {
@@ -1873,11 +1879,18 @@ private struct RecordSpendSheet: View {
 private struct HouseholdPartnerEditorSheet: View {
   @Environment(\.dismiss) private var dismiss
   @State private var name: String
+  /// Whether a household default is set at all. Nil and 0 mean different things
+  /// server-side — "no default" versus "the partner pays everything" — so the
+  /// toggle carries that distinction rather than overloading the slider.
+  @State private var hasDefaultShare: Bool
+  @State private var defaultShare: Double
 
-  let onSave: (String?) -> Void
+  let onSave: (String?, Double?) -> Void
 
-  init(currentName: String, onSave: @escaping (String?) -> Void) {
+  init(currentName: String, currentDefaultShare: Double?, onSave: @escaping (String?, Double?) -> Void) {
     _name = State(initialValue: currentName)
+    _hasDefaultShare = State(initialValue: currentDefaultShare != nil)
+    _defaultShare = State(initialValue: currentDefaultShare ?? 50)
     self.onSave = onSave
   }
 
@@ -1886,6 +1899,24 @@ private struct HouseholdPartnerEditorSheet: View {
       Form {
         Section("Partner") {
           TextField("Name", text: $name)
+        }
+
+        Section {
+          Toggle("Set a default split", isOn: $hasDefaultShare.animation())
+          if hasDefaultShare {
+            TargetSlider(title: "Your share", value: $defaultShare)
+            HStack {
+              Text("You pay \(Int(defaultShare.rounded()))%")
+              Spacer()
+              Text("\(name.isEmpty ? "Partner" : name) pays \(100 - Int(defaultShare.rounded()))%")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+          }
+        } header: {
+          Text("Default split")
+        } footer: {
+          Text("New shared items start at this split. Existing items are not changed.")
         }
       }
       .navigationTitle("Household Partner")
@@ -1897,7 +1928,10 @@ private struct HouseholdPartnerEditorSheet: View {
         ToolbarItem(placement: .confirmationAction) {
           Button("Save") {
             let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            onSave(trimmed.isEmpty ? nil : trimmed)
+            onSave(
+              trimmed.isEmpty ? nil : trimmed,
+              hasDefaultShare ? defaultShare.rounded() : nil
+            )
             dismiss()
           }
         }

@@ -14,6 +14,8 @@ struct HomeQuickExpenseDraft: Equatable {
 }
 
 struct HomeQuickExpenseSheet: View {
+  /// Household default share for a new shared expense; 100 when none is set.
+  var defaultSharePercent: Double = 100
   let onSave: @MainActor (HomeQuickExpenseDraft) async -> String?
 
   @Environment(\.dismiss) private var dismiss
@@ -138,6 +140,12 @@ struct HomeQuickExpenseSheet: View {
       }
       .sheet(isPresented: $isScannerPresented) {
         ReceiptScannerView(onDraft: applyReceiptDraft)
+      }
+      .onAppear {
+        // @State cannot read a property in its initialiser, so the household
+        // default is applied on first appearance. It only matters once the user
+        // switches to Shared, so the one-frame delay is invisible.
+        userSharePercent = defaultSharePercent
       }
     }
   }

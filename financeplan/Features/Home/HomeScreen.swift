@@ -74,7 +74,7 @@ struct HomeScreen: View {
       PaywallView(billingManager: billingManager)
     }
     .sheet(isPresented: $isCapturePresented) {
-      HomeQuickExpenseSheet { draft in
+      HomeQuickExpenseSheet(defaultSharePercent: budgetPlannerViewModel.seededUserSharePercent) { draft in
         await handleCaptureSave(draft)
       }
     }

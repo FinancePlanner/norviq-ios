@@ -16,6 +16,16 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
   private(set) var isSuggestionsLoading = false
   private(set) var suggestionsUnavailable = false
   private(set) var partnerDisplayName: String = "Partner"
+  /// Household default: the percentage of a shared item the user keeps, so 40
+  /// means the partner covers 60%. Nil means no default has been set, which is
+  /// distinct from 100 — see `seededUserSharePercent`.
+  private(set) var householdDefaultSharePercent: Double?
+
+  /// The share a newly created shared item starts at. Falls back to 100 when no
+  /// household default exists, which is the behaviour that predates the setting.
+  var seededUserSharePercent: Double {
+    householdDefaultSharePercent ?? 100
+  }
   var selectedMonthStart: Date = .now
   var isLoading = false
   var errorMessage: String?
@@ -81,6 +91,7 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
           let partner = try? await expensesService.getHouseholdPartner()
           if let partner {
               self.partnerDisplayName = partner.displayName ?? "Partner"
+              self.householdDefaultSharePercent = partner.defaultUserSharePercent
           }
           async let snapshotsTask = expensesService.getSnapshots(year: nil, month: nil)
           async let itemsTask = expensesService.getAllPlanItems()
@@ -213,7 +224,9 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
             plannedAmount: 0,
             pillar: pillar,
             splitMode: .personal,
-            userSharePercent: 100
+            // The split MODE stays the user's choice; only the percentage is
+            // pre-filled, so it applies once they switch to Shared.
+            userSharePercent: seededUserSharePercent
           )
       } catch {
           self.errorMessage = "Could not start a new planned item: \(error.localizedDescription)"
@@ -580,13 +593,20 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
     }
   }
 
-  func updatePartnerDisplayName(_ name: String?) {
+  /// Updates the household partner profile. `defaultSharePercent` is nil when
+  /// the user has not set a default split, which clears it server-side rather
+  /// than storing zero.
+  func updateHouseholdPartner(name: String?, defaultSharePercent: Double?) {
     Task {
       do {
         let partner = try await expensesService.updateHouseholdPartner(
-          payload: HouseholdPartnerProfileRequest(displayName: name)
+          payload: HouseholdPartnerProfileRequest(
+            displayName: name,
+            defaultUserSharePercent: defaultSharePercent
+          )
         )
         self.partnerDisplayName = partner.displayName ?? "Partner"
+        self.householdDefaultSharePercent = partner.defaultUserSharePercent
       } catch {
         self.errorMessage = error.localizedDescription
         await load(force: true)
