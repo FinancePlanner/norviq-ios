@@ -1,22 +1,17 @@
 import SwiftUI
 import StockPlanShared
 
-/// Watch II spending command deck — activity table, DCA gauge, tax teaser (mirrors web deck).
+/// Watch II spending command deck — the AI-categorized activity table.
+/// DCA capacity and the tax forecaster moved to the dashboard and portfolio
+/// tabs; this deck stays personal-spending only.
 struct VigilExpensesCommandDeck: View {
   @Environment(\.colorScheme) private var scheme
 
   let activities: [BudgetActivity]
-  let driftViewModel: BudgetDriftViewModel
   let currencyCode: String
-  let onOpenTax: () -> Void
-  let onOpenReallocation: () -> Void
 
   var body: some View {
-    VStack(spacing: 12) {
-      activityPanel
-      dcaPanel
-      taxPanel
-    }
+    activityPanel
   }
 
   private var activityPanel: some View {
@@ -50,87 +45,6 @@ struct VigilExpensesCommandDeck: View {
             }
           }
         }
-      }
-    }
-  }
-
-  private var dcaPanel: some View {
-    GlassCard(cornerRadius: AppTheme.Radius.card) {
-      VStack(alignment: .leading, spacing: 10) {
-        Text("This month in \(driftViewModel.capacity?.symbol ?? "your ticker")")
-          .font(.subheadline.weight(.semibold))
-        if let capacity = driftViewModel.capacity {
-          Text(capacityHero(capacity))
-            .font(.title3.weight(.bold).monospacedDigit())
-            .foregroundStyle(AppTheme.Colors.successText(for: scheme))
-          if let price = capacity.price {
-            Text("at last \(capacity.priceCurrency ?? capacity.currencyCode) \(price.formatted(.number.precision(.fractionLength(2))))")
-              .font(.caption)
-              .foregroundStyle(.secondary)
-          }
-          ForEach(capacity.categories.prefix(3)) { row in
-            Text("\(row.title) · \(overspendLine(row, symbol: capacity.symbol, currency: capacity.currencyCode))")
-              .font(.caption)
-              .foregroundStyle(.secondary)
-          }
-          HStack {
-            TextField("VWCE", text: Bindable(driftViewModel).dcaSymbolDraft)
-              .textInputAutocapitalization(.characters)
-              .autocorrectionDisabled()
-              .font(.body.monospaced())
-            Button("Set") {
-              Task { await driftViewModel.saveDcaSymbol() }
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(AppTheme.Colors.tint(for: scheme))
-          }
-          Text(capacity.disclaimer)
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-          Button("Review reallocation", action: onOpenReallocation)
-            .buttonStyle(.bordered)
-            .tint(AppTheme.Colors.tint(for: scheme))
-        } else if let dashboard = driftViewModel.dashboard {
-          let surplus = max(dashboard.investmentContributionTarget - dashboard.lostInvestmentCapital, 0)
-          Text("+\(surplus.formatted(.currency(code: currencyCode))) leftover")
-            .font(.title3.weight(.bold).monospacedDigit())
-            .foregroundStyle(AppTheme.Colors.successText(for: scheme))
-        } else {
-          Text("Set salary and pillar targets to calculate leftover cash as units of a holding.")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-        }
-      }
-    }
-  }
-
-  private func capacityHero(_ capacity: SpendToUnitsCapacityWire) -> String {
-    let cash = capacity.surplusAmount.formatted(.currency(code: capacity.currencyCode))
-    if let units = capacity.surplusUnits {
-      return "\(cash) → \(units.formatted(.number.precision(.fractionLength(2)))) \(capacity.symbol)"
-    }
-    return "\(cash) leftover"
-  }
-
-  private func overspendLine(_ row: SpendToUnitsCategoryWire, symbol: String, currency: String) -> String {
-    let cash = row.overspendAmount.formatted(.currency(code: currency))
-    if let units = row.units {
-      return "\(cash) → \(units.formatted(.number.precision(.fractionLength(2)))) \(symbol) not bought"
-    }
-    return "\(cash) over plan"
-  }
-
-  private var taxPanel: some View {
-    GlassCard(cornerRadius: AppTheme.Radius.card) {
-      VStack(alignment: .leading, spacing: 8) {
-        Text("Tax liability forecaster")
-          .font(.subheadline.weight(.semibold))
-        Text("Jurisdiction-aware estimates from your tax profile.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
-        Button("Open tax strategy", action: onOpenTax)
-          .buttonStyle(.bordered)
-          .tint(AppTheme.Colors.tint(for: scheme))
       }
     }
   }

@@ -29,7 +29,6 @@ struct ExpensesPlannerScreen: View {
   @State private var driftViewModel = BudgetDriftViewModel()
   @State private var isReallocationPresented = false
   @State private var isAlertPolicyPresented = false
-  @State private var isTaxDashboardPresented = false
 
   private var isShowingLoadingState: Bool {
     viewModel.isLoading && viewModel.monthlySnapshots.isEmpty
@@ -87,10 +86,7 @@ struct ExpensesPlannerScreen: View {
 
               VigilExpensesCommandDeck(
                 activities: viewModel.activities,
-                driftViewModel: driftViewModel,
-                currencyCode: "USD",
-                onOpenTax: { isTaxDashboardPresented = true },
-                onOpenReallocation: { isReallocationPresented = true }
+                currencyCode: "USD"
               )
               .padding(.horizontal, 16)
 
@@ -226,11 +222,6 @@ struct ExpensesPlannerScreen: View {
         FinancingPlannerScreen()
       }
       .sheet(isPresented: $isRecurringManagerPresented, content: recurringManagerSheet)
-      .sheet(isPresented: $isTaxDashboardPresented) {
-        NavigationStack {
-          TaxDashboardScreen()
-        }
-      }
       .sheet(isPresented: $isPaywallPresented) {
         PaywallView(billingManager: billingManager)
       }

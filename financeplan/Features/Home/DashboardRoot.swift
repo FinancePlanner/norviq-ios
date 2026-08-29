@@ -372,6 +372,8 @@ private struct DashboardContentSection: View {
 
       WhyMovedCard()
 
+      DcaCapacityCard()
+
       UnifiedActivityFeed(
         viewModel: activityViewModel,
         recentExpenses: recentExpenses,
@@ -381,6 +383,8 @@ private struct DashboardContentSection: View {
       )
 
       MacroTeaserCard()
+
+      TaxForecasterTeaserCard()
 
       GoalPlanningDashboardCard(action: onGoalPlanningTap)
 

@@ -357,6 +357,8 @@ struct PortfolioScreen: View {
           onSelectTimeRange: selectTimeRange
         )
 
+        DcaCapacityCard()
+
         PortfolioAssetFilters(
           colorScheme: colorScheme,
           selectedAssetFilter: selectedAssetFilter,
