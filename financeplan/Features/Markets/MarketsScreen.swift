@@ -8,75 +8,73 @@ struct MarketsScreen: View {
   @State private var newsViewModel = MacroViewModel()
 
   var body: some View {
-    NavigationStack {
-      ScrollView {
-        VStack(alignment: .leading, spacing: 20) {
-          VigilPageHeader(
-            watch: .wealth,
-            title: "Markets"
-          )
+    ScrollView {
+      VStack(alignment: .leading, spacing: 20) {
+        VigilPageHeader(
+          watch: .wealth,
+          title: "Markets"
+        )
 
-          NavigationLink {
-            MarketSentimentScreen()
-          } label: {
-            HStack {
-              Label("Retail sentiment", systemImage: "bubble.left.and.bubble.right")
-                .font(.subheadline.weight(.semibold))
-              Spacer()
-              Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-            }
-            .padding()
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
-          }
-          .buttonStyle(.plain)
-          .accessibilityIdentifier("markets.retailSentimentLink")
-
-          if let overview = viewModel.overview {
-            if !overview.indices.isEmpty {
-              indexStrip(overview.indices)
-            }
-            if !overview.heatmap.isEmpty {
-              MarketsHeatmapCard(tiles: overview.heatmap)
-            }
-            if !overview.gainers.isEmpty || !overview.losers.isEmpty {
-              MarketsMoversCard(gainers: overview.gainers, losers: overview.losers)
-            }
-            if !newsViewModel.news.isEmpty {
-              MacroNewsCard(news: newsViewModel.news)
-            }
-            Text("As of \(overview.asOf)")
-              .font(.caption2)
+        NavigationLink {
+          MarketSentimentScreen()
+        } label: {
+          HStack {
+            Label("Retail sentiment", systemImage: "bubble.left.and.bubble.right")
+              .font(.subheadline.weight(.semibold))
+            Spacer()
+            Image(systemName: "chevron.right")
+              .font(.caption)
               .foregroundStyle(.tertiary)
-          } else if viewModel.isLoading {
-            ProgressView("Loading markets…")
-              .frame(maxWidth: .infinity)
-              .padding(.top, 80)
-          } else {
-            ContentUnavailableView(
-              "Markets are warming up",
-              systemImage: "square.grid.3x3",
-              description: Text(viewModel.errorMessage ?? "Market data is temporarily unavailable. Pull to refresh.")
-            )
           }
+          .padding()
+          .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
         }
-        .padding()
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("markets.retailSentimentLink")
+
+        if let overview = viewModel.overview {
+          if !overview.indices.isEmpty {
+            indexStrip(overview.indices)
+          }
+          if !overview.heatmap.isEmpty {
+            MarketsHeatmapCard(tiles: overview.heatmap)
+          }
+          if !overview.gainers.isEmpty || !overview.losers.isEmpty {
+            MarketsMoversCard(gainers: overview.gainers, losers: overview.losers)
+          }
+          if !newsViewModel.news.isEmpty {
+            MacroNewsCard(news: newsViewModel.news)
+          }
+          Text("As of \(overview.asOf)")
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+        } else if viewModel.isLoading {
+          ProgressView("Loading markets…")
+            .frame(maxWidth: .infinity)
+            .padding(.top, 80)
+        } else {
+          ContentUnavailableView(
+            "Markets are warming up",
+            systemImage: "square.grid.3x3",
+            description: Text(viewModel.errorMessage ?? "Market data is temporarily unavailable. Pull to refresh.")
+          )
+        }
       }
-      .vigilScreenBackground()
-      .vigilNavigationTitle("Markets")
-      .aiViewSummary(.markets)
-      .vigilInlineNavigationBar()
-      .refreshable {
+      .padding()
+    }
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Markets")
+    .aiViewSummary(.markets)
+    .vigilInlineNavigationBar()
+    .refreshable {
+      await viewModel.load()
+    }
+    .task {
+      if viewModel.overview == nil {
         await viewModel.load()
       }
-      .task {
-        if viewModel.overview == nil {
-          await viewModel.load()
-        }
-        if newsViewModel.news.isEmpty {
-          await newsViewModel.load(country: "US")
-        }
+      if newsViewModel.news.isEmpty {
+        await newsViewModel.load(country: "US")
       }
     }
   }

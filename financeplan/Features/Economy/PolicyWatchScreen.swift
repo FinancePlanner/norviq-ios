@@ -61,6 +61,7 @@ struct PolicyWatchScreen: View {
     }
     .vigilScreenBackground()
     .vigilNavigationTitle("Policy Watch")
+    .vigilInlineNavigationBar()
     .refreshable {
       await viewModel.load(country: selectedCountry)
     }

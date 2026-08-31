@@ -65,6 +65,49 @@ final class HomeDashboardTests: XCTestCase {
         )
     }
 
+    /// iPhone More already pushes Markets/Economy onto a UINavigationController.
+    /// A second NavigationStack inside those screens is what stacked two bars
+    /// (back on one row, AI on the other; two back buttons on Inflation etc.).
+    func testOverflowTabsDoNotNestNavigationStacks() throws {
+        let home = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appendingPathComponent("financeplan/Features/Home/HomeScreen.swift"),
+            encoding: .utf8
+        )
+        XCTAssertTrue(
+            home.contains("overflowTabHost"),
+            "Markets and Economy must be hosted so iPhone More does not nest NavigationStacks."
+        )
+
+        let markets = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appendingPathComponent("financeplan/Features/Markets/MarketsScreen.swift"),
+            encoding: .utf8
+        )
+        XCTAssertFalse(
+            markets.contains("NavigationStack {"),
+            "MarketsScreen must not wrap itself in NavigationStack; HomeScreen hosts it on iPad only."
+        )
+
+        let economy = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appendingPathComponent("financeplan/Features/Economy/EconomyHubScreen.swift"),
+            encoding: .utf8
+        )
+        let previewStart = economy.range(of: "#Preview")?.lowerBound ?? economy.endIndex
+        let hubBody = economy[..<previewStart]
+        XCTAssertFalse(
+            hubBody.contains("NavigationStack {"),
+            "EconomyHubScreen must not wrap itself in NavigationStack; children inherit the More/iPad stack."
+        )
+    }
+
     // This is a placeholder test file for the Dashboard logic.
     // Based on the 'DashboardService.swift' existing in Features/Home.
 

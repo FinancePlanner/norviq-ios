@@ -30,6 +30,7 @@ private enum EarningsDateFormatterCache {
 
 struct EarningsCalendarScreen: View {
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.dismiss) private var dismiss
   private var marketDataService: any MarketDataServicing { Container.shared.marketDataService() }
 
   @State private var selectedDate = Date()
@@ -61,7 +62,13 @@ struct EarningsCalendarScreen: View {
       }
       .vigilNavigationTitle("Earnings calendar")
       .vigilInlineNavigationBar()
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("Close") { dismiss() }
+        }
+      }
     }
+    .presentationDragIndicator(.visible)
     .sheet(item: $selectedEvent) { event in
       EarningsDetailView(event: event)
     }

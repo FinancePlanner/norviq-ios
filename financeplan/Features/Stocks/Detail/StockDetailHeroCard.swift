@@ -6,6 +6,7 @@ struct StockDetailHeroCard: View {
     let companyProfile: CompanyProfileResponse?
     let comparisonProfile: StockComparisonProfile?
     let marketSnapshot: StockMarketSnapshot?
+    let periodReturns: StockPeriodReturnsResponse?
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -104,6 +105,8 @@ struct StockDetailHeroCard: View {
                     )
                 }
 
+                PeriodReturnsStrip(returns: periodReturns, colorScheme: colorScheme)
+
                 if let companyProfile {
                     Divider()
 
@@ -141,5 +144,39 @@ struct StockDetailHeroCard: View {
                 }
             }
         }
+    }
+}
+
+struct PeriodReturnsStrip: View {
+    let returns: StockPeriodReturnsResponse?
+    let colorScheme: ColorScheme
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            periodPill(title: "3M", value: returns?.threeMonth)
+            periodPill(title: "6M", value: returns?.sixMonth)
+            periodPill(title: "YTD", value: returns?.yearToDate)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Period returns")
+    }
+
+    private func periodPill(title: String, value: Double?) -> some View {
+        HeroMetricPill(
+            title: title,
+            value: PeriodReturnFormatting.percentText(value),
+            tint: periodTint(value)
+        )
+        .accessibilityLabel(PeriodReturnFormatting.accessibilityLabel(period: title, value: value))
+    }
+
+    private func periodTint(_ value: Double?) -> Color {
+        guard let value else {
+            return AppTheme.Colors.secondaryTint(for: colorScheme)
+        }
+        if value < 0 {
+            return AppTheme.Colors.danger
+        }
+        return AppTheme.Colors.success
     }
 }

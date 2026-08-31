@@ -43,63 +43,64 @@ enum EconomyHubSection: String, CaseIterable, Identifiable, Hashable {
 /// Top-level Economy tab root: Inflation | Housing | Growth & Jobs | Policy Watch.
 struct EconomyHubScreen: View {
   var body: some View {
-    NavigationStack {
-      List {
-        Section {
-          VigilPageHeader(
-            watch: .intelligence,
-            title: "Economy"
-          )
-          .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-          .listRowBackground(Color.clear)
-        }
+    List {
+      Section {
+        VigilPageHeader(
+          watch: .intelligence,
+          title: "Economy"
+        )
+        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+        .listRowBackground(Color.clear)
+      }
 
-        Section {
-          ForEach(EconomyHubSection.allCases) { section in
-            NavigationLink(value: section) {
-              Label {
-                VStack(alignment: .leading, spacing: 2) {
-                  Text(section.title)
-                    .font(.body.weight(.semibold))
-                  Text(section.subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-              } icon: {
-                Image(systemName: section.systemImage)
-                  .foregroundStyle(.tint)
+      Section {
+        ForEach(EconomyHubSection.allCases) { section in
+          NavigationLink(value: section) {
+            Label {
+              VStack(alignment: .leading, spacing: 2) {
+                Text(section.title)
+                  .font(.body.weight(.semibold))
+                Text(section.subtitle)
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
               }
+            } icon: {
+              Image(systemName: section.systemImage)
+                .foregroundStyle(.tint)
             }
-            .accessibilityIdentifier("economy.section.\(section.rawValue)")
           }
-        } footer: {
-          Text("Macro snapshots for the US, Brazil, the Euro Area, and every supported tax jurisdiction: Portugal, Spain, Germany, France and Italy.")
-            .font(.caption)
+          .accessibilityIdentifier("economy.section.\(section.rawValue)")
         }
+      } footer: {
+        Text("Macro snapshots for the US, Brazil, the Euro Area, and every supported tax jurisdiction: Portugal, Spain, Germany, France and Italy.")
+          .font(.caption)
       }
-      .vigilListChrome()
-      .vigilScreenBackground()
-      .vigilNavigationTitle("Economy")
-      .aiViewSummary(.economy)
-      .navigationDestination(for: EconomyHubSection.self) { section in
-        switch section {
-        case .inflation:
-          MacroScreen()
-        case .personalInflation:
-          PersonalInflationScreen()
-        case .housing:
-          HousingHubScreen()
-        case .growth:
-          EconomyGrowthScreen()
-        case .policy:
-          PolicyWatchScreen()
-        }
-      }
-      .accessibilityIdentifier("economy.hub")
     }
+    .vigilListChrome()
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Economy")
+    .aiViewSummary(.economy)
+    .vigilInlineNavigationBar()
+    .navigationDestination(for: EconomyHubSection.self) { section in
+      switch section {
+      case .inflation:
+        MacroScreen()
+      case .personalInflation:
+        PersonalInflationScreen()
+      case .housing:
+        HousingHubScreen()
+      case .growth:
+        EconomyGrowthScreen()
+      case .policy:
+        PolicyWatchScreen()
+      }
+    }
+    .accessibilityIdentifier("economy.hub")
   }
 }
 
 #Preview {
-  EconomyHubScreen()
+  NavigationStack {
+    EconomyHubScreen()
+  }
 }

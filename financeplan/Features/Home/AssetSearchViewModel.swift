@@ -10,14 +10,16 @@ final class AssetSearchViewModel {
   var errorMessage: String?
 
   private let service: AssetSearchServicing
+  private let includeReturns: Bool
   @ObservationIgnored private nonisolated(unsafe) var searchTask: Task<Void, Never>?
 
-  init(service: AssetSearchServicing) {
+  init(service: AssetSearchServicing, includeReturns: Bool = true) {
     self.service = service
+    self.includeReturns = includeReturns
   }
 
-  convenience init() {
-    self.init(service: Container.shared.assetSearchService())
+  convenience init(includeReturns: Bool = true) {
+    self.init(service: Container.shared.assetSearchService(), includeReturns: includeReturns)
   }
 
   deinit {
@@ -58,7 +60,7 @@ final class AssetSearchViewModel {
     defer { isLoading = false }
 
     do {
-      results = try await service.searchAssets(query: query)
+      results = try await service.searchAssets(query: query, includeReturns: includeReturns)
     } catch {
       errorMessage = error.localizedDescription
     }

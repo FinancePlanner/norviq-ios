@@ -39,6 +39,7 @@ struct PersonalInflationScreen: View {
     }
     .vigilScreenBackground()
     .vigilNavigationTitle("Your Inflation")
+    .vigilInlineNavigationBar()
     .refreshable { await reload() }
     .task { await reload() }
   }

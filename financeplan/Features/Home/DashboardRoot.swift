@@ -674,6 +674,14 @@ private struct AssetSearchCard: View {
               Text(result.name)
                 .typography(.small)
                 .foregroundStyle(.secondary)
+
+              if result.hasPeriodReturns {
+                HStack(spacing: 12) {
+                  searchReturnLabel("3M", result.threeMonth)
+                  searchReturnLabel("6M", result.sixMonth)
+                  searchReturnLabel("YTD", result.yearToDate)
+                }
+              }
             }
 
             if result.id != viewModel.results.last?.id {
@@ -683,6 +691,24 @@ private struct AssetSearchCard: View {
         }
       }
     }
+  }
+
+  private func searchReturnLabel(_ title: String, _ value: Double?) -> some View {
+    HStack(spacing: 4) {
+      Text(title)
+        .typography(.caption)
+        .foregroundStyle(.secondary)
+      Text(PeriodReturnFormatting.percentText(value))
+        .typography(.small, weight: .semibold)
+        .foregroundStyle(searchReturnColor(value))
+        .monospacedDigit()
+    }
+    .accessibilityLabel(PeriodReturnFormatting.accessibilityLabel(period: title, value: value))
+  }
+
+  private func searchReturnColor(_ value: Double?) -> Color {
+    guard let value else { return .secondary }
+    return value < 0 ? AppTheme.Colors.danger : AppTheme.Colors.success
   }
 }
 

@@ -130,11 +130,15 @@ struct HomeScreen: View {
         pendingAutomationDestination: $pendingAutomationDestination
       )
     case .markets:
-      MarketsScreen()
-        .accessibilityIdentifier("tab.markets")
+      overflowTabHost {
+        MarketsScreen()
+      }
+      .accessibilityIdentifier("tab.markets")
     case .economy:
-      EconomyHubScreen()
-        .accessibilityIdentifier("tab.economy")
+      overflowTabHost {
+        EconomyHubScreen()
+      }
+      .accessibilityIdentifier("tab.economy")
     case .crypto:
       CryptoHomeView(isSettingsPresented: $isSettingsPresented)
         .accessibilityIdentifier("tab.crypto")
@@ -150,6 +154,19 @@ struct HomeScreen: View {
     case .insights:
       InsightsScreen()
         .accessibilityIdentifier("tab.insights")
+    }
+  }
+
+  /// iPhone More already pushes overflow tabs onto a UINavigationController.
+  /// Nesting another NavigationStack is what produced two bars (back on one,
+  /// AI on the other). iPad sidebar has no such push, so it still needs a stack
+  /// for NavigationLink / navigationDestination.
+  @ViewBuilder
+  private func overflowTabHost<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+    if UIDevice.current.userInterfaceIdiom == .pad {
+      NavigationStack { content() }
+    } else {
+      content()
     }
   }
 

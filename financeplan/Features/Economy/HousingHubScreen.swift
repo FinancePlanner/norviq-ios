@@ -61,6 +61,7 @@ struct HousingHubScreen: View {
     }
     .vigilScreenBackground()
     .vigilNavigationTitle("Housing")
+    .vigilInlineNavigationBar()
     .refreshable {
       await viewModel.load(country: selectedCountry)
     }

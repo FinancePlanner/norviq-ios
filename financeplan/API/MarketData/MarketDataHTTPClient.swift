@@ -176,6 +176,14 @@ struct MarketDataHTTPClient: Sendable {
     try await client.call(GetMarketPressureEndpoint(symbol: symbol), errorType: Error.self)
   }
 
+  func fetchPeriodReturns(symbol: String) async throws -> StockPeriodReturnsResponse {
+    try await client.call(GetPeriodReturnsEndpoint(symbol: symbol), errorType: Error.self)
+  }
+
+  func fetchPeriodReturnsBatch(symbols: [String]) async throws -> StockPeriodReturnsBatchResponse {
+    try await client.call(GetPeriodReturnsBatchEndpoint(symbols: symbols), errorType: Error.self)
+  }
+
   func fetchPriceChart(symbol: String, range: String) async throws -> PriceChartSeries {
     try await client.call(GetPriceChartEndpoint(symbol: symbol, range: range), errorType: Error.self)
   }

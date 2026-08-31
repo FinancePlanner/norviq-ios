@@ -280,6 +280,8 @@ final class StockDetailsViewModelTests: XCTestCase {
     var fetchEarningsCalendarResult: Result<[EarningsEvent], Error> = .success([])
     var fetchMarketNewsResult: Result<[StockNews], Error> = .success([])
     var fetchMarketCompareResult: Result<[StockAnalysisMetrics], Error> = .success([])
+    var fetchPeriodReturnsResult: Result<StockPeriodReturnsResponse, Error> = .failure(MockError.notConfigured)
+    var fetchPeriodReturnsCalls = 0
 
     func fetchCompanyProfile(symbol _: String) async throws -> CompanyProfileResponse {
       try fetchCompanyProfileResult.get()
@@ -365,6 +367,11 @@ final class StockDetailsViewModelTests: XCTestCase {
 
     func fetchMarketNews(limit _: Int?) async throws -> [StockNews] {
       try fetchMarketNewsResult.get()
+    }
+
+    func fetchPeriodReturns(symbol _: String) async throws -> StockPeriodReturnsResponse {
+      fetchPeriodReturnsCalls += 1
+      return try fetchPeriodReturnsResult.get()
     }
 
     func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements {
@@ -1149,6 +1156,43 @@ final class StockDetailsViewModelTests: XCTestCase {
     await viewModel.load(stockId: "stock-1")
 
     XCTAssertEqual(service.fetchStockDetailsCalls, 1)
+  }
+
+  func testLoad_PopulatesPeriodReturns() async {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "AAPL"))
+    marketDataService.fetchPeriodReturnsResult = .success(
+      StockPeriodReturnsResponse(
+        symbol: "AAPL",
+        threeMonth: 12.5,
+        sixMonth: -3.1,
+        yearToDate: 18.2,
+        asOf: nil
+      )
+    )
+
+    await viewModel.load(stockId: "stock-1")
+
+    XCTAssertEqual(viewModel.periodReturns?.threeMonth, 12.5)
+    XCTAssertEqual(viewModel.periodReturns?.sixMonth, -3.1)
+    XCTAssertEqual(viewModel.periodReturns?.yearToDate, 18.2)
+    XCTAssertEqual(marketDataService.fetchPeriodReturnsCalls, 1)
+  }
+
+  func testLoad_LeavesPeriodReturnsNilWhenFetchFails() async {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "AAPL"))
+    marketDataService.fetchPeriodReturnsResult = .failure(MockError.notConfigured)
+
+    await viewModel.load(stockId: "stock-1")
+
+    XCTAssertNil(viewModel.periodReturns)
   }
 
   func testLoad_WithForceReloadsForSameStock() async {

@@ -4,7 +4,7 @@ import SwiftUI
 struct ChartBuilderStandaloneScreen: View {
   @Environment(\.colorScheme) private var colorScheme
   @InjectedObservable(\Container.billingManager) private var billingManager
-  @State private var searchViewModel = AssetSearchViewModel()
+  @State private var searchViewModel = AssetSearchViewModel(includeReturns: false)
   @State private var selectedAsset: AssetSearchResult?
 
   var body: some View {

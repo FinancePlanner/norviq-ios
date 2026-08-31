@@ -209,4 +209,70 @@ final class MarketDataHTTPClientTests: XCTestCase {
 
     XCTAssertTrue(response.isEmpty)
   }
+
+  func testFetchPeriodReturns_SendsCorrectRequestAndDecodesResponse() async throws {
+    let session = SessionMock()
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
+    let expected = StockPeriodReturnsResponse(
+      symbol: "AAPL",
+      threeMonth: 12.5,
+      sixMonth: -3.1,
+      yearToDate: 18.2,
+      asOf: nil
+    )
+
+    session.handler = { request in
+      XCTAssertEqual(request.httpMethod, "GET")
+      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/market/returns/AAPL")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+
+      let payload = """
+      { "symbol": "AAPL", "threeMonth": 12.5, "sixMonth": -3.1, "yearToDate": 18.2 }
+      """.data(using: .utf8) ?? Data()
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (payload, response)
+    }
+
+    let client = MarketDataHTTPClient(
+      baseURL: baseURL,
+      session: session,
+      authTokenProvider: { "token-123" }
+    )
+    let response = try await client.fetchPeriodReturns(symbol: "aapl")
+    XCTAssertEqual(response, expected)
+  }
+
+  func testFetchPeriodReturnsBatch_SendsSymbolsQuery() async throws {
+    let session = SessionMock()
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
+
+    session.handler = { request in
+      XCTAssertEqual(request.httpMethod, "GET")
+      let url = try XCTUnwrap(request.url)
+      XCTAssertEqual(url.path, "/v1/market/returns/batch")
+      let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+      let queryItems = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value) })
+      XCTAssertEqual(queryItems["symbols"], "AAPL,MSFT")
+
+      let payload = """
+      { "returns": [{ "symbol": "AAPL", "threeMonth": 12.5, "sixMonth": null, "yearToDate": 18.2 }] }
+      """.data(using: .utf8) ?? Data()
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (payload, response)
+    }
+
+    let client = MarketDataHTTPClient(
+      baseURL: baseURL,
+      session: session,
+      authTokenProvider: { "token-123" }
+    )
+    let response = try await client.fetchPeriodReturnsBatch(symbols: ["AAPL", "MSFT"])
+    XCTAssertEqual(response.returns.count, 1)
+    XCTAssertEqual(response.returns[0].symbol, "AAPL")
+    XCTAssertNil(response.returns[0].sixMonth)
+  }
 }

@@ -55,6 +55,30 @@ struct GetMarketPressureEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
+struct GetPeriodReturnsEndpoint: Endpoint {
+  typealias Response = StockPeriodReturnsResponse
+  let symbol: String
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/returns/\(symbol.uppercased())" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+struct GetPeriodReturnsBatchEndpoint: Endpoint {
+  typealias Response = StockPeriodReturnsBatchResponse
+  let symbols: [String]
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/returns/batch" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    ["symbols": symbols.joined(separator: ",")]
+  }
+}
+
 struct GetMarketOverviewEndpoint: Endpoint {
   typealias Response = MarketOverviewResponse
 

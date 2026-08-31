@@ -61,6 +61,7 @@ struct MacroScreen: View {
     }
     .vigilScreenBackground()
     .vigilNavigationTitle("Inflation")
+    .vigilInlineNavigationBar()
     .refreshable {
       await viewModel.load(country: selectedCountry)
     }

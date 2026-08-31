@@ -54,6 +54,7 @@ final class StockDetailsViewModel: ObservableObject {
     @Published private(set) var portfolioSummary: PortfolioSummaryResponse?
     @Published private(set) var companyProfile: CompanyProfileResponse?
     @Published private(set) var marketSnapshot: StockMarketSnapshot?
+    @Published private(set) var periodReturns: StockPeriodReturnsResponse?
     @Published private(set) var analystConsensus: StockAnalystConsensus?
     @Published private(set) var analystConsensusMessage: String?
     @Published private(set) var basicFinancials: StockBasicFinancials?
@@ -313,6 +314,7 @@ final class StockDetailsViewModel: ObservableObject {
             async let insightsTask = loadInsights(symbol: symbol)
             async let companyProfileTask = loadCompanyProfile(symbol: symbol)
             async let quoteTask = loadQuote(symbol: symbol)
+            async let periodReturnsTask = loadPeriodReturns(symbol: symbol)
             async let analystConsensusTask = loadAnalystConsensus(symbol: symbol)
             async let basicFinancialsTask = loadBasicFinancials(symbol: symbol)
             async let portfolioSummaryTask = loadPortfolioSummary()
@@ -330,6 +332,7 @@ final class StockDetailsViewModel: ObservableObject {
             }
             self.companyProfile = await companyProfileTask
             self.marketSnapshot = await quoteTask
+            self.periodReturns = await periodReturnsTask
             let analystConsensusResult = await analystConsensusTask
             self.analystConsensus = analystConsensusResult.consensus
             self.analystConsensusMessage = analystConsensusResult.message
@@ -359,6 +362,7 @@ final class StockDetailsViewModel: ObservableObject {
             portfolioSummary = nil
             companyProfile = nil
             marketSnapshot = nil
+            periodReturns = nil
             analystConsensus = nil
             analystConsensusMessage = nil
             basicFinancials = nil
@@ -740,6 +744,14 @@ final class StockDetailsViewModel: ObservableObject {
     private func loadQuote(symbol: String) async -> StockMarketSnapshot? {
         do {
             return try await marketDataService.fetchQuote(symbol: symbol)
+        } catch {
+            return nil
+        }
+    }
+
+    private func loadPeriodReturns(symbol: String) async -> StockPeriodReturnsResponse? {
+        do {
+            return try await marketDataService.fetchPeriodReturns(symbol: symbol)
         } catch {
             return nil
         }

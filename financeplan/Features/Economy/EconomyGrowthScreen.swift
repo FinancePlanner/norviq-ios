@@ -61,6 +61,7 @@ struct EconomyGrowthScreen: View {
     }
     .vigilScreenBackground()
     .vigilNavigationTitle("Growth & Jobs")
+    .vigilInlineNavigationBar()
     .refreshable {
       await viewModel.load(country: selectedCountry)
     }

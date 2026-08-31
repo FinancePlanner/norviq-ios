@@ -213,7 +213,8 @@ struct StockDetailScreen: View {
                     details: viewModel.details,
                     companyProfile: viewModel.companyProfile,
                     comparisonProfile: viewModel.primaryComparisonProfile,
-                    marketSnapshot: viewModel.marketSnapshot
+                    marketSnapshot: viewModel.marketSnapshot,
+                    periodReturns: viewModel.periodReturns
                 )
 
                 StockDetailTabBar(selectedTab: $selectedTab, isPro: billingManager.isPro)

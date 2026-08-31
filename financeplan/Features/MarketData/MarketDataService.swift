@@ -28,6 +28,8 @@ protocol MarketDataServicing: Sendable {
   func fetchMarketNews(limit: Int?) async throws -> [StockNews]
   func fetchMarketOverview() async throws -> MarketOverviewResponse
   func fetchMarketPressure(symbol: String) async throws -> MarketPressureResponse
+  func fetchPeriodReturns(symbol: String) async throws -> StockPeriodReturnsResponse
+  func fetchPeriodReturnsBatch(symbols: [String]) async throws -> StockPeriodReturnsBatchResponse
   func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements
   func fetchPriceChart(symbol: String, range: String) async throws -> PriceChartSeries
   func fetchPriceChartComparison(symbols: [String], range: String) async throws -> PriceChartComparisonResponse
@@ -48,6 +50,14 @@ protocol MarketDataServicing: Sendable {
 }
 
 extension MarketDataServicing {
+  func fetchPeriodReturns(symbol _: String) async throws -> StockPeriodReturnsResponse {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchPeriodReturnsBatch(symbols _: [String]) async throws -> StockPeriodReturnsBatchResponse {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
   func fetchChartBuilder(
     symbol _: String,
     metrics _: [String],
@@ -223,6 +233,18 @@ final class MarketDataHTTPService: MarketDataServicing {
   func fetchMarketPressure(symbol: String) async throws -> MarketPressureResponse {
     try await performAuthenticated { client in
       try await client.fetchMarketPressure(symbol: symbol)
+    }
+  }
+
+  func fetchPeriodReturns(symbol: String) async throws -> StockPeriodReturnsResponse {
+    try await performAuthenticated { client in
+      try await client.fetchPeriodReturns(symbol: symbol)
+    }
+  }
+
+  func fetchPeriodReturnsBatch(symbols: [String]) async throws -> StockPeriodReturnsBatchResponse {
+    try await performAuthenticated { client in
+      try await client.fetchPeriodReturnsBatch(symbols: symbols)
     }
   }
 
