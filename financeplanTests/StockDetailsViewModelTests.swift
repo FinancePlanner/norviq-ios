@@ -282,6 +282,9 @@ final class StockDetailsViewModelTests: XCTestCase {
     var fetchMarketCompareResult: Result<[StockAnalysisMetrics], Error> = .success([])
     var fetchPeriodReturnsResult: Result<StockPeriodReturnsResponse, Error> = .failure(MockError.notConfigured)
     var fetchPeriodReturnsCalls = 0
+    var fetchPriceChartResult: Result<financeplan.PriceChartSeries, Error> = .failure(MockError.notConfigured)
+    var fetchPriceChartCalls = 0
+    var lastFetchPriceChartRange: String?
 
     func fetchCompanyProfile(symbol _: String) async throws -> CompanyProfileResponse {
       try fetchCompanyProfileResult.get()
@@ -386,8 +389,10 @@ final class StockDetailsViewModelTests: XCTestCase {
       )
     }
 
-    func fetchPriceChart(symbol _: String, range _: String) async throws -> financeplan.PriceChartSeries {
-      throw MockError.notConfigured
+    func fetchPriceChart(symbol _: String, range: String) async throws -> financeplan.PriceChartSeries {
+      fetchPriceChartCalls += 1
+      lastFetchPriceChartRange = range
+      return try fetchPriceChartResult.get()
     }
 
     func fetchPriceChartComparison(symbols _: [String], range _: String) async throws -> financeplan.PriceChartComparisonResponse {
@@ -455,6 +460,47 @@ final class StockDetailsViewModelTests: XCTestCase {
       open: currentPrice - 1,
       previousClose: currentPrice - 1.25,
       timestamp: 1_775_073_600
+    )
+  }
+
+  private func makeOneYearFallbackSeries(symbol: String) -> PriceChartSeries {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+    let now = Date()
+    let formatter = DateFormatter()
+    formatter.calendar = calendar
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    formatter.dateFormat = "yyyy-MM-dd"
+
+    let year = calendar.component(.year, from: now)
+    let ytd = calendar.date(from: DateComponents(year: year, month: 1, day: 2)) ?? now
+    let sixMonthStart = calendar.date(byAdding: .month, value: -6, to: now) ?? now
+    let threeMonthStart = calendar.date(byAdding: .month, value: -3, to: now) ?? now
+    let six = calendar.date(byAdding: .day, value: 2, to: sixMonthStart) ?? now
+    let three = calendar.date(byAdding: .day, value: 1, to: threeMonthStart) ?? now
+
+    func point(_ date: Date, close: Double) -> PriceChartPoint {
+      PriceChartPoint(
+        date: formatter.string(from: min(date, now)),
+        close: close,
+        open: nil,
+        high: nil,
+        low: nil,
+        volume: nil
+      )
+    }
+
+    return PriceChartSeries(
+      symbol: symbol,
+      currency: "USD",
+      range: "1Y",
+      points: [
+        point(ytd, close: 100),
+        point(six, close: 110),
+        point(three, close: 90),
+        point(now, close: 120),
+      ]
     )
   }
 
@@ -1193,6 +1239,74 @@ final class StockDetailsViewModelTests: XCTestCase {
     await viewModel.load(stockId: "stock-1")
 
     XCTAssertNil(viewModel.periodReturns)
+  }
+
+  func testLoad_DerivesPeriodReturnsFromOneYearChartWhenReturnsEndpointFails() async throws {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "AMD"))
+    marketDataService.fetchPeriodReturnsResult = .failure(MockError.notConfigured)
+    marketDataService.fetchPriceChartResult = .success(makeOneYearFallbackSeries(symbol: "AMD"))
+
+    await viewModel.load(stockId: "stock-1")
+
+    XCTAssertEqual(marketDataService.fetchPriceChartCalls, 1)
+    XCTAssertEqual(marketDataService.lastFetchPriceChartRange, "1Y")
+    XCTAssertEqual(viewModel.periodReturns?.symbol, "AMD")
+    XCTAssertEqual(try XCTUnwrap(viewModel.periodReturns?.threeMonth), 33.333, accuracy: 0.01)
+    XCTAssertEqual(try XCTUnwrap(viewModel.periodReturns?.sixMonth), 9.091, accuracy: 0.01)
+    XCTAssertEqual(try XCTUnwrap(viewModel.periodReturns?.yearToDate), 20.0, accuracy: 0.01)
+    let currentPrice = try XCTUnwrap(viewModel.marketSnapshot?.currentPrice)
+    XCTAssertEqual(currentPrice, 120, accuracy: 0.001)
+  }
+
+  func testLoad_DerivesPeriodReturnsWhenEndpointReturnsEmptyWindows() async throws {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "AMD"))
+    marketDataService.fetchPeriodReturnsResult = .success(
+      StockPeriodReturnsResponse(
+        symbol: "AMD",
+        threeMonth: nil,
+        sixMonth: nil,
+        yearToDate: nil,
+        asOf: nil
+      )
+    )
+    marketDataService.fetchPriceChartResult = .success(makeOneYearFallbackSeries(symbol: "AMD"))
+
+    await viewModel.load(stockId: "stock-1")
+
+    XCTAssertEqual(try XCTUnwrap(viewModel.periodReturns?.yearToDate), 20.0, accuracy: 0.01)
+  }
+
+  func testLoad_DoesNotFetchChartFallbackWhenPeriodReturnsAndQuoteExist() async {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "AAPL"))
+    marketDataService.fetchPeriodReturnsResult = .success(
+      StockPeriodReturnsResponse(
+        symbol: "AAPL",
+        threeMonth: 12.5,
+        sixMonth: -3.1,
+        yearToDate: 18.2,
+        asOf: nil
+      )
+    )
+    marketDataService.fetchQuoteResult = .success(makeQuote(symbol: "AAPL", currentPrice: 171))
+    marketDataService.fetchPriceChartResult = .success(makeOneYearFallbackSeries(symbol: "AAPL"))
+
+    await viewModel.load(stockId: "stock-1")
+
+    XCTAssertEqual(marketDataService.fetchPriceChartCalls, 0)
+    XCTAssertEqual(viewModel.periodReturns?.yearToDate, 18.2)
+    XCTAssertEqual(viewModel.marketSnapshot?.currentPrice, 171)
   }
 
   func testLoad_WithForceReloadsForSameStock() async {

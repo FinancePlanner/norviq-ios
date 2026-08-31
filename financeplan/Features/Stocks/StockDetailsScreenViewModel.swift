@@ -333,6 +333,9 @@ final class StockDetailsViewModel: ObservableObject {
             self.companyProfile = await companyProfileTask
             self.marketSnapshot = await quoteTask
             self.periodReturns = await periodReturnsTask
+            if periodReturns?.hasUsableWindows != true || marketSnapshot == nil {
+                await applyChartFallback(symbol: symbol)
+            }
             let analystConsensusResult = await analystConsensusTask
             self.analystConsensus = analystConsensusResult.consensus
             self.analystConsensusMessage = analystConsensusResult.message
@@ -737,6 +740,9 @@ final class StockDetailsViewModel: ObservableObject {
         do {
             return try await marketDataService.fetchCompanyProfile(symbol: symbol)
         } catch {
+            Self.logger.error(
+                "Company profile load failed symbol=\(symbol, privacy: .public) error=\(error.localizedDescription, privacy: .public)"
+            )
             return nil
         }
     }
@@ -745,6 +751,9 @@ final class StockDetailsViewModel: ObservableObject {
         do {
             return try await marketDataService.fetchQuote(symbol: symbol)
         } catch {
+            Self.logger.error(
+                "Quote load failed symbol=\(symbol, privacy: .public) error=\(error.localizedDescription, privacy: .public)"
+            )
             return nil
         }
     }
@@ -753,7 +762,41 @@ final class StockDetailsViewModel: ObservableObject {
         do {
             return try await marketDataService.fetchPeriodReturns(symbol: symbol)
         } catch {
+            Self.logger.error(
+                "Period returns load failed symbol=\(symbol, privacy: .public) error=\(error.localizedDescription, privacy: .public)"
+            )
             return nil
+        }
+    }
+
+    private func applyChartFallback(symbol: String) async {
+        do {
+            let series = try await marketDataService.fetchPriceChart(
+                symbol: symbol,
+                range: PriceChartRange.oneYear.rawValue
+            )
+            if periodReturns?.hasUsableWindows != true {
+                let derived = PeriodReturnsFromChart.derive(symbol: symbol, points: series.points)
+                if derived.hasUsableWindows {
+                    periodReturns = derived
+                } else {
+                    Self.logger.error(
+                        "Period returns chart fallback empty symbol=\(symbol, privacy: .public)"
+                    )
+                }
+            }
+            if marketSnapshot == nil, let close = series.points.last?.close, close > 0 {
+                marketSnapshot = QuoteResponse(
+                    symbol: symbol,
+                    currency: series.currency,
+                    currentPrice: close,
+                    timestamp: Date().timeIntervalSince1970
+                )
+            }
+        } catch {
+            Self.logger.error(
+                "Period returns chart fallback failed symbol=\(symbol, privacy: .public) error=\(error.localizedDescription, privacy: .public)"
+            )
         }
     }
 
