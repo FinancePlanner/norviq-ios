@@ -83,23 +83,122 @@ struct PortfolioScreen: View {
     LocalCacheScope.currentOwnerUserId
   }
 
-  private var ownedStocks: [SDPortfolioStock] {
-    stocks.filter { LocalCacheScope.isOwnedByCurrentUser($0.ownerUserId, currentUserId: currentOwnerUserId) }
+  // MARK: - Memoised derivation
+  //
+  // The owned → scoped → filtered/sorted chain plus the holdings totals used
+  // to be independent computed properties, each re-filtering `stocks` on
+  // every body pass (which the 20 s quote timer triggers). They're now
+  // derived once per input change into `derived`; the first frame computes
+  // inline so there's no empty flash before `.onChange(initial:)` lands.
+
+  /// Everything the derivation depends on. Cheap to compare relative to the
+  /// derivation itself; the stocks fingerprint catches in-place model edits
+  /// that keep the same object identities.
+  private struct DerivationInputs: Equatable {
+    let stocksFingerprint: Int
+    let ownerUserId: String
+    let selectedListId: String?
+    let assetFilter: AssetFilter
+    let holdingsSort: HoldingsSort
+    let liveQuotes: [String: QuoteResponse]
+    let pnlBySymbol: [String: PnlBySymbol]
   }
 
-  private var scopedStocks: [SDPortfolioStock] {
-    guard let selectedListId = viewModel.selectedPortfolioListId else {
-      return ownedStocks
-    }
-    return ownedStocks.filter { ($0.portfolioListId ?? "") == selectedListId }
+  private struct DerivedPortfolio {
+    var scopedStocks: [SDPortfolioStock] = []
+    var filteredStocks: [SDPortfolioStock] = []
+    var holdingsValue: Double = 0
+    var totalShares: Double = 0
   }
 
-  private var holdingsValue: Double {
-    scopedStocks.reduce(0) { total, stock in
-      let price = viewModel.liveQuotes[stock.symbol.uppercased()]?.currentPrice ?? stock.buyPrice
-      return total + (stock.shares * price)
+  @State private var derived: DerivedPortfolio?
+
+  private var stocksFingerprint: Int {
+    var hasher = Hasher()
+    hasher.combine(stocks.count)
+    for stock in stocks {
+      hasher.combine(stock.id)
+      hasher.combine(stock.symbol)
+      hasher.combine(stock.shares)
+      hasher.combine(stock.buyPrice)
+      hasher.combine(stock.category)
+      hasher.combine(stock.portfolioListId)
+      hasher.combine(stock.ownerUserId)
     }
+    return hasher.finalize()
   }
+
+  private var derivationInputs: DerivationInputs {
+    DerivationInputs(
+      stocksFingerprint: stocksFingerprint,
+      ownerUserId: currentOwnerUserId,
+      selectedListId: viewModel.selectedPortfolioListId,
+      assetFilter: selectedAssetFilter,
+      holdingsSort: selectedHoldingsSort,
+      liveQuotes: viewModel.liveQuotes,
+      pnlBySymbol: viewModel.pnlBySymbol
+    )
+  }
+
+  private var currentDerived: DerivedPortfolio {
+    derived ?? Self.derive(stocks: stocks, inputs: derivationInputs)
+  }
+
+  private static func derive(stocks: [SDPortfolioStock], inputs: DerivationInputs) -> DerivedPortfolio {
+    let owned = stocks.filter {
+      LocalCacheScope.isOwnedByCurrentUser($0.ownerUserId, currentUserId: inputs.ownerUserId)
+    }
+    let scoped: [SDPortfolioStock]
+    if let selectedListId = inputs.selectedListId {
+      scoped = owned.filter { ($0.portfolioListId ?? "") == selectedListId }
+    } else {
+      scoped = owned
+    }
+
+    var holdingsValue = 0.0
+    var totalShares = 0.0
+    for stock in scoped {
+      let price = inputs.liveQuotes[stock.symbol.uppercased()]?.currentPrice ?? stock.buyPrice
+      holdingsValue += stock.shares * price
+      totalShares += stock.shares
+    }
+
+    let base: [SDPortfolioStock]
+    switch inputs.assetFilter {
+    case .all: base = scoped
+    case .stocks: base = scoped.filter { ($0.category ?? AssetCategory.stock.rawValue) == AssetCategory.stock.rawValue }
+    case .etfs: base = scoped.filter { ($0.category ?? AssetCategory.stock.rawValue) == AssetCategory.etf.rawValue }
+    case .crypto: base = scoped.filter { ($0.category ?? AssetCategory.stock.rawValue) == AssetCategory.crypto.rawValue }
+    }
+
+    let filtered: [SDPortfolioStock]
+    switch inputs.holdingsSort {
+    case .name:
+      filtered = base.sorted { $0.symbol.localizedCaseInsensitiveCompare($1.symbol) == .orderedAscending }
+    case .gains:
+      filtered = base.sorted {
+        (inputs.pnlBySymbol[PortfolioViewModel.normalizedSymbol($0.symbol)]?.unrealizedPnl ?? -.greatestFiniteMagnitude)
+          > (inputs.pnlBySymbol[PortfolioViewModel.normalizedSymbol($1.symbol)]?.unrealizedPnl ?? -.greatestFiniteMagnitude)
+      }
+    case .weight:
+      filtered = base.sorted {
+        (inputs.pnlBySymbol[PortfolioViewModel.normalizedSymbol($0.symbol)]?.weightPercent ?? -.greatestFiniteMagnitude)
+          > (inputs.pnlBySymbol[PortfolioViewModel.normalizedSymbol($1.symbol)]?.weightPercent ?? -.greatestFiniteMagnitude)
+      }
+    }
+
+    return DerivedPortfolio(
+      scopedStocks: scoped,
+      filteredStocks: filtered,
+      holdingsValue: holdingsValue,
+      totalShares: totalShares
+    )
+  }
+
+  private var scopedStocks: [SDPortfolioStock] { currentDerived.scopedStocks }
+  private var filteredStocks: [SDPortfolioStock] { currentDerived.filteredStocks }
+  private var holdingsValue: Double { currentDerived.holdingsValue }
+  private var totalShares: Double { currentDerived.totalShares }
 
   private var cashBalance: Double {
     viewModel.cashBalance
@@ -109,41 +208,10 @@ struct PortfolioScreen: View {
     holdingsValue + cashBalance
   }
 
-  private var filteredStocks: [SDPortfolioStock] {
-      let base: [SDPortfolioStock]
-      switch selectedAssetFilter {
-      case .all: base = scopedStocks
-      case .stocks: base = scopedStocks.filter { ($0.category ?? AssetCategory.stock.rawValue) == AssetCategory.stock.rawValue }
-      case .etfs: base = scopedStocks.filter { ($0.category ?? AssetCategory.stock.rawValue) == AssetCategory.etf.rawValue }
-      case .crypto: base = scopedStocks.filter { ($0.category ?? AssetCategory.stock.rawValue) == AssetCategory.crypto.rawValue }
-      }
-      return sortedHoldings(base)
-  }
-
-  private func sortedHoldings(_ stocks: [SDPortfolioStock]) -> [SDPortfolioStock] {
-    switch selectedHoldingsSort {
-    case .name:
-      return stocks.sorted { $0.symbol.localizedCaseInsensitiveCompare($1.symbol) == .orderedAscending }
-    case .gains:
-      return stocks.sorted {
-        (viewModel.pnl(for: $0.symbol)?.unrealizedPnl ?? -.greatestFiniteMagnitude)
-          > (viewModel.pnl(for: $1.symbol)?.unrealizedPnl ?? -.greatestFiniteMagnitude)
-      }
-    case .weight:
-      return stocks.sorted {
-        (viewModel.pnl(for: $0.symbol)?.weightPercent ?? -.greatestFiniteMagnitude)
-          > (viewModel.pnl(for: $1.symbol)?.weightPercent ?? -.greatestFiniteMagnitude)
-      }
-    }
-  }
-
-  private var totalShares: Double {
-    scopedStocks.reduce(0) { $0 + $1.shares }
-  }
-
   private var averagePositionValue: Double {
-    guard !scopedStocks.isEmpty else { return 0 }
-    return holdingsValue / Double(scopedStocks.count)
+    let count = scopedStocks.count
+    guard count > 0 else { return 0 }
+    return holdingsValue / Double(count)
   }
 
   private var heroLabel: String {
@@ -179,6 +247,9 @@ struct PortfolioScreen: View {
       mainContent
     }
     .onAppear(perform: prepareScreen)
+    .onChange(of: derivationInputs, initial: true) { _, inputs in
+      derived = Self.derive(stocks: stocks, inputs: inputs)
+    }
     .onChange(of: totalValue) { _, _ in
       rebuildChartData()
     }

@@ -596,7 +596,7 @@ final class PortfolioViewModel: ObservableObject {
     return max(0, reflected ?? 0)
   }
 
-  private static func normalizedSymbol(_ symbol: String) -> String {
+  static func normalizedSymbol(_ symbol: String) -> String {
     symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
   }
 

@@ -53,7 +53,17 @@ struct PortfolioPositionsSection: View {
         }
       }
     }
-    .appAnimation(AppMotion.structural, value: stocks.map(\.id))
+    .appAnimation(AppMotion.structural, value: orderFingerprint)
+  }
+
+  /// Hash of the row order; changes whenever rows are added, removed or
+  /// re-sorted without allocating an id array on every body pass.
+  private var orderFingerprint: Int {
+    var hasher = Hasher()
+    for stock in stocks {
+      hasher.combine(stock.id)
+    }
+    return hasher.finalize()
   }
 }
 
