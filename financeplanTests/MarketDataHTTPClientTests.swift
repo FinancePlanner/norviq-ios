@@ -5,8 +5,10 @@ import XCTest
 
 @MainActor
 final class MarketDataHTTPClientTests: XCTestCase {
-  private final class SessionMock: MarketDataURLSessionProtocol, @unchecked Sendable {
-    var handler: ((URLRequest) throws -> (Data, URLResponse))?
+  // Nonisolated: BaseHTTPClient sends requests from a @concurrent context, so
+  // the session witness and its handler must not be main-actor-bound.
+  nonisolated private final class SessionMock: MarketDataURLSessionProtocol, @unchecked Sendable {
+    var handler: (@Sendable (URLRequest) throws -> (Data, URLResponse))?
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
       guard let handler else {
