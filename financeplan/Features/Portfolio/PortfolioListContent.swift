@@ -44,7 +44,9 @@ struct PortfolioPositionsSection: View {
           )
           .transition(.opacity.combined(with: .scale(scale: 0.98)))
           .onAppear {
-            if let last = stocks.last, last.id == stock.id {
+            // Rows live in the parent's LazyVStack, so this only runs when
+            // the row actually scrolls into view.
+            if PortfolioPaginationSentinel.shouldLoadMore(appearing: stock.id, lastID: stocks.last?.id) {
               onLoadMore?()
             }
           }
@@ -52,6 +54,17 @@ struct PortfolioPositionsSection: View {
       }
     }
     .appAnimation(AppMotion.structural, value: stocks.map(\.id))
+  }
+}
+
+// MARK: - Pagination sentinel
+
+/// Decides whether a row appearing should request the next page: only the
+/// last row of the currently loaded list is a sentinel.
+enum PortfolioPaginationSentinel {
+  static func shouldLoadMore<ID: Equatable>(appearing id: ID, lastID: ID?) -> Bool {
+    guard let lastID else { return false }
+    return id == lastID
   }
 }
 

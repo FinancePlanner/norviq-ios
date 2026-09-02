@@ -338,7 +338,10 @@ struct PortfolioScreen: View {
 
   private var portfolioScrollContent: some View {
     ScrollView {
-      VStack(spacing: 16) {
+      // Lazy so position rows are built as they scroll into view; the
+      // last-row `onAppear` sentinel in PortfolioPositionsSection relies on
+      // this to fire once per page instead of once per body pass.
+      LazyVStack(spacing: 16) {
         VigilPageHeader(
           watch: .wealth,
           title: "Portfolio"
