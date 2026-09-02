@@ -463,7 +463,7 @@ final class StockDetailsViewModelTests: XCTestCase {
     )
   }
 
-  private func makeOneYearFallbackSeries(symbol: String) -> PriceChartSeries {
+  private func makeOneYearFallbackSeries(symbol: String) -> financeplan.PriceChartSeries {
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = TimeZone(secondsFromGMT: 0)!
     let now = Date()
@@ -480,8 +480,8 @@ final class StockDetailsViewModelTests: XCTestCase {
     let six = calendar.date(byAdding: .day, value: 2, to: sixMonthStart) ?? now
     let three = calendar.date(byAdding: .day, value: 1, to: threeMonthStart) ?? now
 
-    func point(_ date: Date, close: Double) -> PriceChartPoint {
-      PriceChartPoint(
+    func point(_ date: Date, close: Double) -> financeplan.PriceChartPoint {
+      financeplan.PriceChartPoint(
         date: formatter.string(from: min(date, now)),
         close: close,
         open: nil,
@@ -491,7 +491,7 @@ final class StockDetailsViewModelTests: XCTestCase {
       )
     }
 
-    return PriceChartSeries(
+    return financeplan.PriceChartSeries(
       symbol: symbol,
       currency: "USD",
       range: "1Y",
