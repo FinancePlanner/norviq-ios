@@ -2,7 +2,7 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
-struct GetGoalsEndpoint: Endpoint {
+nonisolated struct GetGoalsEndpoint: Endpoint {
     typealias Response = [GoalResponse]
     var method: HTTPMethod { .get }
     var path: String { "/v1/goals" }
@@ -10,7 +10,7 @@ struct GetGoalsEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct CreateGoalEndpoint: Endpoint {
+nonisolated struct CreateGoalEndpoint: Endpoint {
     typealias Response = GoalResponse
     let payload: GoalRequest
     var method: HTTPMethod { .post }
@@ -22,7 +22,7 @@ struct CreateGoalEndpoint: Endpoint {
     }
 }
 
-struct UpdateGoalEndpoint: Endpoint {
+nonisolated struct UpdateGoalEndpoint: Endpoint {
     typealias Response = GoalResponse
     let id: String
     let payload: GoalRequest
@@ -35,7 +35,7 @@ struct UpdateGoalEndpoint: Endpoint {
     }
 }
 
-struct UpdateGoalStatusEndpoint: Endpoint {
+nonisolated struct UpdateGoalStatusEndpoint: Endpoint {
     typealias Response = GoalResponse
     let id: String
     let payload: GoalStatusUpdateRequest
@@ -48,7 +48,7 @@ struct UpdateGoalStatusEndpoint: Endpoint {
     }
 }
 
-struct DeleteGoalEndpoint: Endpoint {
+nonisolated struct DeleteGoalEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let id: String
     var method: HTTPMethod { .delete }

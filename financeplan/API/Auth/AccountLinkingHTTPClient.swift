@@ -3,7 +3,7 @@ import Foundation
 import OSLog
 import StockPlanShared
 
-struct AccountLinkingHTTPClient: Sendable {
+nonisolated struct AccountLinkingHTTPClient: Sendable {
   enum Error: HTTPClientError {
     case invalidResponse
     case invalidStatus(Int)

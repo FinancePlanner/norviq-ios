@@ -11,7 +11,7 @@ extension URLSession: MarketDataURLSessionProtocol {}
 
 // MARK: - Client
 
-struct MarketDataHTTPClient: Sendable {
+nonisolated struct MarketDataHTTPClient: Sendable {
   enum Error: HTTPClientError {
     case invalidResponse
     case invalidStatus(Int)
@@ -235,7 +235,7 @@ struct MarketDataHTTPClient: Sendable {
   }
 }
 
-private struct SearchAssetsEndpoint: Endpoint {
+nonisolated private struct SearchAssetsEndpoint: Endpoint {
   typealias Response = [SearchResultResponse]
 
   let query: String
@@ -250,7 +250,7 @@ private struct SearchAssetsEndpoint: Endpoint {
   }
 }
 
-struct MarketBasicFinancialsResponse: Sendable {
+nonisolated struct MarketBasicFinancialsResponse: Sendable {
   let series: MarketBasicFinancialSeriesResponse
   let metricType: String
   let metric: [String: MarketBasicFinancialMetricValue]
@@ -304,7 +304,7 @@ nonisolated extension MarketBasicFinancialsResponse: Codable {}
 
 nonisolated extension MarketBasicFinancialSeriesResponse: Codable {}
 
-struct MarketBasicFinancialSeriesResponse: Sendable {
+nonisolated struct MarketBasicFinancialSeriesResponse: Sendable {
   let annual: [String: [MarketBasicFinancialSeriesValue]]
   let quarterly: [String: [MarketBasicFinancialSeriesValue]]
 
@@ -340,7 +340,7 @@ struct MarketBasicFinancialSeriesResponse: Sendable {
   }
 }
 
-struct MarketBasicFinancialSeriesValue: Codable, Equatable, Sendable {
+nonisolated struct MarketBasicFinancialSeriesValue: Codable, Equatable, Sendable {
   let period: String
   let value: Double
 
@@ -350,12 +350,12 @@ struct MarketBasicFinancialSeriesValue: Codable, Equatable, Sendable {
   }
 }
 
-enum MarketBasicFinancialSeriesFrequency: Sendable {
+nonisolated enum MarketBasicFinancialSeriesFrequency: Sendable {
   case annual
   case quarterly
 }
 
-enum MarketBasicFinancialMetricValue: Equatable, Sendable {
+nonisolated enum MarketBasicFinancialMetricValue: Equatable, Sendable {
   case number(Double)
   case string(String)
   case null
@@ -408,7 +408,7 @@ enum MarketBasicFinancialMetricValue: Equatable, Sendable {
 
 nonisolated extension MarketBasicFinancialMetricValue: Codable {}
 
-private extension Dictionary where Key == String, Value == MarketBasicFinancialMetricValue {
+nonisolated private extension Dictionary where Key == String, Value == MarketBasicFinancialMetricValue {
   func number(_ key: String) -> Double? {
     guard let value = self[key] else { return nil }
     guard case let .number(number) = value else { return nil }

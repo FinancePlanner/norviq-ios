@@ -11,7 +11,7 @@ extension URLSession: StockURLSessionProtocol {}
 
 // MARK: - Client
 
-struct StockHTTPClient: Sendable {
+nonisolated struct StockHTTPClient: Sendable {
   enum Error: HTTPClientError {
     case invalidResponse
     case invalidStatus(Int)

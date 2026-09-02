@@ -2,7 +2,7 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
-struct CreateBankLinkSessionEndpoint: Endpoint {
+nonisolated struct CreateBankLinkSessionEndpoint: Endpoint {
   typealias Response = BankLinkSessionResponse
 
   var method: HTTPMethod { .post }
@@ -12,7 +12,7 @@ struct CreateBankLinkSessionEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct ExchangeBankConnectionEndpoint: Endpoint {
+nonisolated struct ExchangeBankConnectionEndpoint: Endpoint {
   typealias Response = BankConnectionResponse
 
   let publicToken: String
@@ -32,9 +32,9 @@ struct ExchangeBankConnectionEndpoint: Endpoint {
 }
 
 /// Placeholder response for endpoints that return 204 No Content.
-struct EmptyBankResponse: Codable, Sendable {}
+nonisolated struct EmptyBankResponse: Codable, Sendable {}
 
-struct ListBankInstitutionsEndpoint: Endpoint {
+nonisolated struct ListBankInstitutionsEndpoint: Endpoint {
   typealias Response = [BankInstitutionResponse]
 
   let country: String
@@ -46,7 +46,7 @@ struct ListBankInstitutionsEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct CreateBankHostedLinkEndpoint: Endpoint {
+nonisolated struct CreateBankHostedLinkEndpoint: Endpoint {
   typealias Response = BankLinkSessionResponse
 
   let institutionId: String
@@ -61,7 +61,7 @@ struct CreateBankHostedLinkEndpoint: Endpoint {
   }
 }
 
-struct DisconnectBankConnectionEndpoint: Endpoint {
+nonisolated struct DisconnectBankConnectionEndpoint: Endpoint {
   typealias Response = EmptyBankResponse
 
   let connectionId: String
@@ -73,7 +73,7 @@ struct DisconnectBankConnectionEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct DismissBankTransactionEndpoint: Endpoint {
+nonisolated struct DismissBankTransactionEndpoint: Endpoint {
   typealias Response = EmptyBankResponse
 
   let transactionId: String
@@ -85,7 +85,7 @@ struct DismissBankTransactionEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct ListBankConnectionsEndpoint: Endpoint {
+nonisolated struct ListBankConnectionsEndpoint: Endpoint {
   typealias Response = [BankConnectionResponse]
 
   var method: HTTPMethod { .get }
@@ -95,7 +95,7 @@ struct ListBankConnectionsEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct SyncBankConnectionEndpoint: Endpoint {
+nonisolated struct SyncBankConnectionEndpoint: Endpoint {
   typealias Response = BankSyncResponse
 
   let connectionId: String
@@ -107,7 +107,7 @@ struct SyncBankConnectionEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct ListBankTransactionsEndpoint: Endpoint {
+nonisolated struct ListBankTransactionsEndpoint: Endpoint {
   typealias Response = [BankTransactionResponse]
 
   let status: String
@@ -119,7 +119,7 @@ struct ListBankTransactionsEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct ImportBankTransactionEndpoint: Endpoint {
+nonisolated struct ImportBankTransactionEndpoint: Endpoint {
   typealias Response = ExpenseResponse
 
   let transactionId: String

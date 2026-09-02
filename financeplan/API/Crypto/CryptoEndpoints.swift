@@ -4,7 +4,7 @@ import StockPlanShared
 
 // MARK: - Market Data Endpoints
 
-struct GetCryptoListEndpoint: Endpoint {
+nonisolated struct GetCryptoListEndpoint: Endpoint {
     typealias Response = [CryptoAssetResponse]
     var method: HTTPMethod { .get }
     var path: String { "/v1/crypto/list" }
@@ -12,7 +12,7 @@ struct GetCryptoListEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetCryptoQuoteEndpoint: Endpoint {
+nonisolated struct GetCryptoQuoteEndpoint: Endpoint {
     typealias Response = [CryptoQuoteResponse]
     let symbols: String
     var method: HTTPMethod { .get }
@@ -21,7 +21,7 @@ struct GetCryptoQuoteEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetCryptoBatchQuotesEndpoint: Endpoint {
+nonisolated struct GetCryptoBatchQuotesEndpoint: Endpoint {
     typealias Response = [CryptoQuoteShortResponse]
     let short: Bool
     var method: HTTPMethod { .get }
@@ -32,7 +32,7 @@ struct GetCryptoBatchQuotesEndpoint: Endpoint {
     }
 }
 
-struct GetGeneralCryptoNewsEndpoint: Endpoint {
+nonisolated struct GetGeneralCryptoNewsEndpoint: Endpoint {
     typealias Response = [NewsItemResponse]
     var method: HTTPMethod { .get }
     var path: String { "/v1/crypto/news" }
@@ -40,7 +40,7 @@ struct GetGeneralCryptoNewsEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetCryptoHistoryEndpoint: Endpoint {
+nonisolated struct GetCryptoHistoryEndpoint: Endpoint {
     typealias Response = [CryptoHistoricalPoint]
     let symbol: String
     let resolution: CryptoChartResolution
@@ -59,7 +59,7 @@ struct GetCryptoHistoryEndpoint: Endpoint {
 
 // MARK: - Portfolio Endpoints
 
-struct ListCryptoPortfolioEndpoint: Endpoint {
+nonisolated struct ListCryptoPortfolioEndpoint: Endpoint {
     typealias Response = [CryptoPortfolioItemResponse]
     var method: HTTPMethod { .get }
     var path: String { "/v1/crypto/portfolio" }
@@ -67,7 +67,7 @@ struct ListCryptoPortfolioEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct AddToCryptoPortfolioEndpoint: Endpoint {
+nonisolated struct AddToCryptoPortfolioEndpoint: Endpoint {
     typealias Response = CryptoPortfolioItemResponse
     let payload: CryptoPortfolioItemRequest
     var method: HTTPMethod { .post }
@@ -83,7 +83,7 @@ struct AddToCryptoPortfolioEndpoint: Endpoint {
     }
 }
 
-struct UpdateCryptoPortfolioItemEndpoint: Endpoint {
+nonisolated struct UpdateCryptoPortfolioItemEndpoint: Endpoint {
     typealias Response = CryptoPortfolioItemResponse
     let itemId: String
     let payload: CryptoPortfolioItemRequest
@@ -100,7 +100,7 @@ struct UpdateCryptoPortfolioItemEndpoint: Endpoint {
     }
 }
 
-struct RemoveFromCryptoPortfolioEndpoint: Endpoint {
+nonisolated struct RemoveFromCryptoPortfolioEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let itemId: String
     var method: HTTPMethod { .delete }
@@ -111,7 +111,7 @@ struct RemoveFromCryptoPortfolioEndpoint: Endpoint {
 
 // MARK: - Watchlist Endpoints
 
-private func cryptoWatchlistParameters(_ payload: CryptoWatchlistItemRequest) -> Parameters {
+nonisolated private func cryptoWatchlistParameters(_ payload: CryptoWatchlistItemRequest) -> Parameters {
     var params: Parameters = [
         "symbol": payload.symbol,
         "name": payload.name
@@ -121,7 +121,7 @@ private func cryptoWatchlistParameters(_ payload: CryptoWatchlistItemRequest) ->
     return params
 }
 
-struct ListCryptoWatchlistEndpoint: Endpoint {
+nonisolated struct ListCryptoWatchlistEndpoint: Endpoint {
     typealias Response = [CryptoWatchlistItemResponse]
     var method: HTTPMethod { .get }
     var path: String { "/v1/crypto/watchlist" }
@@ -129,7 +129,7 @@ struct ListCryptoWatchlistEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct AddToCryptoWatchlistEndpoint: Endpoint {
+nonisolated struct AddToCryptoWatchlistEndpoint: Endpoint {
     typealias Response = CryptoWatchlistItemResponse
     let payload: CryptoWatchlistItemRequest
     var method: HTTPMethod { .post }
@@ -138,7 +138,7 @@ struct AddToCryptoWatchlistEndpoint: Endpoint {
     func asParameters() throws -> Parameters { cryptoWatchlistParameters(payload) }
 }
 
-struct UpdateCryptoWatchlistItemEndpoint: Endpoint {
+nonisolated struct UpdateCryptoWatchlistItemEndpoint: Endpoint {
     typealias Response = CryptoWatchlistItemResponse
     let itemId: String
     let payload: CryptoWatchlistItemRequest
@@ -148,7 +148,7 @@ struct UpdateCryptoWatchlistItemEndpoint: Endpoint {
     func asParameters() throws -> Parameters { cryptoWatchlistParameters(payload) }
 }
 
-struct RemoveFromCryptoWatchlistEndpoint: Endpoint {
+nonisolated struct RemoveFromCryptoWatchlistEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let itemId: String
     var method: HTTPMethod { .delete }

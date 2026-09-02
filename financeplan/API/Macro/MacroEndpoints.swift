@@ -4,7 +4,7 @@ import StockPlanShared
 
 // MARK: - Endpoints for Macro / Inflation (Nowflation parity)
 
-struct GetInflationCurrentEndpoint: Endpoint {
+nonisolated struct GetInflationCurrentEndpoint: Endpoint {
   typealias Response = InflationSnapshotResponse
 
   let country: String?
@@ -19,7 +19,7 @@ struct GetInflationCurrentEndpoint: Endpoint {
   }
 }
 
-struct GetTopMoversEndpoint: Endpoint {
+nonisolated struct GetTopMoversEndpoint: Endpoint {
   typealias Response = [TopMoverDTO]
 
   let country: String?
@@ -37,7 +37,7 @@ struct GetTopMoversEndpoint: Endpoint {
   }
 }
 
-struct GetInflationSeriesEndpoint: Endpoint {
+nonisolated struct GetInflationSeriesEndpoint: Endpoint {
   typealias Response = MacroSeriesResponse
 
   let country: String?
@@ -60,7 +60,7 @@ struct GetInflationSeriesEndpoint: Endpoint {
   }
 }
 
-struct GetPersonalInflationEndpoint: Endpoint {
+nonisolated struct GetPersonalInflationEndpoint: Endpoint {
   typealias Response = PersonalInflationResponse
 
   let country: String?
@@ -77,7 +77,7 @@ struct GetPersonalInflationEndpoint: Endpoint {
   }
 }
 
-struct GetFedWatchEndpoint: Endpoint {
+nonisolated struct GetFedWatchEndpoint: Endpoint {
   typealias Response = FedWatchResponse
 
   var method: HTTPMethod { .get }
@@ -87,7 +87,7 @@ struct GetFedWatchEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetMacroItemsEndpoint: Endpoint {
+nonisolated struct GetMacroItemsEndpoint: Endpoint {
   typealias Response = MacroItemsResponse
 
   let country: String?
@@ -102,7 +102,7 @@ struct GetMacroItemsEndpoint: Endpoint {
   }
 }
 
-struct GetMacroItemSeriesEndpoint: Endpoint {
+nonisolated struct GetMacroItemSeriesEndpoint: Endpoint {
   typealias Response = MacroItemSeriesResponse
 
   let itemId: String
@@ -121,7 +121,7 @@ struct GetMacroItemSeriesEndpoint: Endpoint {
   }
 }
 
-struct GetSupportedCountriesEndpoint: Endpoint {
+nonisolated struct GetSupportedCountriesEndpoint: Endpoint {
   typealias Response = [SupportedCountry]
 
   var method: HTTPMethod { .get }
@@ -131,7 +131,7 @@ struct GetSupportedCountriesEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetHousingHubEndpoint: Endpoint {
+nonisolated struct GetHousingHubEndpoint: Endpoint {
   typealias Response = HousingHubResponse
 
   let country: String?
@@ -146,7 +146,7 @@ struct GetHousingHubEndpoint: Endpoint {
   }
 }
 
-struct GetEconomyHubEndpoint: Endpoint {
+nonisolated struct GetEconomyHubEndpoint: Endpoint {
   typealias Response = EconomyHubResponse
 
   let country: String?
@@ -161,7 +161,7 @@ struct GetEconomyHubEndpoint: Endpoint {
   }
 }
 
-struct GetPolicyWatchEndpoint: Endpoint {
+nonisolated struct GetPolicyWatchEndpoint: Endpoint {
   typealias Response = PolicyWatchResponse
 
   let country: String?

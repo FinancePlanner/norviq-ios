@@ -3,7 +3,7 @@ import Foundation
 import OSLog
 import StockPlanShared
 
-final class BankHTTPClient: Sendable {
+nonisolated final class BankHTTPClient: Sendable {
   enum Error: HTTPClientError {
     case invalidResponse
     case invalidStatus(Int)

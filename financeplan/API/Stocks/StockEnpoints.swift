@@ -10,11 +10,11 @@ import Foundation
 import OSLog
 import StockPlanShared
 
-protocol StockRequestBodyEndpoint {
+nonisolated protocol StockRequestBodyEndpoint {
   func bodyData() throws -> Data?
 }
 
-struct CreateStockEndpoint: Endpoint {
+nonisolated struct CreateStockEndpoint: Endpoint {
   typealias Response = StockResponse
 
   let symbol: String
@@ -44,7 +44,7 @@ struct CreateStockEndpoint: Endpoint {
   }
 }
 
-struct BulkCreateStocksEndpoint: Endpoint {
+nonisolated struct BulkCreateStocksEndpoint: Endpoint {
   typealias Response = BulkStockResponse
   let stocks: [StockRequest]
 
@@ -59,7 +59,7 @@ struct BulkCreateStocksEndpoint: Endpoint {
   }
 }
 
-struct GetStocksEndpoint: Endpoint {
+nonisolated struct GetStocksEndpoint: Endpoint {
   // Lenient list decode: tolerates a missing `createdAt` and drops individual
   // malformed rows instead of failing the entire holdings list.
   typealias Response = LenientStockList
@@ -82,7 +82,7 @@ struct GetStocksEndpoint: Endpoint {
   }
 }
 
-struct UpdateStockEndpoint: Endpoint {
+nonisolated struct UpdateStockEndpoint: Endpoint {
   typealias Response = StockResponse
   let stockId: String
   let payload: StockRequest
@@ -97,7 +97,7 @@ struct UpdateStockEndpoint: Endpoint {
   }
 }
 
-struct DeleteStockEndpoint: Endpoint {
+nonisolated struct DeleteStockEndpoint: Endpoint {
   typealias Response = EmptyAPIResponse
 
   let stockId: String
@@ -109,7 +109,7 @@ struct DeleteStockEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct SellStockEndpoint: Endpoint {
+nonisolated struct SellStockEndpoint: Endpoint {
   typealias Response = StockResponse
   let stockId: String
   let payload: SellStockRequest
@@ -126,7 +126,7 @@ struct SellStockEndpoint: Endpoint {
     ]
   }
 }
-struct GetStockDetailsEndpoint: Endpoint {
+nonisolated struct GetStockDetailsEndpoint: Endpoint {
   typealias Response = StockDetails
   let stockId: String
 
@@ -137,7 +137,7 @@ struct GetStockDetailsEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetStockInsightsEndpoint: Endpoint {
+nonisolated struct GetStockInsightsEndpoint: Endpoint {
   typealias Response = StockInsightsResponse
   let symbol: String
 
@@ -148,7 +148,7 @@ struct GetStockInsightsEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetPortfolioPerformanceEndpoint: Endpoint {
+nonisolated struct GetPortfolioPerformanceEndpoint: Endpoint {
   typealias Response = PortfolioPerformanceResponse
   let portfolioListId: String?
 
@@ -165,7 +165,7 @@ struct GetPortfolioPerformanceEndpoint: Endpoint {
   }
 }
 
-struct GetPortfolioSummaryEndpoint: Endpoint {
+nonisolated struct GetPortfolioSummaryEndpoint: Endpoint {
   typealias Response = PortfolioSummaryResponse
   let portfolioListId: String?
 
@@ -182,7 +182,7 @@ struct GetPortfolioSummaryEndpoint: Endpoint {
   }
 }
 
-struct GetPnlEndpoint: Endpoint {
+nonisolated struct GetPnlEndpoint: Endpoint {
   typealias Response = PnlResponse
   let portfolioListId: String?
 
@@ -199,7 +199,7 @@ struct GetPnlEndpoint: Endpoint {
   }
 }
 
-struct GetPortfolioSectorExposureEndpoint: Endpoint {
+nonisolated struct GetPortfolioSectorExposureEndpoint: Endpoint {
   typealias Response = PortfolioSectorExposureResponse
   let portfolioListId: String?
 
@@ -216,7 +216,7 @@ struct GetPortfolioSectorExposureEndpoint: Endpoint {
   }
 }
 
-struct GetStockHistoryEndpoint: Endpoint {
+nonisolated struct GetStockHistoryEndpoint: Endpoint {
   typealias Response = [StockHistory]
   let symbol: String
 
@@ -229,7 +229,7 @@ struct GetStockHistoryEndpoint: Endpoint {
   }
 }
 
-struct GetStockNewsEndpoint: Endpoint {
+nonisolated struct GetStockNewsEndpoint: Endpoint {
   typealias Response = [StockNews]
   let symbol: String
 
@@ -242,7 +242,7 @@ struct GetStockNewsEndpoint: Endpoint {
   }
 }
 
-struct GetStockValuationEndpoint: Endpoint {
+nonisolated struct GetStockValuationEndpoint: Endpoint {
   typealias Response = StockValuationRequest
 
   let symbol: String
@@ -254,7 +254,7 @@ struct GetStockValuationEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct CreateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
+nonisolated struct CreateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
   typealias Response = StockValuationRequest
 
   let path: String
@@ -311,7 +311,7 @@ struct CreateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
   }
 }
 
-struct UpdateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
+nonisolated struct UpdateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
   typealias Response = StockValuationRequest
 
   let path: String
@@ -370,7 +370,7 @@ struct UpdateStockValuationEndpoint: Endpoint, StockRequestBodyEndpoint {
 
 // watchlist
 
-struct GetWatchlistEndpoint: Endpoint {
+nonisolated struct GetWatchlistEndpoint: Endpoint {
   typealias Response = [WatchlistItemResponse]
   let watchlistListId: String?
 
@@ -387,7 +387,7 @@ struct GetWatchlistEndpoint: Endpoint {
   }
 }
 
-struct WatchlistCSVImportPreviewEndpoint: Endpoint, StockRequestBodyEndpoint {
+nonisolated struct WatchlistCSVImportPreviewEndpoint: Endpoint, StockRequestBodyEndpoint {
   typealias Response = WatchlistCsvImportPreviewResponse
   let watchlistListId: String?
   let csvData: Data
@@ -401,7 +401,7 @@ struct WatchlistCSVImportPreviewEndpoint: Endpoint, StockRequestBodyEndpoint {
   func bodyData() throws -> Data? { csvData }
 }
 
-struct WatchlistCSVImportCommitEndpoint: Endpoint, StockRequestBodyEndpoint {
+nonisolated struct WatchlistCSVImportCommitEndpoint: Endpoint, StockRequestBodyEndpoint {
   typealias Response = WatchlistCsvImportCommitResponse
   let watchlistListId: String?
   let csvData: Data
@@ -415,7 +415,7 @@ struct WatchlistCSVImportCommitEndpoint: Endpoint, StockRequestBodyEndpoint {
   func bodyData() throws -> Data? { csvData }
 }
 
-private func watchlistCSVImportParameters(_ watchlistListId: String?) -> Parameters {
+nonisolated private func watchlistCSVImportParameters(_ watchlistListId: String?) -> Parameters {
   var params: Parameters = [:]
   if let watchlistListId, !watchlistListId.isEmpty {
     params["watchlistListId"] = watchlistListId
@@ -423,7 +423,7 @@ private func watchlistCSVImportParameters(_ watchlistListId: String?) -> Paramet
   return params
 }
 
-struct CreateWatchlistEndpoint: Endpoint {
+nonisolated struct CreateWatchlistEndpoint: Endpoint {
   typealias Response = WatchlistItemResponse
   let payload: WatchlistItemRequest
   let watchlistListId: String?
@@ -437,7 +437,7 @@ struct CreateWatchlistEndpoint: Endpoint {
   }
 }
 
-struct UpdateWatchlistEndpoint: Endpoint {
+nonisolated struct UpdateWatchlistEndpoint: Endpoint {
   typealias Response = WatchlistItemResponse
   let watchlistId: String
   let payload: WatchlistItemUpdateRequest
@@ -452,7 +452,7 @@ struct UpdateWatchlistEndpoint: Endpoint {
   }
 }
 
-private func stockParameters(_ payload: StockRequest, portfolioListId: String? = nil) -> Parameters {
+nonisolated private func stockParameters(_ payload: StockRequest, portfolioListId: String? = nil) -> Parameters {
   var params: Parameters = [
     "symbol": payload.symbol,
     "shares": payload.shares,
@@ -469,7 +469,7 @@ private func stockParameters(_ payload: StockRequest, portfolioListId: String? =
   return params
 }
 
-private func watchlistParameters(_ payload: WatchlistItemRequest, watchlistListId: String? = nil) -> Parameters {
+nonisolated private func watchlistParameters(_ payload: WatchlistItemRequest, watchlistListId: String? = nil) -> Parameters {
   var params: Parameters = ["symbol": payload.symbol]
   if let note = payload.note {
     params["note"] = note
@@ -486,7 +486,7 @@ private func watchlistParameters(_ payload: WatchlistItemRequest, watchlistListI
   return params
 }
 
-private func watchlistUpdateParameters(_ payload: WatchlistItemUpdateRequest, watchlistListId: String? = nil) -> Parameters {
+nonisolated private func watchlistUpdateParameters(_ payload: WatchlistItemUpdateRequest, watchlistListId: String? = nil) -> Parameters {
   var params: Parameters = [:]
   if let note = payload.note {
     params["note"] = note
@@ -506,7 +506,7 @@ private func watchlistUpdateParameters(_ payload: WatchlistItemUpdateRequest, wa
   return params
 }
 
-private func targetParameters(_ payload: TargetRequest) -> Parameters {
+nonisolated private func targetParameters(_ payload: TargetRequest) -> Parameters {
   var params: Parameters = [
     "symbol": payload.symbol,
     "scenario": payload.scenario,
@@ -521,7 +521,7 @@ private func targetParameters(_ payload: TargetRequest) -> Parameters {
   return params
 }
 
-struct DeleteWatchlistEndpoint: Endpoint {
+nonisolated struct DeleteWatchlistEndpoint: Endpoint {
   typealias Response = EmptyAPIResponse
   let watchlistId: String
 
@@ -532,7 +532,7 @@ struct DeleteWatchlistEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetTargetsEndpoint: Endpoint {
+nonisolated struct GetTargetsEndpoint: Endpoint {
   typealias Response = [TargetResponse]
   let symbol: String?
 
@@ -548,7 +548,7 @@ struct GetTargetsEndpoint: Endpoint {
   }
 }
 
-struct CreateTargetEndpoint: Endpoint {
+nonisolated struct CreateTargetEndpoint: Endpoint {
   typealias Response = TargetResponse
   let payload: TargetRequest
 
@@ -561,7 +561,7 @@ struct CreateTargetEndpoint: Endpoint {
   }
 }
 
-struct DeleteTargetEndpoint: Endpoint {
+nonisolated struct DeleteTargetEndpoint: Endpoint {
   typealias Response = EmptyAPIResponse
   let targetId: String
 
@@ -572,7 +572,7 @@ struct DeleteTargetEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetPortfolioListsEndpoint: Endpoint {
+nonisolated struct GetPortfolioListsEndpoint: Endpoint {
   typealias Response = [PortfolioListDTOResponse]
 
   var method: HTTPMethod { .get }
@@ -582,7 +582,7 @@ struct GetPortfolioListsEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct CreatePortfolioListEndpoint: Endpoint {
+nonisolated struct CreatePortfolioListEndpoint: Endpoint {
   typealias Response = PortfolioListDTOResponse
   let payload: PortfolioListDTORequest
 
@@ -595,7 +595,7 @@ struct CreatePortfolioListEndpoint: Endpoint {
   }
 }
 
-struct UpdatePortfolioListEndpoint: Endpoint {
+nonisolated struct UpdatePortfolioListEndpoint: Endpoint {
   typealias Response = PortfolioListDTOResponse
   let listId: String
   let payload: PortfolioListDTORequest
@@ -609,7 +609,7 @@ struct UpdatePortfolioListEndpoint: Endpoint {
   }
 }
 
-struct DeletePortfolioListEndpoint: Endpoint {
+nonisolated struct DeletePortfolioListEndpoint: Endpoint {
   typealias Response = EmptyAPIResponse
   let listId: String
 
@@ -620,7 +620,7 @@ struct DeletePortfolioListEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetWatchlistListsEndpoint: Endpoint {
+nonisolated struct GetWatchlistListsEndpoint: Endpoint {
   typealias Response = [WatchlistListDTOResponse]
 
   var method: HTTPMethod { .get }
@@ -630,7 +630,7 @@ struct GetWatchlistListsEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct CreateWatchlistListEndpoint: Endpoint {
+nonisolated struct CreateWatchlistListEndpoint: Endpoint {
   typealias Response = WatchlistListDTOResponse
   let payload: WatchlistListDTORequest
 
@@ -643,7 +643,7 @@ struct CreateWatchlistListEndpoint: Endpoint {
   }
 }
 
-struct UpdateWatchlistListEndpoint: Endpoint {
+nonisolated struct UpdateWatchlistListEndpoint: Endpoint {
   typealias Response = WatchlistListDTOResponse
   let listId: String
   let payload: WatchlistListDTORequest
@@ -657,7 +657,7 @@ struct UpdateWatchlistListEndpoint: Endpoint {
   }
 }
 
-struct DeleteWatchlistListEndpoint: Endpoint {
+nonisolated struct DeleteWatchlistListEndpoint: Endpoint {
   typealias Response = EmptyAPIResponse
   let listId: String
 

@@ -2,7 +2,7 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
-struct GetCompanyProfileEndpoint: Endpoint {
+nonisolated struct GetCompanyProfileEndpoint: Endpoint {
   typealias Response = CompanyProfileResponse
 
   let symbol: String
@@ -14,7 +14,7 @@ struct GetCompanyProfileEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetQuoteEndpoint: Endpoint {
+nonisolated struct GetQuoteEndpoint: Endpoint {
   typealias Response = QuoteResponse
 
   let symbol: String
@@ -26,7 +26,7 @@ struct GetQuoteEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetQuoteBatchEndpoint: Endpoint {
+nonisolated struct GetQuoteBatchEndpoint: Endpoint {
   typealias Response = QuoteBatchResponse
 
   let symbols: [String]
@@ -40,7 +40,7 @@ struct GetQuoteBatchEndpoint: Endpoint {
   }
 }
 
-struct GetGradesConsensusEndpoint: Endpoint {
+nonisolated struct GetGradesConsensusEndpoint: Endpoint {
   typealias Response = [StockAnalystConsensus]
 
   let symbol: String
@@ -52,7 +52,7 @@ struct GetGradesConsensusEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetBasicFinancialsEndpoint: Endpoint {
+nonisolated struct GetBasicFinancialsEndpoint: Endpoint {
   typealias Response = MarketBasicFinancialsResponse
 
   let symbol: String
@@ -64,7 +64,7 @@ struct GetBasicFinancialsEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetAnalysisMetricsEndpoint: Endpoint {
+nonisolated struct GetAnalysisMetricsEndpoint: Endpoint {
   typealias Response = StockAnalysisMetrics
 
   let symbol: String
@@ -87,7 +87,7 @@ struct GetAnalysisMetricsEndpoint: Endpoint {
   }
 }
 
-struct GetMarketCompareEndpoint: Endpoint {
+nonisolated struct GetMarketCompareEndpoint: Endpoint {
   typealias Response = [StockAnalysisMetrics]
 
   let symbols: [String]
@@ -101,7 +101,7 @@ struct GetMarketCompareEndpoint: Endpoint {
   }
 }
 
-struct GetBalanceSheetStatementEndpoint: Endpoint {
+nonisolated struct GetBalanceSheetStatementEndpoint: Endpoint {
   typealias Response = [BalanceSheetStatementResponse]
 
   let symbol: String
@@ -120,7 +120,7 @@ struct GetBalanceSheetStatementEndpoint: Endpoint {
   }
 }
 
-struct GetCashFlowStatementEndpoint: Endpoint {
+nonisolated struct GetCashFlowStatementEndpoint: Endpoint {
   typealias Response = [CashFlowStatementResponse]
 
   let symbol: String
@@ -139,7 +139,7 @@ struct GetCashFlowStatementEndpoint: Endpoint {
   }
 }
 
-struct GetIncomeStatementEndpoint: Endpoint {
+nonisolated struct GetIncomeStatementEndpoint: Endpoint {
   typealias Response = [IncomeStatementResponse]
 
   let symbol: String
@@ -158,7 +158,7 @@ struct GetIncomeStatementEndpoint: Endpoint {
   }
 }
 
-struct GetRatiosEndpoint: Endpoint {
+nonisolated struct GetRatiosEndpoint: Endpoint {
   typealias Response = [RatiosResponse]
 
   let symbol: String
@@ -177,7 +177,7 @@ struct GetRatiosEndpoint: Endpoint {
   }
 }
 
-struct GetRatiosTTMEndpoint: Endpoint {
+nonisolated struct GetRatiosTTMEndpoint: Endpoint {
   typealias Response = [RatiosTTMResponse]
 
   let symbol: String
@@ -189,7 +189,7 @@ struct GetRatiosTTMEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetFinancialGrowthEndpoint: Endpoint {
+nonisolated struct GetFinancialGrowthEndpoint: Endpoint {
   typealias Response = [FinancialGrowthResponse]
 
   let symbol: String
@@ -208,7 +208,7 @@ struct GetFinancialGrowthEndpoint: Endpoint {
   }
 }
 
-struct GetAnalystEstimatesEndpoint: Endpoint {
+nonisolated struct GetAnalystEstimatesEndpoint: Endpoint {
   typealias Response = [AnalystEstimatesResponse]
 
   let symbol: String
@@ -227,7 +227,7 @@ struct GetAnalystEstimatesEndpoint: Endpoint {
   }
 }
 
-struct GetPriceChartEndpoint: Endpoint {
+nonisolated struct GetPriceChartEndpoint: Endpoint {
   typealias Response = PriceChartSeries
 
   let symbol: String
@@ -242,7 +242,7 @@ struct GetPriceChartEndpoint: Endpoint {
   }
 }
 
-struct GetPriceChartComparisonEndpoint: Endpoint {
+nonisolated struct GetPriceChartComparisonEndpoint: Endpoint {
   typealias Response = PriceChartComparisonResponse
 
   let symbols: [String]
@@ -257,7 +257,7 @@ struct GetPriceChartComparisonEndpoint: Endpoint {
   }
 }
 
-struct GetChartBuilderEndpoint: Endpoint {
+nonisolated struct GetChartBuilderEndpoint: Endpoint {
   typealias Response = ChartBuilderResponse
 
   let symbol: String
@@ -283,7 +283,7 @@ struct GetChartBuilderEndpoint: Endpoint {
   }
 }
 
-struct GetChartBuilderCSVEndpoint: Endpoint {
+nonisolated struct GetChartBuilderCSVEndpoint: Endpoint {
   typealias Response = Data
 
   let symbol: String

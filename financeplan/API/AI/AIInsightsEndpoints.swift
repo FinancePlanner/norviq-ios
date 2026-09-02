@@ -4,7 +4,7 @@ import StockPlanShared
 
 /// Generate one educational AI insight card for the authenticated user.
 /// The kind selects the server-side prompt (expenses / portfolio / summary).
-struct GenerateAIInsightEndpoint: Endpoint {
+nonisolated struct GenerateAIInsightEndpoint: Endpoint {
     typealias Response = AIInsightCardResponse
     let kind: AIInsightKind
 

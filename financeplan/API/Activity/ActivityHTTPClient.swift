@@ -5,7 +5,7 @@ import StockPlanShared
 
 // MARK: - Client
 
-final class ActivityHTTPClient: Sendable {
+nonisolated final class ActivityHTTPClient: Sendable {
     
     // MARK: - Error Type
     

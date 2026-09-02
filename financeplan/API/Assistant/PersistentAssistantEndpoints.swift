@@ -2,15 +2,15 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
-struct AssistantCreateConversationPayload: Codable, Sendable { let title: String? }
-struct AssistantMessagePayload: Codable, Sendable { let content: String }
+nonisolated struct AssistantCreateConversationPayload: Codable, Sendable { let title: String? }
+nonisolated struct AssistantMessagePayload: Codable, Sendable { let content: String }
 
-private func assistantParameters<T: Encodable>(_ value: T) throws -> Parameters {
+nonisolated private func assistantParameters<T: Encodable>(_ value: T) throws -> Parameters {
     let data = try JSONEncoder.stockPlanShared.encode(value)
     return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
 }
 
-struct ListAssistantConversationsEndpoint: Endpoint {
+nonisolated struct ListAssistantConversationsEndpoint: Endpoint {
     typealias Response = [AIConversationSummaryResponse]
     var method: HTTPMethod { .get }
     var path: String { "/v1/ai/assistant/conversations" }
@@ -18,7 +18,7 @@ struct ListAssistantConversationsEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct CreateAssistantConversationEndpoint: Endpoint {
+nonisolated struct CreateAssistantConversationEndpoint: Endpoint {
     typealias Response = AIConversationResponse
     let payload: AssistantCreateConversationPayload
     var method: HTTPMethod { .post }
@@ -27,7 +27,7 @@ struct CreateAssistantConversationEndpoint: Endpoint {
     func asParameters() throws -> Parameters { try assistantParameters(payload) }
 }
 
-struct GetAssistantConversationEndpoint: Endpoint {
+nonisolated struct GetAssistantConversationEndpoint: Endpoint {
     typealias Response = AIConversationResponse
     let id: String
     var method: HTTPMethod { .get }
@@ -36,7 +36,7 @@ struct GetAssistantConversationEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct DeleteAssistantConversationEndpoint: Endpoint {
+nonisolated struct DeleteAssistantConversationEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let id: String
     var method: HTTPMethod { .delete }
@@ -45,7 +45,7 @@ struct DeleteAssistantConversationEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct CreateAssistantTurnEndpoint: Endpoint {
+nonisolated struct CreateAssistantTurnEndpoint: Endpoint {
     typealias Response = AIAssistantTurnResponse
     let id: String
     let payload: AssistantMessagePayload
@@ -55,7 +55,7 @@ struct CreateAssistantTurnEndpoint: Endpoint {
     func asParameters() throws -> Parameters { try assistantParameters(payload) }
 }
 
-struct GetAssistantPreferencesEndpoint: Endpoint {
+nonisolated struct GetAssistantPreferencesEndpoint: Endpoint {
     typealias Response = AIAssistantPreferencesResponse
     var method: HTTPMethod { .get }
     var path: String { "/v1/ai/assistant/preferences" }
@@ -63,7 +63,7 @@ struct GetAssistantPreferencesEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct UpdateAssistantPreferencesEndpoint: Endpoint {
+nonisolated struct UpdateAssistantPreferencesEndpoint: Endpoint {
     typealias Response = AIAssistantPreferencesResponse
     let payload: AIAssistantPreferencesResponse
     var method: HTTPMethod { .put }
@@ -72,7 +72,7 @@ struct UpdateAssistantPreferencesEndpoint: Endpoint {
     func asParameters() throws -> Parameters { try assistantParameters(payload) }
 }
 
-struct ListAssistantTipsEndpoint: Endpoint {
+nonisolated struct ListAssistantTipsEndpoint: Endpoint {
     typealias Response = [AITipResponse]
     var method: HTTPMethod { .get }
     var path: String { "/v1/ai/assistant/tips" }
@@ -80,7 +80,7 @@ struct ListAssistantTipsEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct DismissAssistantTipEndpoint: Endpoint {
+nonisolated struct DismissAssistantTipEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let id: String
     var method: HTTPMethod { .delete }
@@ -89,7 +89,7 @@ struct DismissAssistantTipEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetAssistantUsageEndpoint: Endpoint {
+nonisolated struct GetAssistantUsageEndpoint: Endpoint {
     typealias Response = AIAssistantUsageResponse
     var method: HTTPMethod { .get }
     var path: String { "/v1/ai/assistant/usage" }
@@ -97,7 +97,7 @@ struct GetAssistantUsageEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct ListAssistantActionsEndpoint: Endpoint {
+nonisolated struct ListAssistantActionsEndpoint: Endpoint {
     typealias Response = [AIPendingActionResponse]
     var method: HTTPMethod { .get }
     var path: String { "/v1/ai/assistant/actions" }
@@ -105,7 +105,7 @@ struct ListAssistantActionsEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct ConfirmAssistantActionEndpoint: Endpoint {
+nonisolated struct ConfirmAssistantActionEndpoint: Endpoint {
     typealias Response = AIConfirmedActionResponse
     let id: String
     var method: HTTPMethod { .post }
@@ -114,7 +114,7 @@ struct ConfirmAssistantActionEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct CancelAssistantActionEndpoint: Endpoint {
+nonisolated struct CancelAssistantActionEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let id: String
     var method: HTTPMethod { .post }

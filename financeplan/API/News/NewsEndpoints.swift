@@ -2,14 +2,14 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
-struct NewsViewPayload: Codable, Sendable, Equatable {
+nonisolated struct NewsViewPayload: Codable, Sendable, Equatable {
     let newsId: UUID?
     let symbol: String?
     let headline: String
     let url: String?
 }
 
-struct GetNewsEndpoint: Endpoint {
+nonisolated struct GetNewsEndpoint: Endpoint {
     typealias Response = [NewsItemResponse]
     let symbol: String?
     let cursor: String?
@@ -28,7 +28,7 @@ struct GetNewsEndpoint: Endpoint {
     }
 }
 
-struct CreateNewsEndpoint: Endpoint {
+nonisolated struct CreateNewsEndpoint: Endpoint {
     typealias Response = NewsItemResponse
     let payload: NewsItemRequest
 
@@ -48,7 +48,7 @@ struct CreateNewsEndpoint: Endpoint {
     }
 }
 
-struct UpdateNewsEndpoint: Endpoint {
+nonisolated struct UpdateNewsEndpoint: Endpoint {
     typealias Response = NewsItemResponse
     let newsId: String
     let payload: NewsItemRequest
@@ -69,7 +69,7 @@ struct UpdateNewsEndpoint: Endpoint {
     }
 }
 
-struct DeleteNewsEndpoint: Endpoint {
+nonisolated struct DeleteNewsEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let newsId: String
 
@@ -80,7 +80,7 @@ struct DeleteNewsEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct RecordNewsViewEndpoint: Endpoint {
+nonisolated struct RecordNewsViewEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let payload: NewsViewPayload
 
@@ -94,7 +94,7 @@ struct RecordNewsViewEndpoint: Endpoint {
     }
 }
 
-struct GetThesisWatchEndpoint: Endpoint {
+nonisolated struct GetThesisWatchEndpoint: Endpoint {
     typealias Response = ThesisWatchFeedResponse
     let scope: ThesisWatchScope
     let sector: String?
@@ -113,7 +113,7 @@ struct GetThesisWatchEndpoint: Endpoint {
     }
 }
 
-struct ThesisWatchFeedbackEndpoint: Endpoint {
+nonisolated struct ThesisWatchFeedbackEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let storyId: String
     let signal: ThesisWatchFeedbackSignal
@@ -125,7 +125,7 @@ struct ThesisWatchFeedbackEndpoint: Endpoint {
     func asParameters() throws -> Parameters { ["signal": signal.rawValue] }
 }
 
-struct MarkThesisWatchReadEndpoint: Endpoint {
+nonisolated struct MarkThesisWatchReadEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let storyId: String
 
@@ -136,7 +136,7 @@ struct MarkThesisWatchReadEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetThesisWatchNotificationPreferencesEndpoint: Endpoint {
+nonisolated struct GetThesisWatchNotificationPreferencesEndpoint: Endpoint {
     typealias Response = ThesisWatchNotificationPreferences
 
     var method: HTTPMethod { .get }
@@ -146,7 +146,7 @@ struct GetThesisWatchNotificationPreferencesEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct UpdateThesisWatchNotificationPreferencesEndpoint: Endpoint {
+nonisolated struct UpdateThesisWatchNotificationPreferencesEndpoint: Endpoint {
     typealias Response = ThesisWatchNotificationPreferences
     let payload: UpdateThesisWatchNotificationPreferences
 

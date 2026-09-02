@@ -5,7 +5,7 @@ import StockPlanShared
 
 // MARK: - Client
 
-struct GoalsHTTPClient: Sendable {
+nonisolated struct GoalsHTTPClient: Sendable {
     enum Error: HTTPClientError {
         case invalidResponse
         case invalidStatus(Int)

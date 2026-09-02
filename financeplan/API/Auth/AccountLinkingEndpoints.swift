@@ -2,7 +2,7 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
-struct OAuthLinkedAccountsEndpoint: Endpoint {
+nonisolated struct OAuthLinkedAccountsEndpoint: Endpoint {
   typealias Response = OAuthLinkedAccountsResponse
 
   var method: HTTPMethod { .get }
@@ -10,7 +10,7 @@ struct OAuthLinkedAccountsEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
 }
 
-struct OAuthLinkStartEndpoint: Endpoint {
+nonisolated struct OAuthLinkStartEndpoint: Endpoint {
   typealias Response = OAuthStartResponsePayload
 
   let provider: OAuthProviderKind
@@ -25,7 +25,7 @@ struct OAuthLinkStartEndpoint: Endpoint {
   }
 }
 
-struct OAuthLinkExchangeEndpoint: Endpoint {
+nonisolated struct OAuthLinkExchangeEndpoint: Endpoint {
   typealias Response = OAuthLinkResponse
 
   let provider: OAuthProviderKind

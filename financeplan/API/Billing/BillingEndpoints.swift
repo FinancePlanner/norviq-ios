@@ -14,7 +14,7 @@ nonisolated struct BillingManagementURLResponse: Codable, Sendable, Equatable {
   }
 }
 
-struct GetBillingContextEndpoint: Endpoint {
+nonisolated struct GetBillingContextEndpoint: Endpoint {
   typealias Response = BillingContextResponse
 
   var method: HTTPMethod { .get }
@@ -24,7 +24,7 @@ struct GetBillingContextEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct CreateBillingManagementURLEndpoint: Endpoint {
+nonisolated struct CreateBillingManagementURLEndpoint: Endpoint {
   typealias Response = BillingManagementURLResponse
 
   var method: HTTPMethod { .post }
@@ -34,7 +34,7 @@ struct CreateBillingManagementURLEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct RestoreBillingEndpoint: Endpoint {
+nonisolated struct RestoreBillingEndpoint: Endpoint {
   typealias Response = BillingContextResponse
 
   var method: HTTPMethod { .post }

@@ -7,7 +7,7 @@ import StockPlanShared
 /// upload approach in `BrokerHTTPClient` (the `Endpoint`/`Parameters` abstraction
 /// in `BaseHTTPClient` is for JSON bodies, not binary), while reusing its auth
 /// token provider and JSON decoder.
-final class ReceiptsHTTPClient: Sendable {
+nonisolated final class ReceiptsHTTPClient: Sendable {
 
   enum Error: HTTPClientError {
     case invalidResponse

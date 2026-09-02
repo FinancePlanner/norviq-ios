@@ -5,7 +5,7 @@ import StockPlanShared
 
 // MARK: - Client
 
-final class AuthHTTPClient: Sendable {
+nonisolated final class AuthHTTPClient: Sendable {
     
     // MARK: - Static Constants
 

@@ -5,7 +5,7 @@ import StockPlanShared
 
 // MARK: - Client
 
-struct CryptoHTTPClient: Sendable {
+nonisolated struct CryptoHTTPClient: Sendable {
     enum Error: HTTPClientError {
         case invalidResponse
         case invalidStatus(Int)

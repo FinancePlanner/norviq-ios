@@ -2,7 +2,7 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
-struct GetStockEarningsEndpoint: Endpoint {
+nonisolated struct GetStockEarningsEndpoint: Endpoint {
   typealias Response = [EarningsEvent]
   let symbol: String
   let limit: Int
@@ -16,7 +16,7 @@ struct GetStockEarningsEndpoint: Endpoint {
   }
 }
 
-struct GetStockEarningsTranscriptEndpoint: Endpoint {
+nonisolated struct GetStockEarningsTranscriptEndpoint: Endpoint {
   typealias Response = EarningsTranscript
   let symbol: String
   let date: String
@@ -30,7 +30,7 @@ struct GetStockEarningsTranscriptEndpoint: Endpoint {
   }
 }
 
-struct GetEarningsCalendarEndpoint: Endpoint {
+nonisolated struct GetEarningsCalendarEndpoint: Endpoint {
   typealias Response = [EarningsEvent]
   let from: String
   let to: String
@@ -44,7 +44,7 @@ struct GetEarningsCalendarEndpoint: Endpoint {
   }
 }
 
-struct GetMarketPressureEndpoint: Endpoint {
+nonisolated struct GetMarketPressureEndpoint: Endpoint {
   typealias Response = MarketPressureResponse
   let symbol: String
 
@@ -55,7 +55,7 @@ struct GetMarketPressureEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetPeriodReturnsEndpoint: Endpoint {
+nonisolated struct GetPeriodReturnsEndpoint: Endpoint {
   typealias Response = StockPeriodReturnsResponse
   let symbol: String
 
@@ -66,7 +66,7 @@ struct GetPeriodReturnsEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetPeriodReturnsBatchEndpoint: Endpoint {
+nonisolated struct GetPeriodReturnsBatchEndpoint: Endpoint {
   typealias Response = StockPeriodReturnsBatchResponse
   let symbols: [String]
 
@@ -79,7 +79,7 @@ struct GetPeriodReturnsBatchEndpoint: Endpoint {
   }
 }
 
-struct GetMarketOverviewEndpoint: Endpoint {
+nonisolated struct GetMarketOverviewEndpoint: Endpoint {
   typealias Response = MarketOverviewResponse
 
   var method: HTTPMethod { .get }
@@ -89,7 +89,7 @@ struct GetMarketOverviewEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetGeneralMarketNewsEndpoint: Endpoint {
+nonisolated struct GetGeneralMarketNewsEndpoint: Endpoint {
   typealias Response = [StockNews]
   let limit: Int?
 

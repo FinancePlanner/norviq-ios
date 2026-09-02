@@ -2,7 +2,7 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
-struct GetBrokersEndpoint: Endpoint {
+nonisolated struct GetBrokersEndpoint: Endpoint {
   typealias Response = [BrokerConnectionResponse]
 
   var method: HTTPMethod { .get }
@@ -12,7 +12,7 @@ struct GetBrokersEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetBrokerEndpoint: Endpoint {
+nonisolated struct GetBrokerEndpoint: Endpoint {
   typealias Response = BrokerConnectionResponse
   let provider: String
 
@@ -23,7 +23,7 @@ struct GetBrokerEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct SyncIBKREndpoint: Endpoint {
+nonisolated struct SyncIBKREndpoint: Endpoint {
   typealias Response = BrokerSyncResponse
 
   var method: HTTPMethod { .post }
@@ -33,7 +33,7 @@ struct SyncIBKREndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct StartIBKRConnectEndpoint: Endpoint {
+nonisolated struct StartIBKRConnectEndpoint: Endpoint {
   typealias Response = BrokerConnectStartResponse
 
   let redirectURI: String
@@ -52,7 +52,7 @@ struct StartIBKRConnectEndpoint: Endpoint {
   }
 }
 
-struct ConnectIBKRCredentialsEndpoint: Endpoint {
+nonisolated struct ConnectIBKRCredentialsEndpoint: Endpoint {
   typealias Response = BrokerConnectionResponse
 
   let token: String
@@ -75,7 +75,7 @@ struct ConnectIBKRCredentialsEndpoint: Endpoint {
   }
 }
 
-struct DisconnectIBKREndpoint: Endpoint {
+nonisolated struct DisconnectIBKREndpoint: Endpoint {
   typealias Response = BrokerConnectionResponse
 
   var method: HTTPMethod { .delete }

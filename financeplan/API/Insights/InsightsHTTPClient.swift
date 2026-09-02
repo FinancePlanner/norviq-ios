@@ -5,7 +5,7 @@ import StockPlanShared
 
 // MARK: - Client
 
-final class InsightsHTTPClient: Sendable {
+nonisolated final class InsightsHTTPClient: Sendable {
 
     // MARK: - Error Type
 
@@ -123,7 +123,7 @@ final class InsightsHTTPClient: Sendable {
     }
 }
 
-extension Array {
+nonisolated extension Array {
     func chunked(into size: Int) -> [[Element]] {
         guard size > 0 else { return [self] }
         return stride(from: 0, to: count, by: size).map {

@@ -5,7 +5,7 @@ import StockPlanShared
 
 /// Lightweight HTTP client for macro endpoints.
 /// Follows the pattern of MarketDataHTTPClient.
-struct MacroHTTPClient: Sendable {
+nonisolated struct MacroHTTPClient: Sendable {
   enum Error: HTTPClientError {
     case invalidResponse
     case invalidStatus(Int)

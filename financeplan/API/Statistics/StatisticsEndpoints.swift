@@ -2,7 +2,7 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
-struct GetStatisticsOverviewEndpoint: Endpoint {
+nonisolated struct GetStatisticsOverviewEndpoint: Endpoint {
   typealias Response = StatisticsDTO
 
   var method: HTTPMethod { .get }
@@ -12,7 +12,7 @@ struct GetStatisticsOverviewEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetSectorAllocationEndpoint: Endpoint {
+nonisolated struct GetSectorAllocationEndpoint: Endpoint {
   typealias Response = [SectorAllocationDTO]
 
   var method: HTTPMethod { .get }
@@ -22,7 +22,7 @@ struct GetSectorAllocationEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetSectorGainsEndpoint: Endpoint {
+nonisolated struct GetSectorGainsEndpoint: Endpoint {
   typealias Response = SectorGainsResponse
 
   var method: HTTPMethod { .get }
@@ -32,7 +32,7 @@ struct GetSectorGainsEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetStockAllocationEndpoint: Endpoint {
+nonisolated struct GetStockAllocationEndpoint: Endpoint {
   typealias Response = [StockAllocationDTO]
 
   var method: HTTPMethod { .get }

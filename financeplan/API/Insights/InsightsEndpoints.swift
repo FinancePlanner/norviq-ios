@@ -2,7 +2,7 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
-struct GetTickerSentimentEndpoint: Endpoint {
+nonisolated struct GetTickerSentimentEndpoint: Endpoint {
     typealias Response = TickerSentimentResponse
     let symbol: String
     let days: Int?
@@ -22,7 +22,7 @@ struct GetTickerSentimentEndpoint: Endpoint {
 
 /// Batch sentiment for many symbols in one call. The alternative — one request
 /// per row — would put a request per holding on every portfolio load.
-struct GetSymbolSentimentBatchEndpoint: Endpoint {
+nonisolated struct GetSymbolSentimentBatchEndpoint: Endpoint {
     typealias Response = SymbolSentimentBatchResponse
     let symbols: [String]
 
@@ -35,7 +35,7 @@ struct GetSymbolSentimentBatchEndpoint: Endpoint {
     }
 }
 
-struct GetPortfolioSentimentEndpoint: Endpoint {
+nonisolated struct GetPortfolioSentimentEndpoint: Endpoint {
     typealias Response = PortfolioSentimentResponse
     let portfolioListId: String?
 
@@ -50,7 +50,7 @@ struct GetPortfolioSentimentEndpoint: Endpoint {
     }
 }
 
-struct GetWatchlistSentimentEndpoint: Endpoint {
+nonisolated struct GetWatchlistSentimentEndpoint: Endpoint {
     typealias Response = PortfolioSentimentResponse
     let watchlistListId: String?
 
@@ -65,7 +65,7 @@ struct GetWatchlistSentimentEndpoint: Endpoint {
     }
 }
 
-struct GetMarketTrendingSentimentEndpoint: Endpoint {
+nonisolated struct GetMarketTrendingSentimentEndpoint: Endpoint {
     typealias Response = MarketTrendingResponse
     let limit: Int?
 
@@ -82,7 +82,7 @@ struct GetMarketTrendingSentimentEndpoint: Endpoint {
 
 /// Pro-gated upstream: a non-subscriber gets a 402, which surfaces as a thrown
 /// error the caller degrades on.
-struct GetSentimentHistoryEndpoint: Endpoint {
+nonisolated struct GetSentimentHistoryEndpoint: Endpoint {
     typealias Response = [SymbolSentiment]
     let symbol: String
     let limit: Int?

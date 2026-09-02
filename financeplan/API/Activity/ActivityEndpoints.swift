@@ -2,7 +2,7 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
-struct GetActivitiesEndpoint: Endpoint {
+nonisolated struct GetActivitiesEndpoint: Endpoint {
     typealias Response = [UserActivityResponse]
 
     let limit: Int?

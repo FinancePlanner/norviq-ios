@@ -9,7 +9,7 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
-struct GetUserProfileEndpoint: Endpoint {
+nonisolated struct GetUserProfileEndpoint: Endpoint {
   typealias Response = GetUserProfileResponse
 
   var method: HTTPMethod { .get }
@@ -19,7 +19,7 @@ struct GetUserProfileEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct UpdateUserProfileEndpoint: Endpoint {
+nonisolated struct UpdateUserProfileEndpoint: Endpoint {
   typealias Response = UpdateUserProfileResponse
 
   let request: UpdateUserProfileRequest
@@ -33,7 +33,7 @@ struct UpdateUserProfileEndpoint: Endpoint {
   }
 }
 
-struct DeleteUserProfileEndpoint: Endpoint {
+nonisolated struct DeleteUserProfileEndpoint: Endpoint {
   typealias Response = DeleteUserProfileResponse
 
   var method: HTTPMethod { .delete }
@@ -43,7 +43,7 @@ struct DeleteUserProfileEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-struct UpdateUsernameEndpoint: Endpoint {
+nonisolated struct UpdateUsernameEndpoint: Endpoint {
   typealias Response = UpdateUserProfileResponse
 
   let request: UpdateUsernameRequest
@@ -57,7 +57,7 @@ struct UpdateUsernameEndpoint: Endpoint {
   }
 }
 
-struct UpdateEmailEndpoint: Endpoint {
+nonisolated struct UpdateEmailEndpoint: Endpoint {
   typealias Response = UpdateUserProfileResponse
 
   let request: UpdateEmailRequest
@@ -71,7 +71,7 @@ struct UpdateEmailEndpoint: Endpoint {
   }
 }
 
-struct UpdatePasswordEndpoint: Endpoint {
+nonisolated struct UpdatePasswordEndpoint: Endpoint {
   typealias Response = APIMessageResponse
 
   let request: UpdatePasswordRequest
@@ -88,7 +88,7 @@ struct UpdatePasswordEndpoint: Endpoint {
   }
 }
 
-private func userProfileUpdateParameters(_ request: UpdateUserProfileRequest) -> Parameters {
+nonisolated private func userProfileUpdateParameters(_ request: UpdateUserProfileRequest) -> Parameters {
   var userProfile: Parameters = [
     "id": request.userProfile.id,
     "email": request.userProfile.email

@@ -8,7 +8,7 @@ import StockPlanShared
 /// The upload is multipart and hand-built, following `ReceiptsHTTPClient` — the
 /// `Endpoint`/`Parameters` abstraction in `BaseHTTPClient` is for JSON bodies,
 /// not binary. Everything after the upload is ordinary JSON.
-final class SpreadsheetImportHTTPClient: Sendable {
+nonisolated final class SpreadsheetImportHTTPClient: Sendable {
 
   enum Error: HTTPClientError {
     case invalidResponse

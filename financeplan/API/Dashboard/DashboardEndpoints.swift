@@ -2,7 +2,7 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
-struct GetDashboardEndpoint: Endpoint {
+nonisolated struct GetDashboardEndpoint: Endpoint {
     typealias Response = DashboardResponse
     var method: HTTPMethod { .get }
     var path: String { "/v1/dashboard" }
@@ -10,7 +10,7 @@ struct GetDashboardEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetDashboardInsightsEndpoint: Endpoint {
+nonisolated struct GetDashboardInsightsEndpoint: Endpoint {
     typealias Response = DashboardInsightsResponse
     var method: HTTPMethod { .get }
     var path: String { "/v1/dashboard/insights" }
@@ -18,7 +18,7 @@ struct GetDashboardInsightsEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetWhyMovedEndpoint: Endpoint {
+nonisolated struct GetWhyMovedEndpoint: Endpoint {
     typealias Response = WhyMovedResponse
     var method: HTTPMethod { .get }
     var path: String { "/v1/dashboard/why-moved" }

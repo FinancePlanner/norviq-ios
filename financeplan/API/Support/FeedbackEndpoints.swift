@@ -2,7 +2,7 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
-struct SubmitFeedbackEndpoint: Endpoint {
+nonisolated struct SubmitFeedbackEndpoint: Endpoint {
   typealias Response = FeedbackResponse
   let payload: FeedbackRequest
     var method: HTTPMethod { .post }

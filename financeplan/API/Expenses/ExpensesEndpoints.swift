@@ -4,7 +4,7 @@ import StockPlanShared
 
 // MARK: - Snapshots
 
-struct GetSnapshotsEndpoint: Endpoint {
+nonisolated struct GetSnapshotsEndpoint: Endpoint {
     typealias Response = [BudgetSnapshotResponse]
     let year: Int?
     let month: Int?
@@ -19,7 +19,7 @@ struct GetSnapshotsEndpoint: Endpoint {
     }
 }
 
-struct CreateSnapshotEndpoint: Endpoint {
+nonisolated struct CreateSnapshotEndpoint: Endpoint {
     typealias Response = BudgetSnapshotResponse
     let payload: BudgetSnapshotRequest
     var method: HTTPMethod { .post }
@@ -34,7 +34,7 @@ struct CreateSnapshotEndpoint: Endpoint {
     }
 }
 
-struct UpdateSnapshotEndpoint: Endpoint {
+nonisolated struct UpdateSnapshotEndpoint: Endpoint {
     typealias Response = BudgetSnapshotResponse
     let snapshotId: String
     let payload: BudgetSnapshotRequest
@@ -50,7 +50,7 @@ struct UpdateSnapshotEndpoint: Endpoint {
     }
 }
 
-struct DeleteSnapshotEndpoint: Endpoint {
+nonisolated struct DeleteSnapshotEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let snapshotId: String
     var method: HTTPMethod { .delete }
@@ -59,7 +59,7 @@ struct DeleteSnapshotEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct GetSnapshotItemsEndpoint: Endpoint {
+nonisolated struct GetSnapshotItemsEndpoint: Endpoint {
     typealias Response = [BudgetPlanItemResponse]
     let snapshotId: String
     var method: HTTPMethod { .get }
@@ -70,7 +70,7 @@ struct GetSnapshotItemsEndpoint: Endpoint {
 
 // MARK: - Plan Items
 
-struct GetAllPlanItemsEndpoint: Endpoint {
+nonisolated struct GetAllPlanItemsEndpoint: Endpoint {
     typealias Response = [BudgetPlanItemResponse]
     var method: HTTPMethod { .get }
     var path: String { "/v1/budget/items" }
@@ -78,7 +78,7 @@ struct GetAllPlanItemsEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct CreatePlanItemEndpoint: Endpoint {
+nonisolated struct CreatePlanItemEndpoint: Endpoint {
     typealias Response = BudgetPlanItemResponse
     let payload: BudgetPlanItemRequest
     var method: HTTPMethod { .post }
@@ -96,7 +96,7 @@ struct CreatePlanItemEndpoint: Endpoint {
     }
 }
 
-struct UpdatePlanItemEndpoint: Endpoint {
+nonisolated struct UpdatePlanItemEndpoint: Endpoint {
     typealias Response = BudgetPlanItemResponse
     let itemId: String
     let payload: BudgetPlanItemRequest
@@ -115,7 +115,7 @@ struct UpdatePlanItemEndpoint: Endpoint {
     }
 }
 
-struct DeletePlanItemEndpoint: Endpoint {
+nonisolated struct DeletePlanItemEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let itemId: String
     var method: HTTPMethod { .delete }
@@ -126,7 +126,7 @@ struct DeletePlanItemEndpoint: Endpoint {
 
 // MARK: - Expenses
 
-struct GetHouseholdPartnerEndpoint: Endpoint {
+nonisolated struct GetHouseholdPartnerEndpoint: Endpoint {
     typealias Response = HouseholdPartnerProfileResponse
     var method: HTTPMethod { .get }
     var path: String { "/v1/expenses/partner" }
@@ -134,7 +134,7 @@ struct GetHouseholdPartnerEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct UpdateHouseholdPartnerEndpoint: Endpoint {
+nonisolated struct UpdateHouseholdPartnerEndpoint: Endpoint {
     typealias Response = HouseholdPartnerProfileResponse
     let payload: HouseholdPartnerProfileRequest
     var method: HTTPMethod { .put }
@@ -146,7 +146,7 @@ struct UpdateHouseholdPartnerEndpoint: Endpoint {
     }
 }
 
-struct GetExpensesEndpoint: Endpoint {
+nonisolated struct GetExpensesEndpoint: Endpoint {
     typealias Response = [ExpenseResponse]
     let from: String?
     let to: String?
@@ -167,7 +167,7 @@ struct GetExpensesEndpoint: Endpoint {
     }
 }
 
-struct CreateExpenseEndpoint: Endpoint {
+nonisolated struct CreateExpenseEndpoint: Endpoint {
     typealias Response = ExpenseResponse
     let payload: ExpenseRequest
     var method: HTTPMethod { .post }
@@ -191,7 +191,7 @@ struct CreateExpenseEndpoint: Endpoint {
     }
 }
 
-struct UpdateExpenseEndpoint: Endpoint {
+nonisolated struct UpdateExpenseEndpoint: Endpoint {
     typealias Response = ExpenseResponse
     let expenseId: String
     let payload: ExpenseRequest
@@ -216,7 +216,7 @@ struct UpdateExpenseEndpoint: Endpoint {
     }
 }
 
-struct DeleteExpenseEndpoint: Endpoint {
+nonisolated struct DeleteExpenseEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let expenseId: String
     var method: HTTPMethod { .delete }
@@ -227,7 +227,7 @@ struct DeleteExpenseEndpoint: Endpoint {
 
 // MARK: - Categories
 
-struct GetCategoriesEndpoint: Endpoint {
+nonisolated struct GetCategoriesEndpoint: Endpoint {
     typealias Response = [ExpenseCategoryResponse]
     var method: HTTPMethod { .get }
     var path: String { "/v1/expenses/categories" }
@@ -235,7 +235,7 @@ struct GetCategoriesEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct CreateCategoryEndpoint: Endpoint {
+nonisolated struct CreateCategoryEndpoint: Endpoint {
     typealias Response = ExpenseCategoryResponse
     let payload: ExpenseCategoryRequest
     var method: HTTPMethod { .post }
@@ -248,7 +248,7 @@ struct CreateCategoryEndpoint: Endpoint {
     }
 }
 
-struct DeleteCategoryEndpoint: Endpoint {
+nonisolated struct DeleteCategoryEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let categoryId: String
     var method: HTTPMethod { .delete }
@@ -259,7 +259,7 @@ struct DeleteCategoryEndpoint: Endpoint {
 
 // MARK: - Recurring Templates
 
-struct GetRecurringTemplatesEndpoint: Endpoint {
+nonisolated struct GetRecurringTemplatesEndpoint: Endpoint {
     typealias Response = [RecurringTemplateResponse]
     var method: HTTPMethod { .get }
     var path: String { "/v1/expenses/recurring" }
@@ -267,7 +267,7 @@ struct GetRecurringTemplatesEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
-struct CreateRecurringTemplateEndpoint: Endpoint {
+nonisolated struct CreateRecurringTemplateEndpoint: Endpoint {
     typealias Response = RecurringTemplateResponse
     let payload: RecurringTemplateRequest
     var method: HTTPMethod { .post }
@@ -287,7 +287,7 @@ struct CreateRecurringTemplateEndpoint: Endpoint {
     }
 }
 
-struct UpdateRecurringTemplateEndpoint: Endpoint {
+nonisolated struct UpdateRecurringTemplateEndpoint: Endpoint {
     typealias Response = RecurringTemplateResponse
     let templateId: String
     let payload: RecurringTemplateRequest
@@ -308,7 +308,7 @@ struct UpdateRecurringTemplateEndpoint: Endpoint {
     }
 }
 
-struct DeleteRecurringTemplateEndpoint: Endpoint {
+nonisolated struct DeleteRecurringTemplateEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let templateId: String
     var method: HTTPMethod { .delete }
@@ -319,7 +319,7 @@ struct DeleteRecurringTemplateEndpoint: Endpoint {
 
 // MARK: - Reports
 
-struct GetReportsOverviewEndpoint: Endpoint {
+nonisolated struct GetReportsOverviewEndpoint: Endpoint {
     typealias Response = ReportsOverviewResponse
     let from: String?
     let to: String?
@@ -334,7 +334,7 @@ struct GetReportsOverviewEndpoint: Endpoint {
     }
 }
 
-struct GetMonthlyExpenseReportsEndpoint: Endpoint {
+nonisolated struct GetMonthlyExpenseReportsEndpoint: Endpoint {
     typealias Response = [BudgetMonthSummaryResponse]
     let from: String?
     let to: String?
@@ -349,7 +349,7 @@ struct GetMonthlyExpenseReportsEndpoint: Endpoint {
     }
 }
 
-struct GetYearlyExpenseReportsEndpoint: Endpoint {
+nonisolated struct GetYearlyExpenseReportsEndpoint: Endpoint {
     typealias Response = [BudgetYearSummaryResponse]
     let from: String?
     let to: String?
@@ -364,7 +364,7 @@ struct GetYearlyExpenseReportsEndpoint: Endpoint {
     }
 }
 
-struct GetReportSuggestionsEndpoint: Endpoint {
+nonisolated struct GetReportSuggestionsEndpoint: Endpoint {
     typealias Response = ReportSuggestionsResponse
     let from: String?
     let to: String?
@@ -379,7 +379,7 @@ struct GetReportSuggestionsEndpoint: Endpoint {
     }
 }
 
-struct DismissReportSuggestionEndpoint: Endpoint {
+nonisolated struct DismissReportSuggestionEndpoint: Endpoint {
     typealias Response = APISuccess
     let suggestionId: String
     var method: HTTPMethod { .post }

@@ -4,11 +4,11 @@ import OSLog
 import AnyAPI
 
 /// Protocol for structured error reporting. Implementations can log errors with context.
-public protocol ErrorReporting: Sendable {
+nonisolated public protocol ErrorReporting: Sendable {
     func report(_ error: Error, context: [String: String], endpoint: String, method: String, statusCode: Int?)
 }
 
-public protocol HTTPClientError: LocalizedError, Equatable, Sendable {
+nonisolated public protocol HTTPClientError: LocalizedError, Equatable, Sendable {
     var statusCode: Int? { get }
     static func makeInvalidResponse() -> Self
     static func makeInvalidStatus(_ code: Int) -> Self
@@ -17,7 +17,12 @@ public protocol HTTPClientError: LocalizedError, Equatable, Sendable {
 }
 
 /// Shared HTTP client logic.
-public struct BaseHTTPClient: Sendable {
+///
+/// `nonisolated` opts the whole type out of the app's MainActor-by-default
+/// isolation. The request send and JSON decode paths are additionally marked
+/// `@concurrent` so that, under `NonisolatedNonsendingByDefault`, they hop to
+/// the cooperative pool instead of inheriting the caller's (main) executor.
+nonisolated public struct BaseHTTPClient: Sendable {
     
     // MARK: - Stored Properties
     
@@ -68,18 +73,7 @@ public struct BaseHTTPClient: Sendable {
         while attempt < maxRetries {
             do {
                 let data = try await execute(endpoint, errorType: ErrorType.self)
-                do {
-                    return try endpoint.decode(data)
-                } catch {
-                    if let envelope = try? decoder.decode(APIEnvelope<E.Response>.self, from: data),
-                       let payload = envelope.data {
-                        return payload
-                    }
-                    if let message = (try? decoder.decode(APIEnvelope<E.Response>.self, from: data))?.message, !message.isEmpty {
-                        throw ErrorType.makeAPI(message)
-                    }
-                    throw error
-                }
+                return try await decodeResponse(E.Response.self, from: data, using: endpoint.decoder, errorType: ErrorType.self)
             } catch {
                 let shouldRetry = shouldRetry(error: error, attempt: attempt, endpoint: endpoint)
                 if shouldRetry, attempt < maxRetries - 1 {
@@ -103,18 +97,8 @@ public struct BaseHTTPClient: Sendable {
         while attempt < maxRetries {
             do {
                 let (data, httpResponse) = try await executeWithResponse(endpoint, errorType: ErrorType.self)
-                do {
-                    return (try endpoint.decode(data), httpResponse)
-                } catch {
-                    if let envelope = try? decoder.decode(APIEnvelope<E.Response>.self, from: data),
-                       let payload = envelope.data {
-                        return (payload, httpResponse)
-                    }
-                    if let message = (try? decoder.decode(APIEnvelope<E.Response>.self, from: data))?.message, !message.isEmpty {
-                        throw ErrorType.makeAPI(message)
-                    }
-                    throw error
-                }
+                let response = try await decodeResponse(E.Response.self, from: data, using: endpoint.decoder, errorType: ErrorType.self)
+                return (response, httpResponse)
             } catch {
                 let shouldRetry = shouldRetry(error: error, attempt: attempt, endpoint: endpoint)
                 if shouldRetry, attempt < maxRetries - 1 {
@@ -130,6 +114,33 @@ public struct BaseHTTPClient: Sendable {
         let fallbackError = ErrorType.makeAPI("Unknown error")
         reportError(fallbackError, endpoint: endpoint, attempt: maxRetries)
         throw fallbackError
+    }
+    
+    // MARK: - Decoding
+    
+    /// Decodes a response body off the caller's executor. Falls back to the
+    /// `APIEnvelope` wrapper (decoded once, not twice) when the bare payload
+    /// does not decode.
+    @concurrent
+    public func decodeResponse<Response: Codable & Sendable, ErrorType: HTTPClientError>(
+        _ type: Response.Type,
+        from data: Data,
+        using endpointDecoder: JSONDecoder,
+        errorType: ErrorType.Type
+    ) async throws -> Response {
+        do {
+            return try endpointDecoder.decode(Response.self, from: data)
+        } catch {
+            if let envelope = try? decoder.decode(APIEnvelope<Response>.self, from: data) {
+                if let payload = envelope.data {
+                    return payload
+                }
+                if let message = envelope.message, !message.isEmpty {
+                    throw ErrorType.makeAPI(message)
+                }
+            }
+            throw error
+        }
     }
     
     public func callWithoutResponse<E: Endpoint, ErrorType: HTTPClientError>(_ endpoint: E, errorType: ErrorType.Type) async throws where E.Response: Codable {
@@ -220,6 +231,7 @@ public struct BaseHTTPClient: Sendable {
         return try await sendRequestWithResponse(request, errorType: ErrorType.self)
     }
     
+    @concurrent
     public func sendRequest<ErrorType: HTTPClientError>(_ request: URLRequest, errorType: ErrorType.Type) async throws -> Data {
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -229,6 +241,7 @@ public struct BaseHTTPClient: Sendable {
         return data
     }
     
+    @concurrent
     public func sendRequestWithResponse<ErrorType: HTTPClientError>(_ request: URLRequest, errorType: ErrorType.Type) async throws -> (Data, HTTPURLResponse) {
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {

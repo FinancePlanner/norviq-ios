@@ -11,7 +11,7 @@ extension URLSession: UserProfileURLSessionProtocol {}
 
 // MARK: - Client
 
-struct UserProfileHTTPClient: Sendable {
+nonisolated struct UserProfileHTTPClient: Sendable {
   enum Error: HTTPClientError {
     case invalidResponse
     case invalidStatus(Int)

@@ -1,7 +1,7 @@
 import Foundation
 import StockPlanShared
 
-enum APIErrorDecoding {
+nonisolated enum APIErrorDecoding {
   static func message(from data: Data, decoder: JSONDecoder = .stockPlanShared) -> String? {
     if let standard = try? decoder.decode(StandardAPIErrorEnvelope.self, from: data),
        !standard.reason.isEmpty {
@@ -51,7 +51,7 @@ enum APIErrorDecoding {
   }
 }
 
-private struct StandardAPIErrorEnvelope: Decodable {
+nonisolated private struct StandardAPIErrorEnvelope: Decodable {
   let error: Bool
   let code: String
   let reason: String

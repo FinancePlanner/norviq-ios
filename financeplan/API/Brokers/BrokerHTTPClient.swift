@@ -5,7 +5,7 @@ import OSLog
 
 // MARK: - Client
 
-final class BrokerHTTPClient: Sendable {
+nonisolated final class BrokerHTTPClient: Sendable {
   
   // MARK: - Error Type
   

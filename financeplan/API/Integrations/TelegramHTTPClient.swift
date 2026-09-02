@@ -3,7 +3,7 @@ import Foundation
 import OSLog
 import StockPlanShared
 
-struct TelegramHTTPClient: Sendable {
+nonisolated struct TelegramHTTPClient: Sendable {
   enum Error: HTTPClientError {
     case invalidResponse
     case invalidStatus(Int)

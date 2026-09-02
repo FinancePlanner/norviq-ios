@@ -11,7 +11,7 @@ extension URLSession: PushNotificationsURLSessionProtocol {}
 
 // MARK: - Client
 
-struct PushNotificationsHTTPClient: Sendable {
+nonisolated struct PushNotificationsHTTPClient: Sendable {
   enum Error: HTTPClientError {
     case invalidResponse
     case invalidStatus(Int)
@@ -122,7 +122,7 @@ struct PushNotificationsHTTPClient: Sendable {
   }
 }
 
-private struct EmptyEndpoint: Endpoint {
+nonisolated private struct EmptyEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let path: String
     let method: HTTPMethod
@@ -140,7 +140,7 @@ private struct EmptyEndpoint: Endpoint {
     }
 }
 
-private struct CustomEndpoint<T: Encodable>: Endpoint {
+nonisolated private struct CustomEndpoint<T: Encodable>: Endpoint {
     typealias Response = EmptyAPIResponse
     let path: String
     let method: HTTPMethod

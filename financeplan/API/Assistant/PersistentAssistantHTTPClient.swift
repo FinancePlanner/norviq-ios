@@ -3,7 +3,7 @@ import Foundation
 import OSLog
 import StockPlanShared
 
-struct PersistentAssistantHTTPClient: Sendable {
+nonisolated struct PersistentAssistantHTTPClient: Sendable {
     enum Error: HTTPClientError {
         case invalidResponse
         case invalidStatus(Int)
@@ -99,7 +99,7 @@ struct PersistentAssistantHTTPClient: Sendable {
     }
 }
 
-extension PersistentAssistantHTTPClient.Error: Equatable {
+nonisolated extension PersistentAssistantHTTPClient.Error: Equatable {
     nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
         switch (lhs, rhs) {
         case (.invalidResponse, .invalidResponse): true

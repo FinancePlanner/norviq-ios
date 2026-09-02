@@ -15,7 +15,7 @@ typealias AuthMFAResendRequestPayload = AuthMFAResendRequest
 typealias AuthLoginOutcomeStatusPayload = AuthLoginOutcomeStatus
 typealias AuthLoginOutcomePayload = AuthLoginOutcome
 
-struct LoginEndpoint: Endpoint {
+nonisolated struct LoginEndpoint: Endpoint {
   typealias Response = AuthLoginOutcomePayload
 
   let email: String
@@ -33,7 +33,7 @@ struct LoginEndpoint: Endpoint {
   }
 }
 
-struct SignupEndpoint: Endpoint {
+nonisolated struct SignupEndpoint: Endpoint {
   typealias Response = AuthResponse
 
   let username: String
@@ -64,7 +64,7 @@ struct SignupEndpoint: Endpoint {
   }
 }
 
-struct ForgotPasswordEndpoint: Endpoint {
+nonisolated struct ForgotPasswordEndpoint: Endpoint {
   typealias Response = AuthForgotPasswordResponse
 
   let email: String
@@ -80,7 +80,7 @@ struct ForgotPasswordEndpoint: Endpoint {
   }
 }
 
-struct LogoutEndpoint: Endpoint {
+nonisolated struct LogoutEndpoint: Endpoint {
   typealias Response = EmptyAPIResponse
 
   let refreshToken: String
@@ -96,7 +96,7 @@ struct LogoutEndpoint: Endpoint {
   }
 }
 
-struct RefreshEndpoint: Endpoint {
+nonisolated struct RefreshEndpoint: Endpoint {
   typealias Response = AuthResponse
 
   let refreshToken: String
@@ -112,7 +112,7 @@ struct RefreshEndpoint: Endpoint {
   }
 }
 
-struct OAuthStartEndpoint: Endpoint {
+nonisolated struct OAuthStartEndpoint: Endpoint {
   typealias Response = OAuthStartResponsePayload
 
   let provider: OAuthProviderKind
@@ -127,7 +127,7 @@ struct OAuthStartEndpoint: Endpoint {
   }
 }
 
-struct OAuthExchangeEndpoint: Endpoint {
+nonisolated struct OAuthExchangeEndpoint: Endpoint {
   typealias Response = AuthLoginOutcomePayload
 
   let provider: OAuthProviderKind
@@ -147,7 +147,7 @@ struct OAuthExchangeEndpoint: Endpoint {
   }
 }
 
-struct MFAVerifyEndpoint: Endpoint {
+nonisolated struct MFAVerifyEndpoint: Endpoint {
   typealias Response = AuthResponse
 
   let payload: AuthMFAVerifyRequestPayload
@@ -164,7 +164,7 @@ struct MFAVerifyEndpoint: Endpoint {
   }
 }
 
-struct MFAResendEndpoint: Endpoint {
+nonisolated struct MFAResendEndpoint: Endpoint {
   typealias Response = AuthMFAChallengeResponsePayload
 
   let payload: AuthMFAResendRequestPayload
