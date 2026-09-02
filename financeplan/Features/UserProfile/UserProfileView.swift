@@ -6,6 +6,7 @@
 //
 
 import Factory
+import Kingfisher
 import PostHog
 import StockPlanShared
 import SwiftUI
@@ -31,6 +32,7 @@ public struct UserProfileView: View {
     @StateObject private var pushNotificationsCoordinator: PushNotificationsCoordinator
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.displayScale) private var displayScale
     @InjectedObservable(\Container.appEnvironment) private var environmentManager
     @InjectedObservable(\Container.billingManager) private var billingManager
     @State private var path: [UserProfileDestination] = []
@@ -798,14 +800,15 @@ public struct UserProfileView: View {
     private func avatarView(_ profile: UserProfile?) -> some View {
         ZStack {
             if let url = profile?.avatarURL {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    default:
-                        avatarPlaceholder(profile)
-                    }
-                }
+                // Kingfisher: cached and downsampled to the 60pt avatar.
+                KFImage(url)
+                    .downsampling(size: CGSize(width: 60, height: 60))
+                    .scaleFactor(displayScale)
+                    .cacheOriginalImage()
+                    .placeholder { avatarPlaceholder(profile) }
+                    .onFailureView { avatarPlaceholder(profile) }
+                    .resizable()
+                    .scaledToFill()
             } else {
                 avatarPlaceholder(profile)
             }

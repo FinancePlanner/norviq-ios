@@ -1,4 +1,5 @@
 import Charts
+import Kingfisher
 import StockPlanShared
 import SwiftUI
 
@@ -1644,6 +1645,7 @@ struct StockCompanyAvatarView: View {
     let companyProfile: CompanyProfileResponse?
     let fallbackText: String
     let colorScheme: ColorScheme
+    @Environment(\.displayScale) private var displayScale
 
     private var logoURL: URL? {
         guard let logo = companyProfile?.logo?.trimmingCharacters(in: .whitespacesAndNewlines), !logo.isEmpty else {
@@ -1659,16 +1661,15 @@ struct StockCompanyAvatarView: View {
     var body: some View {
         ZStack {
             if let logoURL {
-                AsyncImage(url: logoURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    default:
-                        placeholder
-                    }
-                }
+                // Kingfisher: cached and downsampled to the 56pt avatar.
+                KFImage(logoURL)
+                    .downsampling(size: CGSize(width: 56, height: 56))
+                    .scaleFactor(displayScale)
+                    .cacheOriginalImage()
+                    .placeholder { placeholder }
+                    .onFailureView { placeholder }
+                    .resizable()
+                    .scaledToFill()
             } else {
                 placeholder
             }

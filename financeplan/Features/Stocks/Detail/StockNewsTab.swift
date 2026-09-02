@@ -1,4 +1,5 @@
 import Factory
+import Kingfisher
 import StockPlanShared
 import SwiftUI
 
@@ -135,6 +136,14 @@ private struct FeaturedNewsHero: View {
 }
 
 private struct NewsFeedRow: View {
+    @Environment(\.displayScale) private var displayScale
+
+    private var thumbnailPlaceholder: some View {
+        RoundedRectangle(cornerRadius: 10)
+            .fill(AppTheme.Colors.tertiaryFill(for: colorScheme))
+            .overlay(Image(systemName: "photo").font(.caption).foregroundStyle(.secondary))
+    }
+
     let news: StockNews
     let metadata: NewsArticleTrackingMetadata
     @Environment(\.colorScheme) private var colorScheme
@@ -178,15 +187,16 @@ private struct NewsFeedRow: View {
                 Spacer()
 
                 // Thumbnail
-                AsyncImage(url: URL(string: news.imageURL ?? "")) { image in
-                    image.resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(AppTheme.Colors.tertiaryFill(for: colorScheme))
-                        .overlay(Image(systemName: "photo").font(.caption).foregroundStyle(.secondary))
-                }
-                .frame(width: 60, height: 60)
+                // Kingfisher: cached and downsampled to the 60pt thumbnail.
+                KFImage(news.imageURL.flatMap(URL.init(string:)))
+                    .downsampling(size: CGSize(width: 60, height: 60))
+                    .scaleFactor(displayScale)
+                    .cacheOriginalImage()
+                    .placeholder { thumbnailPlaceholder }
+                    .onFailureView { thumbnailPlaceholder }
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 60, height: 60)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .padding(12)

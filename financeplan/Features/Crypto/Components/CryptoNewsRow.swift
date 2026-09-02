@@ -1,8 +1,10 @@
+import Kingfisher
 import SwiftUI
 import StockPlanShared
 
 struct CryptoNewsRow: View {
     let news: StockNews
+    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
         GlassCard(cornerRadius: 12) {
@@ -17,13 +19,17 @@ struct CryptoNewsRow: View {
                 }
                 Spacer()
                 if let imageURL = news.imageURL, let url = URL(string: imageURL) {
-                    AsyncImage(url: url) { image in
-                        image.resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        Color.gray.opacity(0.2)
-                    }
-                    .frame(width: 60, height: 60)
+                    // Kingfisher: disk/memory cached and downsampled to the
+                    // 60pt frame instead of decoding the full-size thumbnail.
+                    KFImage(url)
+                        .downsampling(size: CGSize(width: 60, height: 60))
+                        .scaleFactor(displayScale)
+                        .cacheOriginalImage()
+                        .placeholder { Color.gray.opacity(0.2) }
+                        .onFailureView { Color.gray.opacity(0.2) }
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 60, height: 60)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                 } else {
                     RoundedRectangle(cornerRadius: 8)
