@@ -46,7 +46,7 @@ typealias PortfolioAllocationShareFormatter = PortfolioAllocationScreen.Portfoli
 struct PortfolioAllocationScreen: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.modelContext) private var modelContext
-    @EnvironmentObject private var viewModel: PortfolioViewModel
+    @Environment(PortfolioViewModel.self) private var viewModel
     @State private var selectedMode: PortfolioAllocationMode = .positions
 
     @Query private var stocks: [SDPortfolioStock]

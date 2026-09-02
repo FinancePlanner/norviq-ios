@@ -18,7 +18,7 @@ struct StockDetailScreen: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.modelContext) private var modelContext
     @InjectedObservable(\Container.billingManager) private var billingManager
-    @StateObject private var viewModel = StockDetailsViewModel()
+    @State private var viewModel = StockDetailsViewModel()
     @State private var activeSheet: ActiveSheet?
     @State private var isPaywallPresented = false
     @State private var selectedTab: StockDetailTab = .overview
@@ -281,7 +281,19 @@ struct StockDetailScreen: View {
                     }
                 case .compare:
                     ProGateView(billingManager: billingManager) {
-                        StockCompareTab(viewModel: viewModel)
+                        StockCompareTab(
+                            primaryProfile: viewModel.primaryComparisonProfile,
+                            peerOptions: viewModel.availablePeerProfiles,
+                            comparisonProfiles: viewModel.comparisonProfiles,
+                            selectedPeerProfiles: viewModel.selectedPeerProfiles,
+                            selectedPeerSymbols: viewModel.selectedPeerSymbols,
+                            comparisonChartResponse: viewModel.comparisonChartResponse,
+                            selectedComparisonChartRange: viewModel.selectedComparisonChartRange,
+                            isComparisonChartLoading: viewModel.isComparisonChartLoading,
+                            comparisonChartErrorMessage: viewModel.comparisonChartErrorMessage,
+                            onUpdatePeerSymbol: viewModel.updatePeerSymbol,
+                            onSelectComparisonChartRange: viewModel.switchComparisonChartRange
+                        )
                     }
                 case .news:
                     StockNewsTab(news: viewModel.news, defaultSymbol: viewModel.details?.symbol ?? initialSymbol)

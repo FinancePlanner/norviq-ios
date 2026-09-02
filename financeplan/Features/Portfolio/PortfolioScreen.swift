@@ -16,7 +16,7 @@ struct PortfolioScreen: View {
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.modelContext) private var modelContext
   @Environment(\.scenePhase) private var scenePhase
-  @EnvironmentObject private var viewModel: PortfolioViewModel
+  @Environment(PortfolioViewModel.self) private var viewModel
   @InjectedObservable(\Container.billingManager) private var billingManager
   @Binding var pendingOpenSymbol: String?
   @Binding var pendingThesisWatchOpen: Bool

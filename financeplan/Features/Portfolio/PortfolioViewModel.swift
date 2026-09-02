@@ -1,6 +1,6 @@
-import Combine
 import Factory
 import Foundation
+import Observation
 import OSLog
 import PostHog
 import StockPlanShared
@@ -52,34 +52,35 @@ enum PortfolioTargetAlertDirection: String, CaseIterable, Identifiable {
   }
 }
 
+@Observable
 @MainActor
-final class PortfolioViewModel: ObservableObject {
-  @Published var isLoading = false
-  @Published var errorMessage: String?
-  @Published var editingStock: StockResponse?
-  @Published var isSaving = false
-  @Published var isDeletingStock = false
-  @Published private(set) var cashBalance: Double = 0
-  @Published private(set) var sectorExposure: PortfolioSectorExposureResponse?
-  @Published private(set) var portfolioLists: [PortfolioListDTOResponse] = []
-  @Published var selectedPortfolioListId: String?
-  @Published private(set) var isShowingAllLists: Bool = false
-  @Published private(set) var targetAlertsBySymbol: [String: TargetResponse] = [:]
-  @Published private(set) var isSavingTargetAlert = false
-  @Published private(set) var liveQuotes: [String: QuoteResponse] = [:]
+final class PortfolioViewModel {
+  var isLoading = false
+  var errorMessage: String?
+  var editingStock: StockResponse?
+  var isSaving = false
+  var isDeletingStock = false
+  private(set) var cashBalance: Double = 0
+  private(set) var sectorExposure: PortfolioSectorExposureResponse?
+  private(set) var portfolioLists: [PortfolioListDTOResponse] = []
+  var selectedPortfolioListId: String?
+  private(set) var isShowingAllLists: Bool = false
+  private(set) var targetAlertsBySymbol: [String: TargetResponse] = [:]
+  private(set) var isSavingTargetAlert = false
+  private(set) var liveQuotes: [String: QuoteResponse] = [:]
   /// Daily retail sentiment, keyed by normalized symbol. Same keying as
   /// `liveQuotes`, which is what lets rows join on it.
-  @Published private(set) var sentimentBySymbol: [String: SymbolSentiment] = [:]
-  @Published private(set) var portfolioSentiment: PortfolioSentimentResponse?
-  @Published private(set) var pnlBySymbol: [String: PnlBySymbol] = [:]
+  private(set) var sentimentBySymbol: [String: SymbolSentiment] = [:]
+  private(set) var portfolioSentiment: PortfolioSentimentResponse?
+  private(set) var pnlBySymbol: [String: PnlBySymbol] = [:]
 
   private let service: StockServicing
   private let marketDataService: MarketDataServicing
-  private var localStore: (any PortfolioLocalPersisting)?
-  private var hasLoadedOnce = false
-  private var isRefreshingLiveQuotes = false
-  @Published private(set) var nextCursor: String? = nil
-  @Published private(set) var isLoadingMore = false
+  @ObservationIgnored private var localStore: (any PortfolioLocalPersisting)?
+  @ObservationIgnored private var hasLoadedOnce = false
+  @ObservationIgnored private var isRefreshingLiveQuotes = false
+  private(set) var nextCursor: String? = nil
+  private(set) var isLoadingMore = false
 
   init(
     service: StockServicing,
@@ -184,7 +185,7 @@ final class PortfolioViewModel: ObservableObject {
   }
 
   /// Symbols currently shown in the portfolio (kept for quote refresh even before first batch returns).
-  private var trackedSymbols: Set<String> = []
+  @ObservationIgnored private var trackedSymbols: Set<String> = []
 
   private func symbolsForQuoteRefresh() -> [String] {
     if !trackedSymbols.isEmpty {

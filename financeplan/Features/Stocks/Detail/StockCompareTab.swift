@@ -1,21 +1,26 @@
 import StockPlanShared
 import SwiftUI
 
+/// Takes plain values rather than the view model so it only re-renders when
+/// the comparison inputs change, not on every StockDetailsViewModel mutation.
 struct StockCompareTab: View {
-    @ObservedObject var viewModel: StockDetailsViewModel
+    let primaryProfile: StockComparisonProfile?
+    let peerOptions: [StockComparisonProfile]
+    let comparisonProfiles: [StockComparisonProfile]
+    let selectedPeerProfiles: [StockComparisonProfile]
+    let selectedPeerSymbols: [String]
+    let comparisonChartResponse: PriceChartComparisonResponse?
+    let selectedComparisonChartRange: PriceChartRange
+    let isComparisonChartLoading: Bool
+    let comparisonChartErrorMessage: String?
+    let onUpdatePeerSymbol: (String, Int) -> Void
+    let onSelectComparisonChartRange: (PriceChartRange) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
 
-    private var primaryProfile: StockComparisonProfile? {
-        viewModel.primaryComparisonProfile
-    }
-
-    private var peerOptions: [StockComparisonProfile] {
-        viewModel.availablePeerProfiles
-    }
-
-    private var comparisonProfiles: [StockComparisonProfile] {
-        viewModel.comparisonProfiles
+    private func selectedPeerSymbol(at slot: Int) -> String {
+        guard selectedPeerSymbols.indices.contains(slot) else { return "" }
+        return selectedPeerSymbols[slot]
     }
 
     var body: some View {
@@ -33,18 +38,18 @@ struct StockCompareTab: View {
                         HStack(spacing: 12) {
                             ComparisonPeerPicker(
                                 title: "Peer 1",
-                                selectedSymbol: viewModel.selectedPeerSymbol(at: 0),
+                                selectedSymbol: selectedPeerSymbol(at: 0),
                                 options: peerOptions
                             ) { symbol in
-                                viewModel.updatePeerSymbol(symbol, slot: 0)
+                                onUpdatePeerSymbol(symbol, 0)
                             }
 
                             ComparisonPeerPicker(
                                 title: "Peer 2",
-                                selectedSymbol: viewModel.selectedPeerSymbol(at: 1),
+                                selectedSymbol: selectedPeerSymbol(at: 1),
                                 options: peerOptions
                             ) { symbol in
-                                viewModel.updatePeerSymbol(symbol, slot: 1)
+                                onUpdatePeerSymbol(symbol, 1)
                             }
                         }
 
@@ -55,7 +60,7 @@ struct StockCompareTab: View {
                                 tint: AppTheme.Colors.tint(for: colorScheme)
                             )
 
-                            ForEach(viewModel.selectedPeerProfiles) { peer in
+                            ForEach(selectedPeerProfiles) { peer in
                                 HeroMetricPill(
                                     title: peer.symbol,
                                     value: peer.currentPrice.currency,
@@ -67,12 +72,12 @@ struct StockCompareTab: View {
                 }
 
                 PriceComparisonChartCard(
-                    response: viewModel.comparisonChartResponse,
+                    response: comparisonChartResponse,
                     primarySymbol: primaryProfile.symbol,
-                    selectedRange: viewModel.selectedComparisonChartRange,
-                    isLoading: viewModel.isComparisonChartLoading,
-                    errorMessage: viewModel.comparisonChartErrorMessage,
-                    onSelectRange: viewModel.switchComparisonChartRange
+                    selectedRange: selectedComparisonChartRange,
+                    isLoading: isComparisonChartLoading,
+                    errorMessage: comparisonChartErrorMessage,
+                    onSelectRange: onSelectComparisonChartRange
                 )
 
                 ForEach(StockComparisonMetricGroup.allCases) { group in

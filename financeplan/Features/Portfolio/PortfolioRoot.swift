@@ -10,7 +10,7 @@ struct PortfolioRoot: View {
   @Binding var pendingThesisWatchOpen: Bool
   @Binding var pendingAutomationDestination: AutomationNavigationDestination?
   @InjectedObservable(\Container.billingManager) private var billingManager
-  @StateObject private var portfolioViewModel = PortfolioViewModel()
+  @State private var portfolioViewModel = PortfolioViewModel()
 
   var body: some View {
     NavigationStack {
@@ -18,7 +18,7 @@ struct PortfolioRoot: View {
         pendingOpenSymbol: $pendingOpenSymbol,
         pendingThesisWatchOpen: $pendingThesisWatchOpen
       )
-      .environmentObject(portfolioViewModel)
+      .environment(portfolioViewModel)
       .navigationDestination(item: $pendingAutomationDestination) { destination in
         switch destination {
         case let .smartScreen(id): ProGateView(billingManager: billingManager) { SmartScreeningScreen(

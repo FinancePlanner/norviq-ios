@@ -5,14 +5,15 @@
 //  Created by Fernando Correia on 11.03.26.
 //
 
-import Combine
 import Factory
 import Foundation
+import Observation
 import OSLog
 import StockPlanShared
 
+@Observable
 @MainActor
-final class StockDetailsViewModel: ObservableObject {
+final class StockDetailsViewModel {
     struct SellPositionOutcome {
         let shouldDismiss: Bool
         let errorMessage: String?
@@ -44,65 +45,65 @@ final class StockDetailsViewModel: ObservableObject {
         let isUnsupportedPlan: Bool
     }
 
-    @Published var details: StockDetails?
+    var details: StockDetails?
     /// True when the requested stock id no longer exists on the server (stale
     /// local cache row); the screen should purge the row and pop back.
-    @Published private(set) var isStaleStock = false
-    @Published var history: [StockHistory] = []
-    @Published var news: [StockNews] = []
-    @Published var valuation: StockValuationRequest?
-    @Published private(set) var portfolioSummary: PortfolioSummaryResponse?
-    @Published private(set) var companyProfile: CompanyProfileResponse?
-    @Published private(set) var marketSnapshot: StockMarketSnapshot?
-    @Published private(set) var periodReturns: StockPeriodReturnsResponse?
-    @Published private(set) var analystConsensus: StockAnalystConsensus?
-    @Published private(set) var analystConsensusMessage: String?
-    @Published private(set) var basicFinancials: StockBasicFinancials?
-    @Published private(set) var stockEarnings: [EarningsEvent] = []
-    @Published private(set) var earningsIncomeStatements: [IncomeStatementResponse] = []
-    @Published private(set) var stockEarningsMessage: String?
-    @Published private(set) var isEarningsLoading = false
-    @Published private(set) var tickerSentiment: TickerSentimentResponse?
-    @Published private(set) var isSentimentLoading = false
+    private(set) var isStaleStock = false
+    var history: [StockHistory] = []
+    var news: [StockNews] = []
+    var valuation: StockValuationRequest?
+    private(set) var portfolioSummary: PortfolioSummaryResponse?
+    private(set) var companyProfile: CompanyProfileResponse?
+    private(set) var marketSnapshot: StockMarketSnapshot?
+    private(set) var periodReturns: StockPeriodReturnsResponse?
+    private(set) var analystConsensus: StockAnalystConsensus?
+    private(set) var analystConsensusMessage: String?
+    private(set) var basicFinancials: StockBasicFinancials?
+    private(set) var stockEarnings: [EarningsEvent] = []
+    private(set) var earningsIncomeStatements: [IncomeStatementResponse] = []
+    private(set) var stockEarningsMessage: String?
+    private(set) var isEarningsLoading = false
+    private(set) var tickerSentiment: TickerSentimentResponse?
+    private(set) var isSentimentLoading = false
     /// The broad daily aggregate. A separate population and window from
     /// `tickerSentiment` above, which samples notable accounts only.
-    @Published private(set) var dailySentiment: SymbolSentiment?
-    @Published private(set) var sentimentHistory: [SymbolSentiment] = []
-    @Published private(set) var selectedEarningsTranscript: EarningsTranscript?
-    @Published private(set) var earningsTranscriptMessage: String?
-    @Published private(set) var isEarningsTranscriptLoading = false
-    @Published private(set) var analysisMetrics: StockAnalysisMetrics?
-    @Published private(set) var analysisMetricsMessage: String?
-    @Published private(set) var financialStatements: StockFinancialStatements?
-    @Published private(set) var financialStatementsMessage: String?
-    @Published private(set) var primaryComparisonProfile: StockComparisonProfile?
-    @Published private(set) var comparisonUniverse: [StockComparisonProfile] = []
-    @Published private(set) var selectedPeerSymbols: [String] = []
-    @Published var isLoading = false
-    @Published var isSavingPosition = false
-    @Published var isDeletingPosition = false
-    @Published var isSellingPosition = false
-    @Published var errorMessage: String?
+    private(set) var dailySentiment: SymbolSentiment?
+    private(set) var sentimentHistory: [SymbolSentiment] = []
+    private(set) var selectedEarningsTranscript: EarningsTranscript?
+    private(set) var earningsTranscriptMessage: String?
+    private(set) var isEarningsTranscriptLoading = false
+    private(set) var analysisMetrics: StockAnalysisMetrics?
+    private(set) var analysisMetricsMessage: String?
+    private(set) var financialStatements: StockFinancialStatements?
+    private(set) var financialStatementsMessage: String?
+    private(set) var primaryComparisonProfile: StockComparisonProfile?
+    private(set) var comparisonUniverse: [StockComparisonProfile] = []
+    private(set) var selectedPeerSymbols: [String] = []
+    var isLoading = false
+    var isSavingPosition = false
+    var isDeletingPosition = false
+    var isSellingPosition = false
+    var errorMessage: String?
 
     // Price chart state
-    @Published private(set) var chartSeries: PriceChartSeries?
-    @Published private(set) var isChartLoading = false
-    @Published private(set) var chartErrorMessage: String?
-    @Published var selectedChartRange: PriceChartRange = .oneDay
+    private(set) var chartSeries: PriceChartSeries?
+    private(set) var isChartLoading = false
+    private(set) var chartErrorMessage: String?
+    var selectedChartRange: PriceChartRange = .oneDay
 
     // Comparison Chart State
-    @Published private(set) var comparisonChartResponse: PriceChartComparisonResponse?
-    @Published private(set) var isComparisonChartLoading = false
-    @Published private(set) var comparisonChartErrorMessage: String?
-    @Published var selectedComparisonChartRange: PriceChartRange = .oneYear
+    private(set) var comparisonChartResponse: PriceChartComparisonResponse?
+    private(set) var isComparisonChartLoading = false
+    private(set) var comparisonChartErrorMessage: String?
+    var selectedComparisonChartRange: PriceChartRange = .oneYear
 
     private let service: StockServicing
     private let marketDataService: MarketDataServicing
-    private var loadedTabs: Set<StockDetailTab> = []
-    private var loadingTabs: Set<StockDetailTab> = []
-    private var comparisonRefreshTask: Task<Void, Never>?
-    private var loadedStockID: String?
-    private var isRefreshingQuote = false
+    @ObservationIgnored private var loadedTabs: Set<StockDetailTab> = []
+    @ObservationIgnored private var loadingTabs: Set<StockDetailTab> = []
+    @ObservationIgnored private var comparisonRefreshTask: Task<Void, Never>?
+    @ObservationIgnored private var loadedStockID: String?
+    @ObservationIgnored private var isRefreshingQuote = false
 
     var shareSnapshot: StockShareSnapshot? {
         guard let details else { return nil }
