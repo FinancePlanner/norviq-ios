@@ -5,8 +5,11 @@ import XCTest
 
 @MainActor
 final class MarketDataServiceTests: XCTestCase {
-  private final class SessionMock: MarketDataURLSessionProtocol, @unchecked Sendable {
-    var handler: ((URLRequest) throws -> (Data, URLResponse))?
+  // Nonisolated: BaseHTTPClient sends requests from a @concurrent context, so
+  // the session witness and its handler must not be main-actor-bound (the
+  // enclosing XCTestCase is @MainActor).
+  nonisolated private final class SessionMock: MarketDataURLSessionProtocol, @unchecked Sendable {
+    var handler: (@Sendable (URLRequest) throws -> (Data, URLResponse))?
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
       guard let handler else {
@@ -125,7 +128,7 @@ final class MarketDataServiceTests: XCTestCase {
       weburl: "https://investors.zetaglobal.com/"
     )
 
-    var requestCount = 0
+    nonisolated(unsafe) var requestCount = 0
     session.handler = { request in
       requestCount += 1
       let response = try XCTUnwrap(HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil))
@@ -154,7 +157,7 @@ final class MarketDataServiceTests: XCTestCase {
       authSessionManager: authSessionManager
     )
 
-    var requests = 0
+    nonisolated(unsafe) var requests = 0
     session.handler = { request in
       requests += 1
 
@@ -445,7 +448,7 @@ final class MarketDataServiceTests: XCTestCase {
       authSessionManager: authSessionManager
     )
     let requestedPathsLock = NSLock()
-    var requestedPaths: Set<String> = []
+    nonisolated(unsafe) var requestedPaths: Set<String> = []
 
     session.handler = { request in
       _ = requestedPathsLock.withLock {
