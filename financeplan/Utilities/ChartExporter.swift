@@ -2,14 +2,17 @@ import SwiftUI
 
 @MainActor
 class ChartExporter {
+  /// `scale` should come from the presenting view's `\.displayScale`
+  /// environment; `UIScreen.main` is deprecated and wrong on external displays.
   static func exportToImage<Content: View>(
     _ content: Content,
-    size: CGSize = CGSize(width: 800, height: 600)
+    size: CGSize = CGSize(width: 800, height: 600),
+    scale: CGFloat
   ) -> UIImage? {
     let renderer = ImageRenderer(content:
       content.frame(width: size.width, height: size.height)
     )
-    renderer.scale = UIScreen.main.scale
+    renderer.scale = scale
     return renderer.uiImage
   }
 }
@@ -17,6 +20,7 @@ class ChartExporter {
 struct ShareableChartView<Content: View>: View {
   let title: String
   let content: Content
+  @Environment(\.displayScale) private var displayScale
   @State private var exportedChart: ExportedChart?
 
   /// The rendered image, as a presentation payload rather than a bool plus a
@@ -67,7 +71,7 @@ struct ShareableChartView<Content: View>: View {
     .padding(24)
     .background(Color(uiColor: .systemBackground))
 
-    guard let image = ChartExporter.exportToImage(exportView) else { return }
+    guard let image = ChartExporter.exportToImage(exportView, scale: displayScale) else { return }
     exportedChart = ExportedChart(image: image)
   }
 }

@@ -111,7 +111,7 @@ private struct BudgetCategoryCard: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(pillar.color(for: colorScheme).opacity(0.15))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .foregroundStyle(pillar.color(for: colorScheme))
           }
           
@@ -124,7 +124,7 @@ private struct BudgetCategoryCard: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(AppTheme.Colors.tertiaryFill)
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .foregroundStyle(.primary)
           }
         }
@@ -179,7 +179,7 @@ private struct MetricItem: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(12)
     .background(AppTheme.Colors.tertiaryFill)
-    .cornerRadius(10)
+    .clipShape(.rect(cornerRadius: 10))
   }
 }
 

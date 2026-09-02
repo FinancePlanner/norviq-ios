@@ -725,7 +725,7 @@ private struct PillarSummaryCard: View {
       .padding(16)
     }
     .background(Color(uiColor: .secondarySystemGroupedBackground))
-    .cornerRadius(16)
+    .clipShape(.rect(cornerRadius: 16))
     .overlay(
       RoundedRectangle(cornerRadius: 16)
         .stroke(AppTheme.Colors.separator, lineWidth: 1)
@@ -752,7 +752,7 @@ private struct PillarMetricItem: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(12)
     .background(AppTheme.Colors.tertiaryFill)
-    .cornerRadius(10)
+    .clipShape(.rect(cornerRadius: 10))
   }
 }
 
@@ -2011,7 +2011,7 @@ private struct MonthPickerHeader: View {
     .padding(.vertical, 8)
     .padding(.horizontal, 8)
     .background(AppTheme.Colors.tertiaryFill)
-    .cornerRadius(12)
+    .clipShape(.rect(cornerRadius: 12))
   }
 
   private func selectPreviousMonth() {

@@ -77,8 +77,9 @@ struct NorviqApp: App {
     WindowGroup {
       ContentView()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .id(appLanguage.localeIdentifier)
-        .id(environmentManager.current)
+        // One identity keyed on both values: two stacked .id() modifiers reset
+        // the subtree twice (once per layer) when either input changes.
+        .id(RootIdentity(locale: appLanguage.localeIdentifier, environment: environmentManager.current))
         .environment(sessionManager)
         .environment(\.locale, Locale(identifier: appLanguage.localeIdentifier))
         .preferredColorScheme(appAppearance.colorScheme)
@@ -107,6 +108,13 @@ struct NorviqApp: App {
     UserDefaults.standard.set(appearance.rawValue, forKey: AppAppearance.storageKey)
   }
   #endif
+}
+
+/// Identity of the root view: changing the locale or the API environment
+/// rebuilds the whole tree once.
+private struct RootIdentity: Hashable {
+  let locale: String
+  let environment: AppEnvironment
 }
 
 /// Applies the brand tint using the *resolved* colour scheme.

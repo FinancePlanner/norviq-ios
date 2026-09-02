@@ -265,6 +265,7 @@ private struct IdentifiedImage: Identifiable {
 }
 
 private struct ShareableChartButton<Content: View>: View {
+  @Environment(\.displayScale) private var displayScale
   let title: String
   @ViewBuilder let content: Content
   @State private var exportedImage: IdentifiedImage?
@@ -291,7 +292,7 @@ private struct ShareableChartButton<Content: View>: View {
     .padding(24)
     .background(Color(uiColor: .systemBackground))
 
-    if let image = ChartExporter.exportToImage(exportView, size: CGSize(width: 800, height: 600)) {
+    if let image = ChartExporter.exportToImage(exportView, size: CGSize(width: 800, height: 600), scale: displayScale) {
       exportedImage = IdentifiedImage(uiImage: image)
     }
   }
@@ -479,27 +480,25 @@ private struct SpendingInsightsSection: View {
 
     Chart {
       ForEach(pillarSummaries.sorted(by: { $0.actualAmount > $1.actualAmount }), id: \.pillar) { summary in
-        if #available(iOS 17.0, *) {
-          SectorMark(
-            angle: .value("Amount", summary.actualAmount),
-            angularInset: 1
-          )
-          .foregroundStyle(summary.pillar.color(for: colorScheme))
-          .annotation(position: .overlay) {
-              let total = latest.actual
-              let percent = total > 0 ? (summary.actualAmount / total) * 100 : 0
-              if percent > 5 {
-                  VStack {
-                      Text(summary.pillar.title)
-                          .typography(.nano, weight: .bold)
-                      Text("\(Int(percent))%")
-                          .typography(.nano)
-                  }
-                  .foregroundStyle(.primary)
-                  .padding(4)
-                  .background(AppTheme.Colors.tertiaryFill, in: .rect(cornerRadius: 4))
-              }
-          }
+        SectorMark(
+          angle: .value("Amount", summary.actualAmount),
+          angularInset: 1
+        )
+        .foregroundStyle(summary.pillar.color(for: colorScheme))
+        .annotation(position: .overlay) {
+            let total = latest.actual
+            let percent = total > 0 ? (summary.actualAmount / total) * 100 : 0
+            if percent > 5 {
+                VStack {
+                    Text(summary.pillar.title)
+                        .typography(.nano, weight: .bold)
+                    Text("\(Int(percent))%")
+                        .typography(.nano)
+                }
+                .foregroundStyle(.primary)
+                .padding(4)
+                .background(AppTheme.Colors.tertiaryFill, in: .rect(cornerRadius: 4))
+            }
         }
       }
     }
@@ -680,38 +679,28 @@ private struct AllocationInsightsSection: View {
           if let sectors = stats?.sectorAllocations, !sectors.isEmpty {
             ZStack {
                 Chart(sectors, id: \.sector) { item in
-                  if #available(iOS 17.0, *) {
-                      SectorMark(
-                        angle: .value("Weight", item.weightPercent),
-                        innerRadius: .ratio(0.6),
-                        angularInset: 1
-                      )
-                      .foregroundStyle(color(for: item.sector, colorScheme: colorScheme))
-                      .annotation(position: .overlay) {
-                          if item.weightPercent > 5 {
-                              Text("\(Int(item.weightPercent))%")
-                                  .typography(.nano, weight: .bold)
-                                  .foregroundStyle(.white)
-                          }
+                  SectorMark(
+                    angle: .value("Weight", item.weightPercent),
+                    innerRadius: .ratio(0.6),
+                    angularInset: 1
+                  )
+                  .foregroundStyle(color(for: item.sector, colorScheme: colorScheme))
+                  .annotation(position: .overlay) {
+                      if item.weightPercent > 5 {
+                          Text("\(Int(item.weightPercent))%")
+                              .typography(.nano, weight: .bold)
+                              .foregroundStyle(.white)
                       }
-                  } else {
-                      BarMark(
-                        x: .value("Weight", item.weightPercent),
-                        y: .value("Sector", item.sector)
-                      )
-                      .foregroundStyle(color(for: item.sector, colorScheme: colorScheme))
                   }
                 }
                 .frame(minHeight: 220)
 
-                if #available(iOS 17.0, *) {
-                    VStack {
-                        Text("Total Value")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text((stats?.totalMarketValue ?? 0).formatted(.currency(code: "USD")))
-                            .font(.headline.bold())
-                    }
+                VStack {
+                    Text("Total Value")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text((stats?.totalMarketValue ?? 0).formatted(.currency(code: "USD")))
+                        .font(.headline.bold())
                 }
             }
 
@@ -822,23 +811,21 @@ private struct PerformanceBreakdownCard: View {
 
           if winnersValue + losersValue > 0 {
             Chart {
-              if #available(iOS 17.0, *) {
-                SectorMark(
-                  angle: .value("Amount", winnersValue),
-                  innerRadius: .ratio(0.6),
-                  outerRadius: .ratio(1.0),
-                  angularInset: 2
-                )
-                .foregroundStyle(.green.gradient)
+              SectorMark(
+                angle: .value("Amount", winnersValue),
+                innerRadius: .ratio(0.6),
+                outerRadius: .ratio(1.0),
+                angularInset: 2
+              )
+              .foregroundStyle(.green.gradient)
 
-                SectorMark(
-                  angle: .value("Amount", losersValue),
-                  innerRadius: .ratio(0.6),
-                  outerRadius: .ratio(1.0),
-                  angularInset: 2
-                )
-                .foregroundStyle(.red.gradient)
-              }
+              SectorMark(
+                angle: .value("Amount", losersValue),
+                innerRadius: .ratio(0.6),
+                outerRadius: .ratio(1.0),
+                angularInset: 2
+              )
+              .foregroundStyle(.red.gradient)
             }
             .frame(minHeight: 180)
             .overlay {
@@ -929,24 +916,22 @@ private struct BudgetTrackingCard: View {
             }
 
             Chart {
-              if #available(iOS 17.0, *) {
+              SectorMark(
+                angle: .value("Amount", latest.actual),
+                innerRadius: .ratio(0.6),
+                outerRadius: .ratio(1.0),
+                angularInset: 2
+              )
+              .foregroundStyle(latest.actual > latest.planned ? Color.red.gradient : AppTheme.Colors.tint(for: colorScheme).gradient)
+
+              if latest.planned > latest.actual {
                 SectorMark(
-                  angle: .value("Amount", latest.actual),
+                  angle: .value("Amount", latest.planned - latest.actual),
                   innerRadius: .ratio(0.6),
                   outerRadius: .ratio(1.0),
                   angularInset: 2
                 )
-                .foregroundStyle(latest.actual > latest.planned ? Color.red.gradient : AppTheme.Colors.tint(for: colorScheme).gradient)
-
-                if latest.planned > latest.actual {
-                  SectorMark(
-                    angle: .value("Amount", latest.planned - latest.actual),
-                    innerRadius: .ratio(0.6),
-                    outerRadius: .ratio(1.0),
-                    angularInset: 2
-                  )
-                  .foregroundStyle(Color.gray.opacity(0.3))
-                }
+                .foregroundStyle(Color.gray.opacity(0.3))
               }
             }
             .frame(minHeight: 180)
@@ -1053,23 +1038,21 @@ private struct SavingsRateCard: View {
             }
 
             Chart {
-              if #available(iOS 17.0, *) {
-                SectorMark(
-                  angle: .value("Amount", savingsAmount > 0 ? savingsAmount : 0),
-                  innerRadius: .ratio(0.6),
-                  outerRadius: .ratio(1.0),
-                  angularInset: 2
-                )
-                .foregroundStyle(.green.gradient)
+              SectorMark(
+                angle: .value("Amount", savingsAmount > 0 ? savingsAmount : 0),
+                innerRadius: .ratio(0.6),
+                outerRadius: .ratio(1.0),
+                angularInset: 2
+              )
+              .foregroundStyle(.green.gradient)
 
-                SectorMark(
-                  angle: .value("Amount", latest.actual),
-                  innerRadius: .ratio(0.6),
-                  outerRadius: .ratio(1.0),
-                  angularInset: 2
-                )
-                .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme).gradient)
-              }
+              SectorMark(
+                angle: .value("Amount", latest.actual),
+                innerRadius: .ratio(0.6),
+                outerRadius: .ratio(1.0),
+                angularInset: 2
+              )
+              .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme).gradient)
             }
             .frame(minHeight: 180)
             .overlay {
