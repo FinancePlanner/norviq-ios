@@ -63,31 +63,47 @@ private struct MacroNewsRow: View {
 /// Defensive ISO/date-string parsing: an unparseable date hides the
 /// timestamp, never the row.
 enum MacroNewsDateFormatting {
-  nonisolated static func relative(from raw: String) -> String? {
-    guard let date = parse(raw) else { return nil }
+  // Formatters are built once, not per row. They're documented thread-safe
+  // but not annotated Sendable, hence nonisolated(unsafe); never mutate them
+  // after construction.
+  nonisolated(unsafe) private static let relativeFormatter: RelativeDateTimeFormatter = {
     let formatter = RelativeDateTimeFormatter()
     formatter.unitsStyle = .abbreviated
-    return formatter.localizedString(for: date, relativeTo: Date())
+    return formatter
+  }()
+
+  nonisolated(unsafe) private static let isoWithFraction: ISO8601DateFormatter = {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return formatter
+  }()
+
+  nonisolated(unsafe) private static let iso = ISO8601DateFormatter()
+
+  nonisolated(unsafe) private static let fallbackDateTime = makeUTCFormatter("yyyy-MM-dd HH:mm:ss")
+  nonisolated(unsafe) private static let fallbackDate = makeUTCFormatter("yyyy-MM-dd")
+
+  nonisolated private static func makeUTCFormatter(_ format: String) -> DateFormatter {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(identifier: "UTC")
+    formatter.dateFormat = format
+    return formatter
+  }
+
+  nonisolated static func relative(from raw: String) -> String? {
+    guard let date = parse(raw) else { return nil }
+    return relativeFormatter.localizedString(for: date, relativeTo: Date())
   }
 
   nonisolated static func parse(_ raw: String) -> Date? {
     let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return nil }
 
-    let isoWithFraction = ISO8601DateFormatter()
-    isoWithFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     if let date = isoWithFraction.date(from: trimmed) { return date }
-
-    let iso = ISO8601DateFormatter()
     if let date = iso.date(from: trimmed) { return date }
-
-    let fallback = DateFormatter()
-    fallback.locale = Locale(identifier: "en_US_POSIX")
-    fallback.timeZone = TimeZone(identifier: "UTC")
-    for format in ["yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd"] {
-      fallback.dateFormat = format
-      if let date = fallback.date(from: trimmed) { return date }
-    }
+    if let date = fallbackDateTime.date(from: trimmed) { return date }
+    if let date = fallbackDate.date(from: trimmed) { return date }
     return nil
   }
 }

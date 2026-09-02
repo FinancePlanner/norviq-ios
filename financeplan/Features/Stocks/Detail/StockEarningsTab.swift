@@ -2,6 +2,22 @@ import Factory
 import StockPlanShared
 import SwiftUI
 
+/// Formatters built once per process instead of per row (audit I8). Same
+/// default locale/time zone as the per-call formatters they replace.
+private enum EarningsTabDateFormatterCache {
+    static let isoDay: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    static let mediumDay: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy"
+        return formatter
+    }()
+}
+
 struct StockEarningsTab: View {
     let symbol: String
     let earnings: [EarningsEvent]
@@ -190,11 +206,8 @@ struct EarningsTableRow: View {
     }
 
     private func formatDisplayDate(_ rawDate: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        guard let date = formatter.date(from: String(rawDate.prefix(10))) else { return rawDate }
-        formatter.dateFormat = "MMM d, yyyy"
-        return formatter.string(from: date)
+        guard let date = EarningsTabDateFormatterCache.isoDay.date(from: String(rawDate.prefix(10))) else { return rawDate }
+        return EarningsTabDateFormatterCache.mediumDay.string(from: date)
     }
 
     private func formattedEPS(_ value: Double?) -> String {
@@ -284,11 +297,8 @@ struct EarningsTranscriptSheet: View {
     }
 
     private func formatDisplayDate(_ rawDate: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        guard let date = formatter.date(from: String(rawDate.prefix(10))) else { return rawDate }
-        formatter.dateFormat = "MMM d, yyyy"
-        return formatter.string(from: date)
+        guard let date = EarningsTabDateFormatterCache.isoDay.date(from: String(rawDate.prefix(10))) else { return rawDate }
+        return EarningsTabDateFormatterCache.mediumDay.string(from: date)
     }
 }
 

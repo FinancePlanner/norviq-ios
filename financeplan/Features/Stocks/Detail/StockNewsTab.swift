@@ -47,6 +47,15 @@ struct StockNewsTab: View {
     }
 }
 
+/// Formatters built once per process instead of per row (audit I8).
+private enum NewsDateFormatterCache {
+    static let isoWithFractionalSeconds: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+}
+
 struct NewsArticleTrackingMetadata: Equatable {
     let newsId: String?
     let symbol: String?
@@ -115,9 +124,7 @@ private struct FeaturedNewsHero: View {
     }
 
     private func formatRelativeDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = formatter.date(from: dateString) else { return dateString }
+        guard let date = NewsDateFormatterCache.isoWithFractionalSeconds.date(from: dateString) else { return dateString }
 
         let now = Date()
         let diff = now.timeIntervalSince(date)
@@ -206,9 +213,7 @@ private struct NewsFeedRow: View {
     }
 
     private func formatRelativeDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = formatter.date(from: dateString) else { return dateString }
+        guard let date = NewsDateFormatterCache.isoWithFractionalSeconds.date(from: dateString) else { return dateString }
 
         let now = Date()
         let diff = now.timeIntervalSince(date)

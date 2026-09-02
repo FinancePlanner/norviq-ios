@@ -215,12 +215,17 @@ struct GoalDetailScreen: View {
     }
   }
 
-  private static func date(_ value: String) -> Date {
+  // Built once per process rather than per call (audit I8).
+  private static let isoDayFormatter: DateFormatter = {
     let formatter = DateFormatter()
     formatter.calendar = Calendar(identifier: .gregorian)
     formatter.locale = Locale(identifier: "en_US_POSIX")
     formatter.dateFormat = "yyyy-MM-dd"
-    return formatter.date(from: value) ?? Date()
+    return formatter
+  }()
+
+  private static func date(_ value: String) -> Date {
+    isoDayFormatter.date(from: value) ?? Date()
   }
 }
 

@@ -67,14 +67,23 @@ struct EarningsTrendCharts: View {
         }
     }
 
+    // Built once per process rather than per bar (audit I8).
+    private static let quarterParser: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    private static let quarterDisplay: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM ''yy"
+        return formatter
+    }()
+
     private func quarterLabel(_ rawDate: String) -> String {
-        let parser = DateFormatter()
-        parser.dateFormat = "yyyy-MM-dd"
-        guard let date = parser.date(from: String(rawDate.prefix(10))) else {
+        guard let date = Self.quarterParser.date(from: String(rawDate.prefix(10))) else {
             return String(rawDate.prefix(7))
         }
-        let display = DateFormatter()
-        display.dateFormat = "MMM ''yy"
-        return display.string(from: date)
+        return Self.quarterDisplay.string(from: date)
     }
 }

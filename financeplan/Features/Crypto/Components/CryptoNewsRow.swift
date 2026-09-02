@@ -40,10 +40,15 @@ struct CryptoNewsRow: View {
         }
     }
 
-    private func formatRelativeDate(_ dateString: String) -> String {
+    // Built once per process rather than per row (audit I8).
+    private static let isoParser: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = formatter.date(from: dateString) else { return dateString }
+        return formatter
+    }()
+
+    private func formatRelativeDate(_ dateString: String) -> String {
+        guard let date = Self.isoParser.date(from: dateString) else { return dateString }
         let diff = Date().timeIntervalSince(date)
         if diff < 3600 { return "\(Int(diff / 60))m ago" }
         if diff < 86400 { return "\(Int(diff / 3600))h ago" }
