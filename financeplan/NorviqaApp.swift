@@ -34,13 +34,15 @@ struct NorviqApp: App {
     AppLanguage.from(appLanguageRawValue)
   }
 
+  /// Analytics SDKs start after the first frame (see `startAnalyticsIfNeeded`).
+  /// Sentry stays in `init` so crash reporting covers launch itself.
+  private static var hasStartedAnalytics = false
+
   init() {
     #if DEBUG
     Self.applyUITestAppearanceOverride()
     #endif
 
-    TelemetryDeck.initialize(config: .init(appID: "C2B05381-D641-4BE4-B418-5AE02A8DB85F"))
-    
     // Initialize Sentry
     if let dsn = Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String, !dsn.isEmpty {
       #if DEBUG
@@ -64,6 +66,19 @@ struct NorviqApp: App {
     }
 
     AppLanguage.applyStoredLanguage()
+  }
+
+  /// TelemetryDeck and PostHog used to be set up synchronously in `init`,
+  /// ahead of the first frame (audit I12). They now start from the root
+  /// view's `.task`, once per process; the root view's identity can change
+  /// (locale / environment switch), so the guard is a static flag rather
+  /// than view state.
+  private func startAnalyticsIfNeeded() {
+    guard !Self.hasStartedAnalytics else { return }
+    Self.hasStartedAnalytics = true
+
+    TelemetryDeck.initialize(config: .init(appID: "C2B05381-D641-4BE4-B418-5AE02A8DB85F"))
+
     let token = PostHogEnv.projectToken.value
     let host = PostHogEnv.host.value
     if !token.isEmpty, !host.isEmpty {
@@ -71,6 +86,8 @@ struct NorviqApp: App {
       config.captureApplicationLifecycleEvents = true
       PostHogSDK.shared.setup(config)
     }
+
+    analytics.track("App Launched")
   }
 
   var body: some Scene {
@@ -89,7 +106,9 @@ struct NorviqApp: App {
         .modifier(AppTintModifier())
         .onAppear {
           AppLanguage.applyStoredLanguage()
-          analytics.track("App Launched")
+        }
+        .task {
+          startAnalyticsIfNeeded()
         }
         .onChange(of: appLanguageRawValue) { _, newValue in
           AppLanguage.applyBundleLanguage(AppLanguage.from(newValue))
