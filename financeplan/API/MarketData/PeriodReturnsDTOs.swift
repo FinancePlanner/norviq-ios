@@ -38,7 +38,7 @@ enum PeriodReturnFormatting: Sendable {
   }
 }
 
-nonisolated enum PeriodReturnsFromChart: Sendable {
+enum PeriodReturnsFromChart: Sendable {
   private static let maxStartSlip: TimeInterval = 10 * 24 * 60 * 60
 
   nonisolated static func derive(
@@ -96,15 +96,15 @@ nonisolated enum PeriodReturnsFromChart: Sendable {
     onOrNear start: Date,
     in dated: [(date: Date, close: Double)]
   ) -> Double? {
-    let candidates = [
-      dated.last(where: { $0.date <= start }),
-      dated.first(where: { $0.date >= start }),
-    ]
-    .compactMap { $0 }
-    .map { (distance: abs($0.date.timeIntervalSince(start)), close: $0.close) }
-    .filter { $0.distance <= maxStartSlip }
-
-    return candidates.min(by: { $0.distance < $1.distance })?.close
+    if let before = dated.last(where: { $0.date <= start }) {
+      return before.close
+    }
+    if let after = dated.first(where: { $0.date >= start }),
+       after.date.timeIntervalSince(start) <= maxStartSlip
+    {
+      return after.close
+    }
+    return nil
   }
 
   private nonisolated static func utcCalendar() -> Calendar {
