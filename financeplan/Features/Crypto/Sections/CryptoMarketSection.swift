@@ -5,7 +5,7 @@ struct CryptoMarketSection: View {
     @ObservedObject var viewModel: CryptoViewModel
 
     var body: some View {
-        VStack(spacing: 0) {
+        LazyVStack(spacing: 0) {
             ForEach(viewModel.topAssets) { asset in
                 NavigationLink(value: CryptoDetailRoute(symbol: asset.symbol, name: asset.name)) {
                     CryptoListRow(asset: asset)

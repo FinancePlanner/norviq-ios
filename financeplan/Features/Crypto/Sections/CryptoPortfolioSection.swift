@@ -30,7 +30,7 @@ struct CryptoPortfolioSection: View {
                     .font(.headline)
                     .padding(.horizontal)
 
-                VStack(spacing: 12) {
+                LazyVStack(spacing: 12) {
                     ForEach(viewModel.userHoldings) { holding in
                         let currentPrice = viewModel.topAssets.first(where: { $0.symbol == holding.symbol })?.price
                         CryptoHoldingRow(holding: holding, currentPrice: currentPrice)

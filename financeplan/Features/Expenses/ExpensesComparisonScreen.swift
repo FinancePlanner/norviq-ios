@@ -235,7 +235,9 @@ private struct ReportContentView<CardContent: View>: View {
   let cardContent: (ReportCard) -> CardContent
 
   var body: some View {
-    VStack(spacing: 24) {
+    // Lazy: report cards are heavy (charts) and ReportCardsSection is a bare
+    // ForEach, so it flattens into this stack and cards build as they scroll in.
+    LazyVStack(spacing: 24) {
       if isShowingLoadingState {
         ProgressView()
           .padding(.top, 40)

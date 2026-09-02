@@ -118,7 +118,7 @@ struct CryptoHomeView: View {
 
     private var proContent: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            LazyVStack(spacing: 24) {
                 VigilPageHeader(
                     watch: .wealth,
                     title: "Crypto"

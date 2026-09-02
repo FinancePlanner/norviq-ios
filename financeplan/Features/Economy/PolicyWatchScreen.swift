@@ -32,7 +32,7 @@ struct PolicyWatchScreen: View {
 
   var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 16) {
+      LazyVStack(alignment: .leading, spacing: 16) {
         VigilPageHeader(
           watch: .intelligence,
           title: "Policy Watch"
