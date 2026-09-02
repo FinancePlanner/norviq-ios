@@ -71,7 +71,7 @@ struct PortfolioPositionsSection: View {
 
 /// Decides whether a row appearing should request the next page: only the
 /// last row of the currently loaded list is a sentinel.
-enum PortfolioPaginationSentinel {
+nonisolated enum PortfolioPaginationSentinel {
   static func shouldLoadMore<ID: Equatable>(appearing id: ID, lastID: ID?) -> Bool {
     guard let lastID else { return false }
     return id == lastID

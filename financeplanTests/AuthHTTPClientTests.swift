@@ -5,9 +5,10 @@ import XCTest
 
 @MainActor
 final class AuthHTTPClientTests: XCTestCase {
-  @MainActor
-  private final class SessionMock: HTTPClientSession, @unchecked Sendable {
-    var handler: ((URLRequest) throws -> (Data, URLResponse))?
+  // Nonisolated: BaseHTTPClient sends requests from a @concurrent context, so
+  // the session witness must not be main-actor-bound.
+  nonisolated private final class SessionMock: HTTPClientSession, @unchecked Sendable {
+    var handler: (@Sendable (URLRequest) throws -> (Data, URLResponse))?
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
       guard let handler else {
@@ -282,7 +283,8 @@ final class AuthHTTPClientTests: XCTestCase {
   func testLogout_WhenV2Returns404_FallsBackToAuthLogout() async throws {
     let session = SessionMock()
     let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
-    var requestedURLs: [String] = []
+    // Handlers run off the main actor (BaseHTTPClient sends from @concurrent).
+    nonisolated(unsafe) var requestedURLs: [String] = []
 
     session.handler = { request in
       let url = try XCTUnwrap(request.url).absoluteString

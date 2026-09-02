@@ -5,9 +5,10 @@ import XCTest
 
 @MainActor
 final class BrokerServiceTests: XCTestCase {
-  @MainActor
-  private final class SessionMock: HTTPClientSession, @unchecked Sendable {
-    var handler: ((URLRequest) throws -> (Data, URLResponse))?
+  // Nonisolated: BaseHTTPClient sends requests from a @concurrent context, so
+  // the session witness must not be main-actor-bound.
+  nonisolated private final class SessionMock: HTTPClientSession, @unchecked Sendable {
+    var handler: (@Sendable (URLRequest) throws -> (Data, URLResponse))?
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
       guard let handler else {
@@ -71,6 +72,7 @@ final class BrokerServiceTests: XCTestCase {
       authorizationURL: "https://api.example.com/v1/auth/brokers/ibkr/callback?flowId=1&state=abc",
       expiresIn: 600
     )
+    let expectedData = try JSONEncoder().encode(expected)
 
     session.handler = { request in
       XCTAssertEqual(request.httpMethod, "POST")
@@ -79,7 +81,7 @@ final class BrokerServiceTests: XCTestCase {
       let response = try XCTUnwrap(
         HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
       )
-      return (try JSONEncoder().encode(expected), response)
+      return (expectedData, response)
     }
 
     let response = try await client.startIBKRConnect(
@@ -103,6 +105,9 @@ final class BrokerServiceTests: XCTestCase {
       items: [.init(line: 2, symbol: "AAPL", shares: 10, buyPrice: 120, buyDate: "2026-01-10", notes: nil)],
       errors: []
     )
+    // Encode on the main actor: the handler runs off it and these DTOs'
+    // Codable conformances are main-actor-isolated in the app target.
+    let expectedData = try JSONEncoder().encode(expected)
 
     session.handler = { request in
       XCTAssertEqual(request.httpMethod, "POST")
@@ -130,7 +135,7 @@ final class BrokerServiceTests: XCTestCase {
           headerFields: nil
         )
       )
-      return (try JSONEncoder().encode(expected), response)
+      return (expectedData, response)
     }
 
     let response = try await client.previewCsvImport(
@@ -156,6 +161,9 @@ final class BrokerServiceTests: XCTestCase {
       updated: [],
       errors: []
     )
+    // Encode on the main actor: the handler runs off it and these DTOs'
+    // Codable conformances are main-actor-isolated in the app target.
+    let expectedData = try JSONEncoder().encode(expected)
 
     session.handler = { request in
       XCTAssertEqual(request.httpMethod, "POST")
@@ -183,7 +191,7 @@ final class BrokerServiceTests: XCTestCase {
           headerFields: nil
         )
       )
-      return (try JSONEncoder().encode(expected), response)
+      return (expectedData, response)
     }
 
     let response = try await client.commitCsvImport(
@@ -208,6 +216,9 @@ final class BrokerServiceTests: XCTestCase {
       items: [.init(line: 2, symbol: "AAPL", shares: 10, buyPrice: 120, buyDate: "2026-01-10", notes: "core holding")],
       errors: []
     )
+    // Encode on the main actor: the handler runs off it and these DTOs'
+    // Codable conformances are main-actor-isolated in the app target.
+    let expectedData = try JSONEncoder().encode(expected)
 
     session.handler = { request in
       XCTAssertEqual(request.url?.path, "/v1/brokers/import/csv")
@@ -247,6 +258,9 @@ final class BrokerServiceTests: XCTestCase {
       errors: [],
       importedLotsCount: 1
     )
+    // Encode on the main actor: the handler runs off it and these DTOs'
+    // Codable conformances are main-actor-isolated in the app target.
+    let expectedData = try JSONEncoder().encode(expected)
 
     session.handler = { request in
       XCTAssertEqual(request.url?.path, "/v1/brokers/import/csv/commit")
@@ -285,7 +299,7 @@ final class BrokerServiceTests: XCTestCase {
       webAuthenticator: webAuthenticator
     )
 
-    var requestCount = 0
+    nonisolated(unsafe) var requestCount = 0
     session.handler = { request in
       requestCount += 1
       if requestCount == 1 {
@@ -371,7 +385,7 @@ final class BrokerServiceTests: XCTestCase {
       webAuthenticator: webAuthenticator
     )
 
-    var paths: [String] = []
+    nonisolated(unsafe) var paths: [String] = []
     session.handler = { request in
       let path = request.url?.path ?? ""
       paths.append(path)
