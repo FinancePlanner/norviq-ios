@@ -1,1 +1,1 @@
-Finance Expenses Stocks
+portfolio,stocks,budget,net worth,dividends,crypto,ETF,expense tracker,IBKR,DCF,AI,investing
