@@ -80,6 +80,14 @@ nonisolated enum PortfolioPaginationSentinel {
 
 // MARK: - Stock Link Row
 
+/// Value pushed by a position row; resolved to StockDetailScreen by the
+/// `navigationDestination(for:)` registered in PortfolioRoot, so the detail
+/// screen is not constructed for every visible row.
+struct PortfolioStockRoute: Hashable {
+  let stockID: String
+  let symbol: String
+}
+
 struct PortfolioStockLinkRow: View {
   let stock: SDPortfolioStock
   let targetAlert: TargetResponse?
@@ -95,9 +103,7 @@ struct PortfolioStockLinkRow: View {
   }
 
   var body: some View {
-    NavigationLink {
-      StockDetailScreen(stockId: stock.id, initialSymbol: stock.symbol)
-    } label: {
+    NavigationLink(value: PortfolioStockRoute(stockID: stock.id, symbol: stock.symbol)) {
       PortfolioRow(stock: stock, targetAlert: targetAlert, liveQuote: liveQuote, pnl: pnl, sentiment: sentiment)
         .accessibilityIdentifier("portfolio.stockRow.\(stock.symbol)")
     }

@@ -2,6 +2,18 @@ import SwiftUI
 import Factory
 import StockPlanShared
 
+/// Toolbar destinations reached from the portfolio root. Value-based links
+/// keep the destination screens (ScenarioPlanningScreen is ~850 lines) from
+/// being constructed on every PortfolioRoot body pass.
+enum PortfolioRootRoute: Hashable {
+  case workspace
+  case scenarioPlanning
+  case netWorthForecast
+  case smartScreens
+  case rebalancingRules
+  case notifications
+}
+
 @MainActor
 struct PortfolioRoot: View {
   @Environment(\.colorScheme) private var colorScheme
@@ -19,6 +31,25 @@ struct PortfolioRoot: View {
         pendingThesisWatchOpen: $pendingThesisWatchOpen
       )
       .environment(portfolioViewModel)
+      .navigationDestination(for: PortfolioRootRoute.self) { route in
+        switch route {
+        case .workspace:
+          PortfolioWorkspaceScreen()
+        case .scenarioPlanning:
+          ProGateView(billingManager: billingManager) { ScenarioPlanningScreen() }
+        case .netWorthForecast:
+          ProGateView(billingManager: billingManager) { NetWorthForecastScreen() }
+        case .smartScreens:
+          ProGateView(billingManager: billingManager) { SmartScreeningScreen() }
+        case .rebalancingRules:
+          ProGateView(billingManager: billingManager) { RebalancingRulesScreen() }
+        case .notifications:
+          NotificationInboxScreen()
+        }
+      }
+      .navigationDestination(for: PortfolioStockRoute.self) { route in
+        StockDetailScreen(stockId: route.stockID, initialSymbol: route.symbol)
+      }
       .navigationDestination(item: $pendingAutomationDestination) { destination in
         switch destination {
         case let .smartScreen(id): ProGateView(billingManager: billingManager) { SmartScreeningScreen(
@@ -44,12 +75,12 @@ struct PortfolioRoot: View {
           .accessibilityLabel(LocalizedStringKey("Open settings"))
         }
         ToolbarItemGroup(placement: .topBarTrailing) {
-          NavigationLink(destination: PortfolioWorkspaceScreen()) {
+          NavigationLink(value: PortfolioRootRoute.workspace) {
             Label("Manage portfolios", systemImage: "rectangle.stack")
           }
           .labelStyle(.iconOnly)
           .accessibilityLabel("Manage portfolios")
-          NavigationLink(destination: ProGateView(billingManager: billingManager) { ScenarioPlanningScreen() }) {
+          NavigationLink(value: PortfolioRootRoute.scenarioPlanning) {
             Label("Scenario planning", systemImage: "chart.xyaxis.line")
           }
           .labelStyle(.iconOnly)
@@ -57,24 +88,16 @@ struct PortfolioRoot: View {
         }
         ToolbarItem(placement: .topBarTrailing) {
           Menu("Automation", systemImage: "wand.and.stars") {
-            NavigationLink {
-              ProGateView(billingManager: billingManager) { NetWorthForecastScreen() }
-            } label: {
+            NavigationLink(value: PortfolioRootRoute.netWorthForecast) {
               Label("Net worth forecast", systemImage: "chart.xyaxis.line")
             }
-            NavigationLink {
-              ProGateView(billingManager: billingManager) { SmartScreeningScreen() }
-            } label: {
+            NavigationLink(value: PortfolioRootRoute.smartScreens) {
               Label("Smart screens", systemImage: "line.3.horizontal.decrease.circle")
             }
-            NavigationLink {
-              ProGateView(billingManager: billingManager) { RebalancingRulesScreen() }
-            } label: {
+            NavigationLink(value: PortfolioRootRoute.rebalancingRules) {
               Label("Rebalancing rules", systemImage: "scale.3d")
             }
-            NavigationLink {
-              NotificationInboxScreen()
-            } label: {
+            NavigationLink(value: PortfolioRootRoute.notifications) {
               Label("Notifications", systemImage: "bell")
             }
           }
