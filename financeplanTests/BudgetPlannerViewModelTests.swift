@@ -1070,6 +1070,118 @@ final class BudgetPlannerViewModelTests: XCTestCase {
     }
   }
 
+  // MARK: - Month rollover
+
+  private func makeSnapshotResponse(_ monthStart: String, id: String) -> BudgetSnapshotResponse {
+    BudgetSnapshotResponse(
+      id: id,
+      monthStart: monthStart,
+      netSalary: 3000,
+      targetShares: [
+        BudgetPillar.fundamentals.rawValue: 0.5,
+        BudgetPillar.futureYou.rawValue: 0.2,
+        BudgetPillar.fun.rawValue: 0.3
+      ],
+      createdAt: nil,
+      updatedAt: nil
+    )
+  }
+
+  private var julySnapshot: BudgetSnapshotResponse { makeSnapshotResponse("2026-07-01", id: "11111111-1111-4111-8111-111111111111") }
+  private var augustSnapshot: BudgetSnapshotResponse { makeSnapshotResponse("2026-08-01", id: "22222222-2222-4222-8222-222222222222") }
+  private var septemberSnapshot: BudgetSnapshotResponse { makeSnapshotResponse("2026-09-01", id: "33333333-3333-4333-8333-333333333333") }
+
+  func testMonthChangeReloadsAndSelectsCurrentMonth() async {
+    let mock = BudgetPlannerServiceMock()
+    mock.snapshotsResult = .success([julySnapshot, augustSnapshot])
+    let clock = MutableClock(makeDate(2026, 8, 31))
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(monthlySnapshots: [], activities: [], expensesService: mock, now: { clock.now })
+    }
+
+    await viewModel.load()
+    await MainActor.run {
+      XCTAssertEqual(viewModel.selectedMonthStart, makeMonth(2026, 8))
+    }
+
+    clock.now = makeDate(2026, 9, 1)
+    mock.snapshotsResult = .success([julySnapshot, augustSnapshot, septemberSnapshot])
+
+    await viewModel.refreshIfMonthChanged()
+
+    await MainActor.run {
+      XCTAssertEqual(viewModel.selectedMonthStart, makeMonth(2026, 9))
+    }
+    XCTAssertEqual(mock.getSnapshotsCallCount, 2)
+    XCTAssertTrue(mock.createBudgetSnapshotRequests.isEmpty)
+  }
+
+  func testSameMonthForegroundDoesNotReloadOrMoveSelection() async {
+    let mock = BudgetPlannerServiceMock()
+    mock.snapshotsResult = .success([julySnapshot, augustSnapshot])
+    let clock = MutableClock(makeDate(2026, 8, 20))
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(monthlySnapshots: [], activities: [], expensesService: mock, now: { clock.now })
+    }
+
+    await viewModel.load()
+    await MainActor.run { viewModel.selectMonth(makeMonth(2026, 7)) }
+
+    clock.now = makeDate(2026, 8, 21)
+    await viewModel.refreshIfMonthChanged()
+
+    await MainActor.run {
+      XCTAssertEqual(viewModel.selectedMonthStart, makeMonth(2026, 7))
+    }
+    XCTAssertEqual(mock.getSnapshotsCallCount, 1)
+  }
+
+  func testMonthChangedButServerLacksCurrentMonthKeepsNewestAndRetriesNextTime() async {
+    let mock = BudgetPlannerServiceMock()
+    mock.snapshotsResult = .success([julySnapshot, augustSnapshot])
+    let clock = MutableClock(makeDate(2026, 8, 31))
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(monthlySnapshots: [], activities: [], expensesService: mock, now: { clock.now })
+    }
+
+    await viewModel.load()
+    clock.now = makeDate(2026, 9, 1)
+
+    await viewModel.refreshIfMonthChanged()
+    await MainActor.run {
+      XCTAssertEqual(viewModel.selectedMonthStart, makeMonth(2026, 8))
+    }
+    XCTAssertEqual(mock.getSnapshotsCallCount, 2)
+    XCTAssertTrue(mock.createBudgetSnapshotRequests.isEmpty)
+
+    // Current month still missing server-side: keep retrying on later foregrounds.
+    await viewModel.refreshIfMonthChanged()
+    XCTAssertEqual(mock.getSnapshotsCallCount, 3)
+  }
+
+  func testFirstLoadInNewMonthSelectsCurrentMonthOverStaleSelection() async {
+    let mock = BudgetPlannerServiceMock()
+    mock.snapshotsResult = .success([augustSnapshot, septemberSnapshot])
+    let clock = MutableClock(makeDate(2026, 9, 1))
+    let viewModel = await MainActor.run {
+      BudgetPlannerViewModel(
+        monthlySnapshots: [MonthlyBudgetSnapshot(monthStart: makeMonth(2026, 8), netSalary: 3000, items: [])],
+        activities: [],
+        expensesService: mock,
+        now: { clock.now }
+      )
+    }
+    await MainActor.run {
+      XCTAssertEqual(viewModel.selectedMonthStart, makeMonth(2026, 8))
+    }
+
+    await viewModel.load()
+
+    await MainActor.run {
+      XCTAssertEqual(viewModel.selectedMonthStart, makeMonth(2026, 9))
+    }
+  }
+
   private func makeMonth(_ year: Int, _ month: Int) -> Date {
     calendar.date(from: DateComponents(year: year, month: month, day: 1)) ?? .now
   }
@@ -1276,4 +1388,9 @@ private enum MockPlannerError: LocalizedError {
   case notConfigured
 
   var errorDescription: String? { "Not configured." }
+}
+
+private final class MutableClock: @unchecked Sendable {
+  var now: Date
+  init(_ now: Date) { self.now = now }
 }

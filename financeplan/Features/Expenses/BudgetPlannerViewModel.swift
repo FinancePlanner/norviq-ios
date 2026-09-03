@@ -32,6 +32,10 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
 
   private let calendar: Calendar
   private let expensesService: any ExpensesServicing
+  private let now: () -> Date
+  /// Month the planner last saw the clock in. When the calendar turns while the
+  /// app is alive, the next load moves the selection onto the new month.
+  private var lastObservedMonthStart: Date?
   private var hasLoadedOnce = false
   private var pendingForceReload = false
   private let logger = Logger(
@@ -47,20 +51,23 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
       return formatter
   }()
 
-  init() {
+  init(now: @escaping () -> Date = Date.init) {
     self.calendar = Calendar(identifier: .gregorian)
     self.expensesService = Container.shared.expensesService()
-    self.selectedMonthStart = self.calendar.startOfMonth(for: .now)
+    self.now = now
+    self.selectedMonthStart = self.calendar.startOfMonth(for: now())
   }
 
   init(
     monthlySnapshots: [MonthlyBudgetSnapshot],
     activities: [BudgetActivity],
-    expensesService: any ExpensesServicing = Container.shared.expensesService()
+    expensesService: any ExpensesServicing = Container.shared.expensesService(),
+    now: @escaping () -> Date = Date.init
   ) {
     let calendar = Calendar(identifier: .gregorian)
     self.calendar = calendar
     self.expensesService = expensesService
+    self.now = now
     self.monthlySnapshots = monthlySnapshots.sorted { $0.monthStart < $1.monthStart }
     self.activities = activities.sorted { $0.occurredOn > $1.occurredOn }
     let availableMonths = Self.makeAvailableMonths(
@@ -68,7 +75,7 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
       activities: self.activities,
       calendar: calendar
     )
-    self.selectedMonthStart = availableMonths.first ?? calendar.startOfMonth(for: .now)
+    self.selectedMonthStart = availableMonths.first ?? calendar.startOfMonth(for: now())
     self.monthlySummaries = []
     self.yearlySummaries = []
   }
@@ -143,6 +150,20 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
              !availableMonths.contains(where: { self.calendar.isDate($0, equalTo: self.selectedMonthStart, toGranularity: .month) }) {
               self.selectedMonthStart = latest
           }
+
+          // A new calendar month lands the planner on that month (the server
+          // rolls the plan forward when snapshots are listed). Only on the
+          // first load or an actual month change, so a month the user picked
+          // by hand survives every other reload.
+          let currentMonth = self.calendar.startOfMonth(for: self.now())
+          let monthChanged = self.lastObservedMonthStart.map {
+            !self.calendar.isDate($0, equalTo: currentMonth, toGranularity: .month)
+          } ?? true
+          if monthChanged,
+             availableMonths.contains(where: { self.calendar.isDate($0, equalTo: currentMonth, toGranularity: .month) }) {
+              self.selectedMonthStart = currentMonth
+          }
+          self.lastObservedMonthStart = currentMonth
 
           do {
               let suggestionsResponse = try await expensesService.getReportSuggestions(from: nil, to: nil)
@@ -434,6 +455,22 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
     selectedMonthStart = calendar.startOfMonth(for: monthStart)
   }
 
+  /// Foreground check: reload when the calendar month moved since the last load,
+  /// or when the current month is still missing (the device can reach the 1st
+  /// hours before the server's UTC month does, so keep asking until it exists).
+  func refreshIfMonthChanged() async {
+    guard hasLoadedOnce else { return }
+    let currentMonth = calendar.startOfMonth(for: now())
+    let monthChanged = lastObservedMonthStart.map {
+      !calendar.isDate($0, equalTo: currentMonth, toGranularity: .month)
+    } ?? true
+    let currentMonthMissing = !availableMonths.contains {
+      calendar.isDate($0, equalTo: currentMonth, toGranularity: .month)
+    }
+    guard monthChanged || currentMonthMissing else { return }
+    await load(force: true)
+  }
+
   func selectYear(_ year: Int) {
     guard let latestMonthInYear = availableMonths.first(where: {
       calendar.component(.year, from: $0) == year
@@ -442,7 +479,7 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
   }
 
   func createNextMonthPlan() {
-    let nextMonth = calendar.date(byAdding: .month, value: 1, to: selectedMonthStart) ?? .now
+    let nextMonth = calendar.date(byAdding: .month, value: 1, to: selectedMonthStart) ?? now()
     let nextMonthStart = calendar.startOfMonth(for: nextMonth)
 
     guard !monthlySnapshots.contains(where: { calendar.isDate($0.monthStart, equalTo: nextMonthStart, toGranularity: .month) }) else {
@@ -518,9 +555,9 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
       monthlySnapshots.remove(at: selectedMonthSnapshotIndex)
 
       if monthlySnapshots.isEmpty {
-          selectedMonthStart = calendar.startOfMonth(for: .now)
+          selectedMonthStart = calendar.startOfMonth(for: now())
       } else {
-          selectedMonthStart = monthlySnapshots.last?.monthStart ?? calendar.startOfMonth(for: .now)
+          selectedMonthStart = monthlySnapshots.last?.monthStart ?? calendar.startOfMonth(for: now())
       }
 
       Task {

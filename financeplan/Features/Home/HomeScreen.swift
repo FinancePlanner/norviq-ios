@@ -21,6 +21,7 @@ struct HomeScreen: View {
   @State private var pendingThesisWatchOpen = false
   @State private var pendingAutomationDestination: AutomationNavigationDestination?
   @State private var budgetPlannerViewModel = BudgetPlannerViewModel()
+  @Environment(\.scenePhase) private var scenePhase
   @State private var isCapturePresented = false
 
   init(onLogout: @escaping () async -> Void) {
@@ -100,6 +101,11 @@ struct HomeScreen: View {
     .onReceive(NotificationCenter.default.publisher(for: .openBudgetFromPushNotification)) { _ in
       selectedTab = .expenses
       Task { await budgetPlannerViewModel.load(force: true) }
+    }
+    // An app left open across the 1st must land on the new month without a relaunch.
+    .onChange(of: scenePhase) { _, phase in
+      guard phase == .active else { return }
+      Task { await budgetPlannerViewModel.refreshIfMonthChanged() }
     }
     .onReceive(NotificationCenter.default.publisher(for: .openThesisWatchFromPushNotification)) { _ in
       pendingThesisWatchOpen = true
