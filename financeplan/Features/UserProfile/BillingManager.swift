@@ -395,6 +395,55 @@ final class BillingManager {
     }
   }
 
+  // MARK: - Per-year filing pack (consumable)
+
+  /// RevenueCat product id for one tax year's filing pack. Must match the
+  /// backend's TaxPackEntitlementService, which grants access from the webhook.
+  static func taxPackProductID(taxYear: Int) -> String {
+    "norviq_tax_pack_\(taxYear)"
+  }
+
+  /// The pack package for a year, from any offering, or nil when the store
+  /// does not sell one (year not yet configured in RevenueCat, or offline).
+  func taxPackPackage(taxYear: Int) async -> Package? {
+    let userID = await sessionStore.currentUserID.trimmingCharacters(in: .whitespacesAndNewlines)
+    if userID.isEmpty {
+      configureAnonymousIfNeeded()
+    } else {
+      configureRevenueCat(userID: userID)
+    }
+    guard didConfigureRevenueCat else { return nil }
+    let productID = Self.taxPackProductID(taxYear: taxYear)
+    do {
+      let offerings = try await Purchases.shared.offerings()
+      return offerings.all.values
+        .flatMap(\.availablePackages)
+        .first { $0.storeProduct.productIdentifier == productID }
+    } catch {
+      return nil
+    }
+  }
+
+  /// Buys one year's pack. Unlike a subscription this never flips `isPro`:
+  /// the backend grants the pack from RevenueCat's webhook, so callers reload
+  /// the filing preview afterwards instead of reading a local flag.
+  func purchaseTaxPack(_ package: Package) async -> Bool {
+    isPurchasing = true
+    errorMessage = nil
+    defer { isPurchasing = false }
+    do {
+      let result = try await Purchases.shared.purchase(package: package)
+      guard !result.userCancelled else { return false }
+      PostHogSDK.shared.capture("tax_pack_purchased", properties: [
+        "product_id": package.storeProduct.productIdentifier,
+      ])
+      return true
+    } catch {
+      errorMessage = error.localizedDescription
+      return false
+    }
+  }
+
   func restorePurchases() async {
     guard uiTestBillingTier == nil else {
       applyUITestBillingContextIfNeeded()

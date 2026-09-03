@@ -115,6 +115,34 @@ final class TaxFilingPackViewModelTests: XCTestCase {
     XCTAssertEqual(service.previewTaxYears, [2025, 2024])
   }
 
+  func testReloadAfterPurchase_RetriesUntilThePreviewOpens() async throws {
+    let service = FilingPackServiceMock()
+    service.previewQueue = [
+      .failure(TaxServiceError.http(statusCode: 403, message: nil)),
+      .failure(TaxServiceError.http(statusCode: 403, message: nil)),
+      .success(try Self.decodePreview()),
+    ]
+    let model = TaxFilingPackViewModel(service: service, taxYear: 2025)
+
+    await model.reloadAfterPurchase(attempts: 5, delay: .zero)
+
+    guard case .loaded = model.state else {
+      return XCTFail("expected .loaded after the webhook landed, got \(model.state)")
+    }
+    XCTAssertEqual(service.previewTaxYears.count, 3)
+  }
+
+  func testReloadAfterPurchase_StopsAfterTheLastAttempt() async {
+    let service = FilingPackServiceMock()
+    service.previewResult = .failure(TaxServiceError.http(statusCode: 402, message: nil))
+    let model = TaxFilingPackViewModel(service: service, taxYear: 2025)
+
+    await model.reloadAfterPurchase(attempts: 3, delay: .zero)
+
+    XCTAssertEqual(model.state, .paywalled)
+    XCTAssertEqual(service.previewTaxYears.count, 3)
+  }
+
   // MARK: - Fixture
 
   /// Shape of `GET /v1/tax/filing/preview` as the backend's
@@ -174,12 +202,17 @@ private enum FilingPackServiceMockError: Error {
 /// other TaxServiceProtocol member fails loudly so a stray call shows up.
 private final class FilingPackServiceMock: TaxServiceProtocol, @unchecked Sendable {
   var previewResult: Result<FilingPackPreviewResponse, Error> = .failure(FilingPackServiceMockError.unexpected)
+  /// Consumed first, one per call, before falling back to `previewResult`.
+  var previewQueue: [Result<FilingPackPreviewResponse, Error>] = []
   var createReportResult: Result<TaxReportResponse, Error> = .failure(FilingPackServiceMockError.unexpected)
   var previewTaxYears: [Int] = []
   var createReportRequests: [TaxReportRequest] = []
 
   func filingPreview(taxYear: Int) async throws -> FilingPackPreviewResponse {
     previewTaxYears.append(taxYear)
+    if !previewQueue.isEmpty {
+      return try previewQueue.removeFirst().get()
+    }
     return try previewResult.get()
   }
 

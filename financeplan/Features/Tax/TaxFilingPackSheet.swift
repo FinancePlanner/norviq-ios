@@ -1,4 +1,5 @@
 import Factory
+import RevenueCat
 import StockPlanShared
 import SwiftUI
 
@@ -13,6 +14,8 @@ struct TaxFilingPackSheet: View {
   let service: TaxServiceProtocol
   @State private var model: TaxFilingPackViewModel
   @State private var isPaywallPresented = false
+  @State private var taxPackPackage: Package?
+  @State private var isBuyingPack = false
 
   init(service: TaxServiceProtocol, taxYear: Int = Calendar.current.component(.year, from: Date()) - 1) {
     self.service = service
@@ -31,7 +34,12 @@ struct TaxFilingPackSheet: View {
           Picker("Tax year", selection: $model.taxYear) {
             ForEach(years, id: \.self) { Text(String($0)).tag($0) }
           }
-          .onChange(of: model.taxYear) { _, _ in Task { await model.load() } }
+          .onChange(of: model.taxYear) { _, year in
+            Task {
+              await model.load()
+              taxPackPackage = await billingManager.taxPackPackage(taxYear: year)
+            }
+          }
         }
 
         switch model.state {
@@ -47,6 +55,25 @@ struct TaxFilingPackSheet: View {
                 .foregroundStyle(.secondary)
               Button("Unlock with Pro") { isPaywallPresented = true }
                 .buttonStyle(.borderedProminent)
+              if let taxPackPackage {
+                Button {
+                  Task { await buyPack(taxPackPackage) }
+                } label: {
+                  if isBuyingPack {
+                    ProgressView()
+                  } else {
+                    Text("Buy the \(String(model.taxYear)) pack · \(taxPackPackage.storeProduct.localizedPriceString)")
+                  }
+                }
+                .buttonStyle(.bordered)
+                .disabled(isBuyingPack)
+                Text("One tax year, no subscription. Unlocks this preview and the PDF/CSV for \(String(model.taxYear)).")
+                  .font(.footnote)
+                  .foregroundStyle(.secondary)
+              }
+              if let message = billingManager.errorMessage, !message.isEmpty {
+                Text(message).font(.footnote).foregroundStyle(.red)
+              }
             }
             .padding(.vertical, 6)
           }
@@ -88,7 +115,10 @@ struct TaxFilingPackSheet: View {
       }
       .navigationTitle("Filing pack")
       .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
-      .task { await model.load() }
+      .task {
+        await model.load()
+        taxPackPackage = await billingManager.taxPackPackage(taxYear: model.taxYear)
+      }
       .sheet(isPresented: $isPaywallPresented) { PaywallView(billingManager: billingManager) }
       .alert("Could not generate", isPresented: Binding(get: { model.generateError != nil }, set: { if !$0 { model.generateError = nil } })) {
         Button("OK", role: .cancel) {}
@@ -96,6 +126,15 @@ struct TaxFilingPackSheet: View {
         Text(model.generateError ?? "")
       }
     }
+  }
+
+  /// The webhook that grants the pack lands a moment after the store confirms
+  /// the charge, so keep asking the backend until the preview opens.
+  private func buyPack(_ package: Package) async {
+    isBuyingPack = true
+    defer { isBuyingPack = false }
+    guard await billingManager.purchaseTaxPack(package) else { return }
+    await model.reloadAfterPurchase()
   }
 
   @ViewBuilder
@@ -194,6 +233,18 @@ final class TaxFilingPackViewModel {
       }
     } catch {
       state = .failed(error.localizedDescription)
+    }
+  }
+
+  /// After a per-year purchase: the entitlement arrives through RevenueCat's
+  /// webhook, so poll the preview until it stops being paywalled.
+  func reloadAfterPurchase(attempts: Int = 6, delay: Duration = .seconds(2)) async {
+    for attempt in 1 ... max(1, attempts) {
+      await load()
+      if state != .paywalled { return }
+      if attempt < attempts {
+        try? await Task.sleep(for: delay)
+      }
     }
   }
 
