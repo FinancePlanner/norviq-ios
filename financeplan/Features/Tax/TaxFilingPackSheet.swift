@@ -17,7 +17,7 @@ struct TaxFilingPackSheet: View {
   @State private var taxPackPackage: Package?
   @State private var isBuyingPack = false
 
-  init(service: TaxServiceProtocol, taxYear: Int = Calendar.current.component(.year, from: Date()) - 1) {
+  init(service: TaxServiceProtocol, taxYear: Int = TaxFilingPackViewModel.defaultTaxYear()) {
     self.service = service
     _model = State(initialValue: TaxFilingPackViewModel(service: service, taxYear: taxYear))
   }
@@ -151,6 +151,10 @@ struct TaxFilingPackSheet: View {
       }
     } header: {
       Text("\(String(preview.taxYear)) · \(preview.jurisdiction.rawValue)")
+    } footer: {
+      if TaxFilingPackViewModel.isYearOpen(preview.taxYear) {
+        Text("Provisional: \(String(preview.taxYear)) is not closed yet. The numbers grow as you import trades and dividends; file from the final pack next spring.")
+      }
     }
   }
 
@@ -213,6 +217,19 @@ final class TaxFilingPackViewModel {
   var generateError: String?
 
   private let service: TaxServiceProtocol
+
+  /// The year people are dealing with right now: during the filing window
+  /// (January–June) that is last year's return; from July the year in
+  /// progress, which the preview can already show and the pack can be bought for.
+  static func defaultTaxYear(on date: Date = Date(), calendar: Calendar = .current) -> Int {
+    let year = calendar.component(.year, from: date)
+    return calendar.component(.month, from: date) <= 6 ? year - 1 : year
+  }
+
+  /// True while the tax year has not ended, so its numbers are still moving.
+  static func isYearOpen(_ taxYear: Int, on date: Date = Date(), calendar: Calendar = .current) -> Bool {
+    taxYear >= calendar.component(.year, from: date)
+  }
 
   init(service: TaxServiceProtocol, taxYear: Int) {
     self.service = service

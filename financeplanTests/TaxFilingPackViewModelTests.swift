@@ -143,6 +143,20 @@ final class TaxFilingPackViewModelTests: XCTestCase {
     XCTAssertEqual(service.previewTaxYears.count, 3)
   }
 
+  func testDefaultTaxYear_FlipsFromLastYearToThisYearInJuly() throws {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
+    let day = { (y: Int, m: Int, d: Int) in calendar.date(from: DateComponents(year: y, month: m, day: d))! }
+
+    XCTAssertEqual(TaxFilingPackViewModel.defaultTaxYear(on: day(2026, 3, 15), calendar: calendar), 2025, "filing window: last year's return")
+    XCTAssertEqual(TaxFilingPackViewModel.defaultTaxYear(on: day(2026, 6, 30), calendar: calendar), 2025)
+    XCTAssertEqual(TaxFilingPackViewModel.defaultTaxYear(on: day(2026, 7, 1), calendar: calendar), 2026, "season closed: the year in progress")
+    XCTAssertEqual(TaxFilingPackViewModel.defaultTaxYear(on: day(2026, 9, 3), calendar: calendar), 2026)
+
+    XCTAssertTrue(TaxFilingPackViewModel.isYearOpen(2026, on: day(2026, 9, 3), calendar: calendar))
+    XCTAssertFalse(TaxFilingPackViewModel.isYearOpen(2025, on: day(2026, 9, 3), calendar: calendar))
+  }
+
   // MARK: - Fixture
 
   /// Shape of `GET /v1/tax/filing/preview` as the backend's
