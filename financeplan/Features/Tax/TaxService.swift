@@ -29,8 +29,15 @@ protocol TaxServiceProtocol: Sendable {
   func saveNotificationPreferences(_ request: TaxNotificationPreferences) async throws -> TaxNotificationPreferences
   func reports() async throws -> [TaxReportResponse]
   func createReport(_ request: TaxReportRequest) async throws -> TaxReportResponse
+  func filingPreview(taxYear: Int) async throws -> FilingPackPreviewResponse
   func downloadReport(_ report: TaxReportResponse) async throws -> URL
   func lossCarryforwards(jurisdiction: TaxJurisdiction, taxYear: Int) async throws -> TaxLossCarryforwardLedgerResponse
+}
+
+/// Non-2xx from the tax API, with the status so screens can tell a paywall
+/// (402/403) from an incomplete profile (409) or an unsupported jurisdiction (422).
+nonisolated enum TaxServiceError: Error, Equatable {
+  case http(statusCode: Int, message: String?)
 }
 
 final class TaxService: TaxServiceProtocol, @unchecked Sendable {
@@ -243,6 +250,16 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     try await send(path: "v1/tax/reports", body: JSONEncoder().encode(request))
   }
 
+  func filingPreview(taxYear: Int) async throws -> FilingPackPreviewResponse {
+    var components = URLComponents(
+      url: environment.current.apiBaseUrl.appending(path: "v1/tax/filing/preview"),
+      resolvingAgainstBaseURL: false
+    )
+    components?.queryItems = [URLQueryItem(name: "taxYear", value: String(taxYear))]
+    guard let url = components?.url else { throw URLError(.badURL) }
+    return try await send(url: url, method: "GET", body: Data?.none)
+  }
+
   func downloadReport(_ report: TaxReportResponse) async throws -> URL {
     guard report.status == "ready", report.downloadPath != nil else {
       throw URLError(.resourceUnavailable)
@@ -253,8 +270,9 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     request.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
     let (data, response) = try await session.data(for: request)
-    guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-      throw URLError(.badServerResponse)
+    guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+    guard (200..<300).contains(http.statusCode) else {
+      throw TaxServiceError.http(statusCode: http.statusCode, message: APIErrorDecoding.message(from: data))
     }
     let destination = FileManager.default.temporaryDirectory
       .appending(path: "norviq-tax-\(report.taxYear)-\(report.id).\(report.format.rawValue)")
@@ -317,9 +335,10 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     var request = URLRequest(url: url)
     request.httpMethod = method
     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-    let (_, response) = try await session.data(for: request)
-    guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-      throw URLError(.badServerResponse)
+    let (data, response) = try await session.data(for: request)
+    guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+    guard (200..<300).contains(http.statusCode) else {
+      throw TaxServiceError.http(statusCode: http.statusCode, message: APIErrorDecoding.message(from: data))
     }
   }
 
@@ -344,8 +363,9 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
       request.setValue(value, forHTTPHeaderField: name)
     }
     let (data, response) = try await session.data(for: request)
-    guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-      throw URLError(.badServerResponse)
+    guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+    guard (200..<300).contains(http.statusCode) else {
+      throw TaxServiceError.http(statusCode: http.statusCode, message: APIErrorDecoding.message(from: data))
     }
     return try JSONDecoder().decode(Response.self, from: data)
   }

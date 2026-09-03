@@ -63,6 +63,15 @@ struct TaxReportsSheet: View {
         } footer: {
           Text("Workpapers support professional review and are not filing-ready tax returns.")
         }
+        Section {
+          NavigationLink {
+            TaxFilingPackSheet(service: service)
+          } label: {
+            Label("Annual filing pack", systemImage: "doc.text.magnifyingglass")
+          }
+        } footer: {
+          Text("Your trades and dividends mapped to your national return (Portugal Anexo J first). Preview the numbers, then generate.")
+        }
         Section("Recent reports") {
           if reports.isEmpty && !isLoading { Text("No reports generated yet.").foregroundStyle(.secondary) }
           ForEach(reports) { report in
