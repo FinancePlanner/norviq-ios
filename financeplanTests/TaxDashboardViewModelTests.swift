@@ -327,6 +327,10 @@ private final class TaxServiceMock: TaxServiceProtocol, @unchecked Sendable {
     throw TaxServiceMockError.unexpected
   }
 
+  func filingPreview(taxYear _: Int) async throws -> FilingPackPreviewResponse {
+    throw TaxServiceMockError.unexpected
+  }
+
   func lossCarryforwards(
     jurisdiction _: TaxJurisdiction,
     taxYear _: Int
