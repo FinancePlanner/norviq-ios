@@ -80,6 +80,11 @@ struct ScenarioSnapshotPreview: Decodable, Identifiable, Sendable {
 private struct ScenarioResource: Decodable { let id: UUID }
 private struct EmptyResponse: Decodable {}
 
+struct ScenarioAPIError: LocalizedError, Equatable, Sendable {
+  let method: String; let path: String; let statusCode: Int
+  var errorDescription: String? { "\(method) /\(path.prefix(while: { $0 != "?" })) failed with HTTP \(statusCode)." }
+}
+
 enum ScenarioBuilderKind: String, CaseIterable, Identifiable, Sendable {
   case historical, custom, monteCarlo = "monte_carlo"; var id: String { rawValue }
   var title: String { switch self { case .historical: "Historical"; case .custom: "Custom"; case .monteCarlo: "Monte Carlo" } }
@@ -206,7 +211,7 @@ final class ScenarioPlanningService: ScenarioPlanningServiceProtocol, @unchecked
   func catalog() async throws -> ScenarioCatalogPayload { try await send("v1/scenarios/catalog") }
   func runs() async throws -> [ScenarioRunSummary] { try await send("v1/scenario-runs") }
   func scenarios() async throws -> [ScenarioDefinitionSummary] { try await send("v1/scenarios") }
-  func portfolios() async throws -> [ScenarioPortfolio] { try await send("v1/portfolio-lists") }
+  func portfolios() async throws -> [ScenarioPortfolio] { try await send("v1/portfolio/lists") }
   func goals() async throws -> [ScenarioGoal] { try await send("v1/financial-goals") }
   func cryptoHoldings() async throws -> [ScenarioCryptoHolding] { try await send("v1/crypto/portfolio") }
   func holdings(portfolioIDs: [UUID]) async throws -> [ScenarioHolding] {
@@ -301,7 +306,8 @@ final class ScenarioPlanningService: ScenarioPlanningServiceProtocol, @unchecked
     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization"); request.setValue("application/json", forHTTPHeaderField: "Accept")
     if let body { request.setValue("application/json", forHTTPHeaderField: "Content-Type"); request.httpBody = try JSONSerialization.data(withJSONObject: body) }
     let (data, response) = try await session.data(for: request)
-    guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else { throw URLError(.badServerResponse) }
+    guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+    guard (200..<300).contains(http.statusCode) else { throw ScenarioAPIError(method: method, path: path, statusCode: http.statusCode) }
     if Response.self == EmptyResponse.self { return EmptyResponse() as! Response }
     let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
     return try decoder.decode(Response.self, from: data)
