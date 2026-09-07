@@ -93,8 +93,8 @@
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
-            key = "NORVIQA_ENVIRONMENT"
-            value = "local"
+            key = "NORVIQ_ENVIRONMENT"
+            value = "production"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>
