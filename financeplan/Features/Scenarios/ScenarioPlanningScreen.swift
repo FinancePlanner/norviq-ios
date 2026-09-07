@@ -30,24 +30,30 @@ import SwiftUI
   func load() async {
     isLoading = true
     defer { isLoading = false }
-    do {
-      async let c = service.catalog()
-      async let r = service.runs()
-      async let s = service.scenarios()
-      async let p = service.portfolios()
-      async let g = service.goals()
-      async let rp = service.riskProfiles()
-      async let ch = service.cryptoHoldings()
-      catalog = try await c
-      runs = try await r
-      scenarios = try await s
-      portfolios = try await p
-      goals = try await g
-      riskProfiles = try await rp
-      cryptoHoldings = try await ch
-      holdings = try await service.holdings(portfolioIDs: portfolios.map(\.id))
-    } catch {
-      errorMessage = "Scenario planning is temporarily unavailable."
+    async let c = service.catalog()
+    async let r = service.runs()
+    async let s = service.scenarios()
+    async let p = service.portfolios()
+    async let g = service.goals()
+    async let rp = service.riskProfiles()
+    async let ch = service.cryptoHoldings()
+    var blocking: [String] = []; var degraded: [String] = []
+    do { catalog = try await c } catch { blocking.append(error.localizedDescription) }
+    do { portfolios = try await p } catch { blocking.append(error.localizedDescription) }
+    do { runs = try await r } catch { degraded.append(error.localizedDescription) }
+    do { scenarios = try await s } catch { degraded.append(error.localizedDescription) }
+    do { goals = try await g } catch { degraded.append(error.localizedDescription) }
+    do { riskProfiles = try await rp } catch { degraded.append(error.localizedDescription) }
+    do { cryptoHoldings = try await ch } catch { degraded.append(error.localizedDescription) }
+    if !portfolios.isEmpty {
+      do { holdings = try await service.holdings(portfolioIDs: portfolios.map(\.id)) } catch { degraded.append(error.localizedDescription) }
+    }
+    if !blocking.isEmpty {
+      errorMessage = (["Scenario planning could not load."] + blocking).joined(separator: " ")
+    } else if !degraded.isEmpty {
+      errorMessage = (["Some scenario inputs are unavailable."] + degraded).joined(separator: " ")
+    } else {
+      errorMessage = nil
     }
   }
 
