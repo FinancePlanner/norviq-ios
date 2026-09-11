@@ -82,6 +82,79 @@ nonisolated final class ReceiptsHTTPClient: Sendable {
     }
   }
 
+  /// Mirrors the backend's per-request ceiling on `/v1/receipts/scan`.
+  static let maxBatchImages = 5
+
+  /// Scans several receipt photos in one request.
+  ///
+  /// Results come back in the order the images were sent, so a caller can pair
+  /// a failure with its photo. An unreadable image is `recognized: false`
+  /// rather than an error — one bad photo out of five must not discard the
+  /// other four.
+  func scanBatch(_ images: [ScreenshotUploadImage]) async throws -> ReceiptBatchScanResponse {
+    guard !images.isEmpty else { throw Error.api("Select at least one receipt photo.") }
+    guard images.count <= Self.maxBatchImages else {
+      throw Error.api("Scan at most \(Self.maxBatchImages) receipts at a time.")
+    }
+
+    var request = URLRequest(url: client.baseURL.appendingPathComponent("v1/receipts/scan"))
+    request.httpMethod = HTTPMethod.post.rawValue
+    await attachAuthorization(to: &request)
+
+    var body = MultipartFormBody()
+    for (index, image) in images.enumerated() {
+      body.addFile(
+        name: "file",
+        filename: image.filename ?? "receipt-\(index + 1).jpg",
+        contentType: image.contentType,
+        data: image.data
+      )
+    }
+    request.setValue(body.contentType, forHTTPHeaderField: "Content-Type")
+    request.httpBody = body.finalizedData()
+
+    let data = try await client.sendRequest(request, errorType: Error.self)
+    return try decodeEnveloped(ReceiptBatchScanResponse.self, from: data)
+  }
+
+  /// Writes the expenses the user confirmed on the review screen.
+  ///
+  /// Sends JSON, not images: extraction already happened, so this spends no AI
+  /// call and is safe to retry. The backend dedupes on `externalId`, so a
+  /// re-submitted batch does not double-insert.
+  func commitReceipts(_ payload: ReceiptImportCommitRequest) async throws -> ReceiptImportCommitResponse {
+    var request = URLRequest(
+      url: client.baseURL.appendingPathComponent("v1/expenses/import/receipts/commit")
+    )
+    request.httpMethod = HTTPMethod.post.rawValue
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    await attachAuthorization(to: &request)
+    request.httpBody = try JSONEncoder().encode(payload)
+
+    let data = try await client.sendRequest(request, errorType: Error.self)
+    return try decodeEnveloped(ReceiptImportCommitResponse.self, from: data)
+  }
+
+  private func attachAuthorization(to request: inout URLRequest) async {
+    guard let token = await client.authTokenProvider(),
+          !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    else { return }
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+  }
+
+  /// The API sometimes wraps payloads in an envelope and sometimes does not.
+  private func decodeEnveloped<T: Codable & Sendable>(_ type: T.Type, from data: Data) throws -> T {
+    do {
+      return try client.decoder.decode(type, from: data)
+    } catch {
+      if let envelope = try? client.decoder.decode(APIEnvelope<T>.self, from: data),
+         let payload = envelope.data {
+        return payload
+      }
+      throw error
+    }
+  }
+
   private func makeUploadRequest(imageData: Data, contentType: String, filename: String) async throws -> URLRequest {
     let base = client.baseURL.appendingPathComponent("v1/receipts/ocr")
     var request = URLRequest(url: base)

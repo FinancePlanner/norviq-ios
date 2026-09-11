@@ -12,6 +12,7 @@ struct ExpensesPlannerScreen: View {
   @State private var isSalaryEditorPresented = false
   @State private var isTargetEditorPresented = false
   @State private var isActivitySheetPresented = false
+  @State private var isReceiptBatchPresented = false
   @State private var isPartnerEditorPresented = false
   @State private var isRecurringManagerPresented = false
   @State private var recurringTemplateToLog: RecurringTemplateResponse?
@@ -206,6 +207,13 @@ struct ExpensesPlannerScreen: View {
         planItemEditorSheet(for: draft)
       }
       .sheet(isPresented: $isActivitySheetPresented, onDismiss: resetRecordSpendInitialPillar, content: recordSpendSheet)
+      .sheet(isPresented: $isReceiptBatchPresented) {
+        ReceiptBatchImportSheet {
+          // force: the expenses were written server-side by the import
+          // endpoint, so a cached month would not show them.
+          await viewModel.load(force: true)
+        }
+      }
       .sheet(item: $activityToEdit) { activity in
         editActivitySheet(for: activity)
       }
@@ -301,6 +309,18 @@ struct ExpensesPlannerScreen: View {
         Button("Adjust pillar targets", systemImage: "slider.horizontal.3", action: presentTargetEditor)
         Button("Add pillar", systemImage: "square.stack.3d.up", action: presentTargetEditor)
         Button("Record spend", systemImage: "plus.circle", action: presentRecordSpend)
+        // Receipt scanning was only reachable from the Home quick-add sheet,
+        // which is the wrong place to look for it when you are already in the
+        // expenses planner.
+        Button {
+          if billingManager.isPro {
+            isReceiptBatchPresented = true
+          } else {
+            isPaywallPresented = true
+          }
+        } label: {
+          Label("Scan receipts", systemImage: "doc.text.viewfinder")
+        }
         Button {
           if billingManager.isPro {
             presentPartnerEditor()
