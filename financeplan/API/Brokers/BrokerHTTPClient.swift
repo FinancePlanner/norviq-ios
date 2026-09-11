@@ -150,6 +150,96 @@ nonisolated final class BrokerHTTPClient: Sendable {
     }
   }
 
+  /// Uploads broker screenshots for extraction. Returns rows to review; nothing
+  /// is written to the portfolio by this call.
+  func previewScreenshotImport(
+    provider: String,
+    portfolioListId: String?,
+    images: [ScreenshotUploadImage]
+  ) async throws -> ScreenshotImportPreviewResponse {
+    guard !images.isEmpty else { throw Error.api("Select at least one screenshot.") }
+    guard images.count <= Self.maxScreenshotImages else {
+      throw Error.api("Upload at most \(Self.maxScreenshotImages) screenshots at a time.")
+    }
+
+    let request = try await makeScreenshotUploadRequest(
+      provider: provider,
+      portfolioListId: portfolioListId,
+      images: images
+    )
+    let data = try await client.sendRequest(request, errorType: Error.self)
+    return try decodeEnveloped(ScreenshotImportPreviewResponse.self, from: data)
+  }
+
+  /// Commits the rows the user approved. Sends JSON, not images — the
+  /// extraction is not repeated, so this costs no AI call and is safe to retry.
+  func commitScreenshotImport(
+    _ payload: ScreenshotImportCommitRequest
+  ) async throws -> CsvImportCommitResponse {
+    var request = URLRequest(url: client.baseURL.appendingPathComponent("v1/brokers/import/screenshot/commit"))
+    request.httpMethod = HTTPMethod.post.rawValue
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    if let token = await client.authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    }
+    request.httpBody = try JSONEncoder().encode(payload)
+
+    let data = try await client.sendRequest(request, errorType: Error.self)
+    return try decodeEnveloped(CsvImportCommitResponse.self, from: data)
+  }
+
+  /// Mirrors `ScreenshotPortfolioImportService.maxImages` on the backend.
+  static let maxScreenshotImages = 3
+
+  private func makeScreenshotUploadRequest(
+    provider: String,
+    portfolioListId: String?,
+    images: [ScreenshotUploadImage]
+  ) async throws -> URLRequest {
+    let base = client.baseURL.appendingPathComponent("v1/brokers/import/screenshot")
+    var components = URLComponents(url: base, resolvingAgainstBaseURL: false)
+    var queryItems = [URLQueryItem(name: "provider", value: provider)]
+    if let portfolioListId, !portfolioListId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      queryItems.append(URLQueryItem(name: "portfolioListId", value: portfolioListId))
+    }
+    components?.queryItems = queryItems
+    guard let url = components?.url else { throw Error.invalidResponse }
+
+    var request = URLRequest(url: url)
+    request.httpMethod = HTTPMethod.post.rawValue
+    if let token = await client.authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    }
+
+    var body = MultipartFormBody()
+    body.addField(name: "provider", value: provider)
+    for (index, image) in images.enumerated() {
+      // Repeated "file" parts; the backend decodes them as [File].
+      body.addFile(
+        name: "file",
+        filename: image.filename ?? "screenshot-\(index + 1).jpg",
+        contentType: image.contentType,
+        data: image.data
+      )
+    }
+    request.setValue(body.contentType, forHTTPHeaderField: "Content-Type")
+    request.httpBody = body.finalizedData()
+    return request
+  }
+
+  /// The API sometimes wraps payloads in an envelope and sometimes does not.
+  private func decodeEnveloped<T: Codable & Sendable>(_ type: T.Type, from data: Data) throws -> T {
+    do {
+      return try client.decoder.decode(type, from: data)
+    } catch {
+      if let envelope = try? client.decoder.decode(APIEnvelope<T>.self, from: data),
+         let payload = envelope.data {
+        return payload
+      }
+      throw error
+    }
+  }
+
   private func makeCSVUploadRequest(
     path: String,
     provider: String,
@@ -171,45 +261,20 @@ nonisolated final class BrokerHTTPClient: Sendable {
 
     var request = URLRequest(url: url)
     request.httpMethod = HTTPMethod.post.rawValue
-    let boundary = "Boundary-\(UUID().uuidString)"
-    request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-
     if let token = await client.authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
       request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     }
 
-    request.httpBody = makeCSVUploadBody(
-      boundary: boundary,
-      provider: provider,
-      csvData: csvData,
-      filename: "portfolio-import.csv"
+    var body = MultipartFormBody()
+    body.addField(name: "provider", value: provider)
+    body.addFile(
+      name: "file",
+      filename: "portfolio-import.csv",
+      contentType: "text/csv",
+      data: csvData
     )
+    request.setValue(body.contentType, forHTTPHeaderField: "Content-Type")
+    request.httpBody = body.finalizedData()
     return request
-  }
-
-  private func makeCSVUploadBody(
-    boundary: String,
-    provider: String,
-    csvData: Data,
-    filename: String
-  ) -> Data {
-    let newline = "\r\n"
-    var body = Data()
-
-    func append(_ text: String) {
-      body.append(Data(text.utf8))
-    }
-
-    append("--\(boundary)\(newline)")
-    append("Content-Disposition: form-data; name=\"provider\"\(newline)\(newline)")
-    append("\(provider)\(newline)")
-    append("--\(boundary)\(newline)")
-    append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\(newline)")
-    append("Content-Type: text/csv\(newline)\(newline)")
-    body.append(csvData)
-    append(newline)
-    append("--\(boundary)--\(newline)")
-
-    return body
   }
 }

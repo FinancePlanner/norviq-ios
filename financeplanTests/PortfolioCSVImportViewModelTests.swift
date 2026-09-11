@@ -70,6 +70,30 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
       lastCommitPayload = csvData
       return try commitResult.get()
     }
+
+    // Screenshot import is exercised by its own tests; these keep the mock
+    // conforming without pretending to implement the flow.
+    private(set) var lastScreenshotImages: [ScreenshotUploadImage]?
+    private(set) var lastScreenshotCommit: ScreenshotImportCommitRequest?
+    var screenshotPreviewResult: Result<ScreenshotImportPreviewResponse, Error> = .success(
+      ScreenshotImportPreviewResponse(provider: "manual", kind: .unknown, items: [], errors: [], imageCount: 0)
+    )
+
+    func previewScreenshotImport(
+      provider: String,
+      portfolioListId: String?,
+      images: [ScreenshotUploadImage]
+    ) async throws -> ScreenshotImportPreviewResponse {
+      lastPreviewProvider = provider
+      lastPreviewPortfolioListId = portfolioListId
+      lastScreenshotImages = images
+      return try screenshotPreviewResult.get()
+    }
+
+    func commitScreenshotImport(_ payload: ScreenshotImportCommitRequest) async throws -> CsvImportCommitResponse {
+      lastScreenshotCommit = payload
+      return try commitResult.get()
+    }
   }
 
   private struct StubError: LocalizedError {

@@ -87,38 +87,20 @@ nonisolated final class ReceiptsHTTPClient: Sendable {
     var request = URLRequest(url: base)
     request.httpMethod = HTTPMethod.post.rawValue
 
-    let boundary = "Boundary-\(UUID().uuidString)"
-    request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-
     if let token = await client.authTokenProvider(), !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
       request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     }
 
-    request.httpBody = makeUploadBody(
-      boundary: boundary,
-      imageData: imageData,
-      contentType: contentType.isEmpty ? "image/jpeg" : contentType,
-      filename: filename
-    )
-    return request
-  }
-
-  private func makeUploadBody(boundary: String, imageData: Data, contentType: String, filename: String) -> Data {
-    let newline = "\r\n"
-    var body = Data()
-
-    func append(_ text: String) {
-      body.append(Data(text.utf8))
-    }
-
+    var body = MultipartFormBody()
     // Backend readImageUpload accepts field "file" or "image".
-    append("--\(boundary)\(newline)")
-    append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\(newline)")
-    append("Content-Type: \(contentType)\(newline)\(newline)")
-    body.append(imageData)
-    append(newline)
-    append("--\(boundary)--\(newline)")
-
-    return body
+    body.addFile(
+      name: "file",
+      filename: filename,
+      contentType: contentType.isEmpty ? "image/jpeg" : contentType,
+      data: imageData
+    )
+    request.setValue(body.contentType, forHTTPHeaderField: "Content-Type")
+    request.httpBody = body.finalizedData()
+    return request
   }
 }
