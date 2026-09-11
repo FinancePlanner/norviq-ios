@@ -25,6 +25,7 @@ struct PortfolioScreen: View {
 
   @State private var isAddPositionPresented = false
   @State private var isCSVImportPresented = false
+  @State private var isScreenshotImportPresented = false
   @State private var destructiveFeedbackTrigger = 0
   @State private var selectedTimeRange: TimeRange = .month
   @State private var selectedAssetFilter: AssetFilter = .all
@@ -289,6 +290,11 @@ struct PortfolioScreen: View {
     }
     .sheet(isPresented: $isCSVImportPresented) {
       PortfolioCSVImportSheet(portfolioListId: viewModel.selectedPortfolioListId) {
+        await reloadPortfolio(force: true)
+      }
+    }
+    .sheet(isPresented: $isScreenshotImportPresented) {
+      PortfolioScreenshotImportSheet(portfolioListId: viewModel.selectedPortfolioListId) {
         await reloadPortfolio(force: true)
       }
     }
@@ -614,6 +620,12 @@ struct PortfolioScreen: View {
       }
 
       Button {
+        presentScreenshotImportSheet()
+      } label: {
+        Label("Import from screenshots", systemImage: "photo.on.rectangle.angled")
+      }
+
+      Button {
         selectedTradingSymbol = "AAPL" // Demo: opens polished trading sheet with candle chart
       } label: {
         Label("Quick Trade (Sheet)", systemImage: "chart.candlestick")
@@ -708,6 +720,10 @@ struct PortfolioScreen: View {
 
   private func presentCSVImportSheet() {
     isCSVImportPresented = true
+  }
+
+  private func presentScreenshotImportSheet() {
+    isScreenshotImportPresented = true
   }
 
   private func loadMoreIfAvailable() {

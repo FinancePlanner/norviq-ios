@@ -164,33 +164,19 @@ nonisolated final class SpreadsheetImportHTTPClient: Sendable {
     var request = URLRequest(url: client.baseURL.appendingPathComponent("v1/expenses/import/spreadsheet"))
     request.httpMethod = HTTPMethod.post.rawValue
 
-    let boundary = "Boundary-\(UUID().uuidString)"
-    request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
     await attachAuthorization(to: &request)
 
-    request.httpBody = makeUploadBody(boundary: boundary, fileData: fileData, filename: filename)
-    return request
-  }
-
-  private func makeUploadBody(boundary: String, fileData: Data, filename: String) -> Data {
-    let newline = "\r\n"
-    var body = Data()
-
-    func append(_ text: String) {
-      body.append(Data(text.utf8))
-    }
-
+    var body = MultipartFormBody()
     // Backend readUpload accepts field "file" or "spreadsheet".
-    append("--\(boundary)\(newline)")
-    append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\(newline)")
-    append(
-      "Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\(newline)\(newline)"
+    body.addFile(
+      name: "file",
+      filename: filename,
+      contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      data: fileData
     )
-    body.append(fileData)
-    append(newline)
-    append("--\(boundary)--\(newline)")
-
-    return body
+    request.setValue(body.contentType, forHTTPHeaderField: "Content-Type")
+    request.httpBody = body.finalizedData()
+    return request
   }
 
   private func attachAuthorization(to request: inout URLRequest) async {

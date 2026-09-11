@@ -29,6 +29,12 @@ protocol BrokerServicing: Sendable {
   func disconnectIBKR() async throws -> BrokerConnectionResponse
   func previewCsvImport(provider: String, portfolioListId: String?, csvData: Data) async throws -> CsvImportPreviewResponse
   func commitCsvImport(provider: String, portfolioListId: String?, csvData: Data) async throws -> CsvImportCommitResponse
+  func previewScreenshotImport(
+    provider: String,
+    portfolioListId: String?,
+    images: [ScreenshotUploadImage]
+  ) async throws -> ScreenshotImportPreviewResponse
+  func commitScreenshotImport(_ payload: ScreenshotImportCommitRequest) async throws -> CsvImportCommitResponse
 }
 
 struct BrokerService: BrokerServicing {
@@ -140,6 +146,26 @@ struct BrokerService: BrokerServicing {
         portfolioListId: portfolioListId,
         csvData: csvData
       )
+    }
+  }
+
+  func previewScreenshotImport(
+    provider: String,
+    portfolioListId: String?,
+    images: [ScreenshotUploadImage]
+  ) async throws -> ScreenshotImportPreviewResponse {
+    try await performAuthenticated { client in
+      try await client.previewScreenshotImport(
+        provider: provider,
+        portfolioListId: portfolioListId,
+        images: images
+      )
+    }
+  }
+
+  func commitScreenshotImport(_ payload: ScreenshotImportCommitRequest) async throws -> CsvImportCommitResponse {
+    try await performAuthenticated { client in
+      try await client.commitScreenshotImport(payload)
     }
   }
 
