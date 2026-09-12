@@ -5,11 +5,42 @@ import XCTest
 final class DCFCalculatorTests: XCTestCase {
 
   @MainActor
-  func testCalculateDCF_WithValidInputs_ComputesFairValuePerShare() {
+  func testCalculateDCF_WithValidInputs_ComputesFairValuePerShare() async {
+    await Task.yield()
     let projections = [
-      YearlyProjection(year: 2025, revenue: 110, revenueGrowth: 0.1, netIncome: 20, netIncomeGrowth: 0.1, netMargin: 0.18, eps: 2.0, fcf: 25.0, fcfMargin: 0.22),
-      YearlyProjection(year: 2026, revenue: 121, revenueGrowth: 0.1, netIncome: 22, netIncomeGrowth: 0.1, netMargin: 0.18, eps: 2.2, fcf: 30.0, fcfMargin: 0.24),
-      YearlyProjection(year: 2027, revenue: 133, revenueGrowth: 0.1, netIncome: 24, netIncomeGrowth: 0.1, netMargin: 0.18, eps: 2.4, fcf: 35.0, fcfMargin: 0.26)
+      YearlyProjection(
+        year: 2025,
+        revenue: 110,
+        revenueGrowth: 0.1,
+        netIncome: 20,
+        netIncomeGrowth: 0.1,
+        netMargin: 0.18,
+        eps: 2.0,
+        fcf: 25.0,
+        fcfMargin: 0.22
+      ),
+      YearlyProjection(
+        year: 2026,
+        revenue: 121,
+        revenueGrowth: 0.1,
+        netIncome: 22,
+        netIncomeGrowth: 0.1,
+        netMargin: 0.18,
+        eps: 2.2,
+        fcf: 30.0,
+        fcfMargin: 0.24
+      ),
+      YearlyProjection(
+        year: 2027,
+        revenue: 133,
+        revenueGrowth: 0.1,
+        netIncome: 24,
+        netIncomeGrowth: 0.1,
+        netMargin: 0.18,
+        eps: 2.4,
+        fcf: 35.0,
+        fcfMargin: 0.26
+      )
     ]
 
     let wacc = 0.10
@@ -41,9 +72,20 @@ final class DCFCalculatorTests: XCTestCase {
   }
 
   @MainActor
-  func testCalculateDCF_WithZeroFCF_ComputesValidResult() {
+  func testCalculateDCF_WithZeroFCF_ComputesValidResult() async {
+    await Task.yield()
     let projections = [
-      YearlyProjection(year: 2025, revenue: 110, revenueGrowth: 0.1, netIncome: 20, netIncomeGrowth: 0.1, netMargin: 0.18, eps: 2.0, fcf: nil, fcfMargin: nil)
+      YearlyProjection(
+        year: 2025,
+        revenue: 110,
+        revenueGrowth: 0.1,
+        netIncome: 20,
+        netIncomeGrowth: 0.1,
+        netMargin: 0.18,
+        eps: 2.0,
+        fcf: nil,
+        fcfMargin: nil
+      )
     ]
 
     let fairValue = DCFCalculator.calculateDCF(
@@ -58,9 +100,20 @@ final class DCFCalculatorTests: XCTestCase {
   }
 
   @MainActor
-  func testCalculateDCF_WithHighDebt_ComputesNegativeOrLowValue() {
+  func testCalculateDCF_WithHighDebt_ComputesNegativeOrLowValue() async {
+    await Task.yield()
     let projections = [
-      YearlyProjection(year: 2025, revenue: 110, revenueGrowth: 0.1, netIncome: 20, netIncomeGrowth: 0.1, netMargin: 0.18, eps: 2.0, fcf: 10.0, fcfMargin: 0.1)
+      YearlyProjection(
+        year: 2025,
+        revenue: 110,
+        revenueGrowth: 0.1,
+        netIncome: 20,
+        netIncomeGrowth: 0.1,
+        netMargin: 0.18,
+        eps: 2.0,
+        fcf: 10.0,
+        fcfMargin: 0.1
+      )
     ]
 
     let wacc = 0.10

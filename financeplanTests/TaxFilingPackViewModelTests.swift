@@ -10,7 +10,7 @@ import XCTest
 final class TaxFilingPackViewModelTests: XCTestCase {
   func testLoad_DecodesPreviewJSONIntoLoadedState() async throws {
     let service = FilingPackServiceMock()
-    service.previewResult = .success(try Self.decodePreview())
+    service.previewResult = try .success(Self.decodePreview())
     let model = TaxFilingPackViewModel(service: service, taxYear: 2025)
 
     await model.load()
@@ -25,7 +25,10 @@ final class TaxFilingPackViewModelTests: XCTestCase {
     XCTAssertEqual(preview.rulePackVersion, "PT-2026.2")
     XCTAssertEqual(preview.summary["totalGain"], Decimal(string: "453.64"))
     XCTAssertEqual(preview.sections.first?.id, "anexo-j-9.2A")
-    XCTAssertEqual(preview.sections.first?.rows.first, ["G01", "840", "2025", "09", "1362.73", "2025", "02", "909.09", "0.91"])
+    XCTAssertEqual(
+      preview.sections.first?.rows.first,
+      ["G01", "840", "2025", "09", "1362.73", "2025", "02", "909.09", "0.91"]
+    )
     XCTAssertEqual(service.previewTaxYears, [2025])
   }
 
@@ -62,16 +65,26 @@ final class TaxFilingPackViewModelTests: XCTestCase {
 
   func testGenerate_QueuesAnnualFilingPackForTheSelectedYear() async throws {
     let service = FilingPackServiceMock()
-    service.previewResult = .success(try Self.decodePreview())
+    service.previewResult = try .success(Self.decodePreview())
     service.createReportResult = .success(
-      TaxReportResponse(id: "r1", taxYear: 2025, kind: .annualFilingPack, format: .pdf, status: "pending", createdAt: "2026-09-03T08:00:00.000Z")
+      TaxReportResponse(
+        id: "r1",
+        taxYear: 2025,
+        kind: .annualFilingPack,
+        format: .pdf,
+        status: "pending",
+        createdAt: "2026-09-03T08:00:00.000Z"
+      )
     )
     let model = TaxFilingPackViewModel(service: service, taxYear: 2025)
     await model.load()
 
     await model.generate(format: .pdf)
 
-    XCTAssertEqual(service.createReportRequests, [TaxReportRequest(taxYear: 2025, kind: .annualFilingPack, format: .pdf)])
+    XCTAssertEqual(
+      service.createReportRequests,
+      [TaxReportRequest(taxYear: 2025, kind: .annualFilingPack, format: .pdf)]
+    )
     XCTAssertEqual(model.queuedReport?.id, "r1")
     XCTAssertFalse(model.isGenerating)
     XCTAssertNil(model.generateError)
@@ -82,7 +95,7 @@ final class TaxFilingPackViewModelTests: XCTestCase {
 
   func testGenerate_FailureSurfacesErrorAndKeepsPreview() async throws {
     let service = FilingPackServiceMock()
-    service.previewResult = .success(try Self.decodePreview())
+    service.previewResult = try .success(Self.decodePreview())
     service.createReportResult = .failure(TaxServiceError.http(statusCode: 429, message: "limit"))
     let model = TaxFilingPackViewModel(service: service, taxYear: 2025)
     await model.load()
@@ -99,9 +112,16 @@ final class TaxFilingPackViewModelTests: XCTestCase {
 
   func testLoad_ClearsQueuedReportWhenYearChanges() async throws {
     let service = FilingPackServiceMock()
-    service.previewResult = .success(try Self.decodePreview())
+    service.previewResult = try .success(Self.decodePreview())
     service.createReportResult = .success(
-      TaxReportResponse(id: "r1", taxYear: 2025, kind: .annualFilingPack, format: .csv, status: "pending", createdAt: "2026-09-03T08:00:00.000Z")
+      TaxReportResponse(
+        id: "r1",
+        taxYear: 2025,
+        kind: .annualFilingPack,
+        format: .csv,
+        status: "pending",
+        createdAt: "2026-09-03T08:00:00.000Z"
+      )
     )
     let model = TaxFilingPackViewModel(service: service, taxYear: 2025)
     await model.load()
@@ -117,10 +137,10 @@ final class TaxFilingPackViewModelTests: XCTestCase {
 
   func testReloadAfterPurchase_RetriesUntilThePreviewOpens() async throws {
     let service = FilingPackServiceMock()
-    service.previewQueue = [
+    service.previewQueue = try [
       .failure(TaxServiceError.http(statusCode: 403, message: nil)),
       .failure(TaxServiceError.http(statusCode: 403, message: nil)),
-      .success(try Self.decodePreview()),
+      .success(Self.decodePreview()),
     ]
     let model = TaxFilingPackViewModel(service: service, taxYear: 2025)
 
@@ -143,14 +163,23 @@ final class TaxFilingPackViewModelTests: XCTestCase {
     XCTAssertEqual(service.previewTaxYears.count, 3)
   }
 
-  func testDefaultTaxYear_FlipsFromLastYearToThisYearInJuly() throws {
+  func testDefaultTaxYear_FlipsFromLastYearToThisYearInJuly() async throws {
+    await Task.yield()
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
     let day = { (y: Int, m: Int, d: Int) in calendar.date(from: DateComponents(year: y, month: m, day: d))! }
 
-    XCTAssertEqual(TaxFilingPackViewModel.defaultTaxYear(on: day(2026, 3, 15), calendar: calendar), 2025, "filing window: last year's return")
+    XCTAssertEqual(
+      TaxFilingPackViewModel.defaultTaxYear(on: day(2026, 3, 15), calendar: calendar),
+      2025,
+      "filing window: last year's return"
+    )
     XCTAssertEqual(TaxFilingPackViewModel.defaultTaxYear(on: day(2026, 6, 30), calendar: calendar), 2025)
-    XCTAssertEqual(TaxFilingPackViewModel.defaultTaxYear(on: day(2026, 7, 1), calendar: calendar), 2026, "season closed: the year in progress")
+    XCTAssertEqual(
+      TaxFilingPackViewModel.defaultTaxYear(on: day(2026, 7, 1), calendar: calendar),
+      2026,
+      "season closed: the year in progress"
+    )
     XCTAssertEqual(TaxFilingPackViewModel.defaultTaxYear(on: day(2026, 9, 3), calendar: calendar), 2026)
 
     XCTAssertTrue(TaxFilingPackViewModel.isYearOpen(2026, on: day(2026, 9, 3), calendar: calendar))

@@ -1,7 +1,6 @@
 import Foundation
 import StockPlanShared
 import XCTest
-
 @testable import financeplan
 
 @MainActor
@@ -19,9 +18,9 @@ final class CryptoBillingGateTests: XCTestCase {
 
   // MARK: - HTTP-level gating
 
-  func testFetchCryptoList_returns403_surfacesUpgradeRequiredAsInvalidStatus() async {
+  func testFetchCryptoList_returns403_surfacesUpgradeRequiredAsInvalidStatus() async throws {
     let session = SessionMock()
-    let baseURL = URL(string: "https://api.example.com")!
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
     let body = """
     {
       "success": false,
@@ -61,7 +60,7 @@ final class CryptoBillingGateTests: XCTestCase {
 
   func testFetchCryptoList_returns200_decodesPayload() async throws {
     let session = SessionMock()
-    let baseURL = URL(string: "https://api.example.com")!
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
 
     session.handler = { request in
       XCTAssertEqual(request.httpMethod, "GET")
@@ -93,9 +92,9 @@ final class CryptoBillingGateTests: XCTestCase {
     XCTAssertEqual(assets.first?.symbol, "BTC")
   }
 
-  func testFetchCryptoList_returns401_surfacesUnauthorized() async {
+  func testFetchCryptoList_returns401_surfacesUnauthorized() async throws {
     let session = SessionMock()
-    let baseURL = URL(string: "https://api.example.com")!
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
 
     session.handler = { request in
       let response = HTTPURLResponse(
@@ -123,9 +122,9 @@ final class CryptoBillingGateTests: XCTestCase {
     }
   }
 
-  func testAddToCryptoPortfolio_returns403_blocksFreeUser() async {
+  func testAddToCryptoPortfolio_returns403_blocksFreeUser() async throws {
     let session = SessionMock()
-    let baseURL = URL(string: "https://api.example.com")!
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
 
     session.handler = { request in
       XCTAssertEqual(request.httpMethod, "POST")
@@ -164,7 +163,8 @@ final class CryptoBillingGateTests: XCTestCase {
 
   // MARK: - BillingContextResponse parsing
 
-  func testBillingContextResponse_decodesCryptoFeatureUnavailable() throws {
+  func testBillingContextResponse_decodesCryptoFeatureUnavailable() async throws {
+    await Task.yield()
     let json = """
     {
       "plan": "free",
@@ -200,7 +200,8 @@ final class CryptoBillingGateTests: XCTestCase {
     XCTAssertFalse(context.isPremium)
   }
 
-  func testBillingContextResponse_decodesCryptoFeatureAvailableForTrial() throws {
+  func testBillingContextResponse_decodesCryptoFeatureAvailableForTrial() async throws {
+    await Task.yield()
     let json = """
     {
       "plan": "temporary",

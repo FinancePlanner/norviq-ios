@@ -9,7 +9,8 @@ final class CSVImportViewModelTests: XCTestCase {
     viewModel = CSVImportViewModel()
   }
 
-  func testParseCSV_WithValidRows_ReturnsCorrectPositions() {
+  func testParseCSV_WithValidRows_ReturnsCorrectPositions() async {
+    await Task.yield()
     let csv = """
     symbol,quantity,price
     AAPL,10,150.5
@@ -28,7 +29,8 @@ final class CSVImportViewModelTests: XCTestCase {
     XCTAssertEqual(results[1].price, 250.75)
   }
 
-  func testParseCSV_WithExtraSpaces_TrimsCorrectly() {
+  func testParseCSV_WithExtraSpaces_TrimsCorrectly() async {
+    await Task.yield()
     let csv = """
     symbol, quantity , price
      AAPL , 10 , 150.5 
@@ -42,7 +44,8 @@ final class CSVImportViewModelTests: XCTestCase {
     XCTAssertEqual(results[0].price, 150.5)
   }
 
-  func testParseCSV_WithInvalidDataRows_SkipsInvalidRows() {
+  func testParseCSV_WithInvalidDataRows_SkipsInvalidRows() async {
+    await Task.yield()
     let csv = """
     symbol,quantity,price
     AAPL,10,150.5
@@ -57,7 +60,8 @@ final class CSVImportViewModelTests: XCTestCase {
     XCTAssertEqual(results[0].symbol, "AAPL")
   }
 
-  func testParseCSV_WithZeroQuantity_SkipsRow() {
+  func testParseCSV_WithZeroQuantity_SkipsRow() async {
+    await Task.yield()
     let csv = """
     symbol,quantity,price
     AAPL,0,150.5
@@ -68,7 +72,8 @@ final class CSVImportViewModelTests: XCTestCase {
     XCTAssertTrue(results.isEmpty)
   }
 
-  func testParseCSV_LowercaseSymbols_ConvertsToUppercase() {
+  func testParseCSV_LowercaseSymbols_ConvertsToUppercase() async {
+    await Task.yield()
     let csv = """
     symbol,quantity,price
     aapl,10,150.5
@@ -79,7 +84,8 @@ final class CSVImportViewModelTests: XCTestCase {
     XCTAssertEqual(results.first?.symbol, "AAPL")
   }
 
-  func testLoadCSV_WithValidFile_LoadsRows() async throws {
+  func testLoadCSV_WithValidFile_LoadsRows() async {
+    await Task.yield()
     let fileURL = makeTempCSVFile(contents: "symbol,quantity,price\nAAPL,10,150.5")
     defer { try? FileManager.default.removeItem(at: fileURL) }
 
@@ -89,7 +95,8 @@ final class CSVImportViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.errorMessage)
   }
 
-  func testLoadCSV_WithEmptyFile_ReturnsEmptyRows() async throws {
+  func testLoadCSV_WithEmptyFile_ReturnsEmptyRows() async {
+    await Task.yield()
     let fileURL = makeTempCSVFile(contents: "")
     defer { try? FileManager.default.removeItem(at: fileURL) }
 

@@ -25,7 +25,9 @@ final class StockServiceTests: XCTestCase {
     var validAccessTokenResult: Result<String?, Error> = .failure(MockError.notConfigured)
     var refreshAccessTokenResult: Result<String?, Error> = .failure(MockError.notConfigured)
 
-    func restoreSessionIfNeeded() async -> Bool { false }
+    func restoreSessionIfNeeded() async -> Bool {
+      false
+    }
 
     func validAccessToken() async throws -> String? {
       validAccessTokenCalls += 1
@@ -118,14 +120,14 @@ final class StockServiceTests: XCTestCase {
       XCTAssertNil(firstStock["buy_date"])
 
       let response = try XCTUnwrap(
-        HTTPURLResponse(
-          url: try XCTUnwrap(request.url),
+        try HTTPURLResponse(
+          url: XCTUnwrap(request.url),
           statusCode: 200,
           httpVersion: nil,
           headerFields: nil
         )
       )
-      return (try JSONEncoder().encode(expected), response)
+      return try (JSONEncoder().encode(expected), response)
     }
 
     let response = try await service.bulkCreate(
@@ -165,8 +167,8 @@ final class StockServiceTests: XCTestCase {
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer expired-token")
 
         let response = try XCTUnwrap(
-          HTTPURLResponse(
-            url: try XCTUnwrap(request.url),
+          try HTTPURLResponse(
+            url: XCTUnwrap(request.url),
             statusCode: 401,
             httpVersion: nil,
             headerFields: nil
@@ -179,14 +181,14 @@ final class StockServiceTests: XCTestCase {
 
       let payload = BulkStockResponse(created: 1, failed: 0, results: [])
       let response = try XCTUnwrap(
-        HTTPURLResponse(
-          url: try XCTUnwrap(request.url),
+        try HTTPURLResponse(
+          url: XCTUnwrap(request.url),
           statusCode: 200,
           httpVersion: nil,
           headerFields: nil
         )
       )
-      return (try JSONEncoder().encode(payload), response)
+      return try (JSONEncoder().encode(payload), response)
     }
 
     let response = try await service.bulkCreate(
@@ -221,8 +223,8 @@ final class StockServiceTests: XCTestCase {
 
     session.handler = { request in
       let response = try XCTUnwrap(
-        HTTPURLResponse(
-          url: try XCTUnwrap(request.url),
+        try HTTPURLResponse(
+          url: XCTUnwrap(request.url),
           statusCode: 401,
           httpVersion: nil,
           headerFields: nil
@@ -283,14 +285,14 @@ final class StockServiceTests: XCTestCase {
       XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
 
       let response = try XCTUnwrap(
-        HTTPURLResponse(
-          url: try XCTUnwrap(request.url),
+        try HTTPURLResponse(
+          url: XCTUnwrap(request.url),
           statusCode: 200,
           httpVersion: nil,
           headerFields: nil
         )
       )
-      return (try JSONEncoder().encode(expected), response)
+      return try (JSONEncoder().encode(expected), response)
     }
 
     let response = try await service.fetchPortfolio()
@@ -325,14 +327,14 @@ final class StockServiceTests: XCTestCase {
       XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
 
       let response = try XCTUnwrap(
-        HTTPURLResponse(
-          url: try XCTUnwrap(request.url),
+        try HTTPURLResponse(
+          url: XCTUnwrap(request.url),
           statusCode: 200,
           httpVersion: nil,
           headerFields: nil
         )
       )
-      return (try JSONEncoder().encode(expected), response)
+      return try (JSONEncoder().encode(expected), response)
     }
 
     let response = try await service.fetchPortfolioSummary()
@@ -372,14 +374,14 @@ final class StockServiceTests: XCTestCase {
       XCTAssertEqual(decoded, sellRequest)
 
       let response = try XCTUnwrap(
-        HTTPURLResponse(
-          url: try XCTUnwrap(request.url),
+        try HTTPURLResponse(
+          url: XCTUnwrap(request.url),
           statusCode: 200,
           httpVersion: nil,
           headerFields: nil
         )
       )
-      return (try JSONEncoder().encode(expected), response)
+      return try (JSONEncoder().encode(expected), response)
     }
 
     let response = try await service.sellStock(id: "stock-1", request: sellRequest)
@@ -413,14 +415,14 @@ final class StockServiceTests: XCTestCase {
       XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
 
       let response = try XCTUnwrap(
-        HTTPURLResponse(
-          url: try XCTUnwrap(request.url),
+        try HTTPURLResponse(
+          url: XCTUnwrap(request.url),
           statusCode: 200,
           httpVersion: nil,
           headerFields: nil
         )
       )
-      return (try JSONEncoder().encode(expected), response)
+      return try (JSONEncoder().encode(expected), response)
     }
 
     let response = try await service.fetchTargets(symbol: " aapl ")
@@ -466,14 +468,14 @@ final class StockServiceTests: XCTestCase {
       XCTAssertNil(json["targetDate"])
 
       let response = try XCTUnwrap(
-        HTTPURLResponse(
-          url: try XCTUnwrap(urlRequest.url),
+        try HTTPURLResponse(
+          url: XCTUnwrap(urlRequest.url),
           statusCode: 201,
           httpVersion: nil,
           headerFields: nil
         )
       )
-      return (try JSONEncoder().encode(expected), response)
+      return try (JSONEncoder().encode(expected), response)
     }
 
     let response = try await service.createTarget(request)
@@ -496,8 +498,8 @@ final class StockServiceTests: XCTestCase {
       XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
 
       let response = try XCTUnwrap(
-        HTTPURLResponse(
-          url: try XCTUnwrap(request.url),
+        try HTTPURLResponse(
+          url: XCTUnwrap(request.url),
           statusCode: 204,
           httpVersion: nil,
           headerFields: nil
@@ -571,28 +573,30 @@ final class StockServiceTests: XCTestCase {
       XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
 
       let response = try XCTUnwrap(
-        HTTPURLResponse(
-          url: try XCTUnwrap(request.url),
+        try HTTPURLResponse(
+          url: XCTUnwrap(request.url),
           statusCode: 200,
           httpVersion: nil,
           headerFields: nil
         )
       )
-      return (try JSONEncoder().encode(expected), response)
+      return try (JSONEncoder().encode(expected), response)
     }
 
     let response = try await service.fetchStockInsights(symbol: "AAPL")
     XCTAssertEqual(response, expected)
   }
 
-  func testGetStockValuationEndpoint_UsesSymbolPath() throws {
+  func testGetStockValuationEndpoint_UsesSymbolPath() async throws {
+    await Task.yield()
     let endpoint = GetStockValuationEndpoint(symbol: "AAPL")
 
     XCTAssertEqual(endpoint.path, "/v1/stocks/symbol/AAPL/valuation")
     XCTAssertTrue(try endpoint.asParameters().isEmpty)
   }
 
-  func testCreateStockValuationEndpoint_EncodesRequestBody() throws {
+  func testCreateStockValuationEndpoint_EncodesRequestBody() async throws {
+    await Task.yield()
     let endpoint = try CreateStockValuationEndpoint(
       symbol: "AAPL",
       bearLow: bearLow,
@@ -615,7 +619,8 @@ final class StockServiceTests: XCTestCase {
     XCTAssertEqual(decoded, makeValuationRequest())
   }
 
-  func testCreateStockValuationEndpoint_PreservesExactDraftNumbersInJSON() throws {
+  func testCreateStockValuationEndpoint_PreservesExactDraftNumbersInJSON() async throws {
+    await Task.yield()
     let endpoint = try CreateStockValuationEndpoint(
       symbol: "ORO",
       bearLow: 1,
@@ -645,7 +650,8 @@ final class StockServiceTests: XCTestCase {
     XCTAssertEqual((bullCase["high"] as? NSNumber)?.doubleValue, 6)
   }
 
-  func testUpdateStockValuationEndpoint_UsesExplicitSymbolAndEncodesRequestBody() throws {
+  func testUpdateStockValuationEndpoint_UsesExplicitSymbolAndEncodesRequestBody() async throws {
+    await Task.yield()
     let endpoint = try UpdateStockValuationEndpoint(
       symbol: "AAPL",
       bearLow: bearLow,
@@ -668,7 +674,8 @@ final class StockServiceTests: XCTestCase {
     XCTAssertEqual(decoded, makeValuationRequest())
   }
 
-  func testCreateStockValuationEndpoint_OmitsNilOptionalFields() throws {
+  func testCreateStockValuationEndpoint_OmitsNilOptionalFields() async throws {
+    await Task.yield()
     let endpoint = try CreateStockValuationEndpoint(
       symbol: "AAPL",
       bearLow: bearLow,
@@ -692,7 +699,8 @@ final class StockServiceTests: XCTestCase {
     XCTAssertEqual((bearCase["high"] as? NSNumber)?.doubleValue, 120)
   }
 
-  func testCreateStockValuationEndpoint_UsesDirectBodyEncoding() throws {
+  func testCreateStockValuationEndpoint_UsesDirectBodyEncoding() async throws {
+    await Task.yield()
     let endpoint = try CreateStockValuationEndpoint(
       symbol: "AAPL",
       bearLow: bearLow,
@@ -713,7 +721,8 @@ final class StockServiceTests: XCTestCase {
     XCTAssertEqual(decoded, makeValuationRequest())
   }
 
-  func testUpdateStockValuationEndpoint_UsesDirectBodyEncoding() throws {
+  func testUpdateStockValuationEndpoint_UsesDirectBodyEncoding() async throws {
+    await Task.yield()
     let endpoint = try UpdateStockValuationEndpoint(
       symbol: "AAPL",
       bearLow: bearLow,
@@ -751,14 +760,14 @@ final class StockServiceTests: XCTestCase {
       XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
 
       let response = try XCTUnwrap(
-        HTTPURLResponse(
-          url: try XCTUnwrap(request.url),
+        try HTTPURLResponse(
+          url: XCTUnwrap(request.url),
           statusCode: 200,
           httpVersion: nil,
           headerFields: nil
         )
       )
-      return (try JSONEncoder().encode(expected), response)
+      return try (JSONEncoder().encode(expected), response)
     }
 
     let response = try await service.getValuation(symbol: "AAPL")
@@ -781,8 +790,8 @@ final class StockServiceTests: XCTestCase {
       XCTAssertEqual(request.httpMethod, "GET")
 
       let response = try XCTUnwrap(
-        HTTPURLResponse(
-          url: try XCTUnwrap(request.url),
+        try HTTPURLResponse(
+          url: XCTUnwrap(request.url),
           statusCode: 200,
           httpVersion: nil,
           headerFields: nil
@@ -830,14 +839,14 @@ final class StockServiceTests: XCTestCase {
       XCTAssertEqual(decoded, expected)
 
       let response = try XCTUnwrap(
-        HTTPURLResponse(
-          url: try XCTUnwrap(request.url),
+        try HTTPURLResponse(
+          url: XCTUnwrap(request.url),
           statusCode: 201,
           httpVersion: nil,
           headerFields: nil
         )
       )
-      return (try JSONEncoder().encode(expected), response)
+      return try (JSONEncoder().encode(expected), response)
     }
 
     let response = try await service.createValuation(
@@ -891,14 +900,14 @@ final class StockServiceTests: XCTestCase {
       XCTAssertEqual((bullCase["high"] as? NSNumber)?.doubleValue, 6)
 
       let response = try XCTUnwrap(
-        HTTPURLResponse(
-          url: try XCTUnwrap(request.url),
+        try HTTPURLResponse(
+          url: XCTUnwrap(request.url),
           statusCode: 201,
           httpVersion: nil,
           headerFields: nil
         )
       )
-      return (try JSONEncoder().encode(expected), response)
+      return try (JSONEncoder().encode(expected), response)
     }
 
     let response = try await service.createValuation(
@@ -937,14 +946,14 @@ final class StockServiceTests: XCTestCase {
       XCTAssertEqual(decoded, expected)
 
       let response = try XCTUnwrap(
-        HTTPURLResponse(
-          url: try XCTUnwrap(request.url),
+        try HTTPURLResponse(
+          url: XCTUnwrap(request.url),
           statusCode: 200,
           httpVersion: nil,
           headerFields: nil
         )
       )
-      return (try JSONEncoder().encode(expected), response)
+      return try (JSONEncoder().encode(expected), response)
     }
 
     let response = try await service.updateValuation(

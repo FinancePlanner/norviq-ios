@@ -6,6 +6,7 @@ import XCTest
 /// are the only real proof that the gating works.
 @MainActor
 final class ReviewPromptCoordinatorTests: XCTestCase {
+
   // MARK: - Test doubles
 
   private final class InMemoryStore: ReviewPromptStoring, @unchecked Sendable {
@@ -15,29 +16,43 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
     var lastPromptByUser: [String: Date] = [:]
     var lastFrictionByUser: [String: Date] = [:]
 
-    func activeDays(for userID: String) -> Set<String> { activeDaysByUser[userID] ?? [] }
+    func activeDays(for userID: String) -> Set<String> {
+      activeDaysByUser[userID] ?? []
+    }
 
     func recordActiveDay(_ day: String, for userID: String) {
       activeDaysByUser[userID, default: []].insert(day)
     }
 
-    func firstSeen(for userID: String) -> Date? { firstSeenByUser[userID] }
-
-    func setFirstSeenIfNeeded(_ date: Date, for userID: String) {
-      if firstSeenByUser[userID] == nil { firstSeenByUser[userID] = date }
+    func firstSeen(for userID: String) -> Date? {
+      firstSeenByUser[userID]
     }
 
-    func firedTriggers(for userID: String) -> Set<String> { firedByUser[userID] ?? [] }
+    func setFirstSeenIfNeeded(_ date: Date, for userID: String) {
+      if firstSeenByUser[userID] == nil {
+        firstSeenByUser[userID] = date
+      }
+    }
+
+    func firedTriggers(for userID: String) -> Set<String> {
+      firedByUser[userID] ?? []
+    }
 
     func markTriggerFired(_ identifier: String, for userID: String) {
       firedByUser[userID, default: []].insert(identifier)
     }
 
-    func lastPromptDate(for userID: String) -> Date? { lastPromptByUser[userID] }
+    func lastPromptDate(for userID: String) -> Date? {
+      lastPromptByUser[userID]
+    }
 
-    func setLastPromptDate(_ date: Date, for userID: String) { lastPromptByUser[userID] = date }
+    func setLastPromptDate(_ date: Date, for userID: String) {
+      lastPromptByUser[userID] = date
+    }
 
-    func lastFrictionDate(for userID: String) -> Date? { lastFrictionByUser[userID] }
+    func lastFrictionDate(for userID: String) -> Date? {
+      lastFrictionByUser[userID]
+    }
 
     func setLastFrictionDate(_ date: Date, for userID: String) {
       lastFrictionByUser[userID] = date
@@ -47,8 +62,13 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
   /// A clock the test moves by hand.
   private final class TestClock: @unchecked Sendable {
     var now: Date
-    init(_ start: Date) { now = start }
-    func advance(days: Int) { now = now.addingTimeInterval(TimeInterval(days) * 86_400) }
+    init(_ start: Date) {
+      now = start
+    }
+
+    func advance(days: Int) {
+      now = now.addingTimeInterval(TimeInterval(days) * 86_400)
+    }
   }
 
   private let userID = "user-1"
@@ -73,7 +93,7 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
 
   /// Puts the user past the engagement floor: 6 distinct active days, 6 days of history.
   private func makeEligibleUser(_ coordinator: ReviewPromptCoordinator) {
-    for _ in 0 ..< 6 {
+    for _ in 0..<6 {
       coordinator.recordAppOpen(userID: userID)
       clock.advance(days: 1)
     }
@@ -81,10 +101,11 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
 
   // MARK: - Active-day counting
 
-  func testSevenDistinctDaysFiresPrompt() {
+  func testSevenDistinctDaysFiresPrompt() async {
+    await Task.yield()
     let coordinator = makeCoordinator()
 
-    for _ in 0 ..< 6 {
+    for _ in 0..<6 {
       coordinator.recordAppOpen(userID: userID)
       clock.advance(days: 1)
     }
@@ -94,10 +115,11 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
     XCTAssertTrue(coordinator.pendingPrompt, "the seventh distinct day should fire")
   }
 
-  func testManyOpensInOneDayDoNotFire() {
+  func testManyOpensInOneDayDoNotFire() async {
+    await Task.yield()
     let coordinator = makeCoordinator()
 
-    for _ in 0 ..< 20 {
+    for _ in 0..<20 {
       coordinator.recordAppOpen(userID: userID)
     }
 
@@ -107,7 +129,8 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
 
   // MARK: - Engagement floor
 
-  func testGoalCompletionBelowEngagementFloorIsSuppressed() {
+  func testGoalCompletionBelowEngagementFloorIsSuppressed() async {
+    await Task.yield()
     let coordinator = makeCoordinator()
     coordinator.recordAppOpen(userID: userID)
 
@@ -116,7 +139,8 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
     XCTAssertFalse(coordinator.pendingPrompt, "a day-one user has not earned an ask")
   }
 
-  func testGoalCompletionFiresOnceEligible() {
+  func testGoalCompletionFiresOnceEligible() async {
+    await Task.yield()
     let coordinator = makeCoordinator()
     makeEligibleUser(coordinator)
 
@@ -127,7 +151,8 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
 
   // MARK: - One-shot
 
-  func testSameGoalDoesNotFireTwice() {
+  func testSameGoalDoesNotFireTwice() async {
+    await Task.yield()
     let coordinator = makeCoordinator()
     makeEligibleUser(coordinator)
 
@@ -142,7 +167,8 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
 
   // MARK: - Cooldown
 
-  func testSecondTriggerWithinCooldownIsSuppressed() {
+  func testSecondTriggerWithinCooldownIsSuppressed() async {
+    await Task.yield()
     let coordinator = makeCoordinator()
     makeEligibleUser(coordinator)
 
@@ -155,7 +181,8 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
     XCTAssertFalse(coordinator.pendingPrompt, "a different goal still waits out the cooldown")
   }
 
-  func testSecondTriggerAfterCooldownFires() {
+  func testSecondTriggerAfterCooldownFires() async {
+    await Task.yield()
     let coordinator = makeCoordinator()
     makeEligibleUser(coordinator)
 
@@ -170,7 +197,8 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
 
   // MARK: - Friction
 
-  func testTriggerWithinFrictionWindowIsSuppressed() {
+  func testTriggerWithinFrictionWindowIsSuppressed() async {
+    await Task.yield()
     let coordinator = makeCoordinator()
     makeEligibleUser(coordinator)
 
@@ -181,7 +209,8 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
     XCTAssertFalse(coordinator.pendingPrompt)
   }
 
-  func testTriggerAfterFrictionWindowFires() {
+  func testTriggerAfterFrictionWindowFires() async {
+    await Task.yield()
     let coordinator = makeCoordinator()
     makeEligibleUser(coordinator)
 
@@ -192,7 +221,8 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
     XCTAssertTrue(coordinator.pendingPrompt)
   }
 
-  func testFrictionWithdrawsAQueuedPrompt() {
+  func testFrictionWithdrawsAQueuedPrompt() async {
+    await Task.yield()
     let coordinator = makeCoordinator()
     makeEligibleUser(coordinator)
 
@@ -207,7 +237,8 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
 
   // MARK: - Context
 
-  func testTriggerWhileASheetIsPresentedIsSuppressed() {
+  func testTriggerWhileASheetIsPresentedIsSuppressed() async {
+    await Task.yield()
     let coordinator = makeCoordinator()
     makeEligibleUser(coordinator)
 
@@ -219,7 +250,8 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
 
   // MARK: - Multi-user isolation
 
-  func testPromptStateDoesNotLeakBetweenUsers() {
+  func testPromptStateDoesNotLeakBetweenUsers() async {
+    await Task.yield()
     let coordinator = makeCoordinator()
     let other = "user-2"
 
@@ -234,7 +266,8 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
     XCTAssertFalse(coordinator.pendingPrompt, "user-2 has no history and is not yet eligible")
   }
 
-  func testEmptyUserIDIsIgnored() {
+  func testEmptyUserIDIsIgnored() async {
+    await Task.yield()
     let coordinator = makeCoordinator()
 
     coordinator.recordAppOpen(userID: "")
@@ -246,7 +279,8 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
 
   // MARK: - Trigger identity
 
-  func testTriggerIdentifiersAreDistinctPerGoalAndShared() {
+  func testTriggerIdentifiersAreDistinctPerGoalAndShared() async {
+    await Task.yield()
     XCTAssertNotEqual(
       ReviewTrigger.goalCompleted(goalID: "a").persistenceIdentifier,
       ReviewTrigger.goalCompleted(goalID: "b").persistenceIdentifier

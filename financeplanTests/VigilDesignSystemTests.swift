@@ -1,6 +1,5 @@
 import SwiftUI
 import XCTest
-
 @testable import financeplan
 
 /// Guards the Vigil design system against silent regressions.
@@ -21,7 +20,8 @@ final class VigilDesignSystemTests: XCTestCase {
 
   // MARK: - Root tint
 
-  func testRootTintResolvesFromEnvironmentNotStoredAppearance() throws {
+  func testRootTintResolvesFromEnvironmentNotStoredAppearance() async throws {
+    await Task.yield()
     let src = try source("financeplan/NorviqaApp.swift")
 
     // `appAppearance.colorScheme` is nil for .system (the default), so
@@ -36,7 +36,8 @@ final class VigilDesignSystemTests: XCTestCase {
     )
   }
 
-  func testAppearanceDependentUIKitChromeUsesResolvedScheme() throws {
+  func testAppearanceDependentUIKitChromeUsesResolvedScheme() async throws {
+    await Task.yield()
     let src = try source("financeplan/NorviqaApp.swift")
 
     // Same root cause, opposite fallback: these defaulted to .dark while the
@@ -64,7 +65,8 @@ final class VigilDesignSystemTests: XCTestCase {
 
   // MARK: - Asset catalog
 
-  func testAccentColorUsesVigilAnchorsNotDeprecatedGold() throws {
+  func testAccentColorUsesVigilAnchorsNotDeprecatedGold() async throws {
+    await Task.yield()
     let json = try source("financeplan/Assets.xcassets/AccentColor.colorset/Contents.json")
 
     // Asset catalogs are static and cannot brand-switch, so this is a one-value
@@ -93,7 +95,8 @@ final class VigilDesignSystemTests: XCTestCase {
   /// on the values that ship.
   ///
   /// Hex is taken verbatim from that file's palette table.
-  func testThemeColorsetsMatchTheSharedBrandSpec() throws {
+  func testThemeColorsetsMatchTheSharedBrandSpec() async throws {
+    await Task.yield()
     let expected: [String: (light: String, dark: String)] = [
       "VigilTint": (light: "0x08,0x91,0xB2", dark: "0x00,0xF2,0xFF"),
       "VigilSecondaryTint": (light: "0x0D,0x94,0x88", dark: "0x00,0xFF,0x94"),
@@ -125,7 +128,8 @@ final class VigilDesignSystemTests: XCTestCase {
   /// The tint is bright enough that white on it fails contrast badly — 1.39:1 in
   /// dark. `OnTint` is what stops that, so it must stay dark-on-light-tint and
   /// light-on-dark-tint, i.e. inverted relative to every other colorset here.
-  func testOnTintInvertsSoLabelsStayReadableOnTheAccent() throws {
+  func testOnTintInvertsSoLabelsStayReadableOnTheAccent() async throws {
+    await Task.yield()
     let json = try source("financeplan/Assets.xcassets/Theme/OnTint.colorset/Contents.json")
       .replacingOccurrences(of: " ", with: "")
 
@@ -139,7 +143,8 @@ final class VigilDesignSystemTests: XCTestCase {
     XCTAssertTrue(dark.contains("\"red\":\"0x05\""), "OnTint dark must be near-black — white on #00F2FF is 1.39:1.")
   }
 
-  func testSplashUsesNorviqWordmarkNotTheMascot() throws {
+  func testSplashUsesNorviqWordmarkNotTheMascot() async throws {
+    await Task.yield()
     let splash = try source("financeplan/Features/Launch/SplashScreen.swift")
     let logo = try source("financeplan/Features/Auth/NorviqaLogo.swift")
 
@@ -169,7 +174,8 @@ final class VigilDesignSystemTests: XCTestCase {
     )
   }
 
-  func testLaunchScreenBackgroundAdaptsToAppearance() throws {
+  func testLaunchScreenBackgroundAdaptsToAppearance() async throws {
+    await Task.yield()
     let plist = try source("Info.plist")
 
     // The launch screen is the UILaunchScreen dictionary, NOT
@@ -187,65 +193,87 @@ final class VigilDesignSystemTests: XCTestCase {
     )
 
     let colorset = try source("financeplan/Assets.xcassets/LaunchBackground.colorset/Contents.json")
-    XCTAssertTrue(colorset.contains("\"value\" : \"dark\""),
-                  "LaunchBackground needs a dark variant or the launch screen cannot adapt.")
+    XCTAssertTrue(
+      colorset.contains("\"value\" : \"dark\""),
+      "LaunchBackground needs a dark variant or the launch screen cannot adapt."
+    )
   }
 
   // MARK: - Dead navigation
 
-  func testNoPlaceholderSettingsDestinationsRemain() throws {
+  func testNoPlaceholderSettingsDestinationsRemain() async throws {
+    await Task.yield()
     let src = try source("financeplan/Features/UserProfile/UserProfileView.swift")
 
     // .dataHandling and .sensitiveActions had no push sites anywhere, so they
     // were unreachable enum cases whose bodies were bare Text placeholders.
-    XCTAssertFalse(src.contains("Text(\"Data handling\")"),
-                   "unreachable placeholder destination should be removed, not shipped")
-    XCTAssertFalse(src.contains("Text(\"Sensitive actions\")"),
-                   "unreachable placeholder destination should be removed, not shipped")
+    XCTAssertFalse(
+      src.contains("Text(\"Data handling\")"),
+      "unreachable placeholder destination should be removed, not shipped"
+    )
+    XCTAssertFalse(
+      src.contains("Text(\"Sensitive actions\")"),
+      "unreachable placeholder destination should be removed, not shipped"
+    )
     XCTAssertFalse(src.contains("case dataHandling"))
     XCTAssertFalse(src.contains("case sensitiveActions"))
   }
 
-  func testBankSyncStaysReachableFromSettingsInTwoTaps() throws {
+  func testBankSyncStaysReachableFromSettingsInTwoTaps() async throws {
+    await Task.yield()
     let profile = try source("financeplan/Features/UserProfile/UserProfileView.swift")
     let integrations = try source("financeplan/Features/Integrations/IntegrationsView.swift")
 
     // Settings > Connected Accounts > Bank Sync. PR #60 had to restore this
     // entry once; keep the shallow path intact.
-    XCTAssertTrue(profile.contains("UserProfileDestination.integrations"),
-                  "Settings must keep a direct row to the functional integrations screen")
-    XCTAssertTrue(integrations.contains("BankingView()"),
-                  "bank sync must stay reachable from IntegrationsView")
+    XCTAssertTrue(
+      profile.contains("UserProfileDestination.integrations"),
+      "Settings must keep a direct row to the functional integrations screen"
+    )
+    XCTAssertTrue(
+      integrations.contains("BankingView()"),
+      "bank sync must stay reachable from IntegrationsView"
+    )
   }
 
   // MARK: - Card surfaces
 
-  func testGlassCardKeepsAdaptiveDefaultPadding() throws {
+  func testGlassCardKeepsAdaptiveDefaultPadding() async throws {
+    await Task.yield()
     let src = try source("financeplan/Components/GlassCard.swift")
 
     // `.padding()` and `.padding(16)` are NOT equivalent — the no-argument form
     // is adaptive. All 75 existing call sites render the adaptive one, so the
     // nil branch must keep calling it with no argument.
-    XCTAssertTrue(src.contains("content.padding()"),
-                  "the default padding branch must stay adaptive, not a fixed value")
-    XCTAssertTrue(src.contains("padding: CGFloat? = nil"),
-                  "padding must be opt-in so existing call sites are unaffected")
+    XCTAssertTrue(
+      src.contains("content.padding()"),
+      "the default padding branch must stay adaptive, not a fixed value"
+    )
+    XCTAssertTrue(
+      src.contains("padding: CGFloat? = nil"),
+      "padding must be opt-in so existing call sites are unaffected"
+    )
   }
 
-  func testGlassCardStillAppliesAppGlassEffect() throws {
+  func testGlassCardStillAppliesAppGlassEffect() async throws {
+    await Task.yield()
     let src = try source("financeplan/Components/GlassCard.swift")
 
     // Guards the consolidation trap: pointing GlassCard at VigilGlassBackground
     // would drop .appGlassEffect and leave a flat cardBackground fill with no
     // stroke, shadow or native glass, flattening cards across all 75 sites. Any
     // future change here needs a screenshot review first.
-    XCTAssertTrue(src.contains(".appGlassEffect("),
-                  "GlassCard must keep the native/fallback glass primitive")
+    XCTAssertTrue(
+      src.contains(".appGlassEffect("),
+      "GlassCard must keep the native/fallback glass primitive"
+    )
 
     // Match construction, not any mention: the doc comment in that file
     // deliberately names VigilGlassBackground to explain why it is NOT used.
-    XCTAssertFalse(src.contains("VigilGlassBackground("),
-                   "swapping in VigilGlassBackground flattens the cards; needs visual review")
+    XCTAssertFalse(
+      src.contains("VigilGlassBackground("),
+      "swapping in VigilGlassBackground flattens the cards; needs visual review"
+    )
   }
 
   // MARK: - Tab bar chrome
@@ -257,7 +285,8 @@ final class VigilDesignSystemTests: XCTestCase {
   ///
   /// Re-hiding the bar is the one edit that would silently undo all of it, so it
   /// is what this guards.
-  func testNativeTabBarIsNotHiddenAgain() throws {
+  func testNativeTabBarIsNotHiddenAgain() async throws {
+    await Task.yield()
     let home = try source("financeplan/Features/Home/HomeScreen.swift")
     let app = try source("financeplan/NorviqaApp.swift")
 
@@ -277,7 +306,8 @@ final class VigilDesignSystemTests: XCTestCase {
 
   /// Home is content + system chrome. Command-center kickers, a second net-worth
   /// strip, and bordered toolbar blobs are the LLM glass look this screen dropped.
-  func testHomeDropsCommandCenterTheater() throws {
+  func testHomeDropsCommandCenterTheater() async throws {
+    await Task.yield()
     let dashboard = try source("financeplan/Features/Home/DashboardRoot.swift")
     XCTAssertFalse(
       dashboard.contains("VigilPageHeader"),
@@ -315,7 +345,8 @@ final class VigilDesignSystemTests: XCTestCase {
 
   // MARK: - Credential autofill
 
-  func testEveryCodeEntryFieldOffersOneTimeCodeAutofill() throws {
+  func testEveryCodeEntryFieldOffersOneTimeCodeAutofill() async throws {
+    await Task.yield()
     // Without .oneTimeCode iOS never surfaces the code in the QuickType bar, so
     // the user leaves the app, memorises six digits and types them back. It
     // fails nothing and logs nothing; it just quietly costs a sign-in.
@@ -332,7 +363,8 @@ final class VigilDesignSystemTests: XCTestCase {
     }
   }
 
-  func testCredentialFieldsDeclareTheirContentType() throws {
+  func testCredentialFieldsDeclareTheirContentType() async throws {
+    await Task.yield()
     let signIn = try source("financeplan/Features/Auth/SignInView.swift")
     let signUp = try source("financeplan/Features/Auth/SignUpView.swift")
 
@@ -344,9 +376,10 @@ final class VigilDesignSystemTests: XCTestCase {
     XCTAssertTrue(signUp.contains("textContentType: .newPassword"))
   }
 
-// MARK: - Reduce Motion
+  // MARK: - Reduce Motion
 
-  func testOnboardingAnimationsRespectReduceMotion() throws {
+  func testOnboardingAnimationsRespectReduceMotion() async throws {
+    await Task.yield()
     // .appAnimation swaps in AppMotion.reduced when accessibilityReduceMotion is
     // on; a raw .animation(...) does not, so the spring plays anyway. Onboarding
     // is the conversion-critical flow and the worst place to ignore the setting.
@@ -386,10 +419,11 @@ final class VigilDesignSystemTests: XCTestCase {
     }
   }
 
-// MARK: - Paywall disclosure
+  // MARK: - Paywall disclosure
 
   @MainActor
-  func testPaywallCatalogMatchesPaidFeaturesAndKeepsReportsFree() {
+  func testPaywallCatalogMatchesPaidFeaturesAndKeepsReportsFree() async {
+    await Task.yield()
     let ids = Set(PaywallCatalog.rows.map(\.id))
     for key in [
       "broker_sync", "target_alerts", "market_fundamentals", "valuation_cases",
@@ -411,7 +445,8 @@ final class VigilDesignSystemTests: XCTestCase {
     XCTAssertEqual(reports?.includedInPro, true)
   }
 
-  func testPaywallScreensNoLongerAdvertiseBannedCopy() throws {
+  func testPaywallScreensNoLongerAdvertiseBannedCopy() async throws {
+    await Task.yield()
     for path in [
       "financeplan/Features/UserProfile/PaywallView.swift",
       "financeplan/Features/Auth/PreLoginPaywallScreen.swift",
@@ -424,7 +459,8 @@ final class VigilDesignSystemTests: XCTestCase {
     }
   }
 
-  func testAllThreePaywallEntryPointsDiscloseTerms() throws {
+  func testAllThreePaywallEntryPointsDiscloseTerms() async throws {
+    await Task.yield()
     // Every entry point must independently show price, cancellation and trial
     // terms — a user can reach any one of them without seeing the others.
     for path in [
@@ -433,30 +469,43 @@ final class VigilDesignSystemTests: XCTestCase {
       "financeplan/Features/Onboarding/Questionnaire/Screens/OnboardingQuestionnairePaywallScreen.swift",
     ] {
       let src = try source(path)
-      XCTAssertTrue(src.contains("PaywallTrustStrip"),
-                    "\(path) must show the cancellation and trial-charge strip")
-      XCTAssertTrue(src.contains("localizedPriceString"),
-                    "\(path) must show the real StoreKit price, not a hardcoded one")
+      XCTAssertTrue(
+        src.contains("PaywallTrustStrip"),
+        "\(path) must show the cancellation and trial-charge strip"
+      )
+      XCTAssertTrue(
+        src.contains("localizedPriceString"),
+        "\(path) must show the real StoreKit price, not a hardcoded one"
+      )
     }
   }
 
-  func testPaywallPriceCannotBeTruncatedAtLargeDynamicType() throws {
+  func testPaywallPriceCannotBeTruncatedAtLargeDynamicType() async throws {
+    await Task.yield()
     let card = try source("financeplan/Components/Paywall/PaywallPlanCard.swift")
 
     // The card is a horizontal HStack: the title/subtitle column and the price
     // compete for width. At AX5 SwiftUI truncates whichever side loses, and on a
     // paywall that must never be the price. Build-31 was rejected for exactly
     // this class of Dynamic Type failure.
-    XCTAssertTrue(card.contains(".layoutPriority(1)"),
-                  "the price column must win the width negotiation")
-    XCTAssertTrue(card.contains(".fixedSize(horizontal: true, vertical: false)"),
-                  "the price must not compress")
-    XCTAssertTrue(card.contains(".fixedSize(horizontal: false, vertical: true)"),
-                  "the title and subtitle must wrap rather than squeeze the price out")
+    XCTAssertTrue(
+      card.contains(".layoutPriority(1)"),
+      "the price column must win the width negotiation"
+    )
+    XCTAssertTrue(
+      card.contains(".fixedSize(horizontal: true, vertical: false)"),
+      "the price must not compress"
+    )
+    XCTAssertTrue(
+      card.contains(".fixedSize(horizontal: false, vertical: true)"),
+      "the title and subtitle must wrap rather than squeeze the price out"
+    )
 
     let strip = try source("financeplan/Components/Paywall/PaywallTrustStrip.swift")
-    XCTAssertTrue(strip.contains(".fixedSize(horizontal: false, vertical: true)"),
-                  "three equal columns at AX5 must wrap, not truncate \"Charged after trial\"")
+    XCTAssertTrue(
+      strip.contains(".fixedSize(horizontal: false, vertical: true)"),
+      "three equal columns at AX5 must wrap, not truncate \"Charged after trial\""
+    )
   }
 }
 

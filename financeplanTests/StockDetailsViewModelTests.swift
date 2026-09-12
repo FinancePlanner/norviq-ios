@@ -132,14 +132,18 @@ final class StockDetailsViewModelTests: XCTestCase {
     func createWatchlistItem(
       _ request: WatchlistItemRequest,
       watchlistListId _: String?
-    ) async throws -> WatchlistItemResponse {
+    )
+      async throws -> WatchlistItemResponse
+    {
       try await createWatchlistItem(request)
     }
 
     func updateWatchlistItem(
       id _: String,
       request _: WatchlistItemUpdateRequest
-    ) async throws -> WatchlistItemResponse {
+    )
+      async throws -> WatchlistItemResponse
+    {
       throw MockError.notConfigured
     }
 
@@ -147,7 +151,9 @@ final class StockDetailsViewModelTests: XCTestCase {
       id: String,
       request: WatchlistItemUpdateRequest,
       watchlistListId _: String?
-    ) async throws -> WatchlistItemResponse {
+    )
+      async throws -> WatchlistItemResponse
+    {
       try await updateWatchlistItem(id: id, request: request)
     }
 
@@ -162,7 +168,9 @@ final class StockDetailsViewModelTests: XCTestCase {
     func createValuation(
       symbol: String,
       draft: StockValuationDraft
-    ) async throws -> StockValuationRequest {
+    )
+      async throws -> StockValuationRequest
+    {
       try await createValuation(
         symbol: symbol,
         bearLow: draft.bearLow,
@@ -186,7 +194,9 @@ final class StockDetailsViewModelTests: XCTestCase {
       bullHigh: Double,
       rationale: String?,
       targetDate: String?
-    ) async throws -> StockValuationRequest {
+    )
+      async throws -> StockValuationRequest
+    {
       createValuationCalls += 1
       lastCreateValuationSymbol = symbol
       lastCreateValuationBearLow = bearLow
@@ -203,7 +213,9 @@ final class StockDetailsViewModelTests: XCTestCase {
     func updateValuation(
       symbol: String,
       draft: StockValuationDraft
-    ) async throws -> StockValuationRequest {
+    )
+      async throws -> StockValuationRequest
+    {
       try await updateValuation(
         symbol: symbol,
         bearLow: draft.bearLow,
@@ -227,7 +239,9 @@ final class StockDetailsViewModelTests: XCTestCase {
       bullHigh: Double,
       rationale: String?,
       targetDate: String?
-    ) async throws -> StockValuationRequest {
+    )
+      async throws -> StockValuationRequest
+    {
       updateValuationCalls += 1
       lastUpdateValuationSymbol = symbol
       lastUpdateValuationBearLow = bearLow
@@ -316,7 +330,9 @@ final class StockDetailsViewModelTests: XCTestCase {
       terminalGrowthRate _: Double?,
       terminalMargin _: Double?,
       fcfMarginAssumption _: Double?
-    ) async throws -> StockAnalysisMetrics {
+    )
+      async throws -> StockAnalysisMetrics
+    {
       try fetchAnalysisMetricsResult.get()
     }
 
@@ -324,14 +340,21 @@ final class StockDetailsViewModelTests: XCTestCase {
       try fetchMarketCompareResult.get()
     }
 
-    func fetchBalanceSheetStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [BalanceSheetStatementResponse] {      try fetchBalanceSheetStatementResult.get()
+    func fetchBalanceSheetStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [
+      BalanceSheetStatementResponse
+    ] {
+      try fetchBalanceSheetStatementResult.get()
     }
 
-    func fetchCashFlowStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [CashFlowStatementResponse] {
+    func fetchCashFlowStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [
+      CashFlowStatementResponse
+    ] {
       try fetchCashFlowStatementResult.get()
     }
 
-    func fetchIncomeStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [IncomeStatementResponse] {
+    func fetchIncomeStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [
+      IncomeStatementResponse
+    ] {
       try fetchIncomeStatementResult.get()
     }
 
@@ -343,11 +366,15 @@ final class StockDetailsViewModelTests: XCTestCase {
       try fetchRatiosTTMResult.get()
     }
 
-    func fetchFinancialGrowth(symbol _: String, limit _: Int?, period _: String?) async throws -> [FinancialGrowthResponse] {
+    func fetchFinancialGrowth(symbol _: String, limit _: Int?, period _: String?) async throws -> [
+      FinancialGrowthResponse
+    ] {
       try fetchFinancialGrowthResult.get()
     }
 
-    func fetchAnalystEstimates(symbol _: String, limit _: Int?, period _: String?) async throws -> [AnalystEstimatesResponse] {
+    func fetchAnalystEstimates(symbol _: String, limit _: Int?, period _: String?) async throws -> [
+      AnalystEstimatesResponse
+    ] {
       try fetchAnalystEstimatesResult.get()
     }
 
@@ -378,14 +405,14 @@ final class StockDetailsViewModelTests: XCTestCase {
     }
 
     func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements {
-      StockFinancialStatements.from(
+      try StockFinancialStatements.from(
         symbol: symbol,
-        balanceSheets: try fetchBalanceSheetStatementResult.get(),
-        cashFlows: try fetchCashFlowStatementResult.get(),
-        ratios: try fetchRatiosResult.get(),
-        ratiosTTM: try fetchRatiosTTMResult.get(),
-        growth: try fetchFinancialGrowthResult.get(),
-        estimates: try fetchAnalystEstimatesResult.get()
+        balanceSheets: fetchBalanceSheetStatementResult.get(),
+        cashFlows: fetchCashFlowStatementResult.get(),
+        ratios: fetchRatiosResult.get(),
+        ratiosTTM: fetchRatiosTTMResult.get(),
+        growth: fetchFinancialGrowthResult.get(),
+        estimates: fetchAnalystEstimatesResult.get()
       )
     }
 
@@ -1006,18 +1033,89 @@ final class StockDetailsViewModelTests: XCTestCase {
         StockInsightProjectionScenarioDTO(
           kind: "base",
           years: [
-            StockInsightProjectionYearDTO(year: 2024, revenue: 360_000_000_000, revenueGrowth: 0.05, netIncome: 96_000_000_000, netIncomeGrowth: 0.06, netMargin: 0.267, eps: 4.8, peLowEstimate: 16, peHighEstimate: 24, sharePriceLow: 76.8, sharePriceHigh: 115.2, cagrLow: -0.15, cagrHigh: -0.09),
-            StockInsightProjectionYearDTO(year: 2025, revenue: 381_600_000_000, revenueGrowth: 0.06, netIncome: 103_680_000_000, netIncomeGrowth: 0.08, netMargin: 0.272, eps: 5.4, peLowEstimate: 17, peHighEstimate: 25, sharePriceLow: 91.8, sharePriceHigh: 135.0, cagrLow: -0.13, cagrHigh: -0.07),
-            StockInsightProjectionYearDTO(year: 2026, revenue: 404_496_000_000, revenueGrowth: 0.06, netIncome: 112_000_000_000, netIncomeGrowth: 0.08, netMargin: 0.277, eps: 6.0, peLowEstimate: 18, peHighEstimate: 26, sharePriceLow: 108.0, sharePriceHigh: 156.0, cagrLow: -0.11, cagrHigh: -0.06),
-            StockInsightProjectionYearDTO(year: 2027, revenue: 428_765_760_000, revenueGrowth: 0.06, netIncome: 120_960_000_000, netIncomeGrowth: 0.08, netMargin: 0.282, eps: 6.6, peLowEstimate: 18, peHighEstimate: 27, sharePriceLow: 118.8, sharePriceHigh: 178.2, cagrLow: -0.10, cagrHigh: -0.05),
-            StockInsightProjectionYearDTO(year: 2028, revenue: 454_491_705_600, revenueGrowth: 0.06, netIncome: 130_636_800_000, netIncomeGrowth: 0.08, netMargin: 0.287, eps: 7.2, peLowEstimate: 19, peHighEstimate: 28, sharePriceLow: 136.8, sharePriceHigh: 201.6, cagrLow: -0.08, cagrHigh: -0.03)
+            StockInsightProjectionYearDTO(
+              year: 2024,
+              revenue: 360_000_000_000,
+              revenueGrowth: 0.05,
+              netIncome: 96_000_000_000,
+              netIncomeGrowth: 0.06,
+              netMargin: 0.267,
+              eps: 4.8,
+              peLowEstimate: 16,
+              peHighEstimate: 24,
+              sharePriceLow: 76.8,
+              sharePriceHigh: 115.2,
+              cagrLow: -0.15,
+              cagrHigh: -0.09
+            ),
+            StockInsightProjectionYearDTO(
+              year: 2025,
+              revenue: 381_600_000_000,
+              revenueGrowth: 0.06,
+              netIncome: 103_680_000_000,
+              netIncomeGrowth: 0.08,
+              netMargin: 0.272,
+              eps: 5.4,
+              peLowEstimate: 17,
+              peHighEstimate: 25,
+              sharePriceLow: 91.8,
+              sharePriceHigh: 135.0,
+              cagrLow: -0.13,
+              cagrHigh: -0.07
+            ),
+            StockInsightProjectionYearDTO(
+              year: 2026,
+              revenue: 404_496_000_000,
+              revenueGrowth: 0.06,
+              netIncome: 112_000_000_000,
+              netIncomeGrowth: 0.08,
+              netMargin: 0.277,
+              eps: 6.0,
+              peLowEstimate: 18,
+              peHighEstimate: 26,
+              sharePriceLow: 108.0,
+              sharePriceHigh: 156.0,
+              cagrLow: -0.11,
+              cagrHigh: -0.06
+            ),
+            StockInsightProjectionYearDTO(
+              year: 2027,
+              revenue: 428_765_760_000,
+              revenueGrowth: 0.06,
+              netIncome: 120_960_000_000,
+              netIncomeGrowth: 0.08,
+              netMargin: 0.282,
+              eps: 6.6,
+              peLowEstimate: 18,
+              peHighEstimate: 27,
+              sharePriceLow: 118.8,
+              sharePriceHigh: 178.2,
+              cagrLow: -0.10,
+              cagrHigh: -0.05
+            ),
+            StockInsightProjectionYearDTO(
+              year: 2028,
+              revenue: 454_491_705_600,
+              revenueGrowth: 0.06,
+              netIncome: 130_636_800_000,
+              netIncomeGrowth: 0.08,
+              netMargin: 0.287,
+              eps: 7.2,
+              peLowEstimate: 19,
+              peHighEstimate: 28,
+              sharePriceLow: 136.8,
+              sharePriceHigh: 201.6,
+              cagrLow: -0.08,
+              cagrHigh: -0.03
+            )
           ]
         )
       ]
     )
   }
 
-  func testShareSnapshot_BuildsStructuredExportText() {
+  func testShareSnapshot_BuildsStructuredExportText() async {
+    await Task.yield()
     let service = StockServiceMock()
     let marketDataService = MarketDataServiceMock()
     let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
@@ -1054,7 +1152,8 @@ final class StockDetailsViewModelTests: XCTestCase {
     XCTAssertTrue(snapshot?.body.contains("Apple expands services revenue") == true)
   }
 
-  func testShareSnapshot_IsNilWithoutLoadedDetails() {
+  func testShareSnapshot_IsNilWithoutLoadedDetails() async {
+    await Task.yield()
     let service = StockServiceMock()
     let marketDataService = MarketDataServiceMock()
     let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
@@ -1538,7 +1637,9 @@ final class StockDetailsViewModelTests: XCTestCase {
       hasTranscript: true
     )
     struct StubError: LocalizedError {
-      var errorDescription: String? { "Transcript fetch failed." }
+      var errorDescription: String? {
+        "Transcript fetch failed."
+      }
     }
     marketDataService.fetchStockEarningsTranscriptResult = .failure(StubError())
 
@@ -1610,7 +1711,8 @@ final class StockDetailsViewModelTests: XCTestCase {
     XCTAssertFalse(viewModel.isEarningsTranscriptLoading)
   }
 
-  func testMarketSnapshot_WhenChangeFieldsMissing_ComputesChangeAndPercent() throws {
+  func testMarketSnapshot_WhenChangeFieldsMissing_ComputesChangeAndPercent() async throws {
+    await Task.yield()
     let snapshot = StockMarketSnapshot(
       symbol: "TEST",
       currency: "USD",
@@ -1629,7 +1731,8 @@ final class StockDetailsViewModelTests: XCTestCase {
     XCTAssertLessThan(snapshot.rangeProgress, 1)
   }
 
-  func testMarketSnapshot_WhenEndpointProvidesPercentagePoints_NormalizesForDisplay() throws {
+  func testMarketSnapshot_WhenEndpointProvidesPercentagePoints_NormalizesForDisplay() async throws {
+    await Task.yield()
     let snapshot = StockMarketSnapshot(
       symbol: "ZETA",
       currency: "USD",

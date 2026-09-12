@@ -1,7 +1,6 @@
 import CoreGraphics
 import Foundation
 import XCTest
-
 @testable import financeplan
 
 @MainActor
@@ -51,7 +50,8 @@ final class MarketsViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.errorMessage)
   }
 
-  func testSquarifiedFramesAreProportionalAndTileTheRect() {
+  func testSquarifiedFramesAreProportionalAndTileTheRect() async {
+    await Task.yield()
     let rect = CGRect(x: 0, y: 0, width: 300, height: 200)
     let weights: [Double] = [6, 6, 4, 3, 2, 2, 1]
     let frames = SquarifiedTreemap.frames(weights: weights, in: rect)
@@ -77,7 +77,8 @@ final class MarketsViewModelTests: XCTestCase {
     }
   }
 
-  func testSquarifiedFramesHandleDegenerateInput() {
+  func testSquarifiedFramesHandleDegenerateInput() async {
+    await Task.yield()
     XCTAssertEqual(SquarifiedTreemap.frames(weights: [], in: CGRect(x: 0, y: 0, width: 10, height: 10)), [])
     let zeroRect = SquarifiedTreemap.frames(weights: [1, 2], in: .zero)
     XCTAssertEqual(zeroRect, [.zero, .zero])

@@ -5,7 +5,8 @@ import XCTest
 
 @MainActor
 final class StockChannelShareSupportTests: XCTestCase {
-  func testThesisFormatterIncludesSymbolPositionAndNormalizedText() {
+  func testThesisFormatterIncludesSymbolPositionAndNormalizedText() async {
+    await Task.yield()
     let payload = StockSharePayloadFormatter.thesis(
       symbol: "aapl",
       thesis: "  Durable margin expansion.\n\nServices mix keeps compounding. ",
@@ -26,7 +27,8 @@ final class StockChannelShareSupportTests: XCTestCase {
     XCTAssertTrue(payload.body.contains("Not investment advice."))
   }
 
-  func testPortugueseThesisFormatterKeepsTechnicalSymbol() {
+  func testPortugueseThesisFormatterKeepsTechnicalSymbol() async {
+    await Task.yield()
     let payload = StockSharePayloadFormatter.thesis(
       symbol: "msft",
       thesis: "Cloud margins improving.",
@@ -40,7 +42,8 @@ final class StockChannelShareSupportTests: XCTestCase {
     XCTAssertTrue(payload.body.contains("Não é aconselhamento financeiro."))
   }
 
-  func testFundamentalsFormatterIncludesCoreMetrics() {
+  func testFundamentalsFormatterIncludesCoreMetrics() async {
+    await Task.yield()
     let profile = StockComparisonProfile(
       symbol: "AAPL",
       companyName: "Apple Inc.",
@@ -69,7 +72,8 @@ final class StockChannelShareSupportTests: XCTestCase {
     XCTAssertTrue(payload.body.contains("Next-year revenue growth:"))
   }
 
-  func testBasePriceFormatterIncludesRangeAndImpliedReturn() {
+  func testBasePriceFormatterIncludesRangeAndImpliedReturn() async {
+    await Task.yield()
     let payload = StockSharePayloadFormatter.basePrice(
       symbol: "tsla",
       valuation: StockValuationRequest(
@@ -91,11 +95,13 @@ final class StockChannelShareSupportTests: XCTestCase {
     XCTAssertTrue(payload.body.contains("Base midpoint implied return:"))
   }
 
-  func testShareDestinationsOnlyIncludeXAndDiscord() {
+  func testShareDestinationsOnlyIncludeXAndDiscord() async {
+    await Task.yield()
     XCTAssertEqual(StockShareDestination.allCases, [.x, .discord])
   }
 
-  func testDiscordPriceTargetsUseMarkdownFormatting() {
+  func testDiscordPriceTargetsUseMarkdownFormatting() async {
+    await Task.yield()
     let payload = StockSharePayloadFormatter.priceTargets(
       symbol: "tsla",
       valuation: StockValuationRequest(
@@ -114,7 +120,8 @@ final class StockChannelShareSupportTests: XCTestCase {
     XCTAssertTrue(payload.body.contains("• Bear:"))
   }
 
-  func testXPriceTargetsAvoidDiscordMarkdownAndStayLimited() {
+  func testXPriceTargetsAvoidDiscordMarkdownAndStayLimited() async {
+    await Task.yield()
     let payload = StockSharePayloadFormatter.priceTargets(
       symbol: "tsla",
       valuation: StockValuationRequest(
@@ -134,7 +141,8 @@ final class StockChannelShareSupportTests: XCTestCase {
     XCTAssertFalse(payload.body.contains("•"))
   }
 
-  func testXFormatterIsCharacterLimited() {
+  func testXFormatterIsCharacterLimited() async {
+    await Task.yield()
     let payload = StockSharePayloadFormatter.thesis(
       symbol: "aapl",
       thesis: String(repeating: "Long thesis sentence. ", count: 40),
@@ -147,7 +155,8 @@ final class StockChannelShareSupportTests: XCTestCase {
     XCTAssertTrue(payload.body.contains("$AAPL"))
   }
 
-  func testPortfolioAllocationFormatterIncludesTopHoldingsAndCash() {
+  func testPortfolioAllocationFormatterIncludesTopHoldingsAndCash() async {
+    await Task.yield()
     let payload = PortfolioAllocationShareFormatter.payload(
       slices: [
         PortfolioAllocationSlice(id: "1", symbol: "AAPL", value: 2_000, percentage: 50),
@@ -166,7 +175,8 @@ final class StockChannelShareSupportTests: XCTestCase {
     XCTAssertTrue(payload.body.contains("Not investment advice."))
   }
 
-  func testPortfolioAllocationXFormatterLimitsOutput() {
+  func testPortfolioAllocationXFormatterLimitsOutput() async {
+    await Task.yield()
     let slices = (0..<10).map {
       PortfolioAllocationSlice(
         id: "\($0)",
@@ -187,7 +197,8 @@ final class StockChannelShareSupportTests: XCTestCase {
     XCTAssertTrue(payload.body.contains("+6 more positions"))
   }
 
-  func testAllocationImpactForNewPositionStartsAtZero() {
+  func testAllocationImpactForNewPositionStartsAtZero() async {
+    await Task.yield()
     let impact = PortfolioAllocationImpactCalculator.preview(
       holdings: [
         .init(id: "aapl", symbol: "AAPL", shares: 1, buyPrice: 100)
@@ -201,7 +212,8 @@ final class StockChannelShareSupportTests: XCTestCase {
     XCTAssertEqual(impact?.afterPercentage ?? -1, 50, accuracy: 0.001)
   }
 
-  func testAllocationImpactForIncreasedPositionRises() {
+  func testAllocationImpactForIncreasedPositionRises() async {
+    await Task.yield()
     let impact = PortfolioAllocationImpactCalculator.preview(
       holdings: [
         .init(id: "aapl", symbol: "AAPL", shares: 1, buyPrice: 100),
@@ -215,7 +227,8 @@ final class StockChannelShareSupportTests: XCTestCase {
     XCTAssertEqual(impact?.afterPercentage ?? -1, 66.666, accuracy: 0.001)
   }
 
-  func testAllocationImpactForPartialSellFallsAndAddsCash() {
+  func testAllocationImpactForPartialSellFallsAndAddsCash() async {
+    await Task.yield()
     let impact = PortfolioAllocationImpactCalculator.preview(
       holdings: [
         .init(id: "aapl", symbol: "AAPL", shares: 2, buyPrice: 100),
@@ -229,7 +242,8 @@ final class StockChannelShareSupportTests: XCTestCase {
     XCTAssertEqual(impact?.afterPercentage ?? -1, 33.333, accuracy: 0.001)
   }
 
-  func testAllocationImpactForFullSellBecomesZero() {
+  func testAllocationImpactForFullSellBecomesZero() async {
+    await Task.yield()
     let impact = PortfolioAllocationImpactCalculator.preview(
       holdings: [
         .init(id: "aapl", symbol: "AAPL", shares: 1, buyPrice: 100),

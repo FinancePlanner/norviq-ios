@@ -1,7 +1,6 @@
 import Foundation
 import StockPlanShared
 import XCTest
-
 @testable import financeplan
 
 @MainActor
@@ -26,7 +25,15 @@ final class WhyMovedViewModelTests: XCTestCase {
   func testLoadPopulatesResponseOnce() async {
     let mock = WhyMovedServiceMock()
     mock.result = .success(makeResponse(
-      movers: [WhyMovedMover(symbol: "AAPL", changePercent: 3.1, contribution: 900, weightPercent: 40, sentiment: WhyMovedSentiment(label: "bullish", score: 0.6, postCount: 12))],
+      movers: [
+        WhyMovedMover(
+          symbol: "AAPL",
+          changePercent: 3.1,
+          contribution: 900,
+          weightPercent: 40,
+          sentiment: WhyMovedSentiment(label: "bullish", score: 0.6, postCount: 12)
+        )
+      ],
       summaryText: "AAPL drove the gain on bullish chatter."
     ))
     let viewModel = WhyMovedViewModel(dashboardService: mock)
@@ -49,7 +56,8 @@ final class WhyMovedViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.response)
   }
 
-  func testDecodeMatchesBackendPayload() throws {
+  func testDecodeMatchesBackendPayload() async throws {
+    await Task.yield()
     let json = """
     {"asOf":"2026-07-25T12:00:00Z","portfolioChangePercent":1.2,"portfolioChangeValue":840,
      "movers":[{"symbol":"AAPL","changePercent":3.1,"contribution":900,"weightPercent":40,

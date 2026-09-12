@@ -39,7 +39,9 @@ final class AppLockManagerTests: XCTestCase {
     override func evaluatePolicy(
       _ policy: LAPolicy,
       localizedReason: String
-    ) async throws -> Bool {
+    )
+      async throws -> Bool
+    {
       if let evaluateError {
         throw evaluateError
       }
@@ -114,7 +116,8 @@ final class AppLockManagerTests: XCTestCase {
     XCTAssertEqual(result, .authenticated)
   }
 
-  func testSecurityCodeManager_SetsAndVerifiesCode() throws {
+  func testSecurityCodeManager_SetsAndVerifiesCode() async throws {
+    await Task.yield()
     let store = SecureStoreStub()
     let manager = SecurityCodeManager(store: store)
 
@@ -125,7 +128,8 @@ final class AppLockManagerTests: XCTestCase {
     XCTAssertFalse(try manager.verifyCode("654321"))
   }
 
-  func testSecurityCodeManager_RejectsInvalidCode() {
+  func testSecurityCodeManager_RejectsInvalidCode() async {
+    await Task.yield()
     let store = SecureStoreStub()
     let manager = SecurityCodeManager(store: store)
 
@@ -133,7 +137,8 @@ final class AppLockManagerTests: XCTestCase {
     XCTAssertFalse(manager.isEnabled)
   }
 
-  func testSecurityCodeManager_ChangesAndRemovesCode() throws {
+  func testSecurityCodeManager_ChangesAndRemovesCode() async throws {
+    await Task.yield()
     let store = SecureStoreStub()
     let manager = SecurityCodeManager(store: store)
 

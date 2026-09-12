@@ -83,7 +83,9 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
       provider: String,
       portfolioListId: String?,
       images: [ScreenshotUploadImage]
-    ) async throws -> ScreenshotImportPreviewResponse {
+    )
+      async throws -> ScreenshotImportPreviewResponse
+    {
       lastPreviewProvider = provider
       lastPreviewPortfolioListId = portfolioListId
       lastScreenshotImages = images
@@ -98,10 +100,13 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
 
   private struct StubError: LocalizedError {
     let message: String
-    var errorDescription: String? { message }
+    var errorDescription: String? {
+      message
+    }
   }
 
-  func testDefaultProviderOptions_AreAvailableBeforeBackendLoad() {
+  func testDefaultProviderOptions_AreAvailableBeforeBackendLoad() async {
+    await Task.yield()
     let viewModel = CsvImportFlowViewModel(brokerService: BrokerServiceMock())
 
     XCTAssertEqual(viewModel.selectedProvider, "generic")
@@ -138,7 +143,17 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     brokerService.commitResult = .success(
       CsvImportCommitResponse(
         provider: "ibkr",
-        inserted: [.init(id: "stock-1", symbol: "AAPL", shares: 10, buyPrice: 120, buyDate: "2026-01-10", notes: nil, createdAt: "2026-01-10T00:00:00Z")],
+        inserted: [
+          .init(
+            id: "stock-1",
+            symbol: "AAPL",
+            shares: 10,
+            buyPrice: 120,
+            buyDate: "2026-01-10",
+            notes: nil,
+            createdAt: "2026-01-10T00:00:00Z"
+          )
+        ],
         updated: [],
         errors: []
       )
@@ -150,11 +165,13 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.availableProviders, ["generic", "ibkr", "trading212", "degiro", "revolut"])
     XCTAssertEqual(viewModel.selectedProvider, "generic")
 
-    let fileURL = makeTempCSVFile(contents: "symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,core holding\n")
+    let fileURL = makeTempCSVFile(
+      contents: "symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,core holding\n"
+    )
     defer { try? FileManager.default.removeItem(at: fileURL) }
 
     await viewModel.loadCSV(from: fileURL)
-    let csvText = String(data: try XCTUnwrap(brokerService.lastPreviewPayload), encoding: .utf8) ?? ""
+    let csvText = try String(data: XCTUnwrap(brokerService.lastPreviewPayload), encoding: .utf8) ?? ""
     XCTAssertEqual(csvText, "symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,core holding\n")
     XCTAssertEqual(brokerService.lastPreviewProvider, "generic")
     XCTAssertEqual(brokerService.lastPreviewPortfolioListId, "portfolio-1")
@@ -173,7 +190,7 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.commitResponse?.importedLotsCount, 0)
   }
 
-  func testPreviewFailure_PublishesErrorAndClearsPreview() async throws {
+  func testPreviewFailure_PublishesErrorAndClearsPreview() async {
     let brokerService = BrokerServiceMock()
     brokerService.previewResult = .failure(StubError(message: "Preview failed."))
 
@@ -188,7 +205,7 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     XCTAssertFalse(viewModel.canImport)
   }
 
-  func testCanImport_IsFalse_WhenPreviewHasNoValidRows() async throws {
+  func testCanImport_IsFalse_WhenPreviewHasNoValidRows() async {
     let brokerService = BrokerServiceMock()
     brokerService.previewResult = .success(
       CsvImportPreviewResponse(
@@ -214,7 +231,7 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.errorMessage, "No valid rows to import.")
   }
 
-  func testCommitImport_Succeeds_WhenBackendImportsLotsOnly() async throws {
+  func testCommitImport_Succeeds_WhenBackendImportsLotsOnly() async {
     let brokerService = BrokerServiceMock()
     brokerService.previewResult = .success(
       CsvImportPreviewResponse(
@@ -234,7 +251,9 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     )
 
     let viewModel = CsvImportFlowViewModel(brokerService: brokerService)
-    let fileURL = makeTempCSVFile(contents: "symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,core holding\n")
+    let fileURL = makeTempCSVFile(
+      contents: "symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,core holding\n"
+    )
     defer { try? FileManager.default.removeItem(at: fileURL) }
 
     await viewModel.loadCSV(from: fileURL)
@@ -245,7 +264,7 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.errorMessage)
   }
 
-  func testCommitImport_Fails_WhenBackendReturnsErrorsEvenWithInsertedRows() async throws {
+  func testCommitImport_Fails_WhenBackendReturnsErrorsEvenWithInsertedRows() async {
     let brokerService = BrokerServiceMock()
     brokerService.previewResult = .success(
       CsvImportPreviewResponse(
@@ -261,7 +280,15 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
       CsvImportCommitResponse(
         provider: "generic",
         inserted: [
-          .init(id: "stock-1", symbol: "AAPL", shares: 10, buyPrice: 120, buyDate: "2026-01-10", notes: nil, createdAt: "2026-01-10T00:00:00Z")
+          .init(
+            id: "stock-1",
+            symbol: "AAPL",
+            shares: 10,
+            buyPrice: 120,
+            buyDate: "2026-01-10",
+            notes: nil,
+            createdAt: "2026-01-10T00:00:00Z"
+          )
         ],
         updated: [],
         errors: [.init(line: 3, message: "MSFT could not be imported.")],
@@ -270,7 +297,9 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     )
 
     let viewModel = CsvImportFlowViewModel(brokerService: brokerService)
-    let fileURL = makeTempCSVFile(contents: "symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,\nMSFT,5,250,2026-01-11,\n")
+    let fileURL = makeTempCSVFile(
+      contents: "symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,\nMSFT,5,250,2026-01-11,\n"
+    )
     defer { try? FileManager.default.removeItem(at: fileURL) }
 
     await viewModel.loadCSV(from: fileURL)
@@ -282,7 +311,7 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.errorMessage)
   }
 
-  func testCommitImport_Fails_WhenNoRowsImported() async throws {
+  func testCommitImport_Fails_WhenNoRowsImported() async {
     let brokerService = BrokerServiceMock()
     brokerService.previewResult = .success(
       CsvImportPreviewResponse(
@@ -303,7 +332,9 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
 
     let viewModel = CsvImportFlowViewModel(brokerService: brokerService)
 
-    let fileURL = makeTempCSVFile(contents: "symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,core holding\n")
+    let fileURL = makeTempCSVFile(
+      contents: "symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,core holding\n"
+    )
     defer { try? FileManager.default.removeItem(at: fileURL) }
 
     await viewModel.loadCSV(from: fileURL)
@@ -317,7 +348,7 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.commitResponse?.importedLotsCount, 0)
   }
 
-  func testCommitImport_Fails_WhenNoRowsImportedAndNoErrorsFromBackend() async throws {
+  func testCommitImport_Fails_WhenNoRowsImportedAndNoErrorsFromBackend() async {
     let brokerService = BrokerServiceMock()
     brokerService.previewResult = .success(
       CsvImportPreviewResponse(
@@ -337,7 +368,9 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     )
 
     let viewModel = CsvImportFlowViewModel(brokerService: brokerService)
-    let fileURL = makeTempCSVFile(contents: "symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,core holding\n")
+    let fileURL = makeTempCSVFile(
+      contents: "symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,core holding\n"
+    )
     defer { try? FileManager.default.removeItem(at: fileURL) }
 
     await viewModel.loadCSV(from: fileURL)
