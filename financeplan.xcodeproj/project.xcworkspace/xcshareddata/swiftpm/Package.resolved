@@ -51,7 +51,6 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/amplitude/AmplitudeUnified-Swift",
       "state" : {
-        "branch" : "main",
         "revision" : "972510b97e37ff0a1bfb45325e3ccf2046c0742b"
       }
     },
@@ -159,7 +158,6 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/gonzalezreal/MarkdownUI",
       "state" : {
-        "branch" : "main",
         "revision" : "8371aeb32f35795a9e559029fb08613355733626"
       }
     },
@@ -177,8 +175,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FinancePlanner/norviq-shared.git",
       "state" : {
-        "revision" : "a50bf75dfd53309ad2cbdb7d2c144058d01fbb9d",
-        "version" : "5.4.0"
+        "revision" : "34b1db1189ff5c9d62cd9dd9389fa0540cfac576",
+        "version" : "5.5.0"
       }
     },
     {

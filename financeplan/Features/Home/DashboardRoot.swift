@@ -25,7 +25,7 @@ struct DashboardRoot: View {
   @State private var isHomeMetricsLoading = false
   @State private var portfolioTotalValue: Double = 0
   @State private var spendingTotalValue: Double = 0
-  @State private var portfolioDeltaPercent: Double?
+  @State private var portfolioChange: PortfolioChange?
   @State private var spendingDeltaPercent: Double?
   @State private var portfolioChartPoints: [ChartDataPoint] = []
   @State private var spendingChartPoints: [ChartDataPoint] = []
@@ -99,7 +99,7 @@ struct DashboardRoot: View {
           DashboardContentSection(
             portfolioTotalValue: portfolioTotalValue,
             spendingTotalValue: spendingTotalValue,
-            portfolioDeltaPercent: portfolioDeltaPercent,
+            portfolioChange: portfolioChange,
             spendingDeltaPercent: spendingDeltaPercent,
             portfolioChartPoints: portfolioChartPoints,
             spendingChartPoints: spendingChartPoints,
@@ -249,7 +249,11 @@ struct DashboardRoot: View {
           spendingChartPoints = spendingPoints
           portfolioTotalValue = resolvedPortfolioValue > 0 ? resolvedPortfolioValue : reportPortfolioValue
           spendingTotalValue = max(0, monthlySummaries.last?.actual ?? reports.latestMonthSummary?.actual ?? 0)
-          portfolioDeltaPercent = Self.deltaPercent(from: portfolioPoints.map(\.value))
+          // The backend knows which window it had enough history to measure, so
+          // it sends the change with that window attached. Nil when it could not
+          // compute one — which stays nil here, so the card shows no delta
+          // rather than a 0.0% claiming the portfolio was flat.
+          portfolioChange = PortfolioChangeFormatting.primary(from: performance.changes)
           spendingDeltaPercent = Self.deltaPercent(
               from: monthlySummaries.map { max(0, $0.actual) }
           )
@@ -314,6 +318,12 @@ struct DashboardRoot: View {
       }
   }
 
+  /// Change between the last two values of an evenly spaced monthly series.
+  ///
+  /// Only the spending side uses this now. It used to be applied to the
+  /// portfolio series too, where "the last two values" were two adjacent
+  /// samples of a randomly generated curve; the portfolio change now comes from
+  /// the backend with the window it was measured over attached.
   private static func deltaPercent(from values: [Double]) -> Double? {
       guard values.count >= 2 else { return nil }
       let current = values[values.count - 1]
@@ -333,7 +343,7 @@ struct DashboardRoot: View {
 private struct DashboardContentSection: View {
   let portfolioTotalValue: Double
   let spendingTotalValue: Double
-  let portfolioDeltaPercent: Double?
+  let portfolioChange: PortfolioChange?
   let spendingDeltaPercent: Double?
   let portfolioChartPoints: [ChartDataPoint]
   let spendingChartPoints: [ChartDataPoint]
@@ -357,7 +367,7 @@ private struct DashboardContentSection: View {
       DashboardHeroCard(
         totalValue: portfolioTotalValue,
         totalSpending: spendingTotalValue,
-        portfolioDeltaPercent: portfolioDeltaPercent,
+        portfolioChange: portfolioChange,
         spendingDeltaPercent: spendingDeltaPercent,
         portfolioPoints: portfolioChartPoints,
         spendingPoints: spendingChartPoints
@@ -406,7 +416,7 @@ private struct DashboardContentSection: View {
 private struct DashboardHeroCard: View {
   let totalValue: Double
   let totalSpending: Double
-  let portfolioDeltaPercent: Double?
+  let portfolioChange: PortfolioChange?
   let spendingDeltaPercent: Double?
   let portfolioPoints: [ChartDataPoint]
   let spendingPoints: [ChartDataPoint]
@@ -430,8 +440,11 @@ private struct DashboardHeroCard: View {
     showingPortfolio ? portfolioPoints : spendingPoints
   }
 
+  /// The portfolio side is a fractional change from the backend (-0.004 is
+  /// -0.4%); the spending side is a fraction derived from monthly budget
+  /// totals. Both are nil when there is nothing to compare against.
   private var currentDeltaPercent: Double? {
-    showingPortfolio ? portfolioDeltaPercent : spendingDeltaPercent
+    showingPortfolio ? portfolioChange?.percent : spendingDeltaPercent
   }
 
   private var currentColor: Color {
@@ -457,13 +470,25 @@ private struct DashboardHeroCard: View {
   }
 
   private var deltaText: String {
+    if showingPortfolio {
+        // Nil means the backend had too little history to measure anything.
+        // Saying so is the honest answer; a 0.0% would claim the portfolio was
+        // flat over a window nobody measured.
+        guard let portfolioChange else {
+            return String(localized: "No baseline for trend yet")
+        }
+        return PortfolioChangeFormatting.label(for: portfolioChange)
+    }
+
     guard let currentDeltaPercent else {
         return String(localized: "No baseline for trend yet")
     }
-    let sign = currentDeltaPercent > 0 ? "+" : ""
+    // Spending compares the last two monthly budget totals, which are real and
+    // evenly spaced, so the window is known here without the server saying so.
+    let sign = currentDeltaPercent >= 0 ? "+" : ""
     let percent = (currentDeltaPercent * 100).formatted(.number.precision(.fractionLength(1)))
-    let vsLastPeriod = String(localized: "vs last period")
-    return "\(sign)\(percent)% \(vsLastPeriod)"
+    let vsLastMonth = String(localized: "vs last month")
+    return "\(sign)\(percent)% \(vsLastMonth)"
   }
 
   var body: some View {
