@@ -3,7 +3,8 @@ import XCTest
 
 @MainActor
 final class MarketDataModelsTests: XCTestCase {
-  func testStockBasicFinancials_OverviewItemsKeepExpectedOrder() throws {
+  func testStockBasicFinancials_OverviewItemsKeepExpectedOrder() async throws {
+    await Task.yield()
     let financials = StockBasicFinancials(
       symbol: "AAPL",
       metricType: "all",
@@ -40,7 +41,8 @@ final class MarketDataModelsTests: XCTestCase {
     XCTAssertFalse(financials.overviewItems[5].detail?.isEmpty ?? true)
   }
 
-  func testStockBasicFinancials_AnnualSeriesItemsUseLatestPointPerMetric() throws {
+  func testStockBasicFinancials_AnnualSeriesItemsUseLatestPointPerMetric() async throws {
+    await Task.yield()
     let financials = StockBasicFinancials(
       symbol: "AAPL",
       metricType: "all",
@@ -81,7 +83,8 @@ final class MarketDataModelsTests: XCTestCase {
     XCTAssertEqual(netMarginValue, 0.2124, accuracy: 0.0001)
   }
 
-  func testStockFinancialStatements_PeriodSelectionFiltersExpectedRecords() {
+  func testStockFinancialStatements_PeriodSelectionFiltersExpectedRecords() async {
+    await Task.yield()
     let statements = StockFinancialStatements.mock(symbol: "aapl")
 
     XCTAssertEqual(statements.symbol, "AAPL")
@@ -104,7 +107,8 @@ final class MarketDataModelsTests: XCTestCase {
     )
   }
 
-  func testStockAnalystConsensus_SupportedTickerListAndWarningMessage() {
+  func testStockAnalystConsensus_SupportedTickerListAndWarningMessage() async {
+    await Task.yield()
     XCTAssertTrue(StockAnalystConsensus.isSupportedTicker("UBER"))
     XCTAssertFalse(StockAnalystConsensus.isSupportedTicker("ZETA"))
     XCTAssertEqual(
@@ -113,7 +117,8 @@ final class MarketDataModelsTests: XCTestCase {
     )
   }
 
-  func testFMPFreeTierCoverage_AnalysisUsesSameSupportedTickerList() {
+  func testFMPFreeTierCoverage_AnalysisUsesSameSupportedTickerList() async {
+    await Task.yield()
     XCTAssertTrue(FMPFreeTierCoverage.isSupportedTicker("UBER"))
     XCTAssertFalse(FMPFreeTierCoverage.isSupportedTicker("ZETA"))
     XCTAssertEqual(

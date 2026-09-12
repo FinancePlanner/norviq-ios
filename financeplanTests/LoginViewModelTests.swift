@@ -51,7 +51,9 @@ final class LoginViewModelTests: XCTestCase {
       password: String,
       confirmPassword: String,
       dateOfBirth: Date
-    ) async throws {
+    )
+      async throws
+    {
       signupCalls += 1
       lastSignupUsername = username
       lastSignupEmail = email
@@ -112,13 +114,33 @@ final class LoginViewModelTests: XCTestCase {
     private var requiredOnboardingUserIDs: Set<String> = []
     private var pendingOnboardingSignupEmails: Set<String> = []
 
-    func setAuthToken(_ value: String) async { authToken = value }
-    func setRefreshToken(_ value: String) async { refreshToken = value }
-    func setAuthTokenExpiresAt(_ value: Date?) async { authTokenExpiresAt = value }
-    func setRefreshTokenExpiresAt(_ value: Date?) async { refreshTokenExpiresAt = value }
-    func setLoginIsSignup(_ value: Bool) async { loginIsSignup = value }
-    func setCurrentUserID(_ value: String) async { currentUserID = value }
-    func setCurrentUsername(_ value: String) async { currentUsername = value }
+    func setAuthToken(_ value: String) async {
+      authToken = value
+    }
+
+    func setRefreshToken(_ value: String) async {
+      refreshToken = value
+    }
+
+    func setAuthTokenExpiresAt(_ value: Date?) async {
+      authTokenExpiresAt = value
+    }
+
+    func setRefreshTokenExpiresAt(_ value: Date?) async {
+      refreshTokenExpiresAt = value
+    }
+
+    func setLoginIsSignup(_ value: Bool) async {
+      loginIsSignup = value
+    }
+
+    func setCurrentUserID(_ value: String) async {
+      currentUserID = value
+    }
+
+    func setCurrentUsername(_ value: String) async {
+      currentUsername = value
+    }
 
     func store(authResponse: AuthResponse) async {
       authToken = authResponse.token
@@ -229,9 +251,9 @@ final class LoginViewModelTests: XCTestCase {
     let store = AuthSessionStoreMock()
     store.loginIsSignup = false
     let viewModel = LoginViewModel(authService: service, sessionStore: store)
-    let expected = AuthResponse(
+    let expected = try AuthResponse(
       token: "token-abc",
-      userId: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+      userId: XCTUnwrap(UUID(uuidString: "11111111-1111-1111-1111-111111111111")),
       expiresIn: 3600,
       refreshToken: "refresh-abc",
       refreshExpiresIn: 86_400,
@@ -255,16 +277,16 @@ final class LoginViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.error)
   }
 
-  func testSubmitLogin_WhenAlreadySubmitting_IgnoresSecondRequest() async {
+  func testSubmitLogin_WhenAlreadySubmitting_IgnoresSecondRequest() async throws {
     let service = AuthServiceMock()
     let store = AuthSessionStoreMock()
     store.loginIsSignup = false
     let viewModel = LoginViewModel(authService: service, sessionStore: store)
     service.loginDelayNanoseconds = 300_000_000
-    service.loginResult = .success(.authenticated(
+    service.loginResult = try .success(.authenticated(
       AuthResponse(
         token: "token",
-        userId: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+        userId: XCTUnwrap(UUID(uuidString: "11111111-1111-1111-1111-111111111111")),
         expiresIn: 3600,
         refreshToken: "refresh",
         refreshExpiresIn: 86_400,
@@ -331,7 +353,7 @@ final class LoginViewModelTests: XCTestCase {
     store.loginIsSignup = false
     store.markPendingOnboardingAfterSignup(email: "user@example.com")
     let viewModel = LoginViewModel(authService: service, sessionStore: store)
-    let userID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+    let userID = try XCTUnwrap(UUID(uuidString: "11111111-1111-1111-1111-111111111111"))
     let expected = AuthResponse(
       token: "token-abc",
       userId: userID,
@@ -396,14 +418,14 @@ final class LoginViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.error, "Could not sign up. Please try again.")
   }
 
-  func testSubmitLogin_WhenMFARequired_PresentsMFAFlow() async {
+  func testSubmitLogin_WhenMFARequired_PresentsMFAFlow() async throws {
     let service = AuthServiceMock()
     let store = AuthSessionStoreMock()
     store.loginIsSignup = false
     let viewModel = LoginViewModel(authService: service, sessionStore: store)
 
-    let challenge = AuthMFAChallengeResponsePayload(
-      challengeId: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
+    let challenge = try AuthMFAChallengeResponsePayload(
+      challengeId: XCTUnwrap(UUID(uuidString: "22222222-2222-2222-2222-222222222222")),
       channel: .email,
       maskedDestination: "us***@e***.com",
       expiresIn: 300,
@@ -422,14 +444,14 @@ final class LoginViewModelTests: XCTestCase {
     XCTAssertEqual(store.authToken, "")
   }
 
-  func testSubmitMFA_WhenVerifySucceeds_PersistsSessionAndDismissesMFA() async {
+  func testSubmitMFA_WhenVerifySucceeds_PersistsSessionAndDismissesMFA() async throws {
     let service = AuthServiceMock()
     let store = AuthSessionStoreMock()
     let viewModel = LoginViewModel(authService: service, sessionStore: store)
-    let challengeID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
-    let expectedAuth = AuthResponse(
+    let challengeID = try XCTUnwrap(UUID(uuidString: "33333333-3333-3333-3333-333333333333"))
+    let expectedAuth = try AuthResponse(
       token: "token-mfa",
-      userId: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+      userId: XCTUnwrap(UUID(uuidString: "11111111-1111-1111-1111-111111111111")),
       expiresIn: 3600,
       refreshToken: "refresh-mfa",
       refreshExpiresIn: 86_400,
@@ -457,12 +479,12 @@ final class LoginViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.pendingMFAChallenge)
   }
 
-  func testResendMFA_WhenRequestSucceeds_RefreshesChallengeAndClearsStaleCode() async {
+  func testResendMFA_WhenRequestSucceeds_RefreshesChallengeAndClearsStaleCode() async throws {
     let service = AuthServiceMock()
     let store = AuthSessionStoreMock()
     let viewModel = LoginViewModel(authService: service, sessionStore: store)
-    let originalChallengeID = UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
-    let refreshedChallengeID = UUID(uuidString: "55555555-5555-5555-5555-555555555555")!
+    let originalChallengeID = try XCTUnwrap(UUID(uuidString: "44444444-4444-4444-4444-444444444444"))
+    let refreshedChallengeID = try XCTUnwrap(UUID(uuidString: "55555555-5555-5555-5555-555555555555"))
     let refreshedChallenge = AuthMFAChallengeResponsePayload(
       challengeId: refreshedChallengeID,
       channel: .email,

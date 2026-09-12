@@ -2,7 +2,6 @@ import Foundation
 import StockPlanShared
 import SwiftData
 import XCTest
-
 @testable import financeplan
 
 @MainActor
@@ -37,7 +36,11 @@ final class WatchlistViewModelTests: XCTestCase {
       makeWatchlistItem(symbol: "MSFT")
     ])
     let localStore = MockWatchlistLocalStore()
-    let viewModel = WatchlistViewModel(service: service, marketDataService: MarketDataServiceStub(), localStore: localStore)
+    let viewModel = WatchlistViewModel(
+      service: service,
+      marketDataService: MarketDataServiceStub(),
+      localStore: localStore
+    )
 
     await viewModel.load()
 
@@ -53,7 +56,11 @@ final class WatchlistViewModelTests: XCTestCase {
     ])
     service.fetchWatchlistResult = .success([makeWatchlistItem(symbol: "AAPL")])
     let localStore = MockWatchlistLocalStore()
-    let viewModel = WatchlistViewModel(service: service, marketDataService: MarketDataServiceStub(), localStore: localStore)
+    let viewModel = WatchlistViewModel(
+      service: service,
+      marketDataService: MarketDataServiceStub(),
+      localStore: localStore
+    )
 
     await viewModel.load()
 
@@ -135,7 +142,8 @@ final class WatchlistViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.errorMessage)
   }
 
-  func testSwiftDataStoreReconcileAppliesCreateUpdateDelete() throws {
+  func testSwiftDataStoreReconcileAppliesCreateUpdateDelete() async throws {
+    await Task.yield()
     let container = try makeInMemoryContainer()
     let context = container.mainContext
     let store = SwiftDataWatchlistLocalStore(context: context, ownerUserId: "user-1")
@@ -155,7 +163,8 @@ final class WatchlistViewModelTests: XCTestCase {
     XCTAssertEqual(all.first(where: { $0.id == "aapl" })?.note, "updated")
   }
 
-  func testSwiftDataWatchlistItemMappingPreservesRemoteListId() {
+  func testSwiftDataWatchlistItemMappingPreservesRemoteListId() async {
+    await Task.yield()
     let response = WatchlistItemResponse(
       id: "aapl",
       symbol: "AAPL",
@@ -183,7 +192,8 @@ final class WatchlistViewModelTests: XCTestCase {
     XCTAssertEqual(item.watchlistListId, "energy-list")
   }
 
-  func testSwiftDataStoreReconcileDoesNotDeleteOtherUsersRows() throws {
+  func testSwiftDataStoreReconcileDoesNotDeleteOtherUsersRows() async throws {
+    await Task.yield()
     let container = try makeInMemoryContainer()
     let context = container.mainContext
     let store = SwiftDataWatchlistLocalStore(context: context, ownerUserId: "user-1")
@@ -214,7 +224,11 @@ final class WatchlistViewModelTests: XCTestCase {
     )
     let localStore = MockWatchlistLocalStore()
     localStore.upsertError = MockStockError.notConfigured
-    let viewModel = WatchlistViewModel(service: service, marketDataService: MarketDataServiceStub(), localStore: localStore)
+    let viewModel = WatchlistViewModel(
+      service: service,
+      marketDataService: MarketDataServiceStub(),
+      localStore: localStore
+    )
 
     let error = await viewModel.saveWatchlist(AddWatchlistDraft(symbol: "AAPL", note: "", status: .active))
 
@@ -327,7 +341,9 @@ final class WatchlistViewModelMockStockService: StockServicing {
   func previewWatchlistCsvImport(
     watchlistListId: String?,
     csvData: Data
-  ) async throws -> WatchlistCsvImportPreviewResponse {
+  )
+    async throws -> WatchlistCsvImportPreviewResponse
+  {
     previewWatchlistCsvImportCalls += 1
     lastPreviewWatchlistListId = watchlistListId
     lastPreviewCsvData = csvData
@@ -337,7 +353,9 @@ final class WatchlistViewModelMockStockService: StockServicing {
   func commitWatchlistCsvImport(
     watchlistListId: String?,
     csvData: Data
-  ) async throws -> WatchlistCsvImportCommitResponse {
+  )
+    async throws -> WatchlistCsvImportCommitResponse
+  {
     commitWatchlistCsvImportCalls += 1
     lastCommitWatchlistListId = watchlistListId
     lastCommitCsvData = csvData
@@ -403,7 +421,9 @@ final class WatchlistViewModelMockStockService: StockServicing {
   func createValuation(
     symbol _: String,
     draft _: StockValuationDraft
-  ) async throws -> StockValuationRequest {
+  )
+    async throws -> StockValuationRequest
+  {
     throw MockStockError.notConfigured
   }
 
@@ -417,14 +437,18 @@ final class WatchlistViewModelMockStockService: StockServicing {
     bullHigh _: Double,
     rationale _: String?,
     targetDate _: String?
-  ) async throws -> StockValuationRequest {
+  )
+    async throws -> StockValuationRequest
+  {
     throw MockStockError.notConfigured
   }
 
   func updateValuation(
     symbol _: String,
     draft _: StockValuationDraft
-  ) async throws -> StockValuationRequest {
+  )
+    async throws -> StockValuationRequest
+  {
     throw MockStockError.notConfigured
   }
 
@@ -438,14 +462,18 @@ final class WatchlistViewModelMockStockService: StockServicing {
     bullHigh _: Double,
     rationale _: String?,
     targetDate _: String?
-  ) async throws -> StockValuationRequest {
+  )
+    async throws -> StockValuationRequest
+  {
     throw MockStockError.notConfigured
   }
 
   func createWatchlistItem(
     _ request: WatchlistItemRequest,
     watchlistListId _: String?
-  ) async throws -> WatchlistItemResponse {
+  )
+    async throws -> WatchlistItemResponse
+  {
     _ = request
     return try createWatchlistItemResult.get()
   }
@@ -454,7 +482,9 @@ final class WatchlistViewModelMockStockService: StockServicing {
     id _: String,
     request _: WatchlistItemUpdateRequest,
     watchlistListId _: String?
-  ) async throws -> WatchlistItemResponse {
+  )
+    async throws -> WatchlistItemResponse
+  {
     throw MockStockError.notConfigured
   }
 

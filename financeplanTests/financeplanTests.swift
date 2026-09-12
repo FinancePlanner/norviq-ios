@@ -12,28 +12,31 @@ import Foundation
 
 final class FinanceplanTests: XCTestCase {
 
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-    }
+  override func setUpWithError() throws {
+    // Put setup code here. This method is called before the invocation of each test method in the class.
+  }
 
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
+  override func tearDownWithError() throws {
+    // Put teardown code here. This method is called after the invocation of each test method in the class.
+  }
 
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
-    }
+  func testExample() async {
+    await Task.yield()
+    // This is an example of a functional test case.
+    // Use XCTAssert and related functions to verify your tests produce the correct results.
+    // Any test you write for XCTest can be annotated as throws and async.
+    // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
+    // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions
+    // afterwards.
+  }
 
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
-        }
+  func testPerformanceExample() async {
+    await Task.yield()
+    // This is an example of a performance test case.
+    self.measure {
+      // Put the code you want to measure the time of here.
     }
+  }
 
 }
 
@@ -49,11 +52,13 @@ final class BillingManagerTests: XCTestCase {
     sessionStore = MockAuthSessionStore()
   }
 
-  func testRevenueCatEntitlementIDMatchesDashboard() {
+  func testRevenueCatEntitlementIDMatchesDashboard() async {
+    await Task.yield()
     XCTAssertEqual(BillingManager.revenueCatEntitlementID, "pro_access")
   }
 
-  func testIsProReturnsTrueWhenPremium() {
+  func testIsProReturnsTrueWhenPremium() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -65,7 +70,8 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertTrue(sut.isPro)
   }
 
-  func testIsProReturnsTrueWhenEntitlementLevelIsPro() {
+  func testIsProReturnsTrueWhenEntitlementLevelIsPro() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -77,7 +83,8 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertTrue(sut.isPro)
   }
 
-  func testIsProReturnsTrueForTemporaryTrialEntitlement() {
+  func testIsProReturnsTrueForTemporaryTrialEntitlement() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -95,7 +102,8 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertEqual(sut.trialDaysRemaining, 7)
   }
 
-  func testIsProReturnsFalseWhenNotPremiumAndNotProLevel() {
+  func testIsProReturnsFalseWhenNotPremiumAndNotProLevel() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -110,7 +118,8 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertFalse(sut.isPro)
   }
 
-  func testFeatureAvailabilityUsesServerFeatureDescriptor() {
+  func testFeatureAvailabilityUsesServerFeatureDescriptor() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -137,7 +146,8 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertFalse(sut.isFeatureAvailable("advanced_research"))
   }
 
-  func testSelectingMonthlyWithoutPackagesUpdatesSelectedProductID() {
+  func testSelectingMonthlyWithoutPackagesUpdatesSelectedProductID() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -150,7 +160,8 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertNil(sut.selectedPackage)
   }
 
-  func testSelectingWeeklyWithoutPackagesUpdatesSelectedProductID() {
+  func testSelectingWeeklyWithoutPackagesUpdatesSelectedProductID() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -177,7 +188,8 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertEqual(sut.errorMessage, "Monthly plan is currently unavailable. Please try again later.")
   }
 
-  func testPurchaseCTATitleShowsUnavailableWithoutLoadedPackage() {
+  func testPurchaseCTATitleShowsUnavailableWithoutLoadedPackage() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -194,7 +206,8 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertEqual(sut.purchaseCTATitle, "Subscriptions Unavailable")
   }
 
-  func testSelectedPlanHasFreeTrialIsFalseWithoutPackages() {
+  func testSelectedPlanHasFreeTrialIsFalseWithoutPackages() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -205,7 +218,8 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertFalse(sut.selectedPlanHasFreeTrial)
   }
 
-  func testCurrentPlanDisplayNameUsesBackendSubscriptionPlan() {
+  func testCurrentPlanDisplayNameUsesBackendSubscriptionPlan() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -222,7 +236,8 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertEqual(sut.currentPlanDisplayName, "Monthly Plan")
   }
 
-  func testWeeklyUserCanUpgradeToMonthlyAndAnnualOnly() {
+  func testWeeklyUserCanUpgradeToMonthlyAndAnnualOnly() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -238,7 +253,8 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertEqual(sut.availableUpgradePlanOptions.map(\.productId), ["pro_monthly", "pro_yearly"])
   }
 
-  func testServerAnnualPlanOptionIsNormalizedToYearlyProductID() {
+  func testServerAnnualPlanOptionIsNormalizedToYearlyProductID() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -277,7 +293,8 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertEqual(sut.availableUpgradePlanOptions.map(\.plan), ["pro_monthly", "pro_yearly"])
   }
 
-  func testAnnualUserHasNoHigherUpgradeOptions() {
+  func testAnnualUserHasNoHigherUpgradeOptions() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -293,7 +310,8 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertTrue(sut.availableUpgradePlanOptions.isEmpty)
   }
 
-  func testClearCacheResetsSelectionToAnnual() {
+  func testClearCacheResetsSelectionToAnnual() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -307,7 +325,8 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertNil(sut.selectedPackage)
   }
 
-  func testIsProFallsBackToUserDefaultsWhenContextIsNil() {
+  func testIsProFallsBackToUserDefaultsWhenContextIsNil() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -324,7 +343,7 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertFalse(sut.isPro)
   }
 
-  func testManageSubscriptionUsesBackendManagementURLForAuthenticatedUser() async throws {
+  func testManageSubscriptionUsesBackendManagementURLForAuthenticatedUser() async {
     let session = BillingSessionMock()
     let recorder = SubscriptionURLRecorder()
     authSessionManager.validAccessTokenResult = .success("token-123")
@@ -342,7 +361,7 @@ final class BillingManagerTests: XCTestCase {
       }
       """.data(using: .utf8) ?? Data()
       let response = try XCTUnwrap(
-        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
+        try HTTPURLResponse(url: XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
       )
       return (data, response)
     }
@@ -402,7 +421,7 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertNil(sut.errorMessage)
   }
 
-  func testManageSubscriptionFallsBackToAppleWhenBackendHasNoManageableSubscription() async throws {
+  func testManageSubscriptionFallsBackToAppleWhenBackendHasNoManageableSubscription() async {
     let session = BillingSessionMock()
     let recorder = SubscriptionURLRecorder()
     let appleRecorder = AppleSubscriptionManagementRecorder()
@@ -419,7 +438,7 @@ final class BillingManagerTests: XCTestCase {
       }
       """.data(using: .utf8) ?? Data()
       let response = try XCTUnwrap(
-        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 404, httpVersion: nil, headerFields: nil)
+        try HTTPURLResponse(url: XCTUnwrap(request.url), statusCode: 404, httpVersion: nil, headerFields: nil)
       )
       return (data, response)
     }
@@ -461,7 +480,8 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertEqual(sut.errorMessage, "RevenueCat API key is not configured.")
   }
 
-  func testRestoreResultShowsNoActivePurchaseMessageWhenBackendStaysFree() {
+  func testRestoreResultShowsNoActivePurchaseMessageWhenBackendStaysFree() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -478,7 +498,8 @@ final class BillingManagerTests: XCTestCase {
     XCTAssertFalse(sut.isPro)
   }
 
-  func testRestoreResultShowsSuccessWhenBackendReturnsPremium() {
+  func testRestoreResultShowsSuccessWhenBackendReturnsPremium() async {
+    await Task.yield()
     let sut = BillingManager(
       environmentManager: environmentManager,
       authSessionManager: authSessionManager,
@@ -541,7 +562,7 @@ final class BillingManagerTests: XCTestCase {
   }
 }
 
-// Minimal mocks for testing
+/// Minimal mocks for testing
 private final class BillingSessionMock: HTTPClientSession, @unchecked Sendable {
   var handler: ((URLRequest) throws -> (Data, URLResponse))?
 
@@ -579,54 +600,118 @@ private final class MockAuthSessionManager: AuthSessionManaging, @unchecked Send
 
   func logout() async {}
   func reset() {}
-  func restoreSessionIfNeeded() async -> Bool { return false }
+  func restoreSessionIfNeeded() async -> Bool {
+    return false
+  }
+
   func invalidateSession() async {}
   func onSessionConfigured() {}
-  func validAccessToken() async throws -> String? { try validAccessTokenResult.get() }
-  func refreshAccessToken() async throws -> String? { try refreshAccessTokenResult.get() }
+  func validAccessToken() async throws -> String? {
+    try validAccessTokenResult.get()
+  }
+
+  func refreshAccessToken() async throws -> String? {
+    try refreshAccessTokenResult.get()
+  }
 }
 
 private final class MockAuthSessionStore: AuthSessionStoring, @unchecked Sendable {
   private var _authToken = ""
-  var authToken: String { get async { _authToken } }
+  var authToken: String {
+    get async { _authToken }
+  }
+
   private var _refreshToken = ""
-  var refreshToken: String { get async { _refreshToken } }
+  var refreshToken: String {
+    get async { _refreshToken }
+  }
+
   private var _authTokenExpiresAt: Date? = nil
-  var authTokenExpiresAt: Date? { get async { _authTokenExpiresAt } }
+  var authTokenExpiresAt: Date? {
+    get async { _authTokenExpiresAt }
+  }
+
   private var _refreshTokenExpiresAt: Date? = nil
-  var refreshTokenExpiresAt: Date? { get async { _refreshTokenExpiresAt } }
+  var refreshTokenExpiresAt: Date? {
+    get async { _refreshTokenExpiresAt }
+  }
+
   private var _loginIsSignup = false
-  var loginIsSignup: Bool { get async { _loginIsSignup } }
+  var loginIsSignup: Bool {
+    get async { _loginIsSignup }
+  }
+
   private var _currentUserID = "mock-user-id"
-  var currentUserID: String { get async { _currentUserID } }
+  var currentUserID: String {
+    get async { _currentUserID }
+  }
+
   private var _currentUsername = "mock-user"
-  var currentUsername: String { get async { _currentUsername } }
+  var currentUsername: String {
+    get async { _currentUsername }
+  }
+
   var isSetupComplete = false
   var hasPassedSecurity = false
   var hasAppLockEnabled = false
   var currentSecurityCodeHash: String? = nil
 
-  func setAuthToken(_ value: String) async { _authToken = value }
-  func setRefreshToken(_ value: String) async { _refreshToken = value }
-  func setAuthTokenExpiresAt(_ value: Date?) async { _authTokenExpiresAt = value }
-  func setRefreshTokenExpiresAt(_ value: Date?) async { _refreshTokenExpiresAt = value }
-  func setLoginIsSignup(_ value: Bool) async { _loginIsSignup = value }
-  func setCurrentUserID(_ value: String) async { _currentUserID = value }
-  func setCurrentUsername(_ value: String) async { _currentUsername = value }
+  func setAuthToken(_ value: String) async {
+    _authToken = value
+  }
+
+  func setRefreshToken(_ value: String) async {
+    _refreshToken = value
+  }
+
+  func setAuthTokenExpiresAt(_ value: Date?) async {
+    _authTokenExpiresAt = value
+  }
+
+  func setRefreshTokenExpiresAt(_ value: Date?) async {
+    _refreshTokenExpiresAt = value
+  }
+
+  func setLoginIsSignup(_ value: Bool) async {
+    _loginIsSignup = value
+  }
+
+  func setCurrentUserID(_ value: String) async {
+    _currentUserID = value
+  }
+
+  func setCurrentUsername(_ value: String) async {
+    _currentUsername = value
+  }
 
   func store(authResponse: StockPlanShared.AuthResponse) async {}
   func saveTokens(access: String, refresh: String) throws {}
-  func loadTokens() throws -> (access: String, refresh: String)? { return nil }
+  func loadTokens() throws -> (access: String, refresh: String)? {
+    return nil
+  }
+
   func clearTokens() throws {}
   func saveUserProfile(id: String, username: String) {}
   func clearSession() async {}
-  func hasCompletedInitialStockImport(for userID: String) async -> Bool { return false }
+  func hasCompletedInitialStockImport(for userID: String) async -> Bool {
+    return false
+  }
+
   func markInitialStockImportCompleted(for userID: String) async {}
-  func hasCompletedOnboardingQuestionnaire(for userID: String) async -> Bool { return false }
+  func hasCompletedOnboardingQuestionnaire(for userID: String) async -> Bool {
+    return false
+  }
+
   func markOnboardingQuestionnaireCompleted(for userID: String) async {}
-  func requiresOnboardingQuestionnaire(for userID: String) async -> Bool { return false }
+  func requiresOnboardingQuestionnaire(for userID: String) async -> Bool {
+    return false
+  }
+
   func markOnboardingQuestionnaireRequired(for userID: String) async {}
   func markPendingOnboardingAfterSignup(email: String) async {}
-  func hasPendingOnboardingAfterSignup(email: String) async -> Bool { return false }
+  func hasPendingOnboardingAfterSignup(email: String) async -> Bool {
+    return false
+  }
+
   func clearPendingOnboardingAfterSignup(email: String) async {}
 }

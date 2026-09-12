@@ -1,6 +1,5 @@
 import Foundation
 import XCTest
-
 @testable import financeplan
 
 @MainActor
@@ -19,7 +18,13 @@ final class StockPressureViewModelTests: XCTestCase {
         netShares: -40_000,
         lastActivityAt: "2026-07-21",
         notable: [
-          MarketPressureInsiderTrade(name: "Jane Exec", role: "officer", side: "sell", shares: 50_000, date: "2026-07-20"),
+          MarketPressureInsiderTrade(
+            name: "Jane Exec",
+            role: "officer",
+            side: "sell",
+            shares: 50_000,
+            date: "2026-07-20"
+          ),
         ]
       ),
       history: [MarketPressureHistoryPoint(date: "2026-07-24", relativeVolume: 1.4)]
@@ -60,7 +65,8 @@ final class StockPressureViewModelTests: XCTestCase {
     XCTAssertFalse(viewModel.isLoading)
   }
 
-  func testDecodeMatchesBackendPayload() throws {
+  func testDecodeMatchesBackendPayload() async throws {
+    await Task.yield()
     let json = """
     {"symbol":"AAPL","asOf":"2026-07-25T12:00:00Z","temperature":63.4,"label":"buying",
      "volume":{"today":3000000,"average30d":1000000,"relative":3.0,"changePct":2.4},

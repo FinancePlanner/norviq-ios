@@ -1,0 +1,19 @@
+# Test-target overrides. SwiftFormat uses the closest config file to each input,
+# so this applies to financeplanTests/ only and leaves app code on the root rules.
+
+# Do NOT strip `async` / `throws` from test methods that contain no await or try.
+#
+# XCTest invokes a synchronous test method off the main thread. In a @MainActor
+# test class that trips Swift 6's actor-isolation check, and the process aborts
+# with SIGABRT *after* the test body has already run — xcodebuild reports it with
+# no failure message at all, so it reads as an unexplained crash.
+#
+# Marking such tests `async` is the fix, but redundantAsync removes the keyword
+# again the moment nobody awaits anything, silently reintroducing the abort. That
+# is how 64 tests across 11 suites ended up failing at once.
+#
+# Tests here also carry an explicit `await Task.yield()` so they survive a
+# formatter run that predates this file.
+--disable redundantAsync
+--disable redundantThrows
+--disable redundantTypedThrows

@@ -30,7 +30,9 @@ final class TelegramLinkViewModelTests: XCTestCase {
     }
 
     func disconnect() async throws {
-      if let disconnectError { throw disconnectError }
+      if let disconnectError {
+        throw disconnectError
+      }
       statusResult = .success(
         TelegramStatus(available: true, connected: false, botUsername: "norviq_bot", lastSeenAt: nil, connectedAt: nil)
       )
@@ -48,7 +50,9 @@ final class TelegramLinkViewModelTests: XCTestCase {
 
   private enum MockError: LocalizedError {
     case offline
-    var errorDescription: String? { "The network is unavailable." }
+    var errorDescription: String? {
+      "The network is unavailable."
+    }
   }
 
   private func connectedStatus() -> TelegramStatus {
@@ -70,7 +74,7 @@ final class TelegramLinkViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.errorMessage)
   }
 
-  // Alerts only mean something once there is a chat to deliver them to.
+  /// Alerts only mean something once there is a chat to deliver them to.
   func testLoadFetchesAlertsOnlyWhenConnected() async {
     let service = ServiceMock()
     service.preferencesResult = .success([
@@ -97,8 +101,8 @@ final class TelegramLinkViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.pairingCode?.deepLink, "https://t.me/norviq_bot?start=ABCD2345")
   }
 
-  // The code is only useful until the link exists; leaving it on screen after
-  // would invite the user to redeem something already spent.
+  /// The code is only useful until the link exists; leaving it on screen after
+  /// would invite the user to redeem something already spent.
   func testCodeIsClearedOnceConnected() async {
     let service = ServiceMock()
     let viewModel = TelegramLinkViewModel(service: service)
@@ -147,8 +151,8 @@ final class TelegramLinkViewModelTests: XCTestCase {
     XCTAssertFalse(viewModel.isAvailable)
   }
 
-  // A build with no bot configured must not offer a Connect button that can
-  // only fail.
+  /// A build with no bot configured must not offer a Connect button that can
+  /// only fail.
   func testUnavailableDeploymentReportsUnavailable() async {
     let service = ServiceMock()
     service.statusResult = .success(
@@ -162,7 +166,8 @@ final class TelegramLinkViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.botHandle, "")
   }
 
-  func testAlertLabelsFallBackToTheRawKind() {
+  func testAlertLabelsFallBackToTheRawKind() async {
+    await Task.yield()
     let known = TelegramAlertPreference(
       kind: "thesis_watch", enabled: false, quietHoursStart: nil, quietHoursEnd: nil, timezone: "UTC"
     )

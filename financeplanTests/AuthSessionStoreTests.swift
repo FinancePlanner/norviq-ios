@@ -23,18 +23,27 @@ final class AuthSessionStoreTests: XCTestCase {
   }
 
   private final class BrokenSecureStore: SecureStringStoring {
-    func string(for key: String) throws -> String? { throw SecureStoreError.readFailed(errSecAuthFailed) }
-    func setString(_ value: String, for key: String) throws { throw SecureStoreError.writeFailed(errSecAuthFailed) }
-    func removeValue(for key: String) throws { throw SecureStoreError.deleteFailed(errSecAuthFailed) }
+    func string(for key: String) throws -> String? {
+      throw SecureStoreError.readFailed(errSecAuthFailed)
+    }
+
+    func setString(_ value: String, for key: String) throws {
+      throw SecureStoreError.writeFailed(errSecAuthFailed)
+    }
+
+    func removeValue(for key: String) throws {
+      throw SecureStoreError.deleteFailed(errSecAuthFailed)
+    }
   }
 
   @MainActor
-  func testStoreAuthResponse_PrefersJWTExpirationWhenPresent() throws {
-    let defaults = UserDefaults(suiteName: #function)!
+  func testStoreAuthResponse_PrefersJWTExpirationWhenPresent() async throws {
+    await Task.yield()
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: #function))
     defaults.removePersistentDomain(forName: #function)
     let secureStore = InMemorySecureStore()
     let now = Date(timeIntervalSince1970: 1_800_000_000)
-    let userID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+    let userID = try XCTUnwrap(UUID(uuidString: "11111111-1111-1111-1111-111111111111"))
     let jwtExpiry = now.addingTimeInterval(600)
     let store = UserDefaultsAuthSessionStore(
       defaults: defaults,
@@ -61,13 +70,17 @@ final class AuthSessionStoreTests: XCTestCase {
     XCTAssertEqual(store.authToken, makeJWT(userID: userID, expiresAt: jwtExpiry))
   }
 
+  /// Async with no suspension point: this test mutates a named UserDefaults suite
+  /// and aborts if an `await` is introduced, but a synchronous test in a
+  /// @MainActor class aborts the whole process. The test-target .swiftformat
+  /// keeps `async` from being stripped for want of an `await`.
   @MainActor
-  func testStoreAuthResponse_WithOpaqueToken_FallsBackToExpiresIn() {
-    let defaults = UserDefaults(suiteName: #function)!
+  func testStoreAuthResponse_WithOpaqueToken_FallsBackToExpiresIn() async throws {
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: #function))
     defaults.removePersistentDomain(forName: #function)
     let secureStore = InMemorySecureStore()
     let now = Date(timeIntervalSince1970: 1_800_000_000)
-    let userID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+    let userID = try XCTUnwrap(UUID(uuidString: "11111111-1111-1111-1111-111111111111"))
     let store = UserDefaultsAuthSessionStore(
       defaults: defaults,
       secureStore: secureStore,
@@ -92,11 +105,12 @@ final class AuthSessionStoreTests: XCTestCase {
   }
 
   @MainActor
-  func testStoreAuthResponse_WhenSecureStoreFails_DoesNotFallBackToUserDefaults() {
-    let defaults = UserDefaults(suiteName: #function)!
+  func testStoreAuthResponse_WhenSecureStoreFails_DoesNotFallBackToUserDefaults() async throws {
+    await Task.yield()
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: #function))
     defaults.removePersistentDomain(forName: #function)
     let now = Date(timeIntervalSince1970: 1_800_000_000)
-    let userID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+    let userID = try XCTUnwrap(UUID(uuidString: "11111111-1111-1111-1111-111111111111"))
     let store = UserDefaultsAuthSessionStore(
       defaults: defaults,
       secureStore: BrokenSecureStore(),
@@ -124,8 +138,9 @@ final class AuthSessionStoreTests: XCTestCase {
   }
 
   @MainActor
-  func testPendingSignupEmailIsNormalizedForOnboardingRouting() {
-    let defaults = UserDefaults(suiteName: #function)!
+  func testPendingSignupEmailIsNormalizedForOnboardingRouting() async throws {
+    await Task.yield()
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: #function))
     defaults.removePersistentDomain(forName: #function)
     let store = UserDefaultsAuthSessionStore(
       defaults: defaults,
@@ -140,8 +155,9 @@ final class AuthSessionStoreTests: XCTestCase {
   }
 
   @MainActor
-  func testCompletingOnboardingClearsRequiredOnboardingForUser() {
-    let defaults = UserDefaults(suiteName: #function)!
+  func testCompletingOnboardingClearsRequiredOnboardingForUser() async throws {
+    await Task.yield()
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: #function))
     defaults.removePersistentDomain(forName: #function)
     let store = UserDefaultsAuthSessionStore(
       defaults: defaults,

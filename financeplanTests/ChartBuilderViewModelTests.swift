@@ -1,12 +1,11 @@
 import Foundation
 import StockPlanShared
 import XCTest
-
 @testable import financeplan
 
 @MainActor
 final class ChartBuilderViewModelTests: XCTestCase {
-  func testBuildForwardsSelectionAndStoresResponse() async throws {
+  func testBuildForwardsSelectionAndStoresResponse() async {
     let service = ChartBuilderServiceMock()
     service.chartResponse = makeResponse(metricKeys: ["revenue", "freeCashFlow"])
     let viewModel = ChartBuilderViewModel(symbol: "aapl", service: service)
@@ -23,7 +22,8 @@ final class ChartBuilderViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.errorMessage)
   }
 
-  func testTTMRemovesUnsupportedMetrics() throws {
+  func testTTMRemovesUnsupportedMetrics() async throws {
+    await Task.yield()
     let viewModel = ChartBuilderViewModel(symbol: "AAPL", service: ChartBuilderServiceMock())
     let growthMetric = try XCTUnwrap(ChartBuilderMetricCatalog.byKey["revenueGrowth"])
     viewModel.toggleMetric(growthMetric)
@@ -37,7 +37,8 @@ final class ChartBuilderViewModelTests: XCTestCase {
     })
   }
 
-  func testCompareSymbolsNormalizeDeduplicateAndRespectCap() {
+  func testCompareSymbolsNormalizeDeduplicateAndRespectCap() async {
+    await Task.yield()
     let viewModel = ChartBuilderViewModel(symbol: "AAPL", service: ChartBuilderServiceMock())
 
     viewModel.addCompareSymbol(" msft ")

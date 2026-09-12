@@ -2,7 +2,6 @@ import Foundation
 import StockPlanShared
 import SwiftData
 import XCTest
-
 @testable import financeplan
 
 @MainActor
@@ -211,7 +210,9 @@ final class PortfolioViewModelTests: XCTestCase {
     let service = MockStockService()
     service.fetchPortfolioResult = .success([makeStock(id: "aapl", symbol: "AAPL", shares: 1, buyPrice: 100)])
     service.fetchPortfolioSectorExposureResult = .failure(StockHTTPClient.Error.invalidStatus(404))
-    service.fetchPortfolioSummaryResult = .success(makeSummary(allocation: [AllocationItem(symbol: "AAPL", value: 100, currency: "USD")]))
+    service.fetchPortfolioSummaryResult = .success(
+      makeSummary(allocation: [AllocationItem(symbol: "AAPL", value: 100, currency: "USD")])
+    )
 
     let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
     await viewModel.load()
@@ -295,14 +296,18 @@ final class PortfolioViewModelTests: XCTestCase {
     XCTAssertEqual(service.createCalls, 0)
   }
 
-  func testLoadReconcilesRemoteStocksThroughLocalStore() async throws {
+  func testLoadReconcilesRemoteStocksThroughLocalStore() async {
     let service = MockStockService()
     service.fetchPortfolioResult = .success([
       makeStock(id: "aapl", symbol: "AAPL", shares: 10, buyPrice: 150),
       makeStock(id: "msft", symbol: "MSFT", shares: 5, buyPrice: 200)
     ])
     let localStore = MockPortfolioLocalStore()
-    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub(), localStore: localStore)
+    let viewModel = PortfolioViewModel(
+      service: service,
+      marketDataService: MarketDataServiceStub(),
+      localStore: localStore
+    )
 
     await viewModel.load()
 
@@ -315,7 +320,11 @@ final class PortfolioViewModelTests: XCTestCase {
     service.createResult = .success(makeStock(id: "nvda", symbol: "NVDA", shares: 3, buyPrice: 120))
     let localStore = MockPortfolioLocalStore()
     localStore.upsertError = MockError("SwiftData save failed.")
-    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub(), localStore: localStore)
+    let viewModel = PortfolioViewModel(
+      service: service,
+      marketDataService: MarketDataServiceStub(),
+      localStore: localStore
+    )
 
     let message = await viewModel.saveNewPosition(
       AddPositionDraft(
@@ -333,7 +342,8 @@ final class PortfolioViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.errorMessage, "SwiftData save failed.")
   }
 
-  func testSwiftDataStoreReconcileAppliesCreateUpdateDelete() throws {
+  func testSwiftDataStoreReconcileAppliesCreateUpdateDelete() async throws {
+    await Task.yield()
     let container = try makeInMemoryContainer()
     let context = container.mainContext
     let store = SwiftDataPortfolioLocalStore(context: context, ownerUserId: "user-1")
@@ -353,7 +363,8 @@ final class PortfolioViewModelTests: XCTestCase {
     XCTAssertEqual(all.first(where: { $0.id == "msft" })?.buyPrice, 200)
   }
 
-  func testSwiftDataStoreReconcileUsesServerAsSourceOfTruth() throws {
+  func testSwiftDataStoreReconcileUsesServerAsSourceOfTruth() async throws {
+    await Task.yield()
     let container = try makeInMemoryContainer()
     let context = container.mainContext
     let store = SwiftDataPortfolioLocalStore(context: context, ownerUserId: "user-1")
@@ -371,7 +382,8 @@ final class PortfolioViewModelTests: XCTestCase {
     XCTAssertEqual(all[0].buyPrice, 175)
   }
 
-  func testSwiftDataStoreReconcileDoesNotDeleteOtherUsersRows() throws {
+  func testSwiftDataStoreReconcileDoesNotDeleteOtherUsersRows() async throws {
+    await Task.yield()
     let container = try makeInMemoryContainer()
     let context = container.mainContext
     let store = SwiftDataPortfolioLocalStore(context: context, ownerUserId: "user-1")
@@ -507,7 +519,9 @@ extension MarketDataServicing {
     terminalGrowthRate _: Double?,
     terminalMargin _: Double?,
     fcfMarginAssumption _: Double?
-  ) async throws -> StockAnalysisMetrics {
+  )
+    async throws -> StockAnalysisMetrics
+  {
     throw QuoteMarketDataMockError.notConfigured
   }
 
@@ -515,11 +529,15 @@ extension MarketDataServicing {
     throw QuoteMarketDataMockError.notConfigured
   }
 
-  func fetchBalanceSheetStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [BalanceSheetStatementResponse] {
+  func fetchBalanceSheetStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [
+    BalanceSheetStatementResponse
+  ] {
     throw QuoteMarketDataMockError.notConfigured
   }
 
-  func fetchCashFlowStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [CashFlowStatementResponse] {
+  func fetchCashFlowStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [
+    CashFlowStatementResponse
+  ] {
     throw QuoteMarketDataMockError.notConfigured
   }
 
@@ -539,7 +557,9 @@ extension MarketDataServicing {
     throw QuoteMarketDataMockError.notConfigured
   }
 
-  func fetchAnalystEstimates(symbol _: String, limit _: Int?, period _: String?) async throws -> [AnalystEstimatesResponse] {
+  func fetchAnalystEstimates(symbol _: String, limit _: Int?, period _: String?) async throws -> [
+    AnalystEstimatesResponse
+  ] {
     throw QuoteMarketDataMockError.notConfigured
   }
 
@@ -679,7 +699,10 @@ private final class MockStockService: StockServicing {
     try await fetchPortfolio()
   }
 
-  func fetchPortfolio(portfolioListId _: String?, cursor: String?, limit _: Int?) async throws -> (items: [StockResponse], nextCursor: String?) {
+  func fetchPortfolio(portfolioListId _: String?, cursor: String?, limit _: Int?) async throws -> (
+    items: [StockResponse],
+    nextCursor: String?
+  ) {
     fetchPortfolioCalls += 1
     fetchPortfolioCursors.append(cursor)
     if var pages = fetchPortfolioPages, !pages.isEmpty {
@@ -687,7 +710,7 @@ private final class MockStockService: StockServicing {
       fetchPortfolioPages = pages
       return page
     }
-    return (try fetchPortfolioResult.get(), nil)
+    return try (fetchPortfolioResult.get(), nil)
   }
 
   func fetchPortfolioSummary() async throws -> PortfolioSummaryResponse {
@@ -745,7 +768,9 @@ private final class MockStockService: StockServicing {
   func createValuation(
     symbol _: String,
     draft _: StockValuationDraft
-  ) async throws -> StockValuationRequest {
+  )
+    async throws -> StockValuationRequest
+  {
     throw MockError("Not configured.")
   }
 
@@ -759,14 +784,18 @@ private final class MockStockService: StockServicing {
     bullHigh _: Double,
     rationale _: String?,
     targetDate _: String?
-  ) async throws -> StockValuationRequest {
+  )
+    async throws -> StockValuationRequest
+  {
     throw MockError("Not configured.")
   }
 
   func updateValuation(
     symbol _: String,
     draft _: StockValuationDraft
-  ) async throws -> StockValuationRequest {
+  )
+    async throws -> StockValuationRequest
+  {
     throw MockError("Not configured.")
   }
 
@@ -780,7 +809,9 @@ private final class MockStockService: StockServicing {
     bullHigh _: Double,
     rationale _: String?,
     targetDate _: String?
-  ) async throws -> StockValuationRequest {
+  )
+    async throws -> StockValuationRequest
+  {
     throw MockError("Not configured.")
   }
 
@@ -799,14 +830,18 @@ private final class MockStockService: StockServicing {
   func createWatchlistItem(
     _ request: WatchlistItemRequest,
     watchlistListId _: String?
-  ) async throws -> WatchlistItemResponse {
+  )
+    async throws -> WatchlistItemResponse
+  {
     try await createWatchlistItem(request)
   }
 
   func updateWatchlistItem(
     id _: String,
     request _: WatchlistItemUpdateRequest
-  ) async throws -> WatchlistItemResponse {
+  )
+    async throws -> WatchlistItemResponse
+  {
     throw MockError("Not configured.")
   }
 
@@ -814,7 +849,9 @@ private final class MockStockService: StockServicing {
     id: String,
     request: WatchlistItemUpdateRequest,
     watchlistListId _: String?
-  ) async throws -> WatchlistItemResponse {
+  )
+    async throws -> WatchlistItemResponse
+  {
     try await updateWatchlistItem(id: id, request: request)
   }
 

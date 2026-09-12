@@ -1,5 +1,4 @@
 import XCTest
-
 @testable import financeplan
 
 @MainActor
@@ -27,7 +26,8 @@ final class AppEnvironmentManagerTests: XCTestCase {
     defaults = nil
   }
 
-  func testLegacyDevBuildSettingFallsBackToProductionForArchives() {
+  func testLegacyDevBuildSettingFallsBackToProductionForArchives() async {
+    await Task.yield()
     let manager = AppEnvironmentManager(
       environmentVariables: [:],
       infoDictionary: ["NorviqAPIEnvironment": "dev"],
@@ -40,7 +40,8 @@ final class AppEnvironmentManagerTests: XCTestCase {
     XCTAssertNil(manager.schemeEnvironment)
   }
 
-  func testBuildSettingForcesProductionEnvironmentForAppStoreRelease() {
+  func testBuildSettingForcesProductionEnvironmentForAppStoreRelease() async {
+    await Task.yield()
     let manager = AppEnvironmentManager(
       environmentVariables: [:],
       infoDictionary: ["NorviqAPIEnvironment": "production"],
@@ -53,7 +54,8 @@ final class AppEnvironmentManagerTests: XCTestCase {
     XCTAssertEqual(manager.schemeEnvironment, AppEnvironments.production)
   }
 
-  func testPersistedEnvironmentDoesNotOverrideForcedBuildEnvironment() {
+  func testPersistedEnvironmentDoesNotOverrideForcedBuildEnvironment() async {
+    await Task.yield()
     defaults.set(AppEnvironments.production.title, forKey: "environment")
 
     let manager = AppEnvironmentManager(
@@ -67,7 +69,8 @@ final class AppEnvironmentManagerTests: XCTestCase {
     XCTAssertEqual(manager.current, AppEnvironments.production)
   }
 
-  func testPersistedEnvironmentOnlyAppliesToDebugBuilds() {
+  func testPersistedEnvironmentOnlyAppliesToDebugBuilds() async {
+    await Task.yield()
     defaults.set("dev", forKey: "environment")
 
     let manager = AppEnvironmentManager(
@@ -82,7 +85,8 @@ final class AppEnvironmentManagerTests: XCTestCase {
     XCTAssertEqual(manager.current, AppEnvironments.production)
   }
 
-  func testDebugBuildDefaultsToLocal() {
+  func testDebugBuildDefaultsToLocal() async {
+    await Task.yield()
     let manager = AppEnvironmentManager(
       environmentVariables: [:],
       infoDictionary: [:],
@@ -95,7 +99,8 @@ final class AppEnvironmentManagerTests: XCTestCase {
     XCTAssertEqual(manager.current, AppEnvironments.local)
   }
 
-  func testTestFlightDefaultsToProduction() {
+  func testTestFlightDefaultsToProduction() async {
+    await Task.yield()
     let manager = AppEnvironmentManager(
       environmentVariables: [:],
       infoDictionary: [:],
@@ -108,7 +113,8 @@ final class AppEnvironmentManagerTests: XCTestCase {
     XCTAssertEqual(manager.current, AppEnvironments.production)
   }
 
-  func testAllowedEnvironmentsReturnsAllCasesWhenLocal() {
+  func testAllowedEnvironmentsReturnsAllCasesWhenLocal() async {
+    await Task.yield()
     let manager = AppEnvironmentManager(
       environmentVariables: [:],
       infoDictionary: [:],
@@ -120,7 +126,8 @@ final class AppEnvironmentManagerTests: XCTestCase {
     XCTAssertEqual(manager.allowedEnvironmentsWhen(isLoggedIn: false), AppEnvironments.allCases)
   }
 
-  func testAllowedEnvironmentsReturnsEmptyWhenProduction() {
+  func testAllowedEnvironmentsReturnsEmptyWhenProduction() async {
+    await Task.yield()
     let manager = AppEnvironmentManager(
       environmentVariables: ["NORVIQ_ENVIRONMENT": "production"],
       infoDictionary: [:],

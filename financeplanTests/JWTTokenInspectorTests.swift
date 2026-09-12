@@ -4,8 +4,9 @@ import XCTest
 
 @MainActor
 final class JWTTokenInspectorTests: XCTestCase {
-  func testPayload_DecodesUserIDAndExpiration() throws {
-    let userID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+  func testPayload_DecodesUserIDAndExpiration() async throws {
+    await Task.yield()
+    let userID = try XCTUnwrap(UUID(uuidString: "11111111-1111-1111-1111-111111111111"))
     let expiry = Date(timeIntervalSince1970: 1_900_000_000)
     let token = makeJWT(userID: userID, expiresAt: expiry)
 
@@ -15,7 +16,8 @@ final class JWTTokenInspectorTests: XCTestCase {
     XCTAssertEqual(payload.expiresAt, expiry)
   }
 
-  func testPayload_WithMalformedToken_ReturnsNil() {
+  func testPayload_WithMalformedToken_ReturnsNil() async {
+    await Task.yield()
     XCTAssertNil(JWTTokenInspector.payload(from: "not-a-jwt"))
   }
 

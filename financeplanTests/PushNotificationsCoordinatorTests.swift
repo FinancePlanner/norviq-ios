@@ -17,7 +17,9 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
       deviceToken: String,
       apnsEnvironment: PushAPNSEnvironment,
       authorizationStatus: PushAuthorizationStatus
-    ) async throws -> PushDeviceRegistrationResponse {
+    )
+      async throws -> PushDeviceRegistrationResponse
+    {
       registerCalls += 1
       lastRegisterDeviceToken = deviceToken
       lastRegisterEnvironment = apnsEnvironment
@@ -80,36 +82,62 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
 
   private final class SessionStoreMock: AuthSessionStoring, @unchecked Sendable {
     var authToken: String = ""
-    func setAuthToken(_ value: String) async { authToken = value }
+    func setAuthToken(_ value: String) async {
+      authToken = value
+    }
 
     var refreshToken: String = ""
-    func setRefreshToken(_ value: String) async { refreshToken = value }
+    func setRefreshToken(_ value: String) async {
+      refreshToken = value
+    }
 
     var authTokenExpiresAt: Date?
-    func setAuthTokenExpiresAt(_ value: Date?) async { authTokenExpiresAt = value }
+    func setAuthTokenExpiresAt(_ value: Date?) async {
+      authTokenExpiresAt = value
+    }
 
     var refreshTokenExpiresAt: Date?
-    func setRefreshTokenExpiresAt(_ value: Date?) async { refreshTokenExpiresAt = value }
+    func setRefreshTokenExpiresAt(_ value: Date?) async {
+      refreshTokenExpiresAt = value
+    }
 
     var loginIsSignup: Bool = true
-    func setLoginIsSignup(_ value: Bool) async { loginIsSignup = value }
+    func setLoginIsSignup(_ value: Bool) async {
+      loginIsSignup = value
+    }
 
     var currentUserID: String = ""
-    func setCurrentUserID(_ value: String) async { currentUserID = value }
+    func setCurrentUserID(_ value: String) async {
+      currentUserID = value
+    }
 
     var currentUsername: String = ""
-    func setCurrentUsername(_ value: String) async { currentUsername = value }
+    func setCurrentUsername(_ value: String) async {
+      currentUsername = value
+    }
 
     func store(authResponse _: AuthResponse) async {}
     func clearSession() async {}
-    func hasCompletedInitialStockImport(for _: String) async -> Bool { false }
+    func hasCompletedInitialStockImport(for _: String) async -> Bool {
+      false
+    }
+
     func markInitialStockImportCompleted(for _: String) async {}
-    func hasCompletedOnboardingQuestionnaire(for _: String) async -> Bool { false }
+    func hasCompletedOnboardingQuestionnaire(for _: String) async -> Bool {
+      false
+    }
+
     func markOnboardingQuestionnaireCompleted(for _: String) async {}
-    func requiresOnboardingQuestionnaire(for _: String) async -> Bool { false }
+    func requiresOnboardingQuestionnaire(for _: String) async -> Bool {
+      false
+    }
+
     func markOnboardingQuestionnaireRequired(for _: String) async {}
     func markPendingOnboardingAfterSignup(email _: String) async {}
-    func hasPendingOnboardingAfterSignup(email _: String) async -> Bool { false }
+    func hasPendingOnboardingAfterSignup(email _: String) async -> Bool {
+      false
+    }
+
     func clearPendingOnboardingAfterSignup(email _: String) async {}
   }
 
@@ -236,7 +264,8 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     XCTAssertEqual(route?.scenario, "bull")
   }
 
-  func testPayloadParser_ParsesTargetHitPayload() {
+  func testPayloadParser_ParsesTargetHitPayload() async {
+    await Task.yield()
     let route = PushNotificationPayloadParser.parse(
       userInfo: [
         "type": "target_hit",
@@ -254,7 +283,8 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     XCTAssertEqual(route?.deepLink, "financeplan://stocks/MSFT")
   }
 
-  func testPayloadParser_ParsesEarningsReminderPayload() {
+  func testPayloadParser_ParsesEarningsReminderPayload() async {
+    await Task.yield()
     let route = PushNotificationPayloadParser.parse(
       userInfo: [
         "type": "earnings_reminder",
@@ -272,7 +302,8 @@ final class PushNotificationsCoordinatorTests: XCTestCase {
     XCTAssertEqual(route?.deepLink, "financeplan://stocks/AAPL")
   }
 
-  func testPayloadParser_ParsesBudgetDriftPayload() {
+  func testPayloadParser_ParsesBudgetDriftPayload() async {
+    await Task.yield()
     let route = PushNotificationPayloadParser.parse(
       userInfo: [
         "type": "budget",

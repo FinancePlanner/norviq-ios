@@ -7,6 +7,7 @@ import StockPlanShared
 /// being constructed on every PortfolioRoot body pass.
 enum PortfolioRootRoute: Hashable {
   case workspace
+  case simulator
   case scenarioPlanning
   case netWorthForecast
   case smartScreens
@@ -35,6 +36,10 @@ struct PortfolioRoot: View {
         switch route {
         case .workspace:
           PortfolioWorkspaceScreen()
+        // Deliberately not behind ProGateView: the simulator is the one
+        // surface someone with no holdings can use.
+        case .simulator:
+          PortfolioSimulatorScreen()
         case .scenarioPlanning:
           ProGateView(billingManager: billingManager) { ScenarioPlanningScreen() }
         case .netWorthForecast:
@@ -80,6 +85,11 @@ struct PortfolioRoot: View {
           }
           .labelStyle(.iconOnly)
           .accessibilityLabel("Manage portfolios")
+          NavigationLink(value: PortfolioRootRoute.simulator) {
+            Label("Portfolio simulator", systemImage: "slider.horizontal.below.square.filled.and.square")
+          }
+          .labelStyle(.iconOnly)
+          .accessibilityLabel("Open portfolio simulator")
           NavigationLink(value: PortfolioRootRoute.scenarioPlanning) {
             Label("Scenario planning", systemImage: "chart.xyaxis.line")
           }

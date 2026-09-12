@@ -1,7 +1,6 @@
 import Foundation
 import StockPlanShared
 import XCTest
-
 @testable import financeplan
 
 @MainActor
@@ -40,7 +39,8 @@ final class MacroViewModelNewsTests: XCTestCase {
     XCTAssertNil(viewModel.errorMessage)
   }
 
-  func testRelativeDateParsingIsDefensive() {
+  func testRelativeDateParsingIsDefensive() async {
+    await Task.yield()
     XCTAssertNotNil(MacroNewsDateFormatting.parse("2026-07-24T10:00:00Z"))
     XCTAssertNotNil(MacroNewsDateFormatting.parse("2026-07-24 10:00:00"))
     XCTAssertNotNil(MacroNewsDateFormatting.parse("2026-07-24"))
@@ -91,7 +91,9 @@ private final class MacroServiceNewsMock: MacroServicing, @unchecked Sendable {
     )
   }
 
-  func getTopMovers(country _: String?, focus _: String?) async throws -> [TopMoverDTO] { [] }
+  func getTopMovers(country _: String?, focus _: String?) async throws -> [TopMoverDTO] {
+    []
+  }
 
   func getSeries(country _: String?, series _: String, limit _: Int?) async throws -> MacroSeriesResponse {
     throw NewsMockError.unavailable
@@ -101,7 +103,9 @@ private final class MacroServiceNewsMock: MacroServicing, @unchecked Sendable {
     throw NewsMockError.unavailable
   }
 
-  func getSupportedCountries() async throws -> [SupportedCountry] { [] }
+  func getSupportedCountries() async throws -> [SupportedCountry] {
+    []
+  }
 
   func getFedWatch() async throws -> FedWatchResponse {
     throw NewsMockError.unavailable

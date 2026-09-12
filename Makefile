@@ -1,7 +1,9 @@
 IOS_PROJECT ?= financeplan.xcodeproj
 IOS_SCHEME ?= financeplan
 IOS_BUILD_DESTINATION ?= generic/platform=iOS Simulator
-IOS_TEST_DESTINATION ?= platform=iOS Simulator,name=iPhone 17,OS=26.4.1
+# No OS pin: xcodebuild resolves against whatever runtime is installed, so this
+# does not break on every Xcode update or on a machine with a different one.
+IOS_TEST_DESTINATION ?= platform=iOS Simulator,name=iPhone 17
 
 .PHONY: help sync-brand-assets verify-brand-assets ios-build ios-test ios-ui-test
 
