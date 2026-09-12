@@ -69,7 +69,7 @@ struct DashboardRoot: View {
             value: insights.cashBuffer.formatted(.currency(code: "USD").presentation(.narrow)),
             detail: String(localized: "Enough for short-term volatility."),
             symbol: "shield",
-            tint: AppTheme.Colors.tint(for: .light)
+            tint: AppTheme.Colors.tint
         )
     ]
   }

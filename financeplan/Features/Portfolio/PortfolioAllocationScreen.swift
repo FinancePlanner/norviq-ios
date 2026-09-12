@@ -454,7 +454,7 @@ struct PortfolioAllocationScreen: View {
                 }
 
                 HStack(spacing: 10) {
-                    benchmarkBar(value: item.weightPercent, color: AppTheme.Colors.tint(for: .light))
+                    benchmarkBar(value: item.weightPercent, color: AppTheme.Colors.tint)
                     Text(item.weightPercent.formatted(.number.precision(.fractionLength(1))) + "%")
                         .typography(.nano)
                         .foregroundStyle(.secondary)
