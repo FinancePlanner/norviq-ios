@@ -3,6 +3,18 @@ import StockPlanShared
 import XCTest
 @testable import financeplan
 
+// The simulation DTOs are declared both here in the app
+// (API/Simulation/PortfolioSimulationModels.swift) and in StockPlanShared, which
+// gained its own copies in 5.6.0. Inside the app module the local ones simply
+// win, but this file imports both at the same level, so the names are genuinely
+// ambiguous and have to say which they mean.
+//
+// The duplication is the real problem; qualifying here only stops it breaking
+// the build. Deleting the local copies means porting the simulator onto shared's
+// shapes, which are not the same - shared's PortfolioSimulationResult is built on
+// RebalancingSimulation and RebalancingValuationWarning where the local one uses
+// SimulationDetail and SimulationWarning.
+
 /// Every test is async: a synchronous test method in this @MainActor XCTestCase
 /// aborts with SIGABRT under Swift 6 once it touches the view model, even though
 /// the body runs and produces correct values.
@@ -145,8 +157,8 @@ final class PortfolioSimulatorTests: XCTestCase {
   private static func result(
     cashBasisPoints: Int,
     leftoverCash: Double = 0
-  ) -> PortfolioSimulationResult {
-    PortfolioSimulationResult(
+  ) -> financeplan.PortfolioSimulationResult {
+    financeplan.PortfolioSimulationResult(
       simulationId: "sim-1",
       revision: 1,
       mode: .fromScratch,
@@ -168,36 +180,36 @@ final class PortfolioSimulatorTests: XCTestCase {
   }
 
   private final class ServiceMock: PortfolioSimulationServicing, @unchecked Sendable {
-    var previewResult: PortfolioSimulationResult?
+    var previewResult: financeplan.PortfolioSimulationResult?
     var previewError: (any Error)?
     var portfoliosError: (any Error)?
-    private(set) var lastPreviewRequest: PortfolioSimulationUpsertRequest?
+    private(set) var lastPreviewRequest: financeplan.PortfolioSimulationUpsertRequest?
 
-    func list() async throws -> [PortfolioSimulation] {
+    func list() async throws -> [financeplan.PortfolioSimulation] {
       []
     }
 
-    func detail(simulationId _: String) async throws -> PortfolioSimulation {
+    func detail(simulationId _: String) async throws -> financeplan.PortfolioSimulation {
       throw StockHTTPClient.Error.invalidResponse
     }
 
-    func create(_ input: PortfolioSimulationUpsertRequest) async throws -> PortfolioSimulation {
+    func create(_ input: financeplan.PortfolioSimulationUpsertRequest) async throws -> financeplan.PortfolioSimulation {
       lastPreviewRequest = input
       throw StockHTTPClient.Error.invalidResponse
     }
 
     func update(
       simulationId _: String,
-      input _: PortfolioSimulationUpsertRequest
+      input _: financeplan.PortfolioSimulationUpsertRequest
     )
-      async throws -> PortfolioSimulation
+      async throws -> financeplan.PortfolioSimulation
     {
       throw StockHTTPClient.Error.invalidResponse
     }
 
     func delete(simulationId _: String) async throws {}
 
-    func preview(_ input: PortfolioSimulationUpsertRequest) async throws -> PortfolioSimulationResult {
+    func preview(_ input: financeplan.PortfolioSimulationUpsertRequest) async throws -> financeplan.PortfolioSimulationResult {
       lastPreviewRequest = input
       if let previewError {
         throw previewError
@@ -210,7 +222,7 @@ final class PortfolioSimulatorTests: XCTestCase {
       simulationId _: String,
       capitalOverride _: Double?
     )
-      async throws -> PortfolioSimulationResult
+      async throws -> financeplan.PortfolioSimulationResult
     {
       guard let previewResult else { throw StockHTTPClient.Error.invalidResponse }
       return previewResult
