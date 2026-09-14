@@ -1,10 +1,17 @@
 import Foundation
 
 // These mirror StockPlanShared's PortfolioSimulation DTOs but are declared
-// locally, the way ScenarioPlanningService declares its own. The shared package
-// is pinned by exact version and the simulation types land in a release this app
-// has not taken yet; keeping them local lets the feature ship without forcing a
-// coordinated bump, and they can be deleted when the pin moves.
+// locally, the way ScenarioPlanningService declares its own. They were written
+// while the shared package was pinned to a release that predated the simulation
+// types, so the feature could ship without forcing a coordinated bump.
+//
+// The pin has since moved to 5.7.0, which does carry them, so these now shadow
+// the shared declarations rather than standing in for them. That compiles - a
+// module's own types win over imported ones - but it is not free: the two have
+// drifted, and shared's PortfolioSimulationResult is built on
+// RebalancingSimulation and RebalancingValuationWarning where this one uses its
+// own SimulationDetail and SimulationWarning. Deleting this file therefore means
+// migrating the simulator feature to those shapes, which is its own change.
 
 nonisolated enum PortfolioSimulationMode: String, Codable, Sendable, CaseIterable {
   case fromScratch
