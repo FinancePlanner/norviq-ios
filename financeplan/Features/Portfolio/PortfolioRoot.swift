@@ -7,6 +7,8 @@ import StockPlanShared
 /// being constructed on every PortfolioRoot body pass.
 enum PortfolioRootRoute: Hashable {
   case workspace
+  case grow
+  case retire
   case simulator
   case scenarioPlanning
   case netWorthForecast
@@ -36,6 +38,13 @@ struct PortfolioRoot: View {
         switch route {
         case .workspace:
           PortfolioWorkspaceScreen()
+        // Planning is ungated for the same reason the simulator is: it works
+        // with no holdings, and "am I on track" is the question people arrive
+        // with.
+        case .grow:
+          GrowScreen()
+        case .retire:
+          RetireScreen()
         // Deliberately not behind ProGateView: the simulator is the one
         // surface someone with no holdings can use.
         case .simulator:
@@ -95,6 +104,19 @@ struct PortfolioRoot: View {
           }
           .labelStyle(.iconOnly)
           .accessibilityLabel("Open scenario planning")
+        }
+        // A menu rather than two more icons: the top bar already carries four,
+        // and these two belong together as one idea - path, and destination.
+        ToolbarItem(placement: .topBarTrailing) {
+          Menu("Planning", systemImage: "target") {
+            NavigationLink(value: PortfolioRootRoute.grow) {
+              Label("Grow", systemImage: "chart.line.uptrend.xyaxis")
+            }
+            NavigationLink(value: PortfolioRootRoute.retire) {
+              Label("Retire", systemImage: "beach.umbrella")
+            }
+          }
+          .accessibilityLabel("Open planning")
         }
         ToolbarItem(placement: .topBarTrailing) {
           Menu("Automation", systemImage: "wand.and.stars") {
