@@ -12,7 +12,8 @@ let sharedModelContainer: ModelContainer = {
         LocalBudgetPlanItem.self,
         LocalExpenseCategory.self,
         LocalRecurringTemplate.self,
-        OfflineSyncAction.self
+        OfflineSyncAction.self,
+        LocalNewsTickerItem.self
     ])
     let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
     do {

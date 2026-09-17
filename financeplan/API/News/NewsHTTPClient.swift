@@ -45,7 +45,8 @@ nonisolated final class NewsHTTPClient: Sendable {
         static func makeAPI(_ message: String) -> Error { .api(message) }
     }
 
-    private let client: BaseHTTPClient
+    // Internal so API/News/NewsHTTPClient+Ticker.swift can reuse it.
+    let client: BaseHTTPClient
 
     init(baseURL: URL, session: any HTTPClientSession = URLSession.shared, authTokenProvider: @escaping @Sendable () async -> String? = { nil }) {
         self.client = BaseHTTPClient(
