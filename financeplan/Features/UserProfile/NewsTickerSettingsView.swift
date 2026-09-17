@@ -1,3 +1,4 @@
+import Factory
 import StockPlanShared
 import SwiftUI
 
