@@ -361,6 +361,7 @@ private struct DashboardContentSection: View {
   let onGoalPlanningTap: () -> Void
 
   @Environment(\.colorScheme) private var colorScheme
+  @State private var newsTickerViewModel = NewsTickerViewModel()
 
   var body: some View {
     VStack(spacing: 20) {
@@ -374,6 +375,8 @@ private struct DashboardContentSection: View {
       )
       .redacted(reason: isHomeMetricsRedacted ? .placeholder : [])
       .appAnimation(AppMotion.state, value: isHomeMetricsRedacted)
+
+      NewsTickerStrip(viewModel: newsTickerViewModel)
 
       if isSearchResultsVisible {
         AssetSearchCard(viewModel: searchViewModel)

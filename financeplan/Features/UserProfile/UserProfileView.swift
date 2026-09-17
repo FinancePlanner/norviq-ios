@@ -17,6 +17,7 @@ private enum UserProfileDestination: Hashable {
     case shareFeedback
     case about
     case language
+    case newsTicker
     case dataAvailability
     case connect
     case integrations
@@ -384,6 +385,14 @@ public struct UserProfileView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
+            // News ticker
+            Section(LocalizedStringKey("News")) {
+                NavigationLink(value: UserProfileDestination.newsTicker) {
+                    Label(LocalizedStringKey("News ticker"), systemImage: "newspaper")
+                }
+            }
+            .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+
             // Language
             Section(LocalizedStringKey("Language")) {
                 NavigationLink(value: UserProfileDestination.language) {
@@ -626,6 +635,8 @@ public struct UserProfileView: View {
             AboutNorviqView()
         case .language:
             LanguageSettingsView()
+        case .newsTicker:
+            NewsTickerSettingsView()
         case .dataAvailability:
             DataAvailabilityView()
         case .connect:
