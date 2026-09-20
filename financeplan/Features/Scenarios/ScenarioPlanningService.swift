@@ -308,7 +308,7 @@ final class ScenarioPlanningService: ScenarioPlanningServiceProtocol, @unchecked
     let (data, response) = try await session.data(for: request)
     guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
     guard (200..<300).contains(http.statusCode) else { throw ScenarioAPIError(method: method, path: path, statusCode: http.statusCode) }
-    if Response.self == EmptyResponse.self { return EmptyResponse() as! Response }
+    if let empty = EmptyResponse() as? Response { return empty }
     let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
     return try decoder.decode(Response.self, from: data)
   }
