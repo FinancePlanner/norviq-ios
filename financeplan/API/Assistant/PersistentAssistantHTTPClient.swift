@@ -97,6 +97,25 @@ nonisolated struct PersistentAssistantHTTPClient: Sendable {
     func cancelAction(id: String) async throws {
         try await client.callWithoutResponse(CancelAssistantActionEndpoint(id: id), errorType: Error.self)
     }
+
+    func memos(bookmarked: Bool?, conversationID: String?) async throws -> [PositionMemoListItem] {
+        try await client.call(ListPositionMemosEndpoint(bookmarked: bookmarked, conversationID: conversationID), errorType: Error.self)
+    }
+
+    func memo(id: String) async throws -> PositionMemoDetail {
+        try await client.call(GetPositionMemoEndpoint(id: id), errorType: Error.self)
+    }
+
+    func bookmarkMemo(id: String, bookmarked: Bool) async throws -> PositionMemoCard {
+        try await client.call(
+            BookmarkPositionMemoEndpoint(id: id, payload: .init(bookmarked: bookmarked)),
+            errorType: Error.self
+        )
+    }
+
+    func deleteMemo(id: String) async throws {
+        try await client.callWithoutResponse(DeletePositionMemoEndpoint(id: id), errorType: Error.self)
+    }
 }
 
 nonisolated extension PersistentAssistantHTTPClient.Error: Equatable {

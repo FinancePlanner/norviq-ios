@@ -53,6 +53,14 @@ final class AssistantCommandsTests: XCTestCase {
         }
     }
 
+    func testDueDiligenceCommandReachesTheServerVerbatim() {
+        guard case let .command(command, prompt) = AssistantCommandParser.resolve("/dd GRAB cost 4.10 EUR") else {
+            return XCTFail("Expected /dd to be sent to the server")
+        }
+        XCTAssertEqual(command.id, "dd")
+        XCTAssertEqual(prompt, "/dd GRAB cost 4.10 EUR")
+    }
+
     func testSuggestionsFilterByPrefix() {
         XCTAssertEqual(AssistantCommandRegistry.suggestions(for: "/").count, AssistantCommandRegistry.all.count)
         XCTAssertEqual(AssistantCommandRegistry.suggestions(for: "/ex").map(\.id), ["expenses"])

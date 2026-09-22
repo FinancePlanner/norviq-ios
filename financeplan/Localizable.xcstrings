@@ -17141,6 +17141,156 @@
           }
         }
       }
+    },
+    "Position memo · %@" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memorando de posição · %@"
+          }
+        }
+      }
+    },
+    "Saved memos" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memorandos guardados"
+          }
+        }
+      }
+    },
+    "Opening memo…" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A abrir o memorando…"
+          }
+        }
+      }
+    },
+    "Memo unavailable" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memorando indisponível"
+          }
+        }
+      }
+    },
+    "Memo" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memorando"
+          }
+        }
+      }
+    },
+    "Remove from saved memos" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remover dos memorandos guardados"
+          }
+        }
+      }
+    },
+    "Save memo" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar memorando"
+          }
+        }
+      }
+    },
+    "Delete memo" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apagar memorando"
+          }
+        }
+      }
+    },
+    "Delete this memo?" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apagar este memorando?"
+          }
+        }
+      }
+    },
+    "VERDICT" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VEREDITO"
+          }
+        }
+      }
+    },
+    "SOURCES" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FONTES"
+          }
+        }
+      }
+    },
+    "YOUR MARK" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A SUA MARCA"
+          }
+        }
+      }
+    },
+    "No saved memos" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sem memorandos guardados"
+          }
+        }
+      }
+    },
+    "Due diligence" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Due diligence"
+          }
+        }
+      }
+    },
+    "Memo on a holding you can save" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memorando sobre uma posição que pode guardar"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

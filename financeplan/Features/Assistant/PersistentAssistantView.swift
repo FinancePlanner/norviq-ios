@@ -39,6 +39,8 @@ struct PersistentAssistantView: View {
                     Button("Close") { dismiss() }
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    NavigationLink(value: SavedPositionMemosRoute()) { Image(systemName: "bookmark") }
+                        .accessibilityLabel("Saved memos")
                     Button { showsConversations = true } label: { Image(systemName: "clock.arrow.circlepath") }
                         .accessibilityLabel("Conversations")
                     Button { showsPreferences = true } label: { Image(systemName: "slider.horizontal.3") }
@@ -46,6 +48,16 @@ struct PersistentAssistantView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) { composer }
+            .navigationDestination(for: PositionMemoRoute.self) { route in
+                PositionMemoReaderView(id: route.id, service: viewModel.memoService) { id, bookmarked in
+                    viewModel.memoChanged(id: id, bookmarked: bookmarked)
+                }
+            }
+            .navigationDestination(for: SavedPositionMemosRoute.self) { _ in
+                SavedPositionMemosView(service: viewModel.memoService) { id, bookmarked in
+                    viewModel.memoChanged(id: id, bookmarked: bookmarked)
+                }
+            }
             .task {
                 await viewModel.load()
                 // After `load`, which selects or creates the conversation and
@@ -83,7 +95,20 @@ struct PersistentAssistantView: View {
                         idleState
                     }
                     if let messages = viewModel.activeConversation?.messages {
-                        ForEach(messages, id: \.id) { message in messageBubble(message).id(message.id) }
+                        ForEach(messages, id: \.id) { message in
+                            VStack(spacing: 8) {
+                                messageBubble(message)
+                                if let card = viewModel.memoCards[message.id] {
+                                    PositionMemoCardView(
+                                        card: card,
+                                        isSaving: viewModel.memoBookmarkInFlight.contains(card.id)
+                                    ) {
+                                        Task { await viewModel.toggleBookmark(messageID: message.id) }
+                                    }
+                                }
+                            }
+                            .id(message.id)
+                        }
                     }
                     ForEach(viewModel.pendingActions, id: \.id) { action in pendingActionCard(action).id(action.id) }
                     if viewModel.isSending { HStack { ProgressView(); Text("Thinking…").foregroundStyle(.secondary); Spacer() }.padding(.horizontal, 16) }

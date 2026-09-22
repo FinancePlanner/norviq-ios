@@ -67,6 +67,14 @@ nonisolated enum AssistantCommandRegistry {
             synopsis: "Value, allocation, and performers",
             argumentHint: nil
         ),
+        // Sent through unchanged: the server recognises "/dd" and writes a
+        // saved position memo instead of an ordinary reply.
+        AssistantCommand(
+            id: "dd",
+            title: "Due diligence",
+            synopsis: "Memo on a holding you can save",
+            argumentHint: "GRAB cost 4.10 EUR"
+        ),
     ]
 
     static func command(named name: String) -> AssistantCommand? {

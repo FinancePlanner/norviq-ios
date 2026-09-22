@@ -16,7 +16,12 @@ final class PersistentAssistantViewModel {
     private(set) var activityLabel: String?
     private(set) var activeActionID: String?
     private(set) var errorMessage: String?
+    /// Memo cards keyed by the assistant message that announced them.
+    private(set) var memoCards: [String: PositionMemoCard] = [:]
+    private(set) var memoBookmarkInFlight: Set<String> = []
     var draft = ""
+
+    var memoService: any PersistentAssistantServicing { service }
 
     private let service: any PersistentAssistantServicing
 
@@ -54,6 +59,7 @@ final class PersistentAssistantViewModel {
 
     func createConversation() async throws {
         let created = try await service.createConversation(title: "New conversation")
+        memoCards = [:]
         activeConversation = created
         await refreshConversations()
     }
@@ -64,7 +70,51 @@ final class PersistentAssistantViewModel {
     }
 
     func selectConversation(id: String) async throws {
-        activeConversation = try await service.conversation(id: id)
+        let conversation = try await service.conversation(id: id)
+        activeConversation = conversation
+        await attachMemoCards(to: conversation)
+    }
+
+    /// The stored assistant message only says "Memo on X is ready.", so cards
+    /// for an older conversation are matched back to those lines by symbol,
+    /// oldest first.
+    private func attachMemoCards(to conversation: AIConversationResponse) async {
+        memoCards = [:]
+        guard conversation.messages.contains(where: { PositionMemoAnnouncement.symbol(in: $0) != nil }),
+              let memos = try? await service.memos(bookmarked: nil, conversationID: conversation.id),
+              activeConversation?.id == conversation.id
+        else { return }
+        var remaining = memos.sorted { $0.createdAt < $1.createdAt }
+        for message in conversation.messages {
+            guard let symbol = PositionMemoAnnouncement.symbol(in: message),
+                  let index = remaining.firstIndex(where: { $0.primarySymbol == symbol })
+            else { continue }
+            let item = remaining.remove(at: index)
+            memoCards[message.id] = PositionMemoCard(
+                id: item.id, symbol: item.primarySymbol, title: item.title,
+                verdict: item.verdict, bookmarked: item.bookmarked
+            )
+        }
+    }
+
+    func toggleBookmark(messageID: String) async {
+        guard let card = memoCards[messageID], !memoBookmarkInFlight.contains(card.id) else { return }
+        memoBookmarkInFlight.insert(card.id)
+        defer { memoBookmarkInFlight.remove(card.id) }
+        do { memoCards[messageID] = try await service.bookmarkMemo(id: card.id, bookmarked: !card.bookmarked) }
+        catch { errorMessage = readable(error, fallback: "The memo could not be saved.") }
+    }
+
+    /// Keeps a card in step with changes made on the reader screen.
+    func memoChanged(id: String, bookmarked: Bool?) {
+        guard let key = memoCards.first(where: { $0.value.id == id })?.key, let card = memoCards[key] else { return }
+        if let bookmarked {
+            memoCards[key] = PositionMemoCard(
+                id: card.id, symbol: card.symbol, title: card.title, verdict: card.verdict, bookmarked: bookmarked
+            )
+        } else {
+            memoCards[key] = nil
+        }
     }
 
     func select(id: String) async {
@@ -123,6 +173,7 @@ final class PersistentAssistantViewModel {
                     if let current = activeConversation {
                         activeConversation = replacingMessages(in: current, with: current.messages + [turn.message])
                     }
+                    if let memo = turn.memo { memoCards[turn.message.id] = memo }
                     if let action = turn.pendingAction { pendingActions.insert(action, at: 0) }
                 case let .error(message):
                     throw PersistentAssistantStreamFailure(message: message)
@@ -212,4 +263,15 @@ final class PersistentAssistantViewModel {
 private struct PersistentAssistantStreamFailure: LocalizedError {
     let message: String
     var errorDescription: String? { message }
+}
+
+/// Reads the one-line pointer the server stores in place of a memo's body.
+nonisolated enum PositionMemoAnnouncement {
+    static func symbol(in message: AIMessageResponse) -> String? {
+        guard message.role == .assistant else { return nil }
+        let text = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard text.hasPrefix("Memo on "), text.hasSuffix(" is ready.") else { return nil }
+        let symbol = text.dropFirst("Memo on ".count).dropLast(" is ready.".count)
+        return symbol.isEmpty || symbol.contains(" ") ? nil : String(symbol)
+    }
 }

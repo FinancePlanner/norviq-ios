@@ -17,6 +17,10 @@ protocol PersistentAssistantServicing: Sendable {
     func pendingActions() async throws -> [AIPendingActionResponse]
     func confirmAction(id: String) async throws -> AIConfirmedActionResponse
     func cancelAction(id: String) async throws
+    func memos(bookmarked: Bool?, conversationID: String?) async throws -> [PositionMemoListItem]
+    func memo(id: String) async throws -> PositionMemoDetail
+    func bookmarkMemo(id: String, bookmarked: Bool) async throws -> PositionMemoCard
+    func deleteMemo(id: String) async throws
 }
 
 struct DefaultPersistentAssistantService: PersistentAssistantServicing, Sendable {
@@ -53,4 +57,12 @@ struct DefaultPersistentAssistantService: PersistentAssistantServicing, Sendable
     func pendingActions() async throws -> [AIPendingActionResponse] { try await client.pendingActions() }
     func confirmAction(id: String) async throws -> AIConfirmedActionResponse { try await client.confirmAction(id: id) }
     func cancelAction(id: String) async throws { try await client.cancelAction(id: id) }
+    func memos(bookmarked: Bool?, conversationID: String?) async throws -> [PositionMemoListItem] {
+        try await client.memos(bookmarked: bookmarked, conversationID: conversationID)
+    }
+    func memo(id: String) async throws -> PositionMemoDetail { try await client.memo(id: id) }
+    func bookmarkMemo(id: String, bookmarked: Bool) async throws -> PositionMemoCard {
+        try await client.bookmarkMemo(id: id, bookmarked: bookmarked)
+    }
+    func deleteMemo(id: String) async throws { try await client.deleteMemo(id: id) }
 }
