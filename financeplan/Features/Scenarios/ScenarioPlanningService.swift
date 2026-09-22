@@ -80,6 +80,28 @@ struct ScenarioSnapshotPreview: Decodable, Identifiable, Sendable {
 private struct ScenarioResource: Decodable { let id: UUID }
 private struct EmptyResponse: Decodable {}
 
+/// Builds a request URL without percent-encoding `?` into the path.
+///
+/// `URL.appending(path:)` encodes reserved characters, so a path of
+/// `v1/stocks?portfolioListId=…` becomes `/v1/stocks%3FportfolioListId=…` and
+/// the route 404s. Query items stay in the query.
+func scenarioRequestURL(base: URL, path: String, query: [URLQueryItem] = []) -> URL? {
+  let split = path.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false)
+  let pathOnly = String(split[0])
+  var items = query
+  if split.count == 2, !split[1].isEmpty {
+    let embedded = URLComponents(string: "https://local.invalid/?\(split[1])")?.queryItems ?? []
+    items = embedded + items
+  }
+  guard var components = URLComponents(url: base.appending(path: pathOnly), resolvingAgainstBaseURL: false) else {
+    return nil
+  }
+  if !items.isEmpty {
+    components.queryItems = items
+  }
+  return components.url
+}
+
 struct ScenarioAPIError: LocalizedError, Equatable, Sendable {
   let method: String; let path: String; let statusCode: Int
   var errorDescription: String? { "\(method) /\(path.prefix(while: { $0 != "?" })) failed with HTTP \(statusCode)." }
@@ -216,7 +238,12 @@ final class ScenarioPlanningService: ScenarioPlanningServiceProtocol, @unchecked
   func cryptoHoldings() async throws -> [ScenarioCryptoHolding] { try await send("v1/crypto/portfolio") }
   func holdings(portfolioIDs: [UUID]) async throws -> [ScenarioHolding] {
     var output: [ScenarioHolding] = []
-    for id in portfolioIDs { output += try await send("v1/stocks?portfolioListId=\(id.uuidString)") }
+    for id in portfolioIDs {
+      output += try await send(
+        "v1/stocks",
+        query: [URLQueryItem(name: "portfolioListId", value: id.uuidString)]
+      )
+    }
     return output
   }
   func riskProfiles() async throws -> [ScenarioRiskProfile] { try await send("v1/holding-risk-profiles") }
@@ -300,9 +327,17 @@ final class ScenarioPlanningService: ScenarioPlanningServiceProtocol, @unchecked
     let _: EmptyResponse = try await send("v1/scenarios/\(id)", method: "DELETE")
   }
 
-  private func send<Response: Decodable>(_ path: String, method: String = "GET", body: [String: Any]? = nil) async throws -> Response {
+  private func send<Response: Decodable>(
+    _ path: String,
+    method: String = "GET",
+    query: [URLQueryItem] = [],
+    body: [String: Any]? = nil
+  ) async throws -> Response {
     guard let token = try await auth.validAccessToken() else { throw AuthSessionError.notAuthenticated }
-    var request = URLRequest(url: environment.current.apiBaseUrl.appending(path: path)); request.httpMethod = method
+    guard let url = scenarioRequestURL(base: environment.current.apiBaseUrl, path: path, query: query) else {
+      throw URLError(.badURL)
+    }
+    var request = URLRequest(url: url); request.httpMethod = method
     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization"); request.setValue("application/json", forHTTPHeaderField: "Accept")
     if let body { request.setValue("application/json", forHTTPHeaderField: "Content-Type"); request.httpBody = try JSONSerialization.data(withJSONObject: body) }
     let (data, response) = try await session.data(for: request)

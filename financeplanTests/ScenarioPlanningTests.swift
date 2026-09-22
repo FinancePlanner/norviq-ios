@@ -321,6 +321,27 @@ final class ScenarioPlanningTests: XCTestCase {
     XCTAssertEqual(result.covariance[1][0], 0.006)
   }
 
+  func testHoldingsURLKeepsTheQuerySeparator() {
+    let base = URL(string: "https://api.norviq.org")!
+    let id = UUID(uuidString: "590C87EF-E86E-4ECD-A9F2-8255709D11EA")!
+    let url = scenarioRequestURL(
+      base: base,
+      path: "v1/stocks",
+      query: [URLQueryItem(name: "portfolioListId", value: id.uuidString)]
+    )
+    XCTAssertEqual(url?.path, "/v1/stocks")
+    XCTAssertEqual(url?.query, "portfolioListId=590C87EF-E86E-4ECD-A9F2-8255709D11EA")
+    XCTAssertFalse(url?.absoluteString.contains("%3F") ?? true)
+  }
+
+  func testLegacyQueryInsideThePathIsNotEncoded() {
+    let base = URL(string: "https://api.norviq.org")!
+    let url = scenarioRequestURL(base: base, path: "v1/stocks?portfolioListId=ABC")
+    XCTAssertEqual(url?.path, "/v1/stocks")
+    XCTAssertEqual(url?.query, "portfolioListId=ABC")
+    XCTAssertFalse(url?.absoluteString.contains("%3F") ?? true)
+  }
+
   func testMultiAssetAssumptionsRejectDimensionMismatch() async {
     await Task.yield()
     XCTAssertThrowsError(try parseScenarioMultiAssetAssumptions(
