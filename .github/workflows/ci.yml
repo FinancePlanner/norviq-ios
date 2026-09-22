@@ -23,6 +23,8 @@ jobs:
               "https://github.com/realm/SwiftLint/releases/download/0.65.1/portable_swiftlint.zip"
             unzip -o /tmp/swiftlint.zip -d /tmp/swiftlint
             echo "/tmp/swiftlint" >> $GITHUB_PATH
+            # $GITHUB_PATH only reaches later steps, so this one needs it too.
+            export PATH="/tmp/swiftlint:$PATH"
           fi
           swiftlint version
 
