@@ -14,6 +14,8 @@ final class PersistentAssistantViewModel {
     private(set) var isLoading = false
     private(set) var isSending = false
     private(set) var activityLabel: String?
+    /// Drives the Muse header's avatar ring and status line.
+    private(set) var agentState = MuseAgentState.idle
     private(set) var activeActionID: String?
     private(set) var errorMessage: String?
     /// Memo cards keyed by the assistant message that announced them.
@@ -24,9 +26,36 @@ final class PersistentAssistantViewModel {
     var memoService: any PersistentAssistantServicing { service }
 
     private let service: any PersistentAssistantServicing
+    private let sleep: @Sendable (Duration) async throws -> Void
+    private var celebrationTask: Task<Void, Never>?
 
-    init(service: any PersistentAssistantServicing) { self.service = service }
+    init(
+        service: any PersistentAssistantServicing,
+        sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+    ) {
+        self.service = service
+        self.sleep = sleep
+    }
     convenience init() { self.init(service: Container.shared.persistentAssistantService()) }
+
+    /// Applies an agent event. The celebration after a turn ends on its own
+    /// after `MuseAgentState.celebrationDuration`.
+    func apply(_ event: MuseAgentEvent) {
+        agentState = agentState.reduce(event)
+        guard agentState.phase == .celebrating else {
+            celebrationTask?.cancel()
+            celebrationTask = nil
+            return
+        }
+        guard event == .turn else { return }
+        celebrationTask?.cancel()
+        celebrationTask = Task { [weak self, sleep] in
+            do { try await sleep(MuseAgentState.celebrationDuration) } catch { return }
+            self?.apply(.celebrationEnded)
+        }
+    }
+
+    func composerFocusChanged(_ focused: Bool) { apply(.composerFocus(focused)) }
 
     func load() async {
         guard !isLoading else { return }
@@ -162,14 +191,20 @@ final class PersistentAssistantViewModel {
             isSending = false
             activityLabel = nil
         }
+        apply(.started)
         do {
             var receivedTurn = false
             for try await event in service.streamTurn(conversationID: conversation.id, content: outgoingContent) {
                 switch event {
                 case .started:
                     activityLabel = "Reviewing your finances…"
+                    apply(.started)
+                case let .tool(label):
+                    activityLabel = label
+                    apply(.tool(label))
                 case let .turn(turn):
                     receivedTurn = true
+                    apply(.turn)
                     if let current = activeConversation {
                         activeConversation = replacingMessages(in: current, with: current.messages + [turn.message])
                     }
@@ -189,6 +224,9 @@ final class PersistentAssistantViewModel {
             usage = try await usageRequest
             conversations = try await conversationsRequest
         } catch {
+            // A turn that arrived before a later failure (e.g. refreshing
+            // usage) still counts; only a turn that never landed is a snag.
+            if agentState.phase == .working { apply(.failed) }
             if let current = activeConversation {
                 activeConversation = replacingMessages(in: current, with: current.messages.filter { $0.id != optimistic.id })
             }

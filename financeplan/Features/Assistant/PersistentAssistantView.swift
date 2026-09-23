@@ -21,6 +21,7 @@ struct PersistentAssistantView: View {
     @State private var viewModel = PersistentAssistantViewModel()
     @State private var showsConversations = false
     @State private var showsPreferences = false
+    @FocusState private var isComposerFocused: Bool
 
     var body: some View {
         @Bindable var viewModel = viewModel
@@ -114,6 +115,8 @@ struct PersistentAssistantView: View {
             }
             .safeAreaInset(edge: .top, spacing: 0) {
                 MuseChatHeader(
+                    status: viewModel.agentState.status,
+                    phase: viewModel.agentState.phase,
                     onLeading: { showsConversations = true },
                     onNewChat: { Task { await viewModel.newConversation() } }
                 )
@@ -198,6 +201,8 @@ struct PersistentAssistantView: View {
             }
             HStack(alignment: .bottom, spacing: 8) {
                 TextField("Ask about your finances", text: $viewModel.draft, axis: .vertical)
+                    .focused($isComposerFocused)
+                    .onChange(of: isComposerFocused) { _, focused in viewModel.composerFocusChanged(focused) }
                     .lineLimit(1...5).textFieldStyle(.plain)
                     .foregroundStyle(AppTheme.Colors.foreground)
                     .submitLabel(.send).onSubmit { Task { await viewModel.send() } }
