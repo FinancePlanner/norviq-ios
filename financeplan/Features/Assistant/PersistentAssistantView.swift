@@ -17,6 +17,7 @@ struct PersistentAssistantView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var viewModel = PersistentAssistantViewModel()
     @State private var showsConversations = false
     @State private var showsPreferences = false
@@ -32,7 +33,8 @@ struct PersistentAssistantView: View {
                 }
             }
             .vigilScreenBackground()
-            .vigilNavigationTitle("Q")
+            // The Muse header pill names the agent; a second title would compete with it.
+            .vigilNavigationTitle("")
             .vigilInlineNavigationBar()
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -41,8 +43,6 @@ struct PersistentAssistantView: View {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     NavigationLink(value: SavedPositionMemosRoute()) { Image(systemName: "bookmark") }
                         .accessibilityLabel("Saved memos")
-                    Button { showsConversations = true } label: { Image(systemName: "clock.arrow.circlepath") }
-                        .accessibilityLabel("Conversations")
                     Button { showsPreferences = true } label: { Image(systemName: "slider.horizontal.3") }
                         .accessibilityLabel("Assistant settings")
                 }
@@ -81,13 +81,7 @@ struct PersistentAssistantView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 16) {
-                    VigilPageHeader(
-                        watch: .intelligence,
-                        title: "Q"
-                    )
-                    .padding(.horizontal, 16)
-
-                    statusHeader
+                    if let usage = viewModel.usage { usageCaption(usage) }
                     if !viewModel.tips.isEmpty { tipsSection }
                     if viewModel.activeConversation?.messages.isEmpty ?? true,
                        viewModel.pendingActions.isEmpty,
@@ -97,7 +91,7 @@ struct PersistentAssistantView: View {
                     if let messages = viewModel.activeConversation?.messages {
                         ForEach(messages, id: \.id) { message in
                             VStack(spacing: 8) {
-                                messageBubble(message)
+                                MuseChatBubble(text: message.content, isUser: message.role == .user)
                                 if let card = viewModel.memoCards[message.id] {
                                     PositionMemoCardView(
                                         card: card,
@@ -111,25 +105,34 @@ struct PersistentAssistantView: View {
                         }
                     }
                     ForEach(viewModel.pendingActions, id: \.id) { action in pendingActionCard(action).id(action.id) }
-                    if viewModel.isSending { HStack { ProgressView(); Text("Thinking…").foregroundStyle(.secondary); Spacer() }.padding(.horizontal, 16) }
+                    if viewModel.isSending {
+                        MuseChatBubble(isUser: false) { ProgressView().controlSize(.small) }
+                            .accessibilityLabel("Thinking")
+                    }
                 }
                 .padding(.vertical, 16)
+            }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                MuseChatHeader(
+                    onLeading: { showsConversations = true },
+                    onNewChat: { Task { await viewModel.newConversation() } }
+                )
             }
             .background(AppTheme.Colors.pageBackground(for: scheme))
             .vigilScreenBackground()
             .onChange(of: viewModel.activeConversation?.messages.count) {
-                if let id = viewModel.activeConversation?.messages.last?.id { withAnimation { proxy.scrollTo(id, anchor: .bottom) } }
+                guard let id = viewModel.activeConversation?.messages.last?.id else { return }
+                if reduceMotion {
+                    proxy.scrollTo(id, anchor: .bottom)
+                } else {
+                    withAnimation { proxy.scrollTo(id, anchor: .bottom) }
+                }
             }
         }
     }
 
     private var idleState: some View {
         VStack(spacing: 12) {
-            Image("VigIcon")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 96, height: 96)
-                .accessibilityHidden(true)
             Text("Ask Q. Nothing slips past.")
                 .font(.headline)
                 .multilineTextAlignment(.center)
@@ -144,26 +147,18 @@ struct PersistentAssistantView: View {
             .padding(.top, 8)
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 32)
+        .padding(.top, 16)
         .padding(.horizontal, 24)
     }
 
-    private var statusHeader: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "sparkles").foregroundStyle(.tint)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(viewModel.activeConversation?.title ?? "New conversation").font(.headline)
-                if let usage = viewModel.usage {
-                    Text(usage.isPro ? "Pro · unlimited" : "\(usage.remaining ?? 0) requests left this month")
-                        .font(.caption).foregroundStyle(.secondary).contentTransition(.numericText())
-                }
-            }
-            Spacer()
-        }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(.rect(cornerRadius: 10))
-        .padding(.horizontal, 16)
+    /// Remaining free requests, formerly in the status card. The Muse header's
+    /// status line is reserved for the agent's state, so usage moves here.
+    private func usageCaption(_ usage: AIAssistantUsageResponse) -> some View {
+        Text(usage.isPro ? "Pro · unlimited" : "\(usage.remaining ?? 0) requests left this month")
+            .font(.caption)
+            .foregroundStyle(AppTheme.Colors.secondaryText)
+            .contentTransition(.numericText())
+            .frame(maxWidth: .infinity)
     }
 
     private var tipsSection: some View {
@@ -174,22 +169,8 @@ struct PersistentAssistantView: View {
                     HStack { Text(tip.title).font(.subheadline.weight(.semibold)); Spacer(); Button { Task { await viewModel.dismiss(tip) } } label: { Image(systemName: "xmark") }.buttonStyle(.plain).foregroundStyle(.secondary) }
                     Text(tip.body).font(.subheadline).foregroundStyle(.secondary)
                 }
-                .padding(16).background(Color(.secondarySystemGroupedBackground)).clipShape(.rect(cornerRadius: 10))
+                .padding(16).background(AppTheme.Colors.cardBackground, in: .rect(cornerRadius: AppTheme.Radius.card))
             }
-        }
-        .padding(.horizontal, 16)
-    }
-
-    private func messageBubble(_ message: AIMessageResponse) -> some View {
-        HStack {
-            if message.role == .user { Spacer(minLength: 48) }
-            Text(message.content)
-                .font(.body)
-                .foregroundStyle(message.role == .user ? Color.white : Color.primary)
-                .padding(.horizontal, 16).padding(.vertical, 12)
-                .background(message.role == .user ? Color.accentColor : Color(.secondarySystemGroupedBackground))
-                .clipShape(.rect(cornerRadius: 10))
-            if message.role != .user { Spacer(minLength: 48) }
         }
         .padding(.horizontal, 16)
     }
@@ -205,8 +186,7 @@ struct PersistentAssistantView: View {
             }
         }
         .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(.rect(cornerRadius: 10))
+        .background(AppTheme.Colors.cardBackground, in: .rect(cornerRadius: AppTheme.Radius.card))
         .padding(.horizontal, 16)
     }
 
@@ -218,14 +198,19 @@ struct PersistentAssistantView: View {
             }
             HStack(alignment: .bottom, spacing: 8) {
                 TextField("Ask about your finances", text: $viewModel.draft, axis: .vertical)
-                    .lineLimit(1...5).textFieldStyle(.roundedBorder)
+                    .lineLimit(1...5).textFieldStyle(.plain)
+                    .foregroundStyle(AppTheme.Colors.foreground)
                     .submitLabel(.send).onSubmit { Task { await viewModel.send() } }
+                    .padding(.vertical, 8)
                 Button { Task { await viewModel.send() } } label: { Image(systemName: "arrow.up.circle.fill").font(.title) }
+                    .foregroundStyle(AppTheme.Colors.tint)
                     .disabled(viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isSending)
                     .accessibilityLabel("Send")
             }
-            .padding(.horizontal, 16).padding(.vertical, 12)
-            .background(.bar)
+            .padding(.leading, 16).padding(.trailing, 6).padding(.vertical, 4)
+            .background(AppTheme.Colors.tintSoft, in: .rect(cornerRadius: 24))
+            .padding(.horizontal, 16).padding(.vertical, 8)
+            .background(AppTheme.Colors.pageBackground)
         }
     }
 
