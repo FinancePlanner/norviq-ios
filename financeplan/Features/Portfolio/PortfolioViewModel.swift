@@ -407,8 +407,8 @@ final class PortfolioViewModel {
 
     let symbol = draft.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
     guard !symbol.isEmpty,
-      let shares = Double(draft.shares),
-      let buyPrice = Double(draft.buyPrice)
+      let shares = MoneyInputParser.parse(draft.shares),
+      let buyPrice = MoneyInputParser.parse(draft.buyPrice)
     else {
       return "Enter valid symbol, shares, and buy price."
     }

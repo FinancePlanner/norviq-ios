@@ -157,7 +157,8 @@ struct EditStockPositionSheet: View {
   }
 
   private var currentDraft: StockResponse? {
-    guard let shares = Double(sharesText), let buyPrice = Double(buyPriceText) else { return nil }
+    guard let shares = MoneyInputParser.parse(sharesText),
+      let buyPrice = MoneyInputParser.parse(buyPriceText) else { return nil }
     return StockResponse(
       id: stock.id,
       symbol: stock.symbol,

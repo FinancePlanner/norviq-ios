@@ -210,7 +210,8 @@ final class WatchlistViewModel: ObservableObject {
     portfolioListId: String?
   ) async -> String? {
     guard !isSaving else { return "Already saving." }
-    guard let shares = Double(draft.shares), let buyPrice = Double(draft.buyPrice) else {
+    guard let shares = MoneyInputParser.parse(draft.shares),
+      let buyPrice = MoneyInputParser.parse(draft.buyPrice) else {
       return "Enter valid shares and buy price."
     }
 

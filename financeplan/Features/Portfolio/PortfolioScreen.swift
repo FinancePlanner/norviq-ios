@@ -732,8 +732,8 @@ struct PortfolioScreen: View {
 
   private func allocationImpact(for draft: AddPositionDraft) -> PortfolioAllocationImpact? {
     guard
-      let shares = Double(draft.shares),
-      let buyPrice = Double(draft.buyPrice)
+      let shares = MoneyInputParser.parse(draft.shares),
+      let buyPrice = MoneyInputParser.parse(draft.buyPrice)
     else {
       return nil
     }

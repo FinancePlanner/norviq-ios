@@ -130,7 +130,7 @@ struct AddCryptoHoldingSheet: View {
     }
 
     private func save() {
-        guard let qty = Double(quantity), let price = Double(buyPrice) else { return }
+        guard let qty = MoneyInputParser.parse(quantity), let price = MoneyInputParser.parse(buyPrice) else { return }
         isSaving = true
         Task {
             let success = await viewModel.addHolding(symbol: symbol, name: name, quantity: qty, price: price)
