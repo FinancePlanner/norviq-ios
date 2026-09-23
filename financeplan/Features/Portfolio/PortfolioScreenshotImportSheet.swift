@@ -58,6 +58,9 @@ struct PortfolioScreenshotImportSheet: View {
           committedSection
         } else if !viewModel.rows.isEmpty {
           kindSection
+          if viewModel.needsMergeConfirmation {
+            mergeConfirmationSection
+          }
           reviewSection
         }
       }
@@ -104,6 +107,26 @@ struct PortfolioScreenshotImportSheet: View {
         Up to \(ScreenshotImportViewModel.maxImages) screenshots of your broker's holdings \
         or trade history. Everything read from them is shown for you to check before \
         anything is saved. Images are read and discarded — they are never stored.
+        """
+      )
+    }
+  }
+
+  /// Named before it happens: importing over a holding the user added by hand
+  /// replaces it, and that is not something to discover afterwards.
+  private var mergeConfirmationSection: some View {
+    Section {
+      Toggle(isOn: $viewModel.confirmMergeExisting) {
+        Text("Replace positions I already hold")
+      }
+    } header: {
+      Text("Already in your portfolio")
+    } footer: {
+      Text(
+        """
+        You already hold \(viewModel.conflictingSymbols.joined(separator: ", ")) from \
+        outside this import. Turning this on replaces those positions with the imported \
+        ones. Leave it off and the import stops instead of listing the same symbol twice.
         """
       )
     }

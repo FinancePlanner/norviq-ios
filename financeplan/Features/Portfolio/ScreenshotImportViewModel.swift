@@ -62,6 +62,10 @@ final class ScreenshotImportViewModel {
   private(set) var warnings: [String] = []
   private(set) var errorMessage: String?
   private(set) var isExtracting = false
+  /// Set by the sheet once the user accepts replacing the holdings named in
+  /// `conflictingSymbols`. Without it the backend refuses the commit rather
+  /// than leaving two rows for one symbol.
+  var confirmMergeExisting = false
   private(set) var isCommitting = false
   private(set) var didCommit = false
   private(set) var kind: ScreenshotImportKind = .unknown
@@ -166,6 +170,19 @@ final class ScreenshotImportViewModel {
     }
   }
 
+  /// Symbols already held from somewhere this import will not replace on its
+  /// own — typed in by hand, or imported from another broker. Committing over
+  /// them replaces them, so the sheet names them and asks first.
+  var conflictingSymbols: [String] {
+    var seen = Set<String>()
+    return rows
+      .filter { $0.isIncluded && !$0.willReplace && $0.existingKind != .none }
+      .map { $0.symbol.trimmingCharacters(in: .whitespaces).uppercased() }
+      .filter { seen.insert($0).inserted }
+  }
+
+  var needsMergeConfirmation: Bool { !conflictingSymbols.isEmpty }
+
   func commit() async {
     guard !isCommitting else { return }
     isCommitting = true
@@ -196,7 +213,8 @@ final class ScreenshotImportViewModel {
         ScreenshotImportCommitRequest(
           provider: Self.provider,
           portfolioListId: portfolioListId,
-          items: items
+          items: items,
+          confirmMergeExisting: confirmMergeExisting
         )
       )
       insertedCount = response.inserted.count

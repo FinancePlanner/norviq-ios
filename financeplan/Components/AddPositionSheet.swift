@@ -159,7 +159,7 @@ struct AddPositionSheet: View {
 
   private var isValid: Bool {
     !draft.symbol.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-      && Double(draft.shares) != nil
-      && Double(draft.buyPrice) != nil
+      && MoneyInputParser.parse(draft.shares) != nil
+      && MoneyInputParser.parse(draft.buyPrice) != nil
   }
 }
