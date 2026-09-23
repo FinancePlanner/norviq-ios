@@ -8,11 +8,14 @@ import SwiftUI
 /// `.safeAreaInset(edge: .top)` so the transcript starts below it and scrolls
 /// beneath the scrim.
 ///
-/// Stage A is restyle only: `status` is a plain string the caller owns. The
-/// avatar states (listening / working ring / celebrating) arrive in Stage B.
+/// `status` and `phase` come from `MuseAgentState`. There is no working
+/// mascot art: `working` draws an animated ring around the idle art (a static
+/// ring under Reduce Motion), `listening` a faint ring, and `celebrating` a
+/// full ring with a small bounce.
 struct MuseChatHeader: View {
     var name: String = "Vig"
     var status: String = "Ready"
+    var phase: MuseAgentPhase = .idle
     var leadingSystemImage: String = "clock.arrow.circlepath"
     var leadingAccessibilityLabel: LocalizedStringKey = "Conversations"
     var onLeading: () -> Void
@@ -21,6 +24,8 @@ struct MuseChatHeader: View {
     static let barHeight: CGFloat = 56
     static let avatarSize: CGFloat = 110
     static let scrimHeight: CGFloat = 120
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 8) {
@@ -67,6 +72,16 @@ struct MuseChatHeader: View {
     }
 
     private var avatar: some View {
+        avatarArt
+            .overlay {
+                MuseAvatarRing(phase: phase, reduceMotion: reduceMotion)
+                    .padding(-5)
+            }
+            .scaleEffect(phase == .celebrating && !reduceMotion ? 1.06 : 1)
+            .animation(reduceMotion ? nil : .spring(duration: 0.4, bounce: 0.45), value: phase)
+    }
+
+    private var avatarArt: some View {
         Image("VigIcon")
             .resizable()
             .scaledToFit()
@@ -86,7 +101,9 @@ struct MuseChatHeader: View {
             Text(status)
                 .font(.system(size: 13))
                 .foregroundStyle(AppTheme.Colors.secondaryText)
+                .lineLimit(1)
                 .contentTransition(.opacity)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: status)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
@@ -105,6 +122,50 @@ struct MuseChatHeader: View {
         .frame(height: Self.scrimHeight + Self.barHeight)
         .ignoresSafeArea(edges: .top)
         .allowsHitTesting(false)
+    }
+}
+
+/// The ring that carries the agent's state around the 110pt avatar.
+private struct MuseAvatarRing: View {
+    let phase: MuseAgentPhase
+    let reduceMotion: Bool
+
+    private static let lineWidth: CGFloat = 3
+    private static let revolution: TimeInterval = 1.2
+
+    var body: some View {
+        switch phase {
+        case .idle:
+            Color.clear
+        case .listening:
+            Circle().strokeBorder(AppTheme.Colors.tint.opacity(0.4), lineWidth: 2)
+        case .celebrating:
+            Circle().strokeBorder(AppTheme.Colors.tint, lineWidth: Self.lineWidth)
+        case .working:
+            if reduceMotion {
+                Circle().strokeBorder(AppTheme.Colors.tint, lineWidth: Self.lineWidth)
+            } else {
+                spinningArc
+            }
+        }
+    }
+
+    private var spinningArc: some View {
+        TimelineView(.animation) { context in
+            let turns = context.date.timeIntervalSinceReferenceDate
+                .truncatingRemainder(dividingBy: Self.revolution) / Self.revolution
+            ZStack {
+                Circle().strokeBorder(AppTheme.Colors.tint.opacity(0.18), lineWidth: Self.lineWidth)
+                Circle()
+                    .inset(by: Self.lineWidth / 2)
+                    .trim(from: 0, to: 0.3)
+                    .stroke(
+                        AppTheme.Colors.tint,
+                        style: StrokeStyle(lineWidth: Self.lineWidth, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(turns * 360))
+            }
+        }
     }
 }
 
@@ -129,7 +190,7 @@ struct MuseChatHeader: View {
 }
 
 #Preview("MuseChatHeader · Dark") {
-    MuseChatHeader(status: "is thinking", onLeading: {}, onNewChat: {})
+    MuseChatHeader(status: "is thinking", phase: .working, onLeading: {}, onNewChat: {})
         .frame(maxHeight: .infinity, alignment: .top)
         .background(AppTheme.Colors.pageBackground)
         .preferredColorScheme(.dark)

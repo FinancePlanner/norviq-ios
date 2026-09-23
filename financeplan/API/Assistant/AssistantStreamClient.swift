@@ -36,6 +36,9 @@ private struct PersistentAssistantTurnRequestDTO: Codable, Sendable {
 
 enum PersistentAssistantStreamEvent: Sendable {
     case started
+    /// A tool is running; the label is the server's activity line
+    /// (e.g. "Adding expense…"). Older backends never send it.
+    case tool(String)
     case turn(AIAssistantTurnResponse)
     case error(String)
     case done
@@ -165,18 +168,8 @@ struct AssistantStreamClient: Sendable {
                         }
                         guard line.hasPrefix("data:") else { continue }
                         let json = String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces)
-                        switch event {
-                        case "started":
-                            continuation.yield(.started)
-                        case "turn":
-                            guard let data = json.data(using: .utf8) else { throw Failure.invalidResponse }
-                            continuation.yield(.turn(try JSONDecoder().decode(AIAssistantTurnResponse.self, from: data)))
-                        case "error":
-                            continuation.yield(.error(Self.field("message", in: json) ?? "The assistant could not complete this turn."))
-                        case "done":
-                            continuation.yield(.done)
-                        default:
-                            break
+                        if let parsed = try Self.decodePersistent(event: event, json: json) {
+                            continuation.yield(parsed)
                         }
                     }
                     continuation.finish()
@@ -185,6 +178,28 @@ struct AssistantStreamClient: Sendable {
                 }
             }
             continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    /// Maps one SSE frame of the persisted-turn stream. Frames this client
+    /// does not know, and `tool` frames without a label, return nil so a newer
+    /// backend never breaks an older app (and vice versa).
+    static func decodePersistent(event: String, json: String) throws -> PersistentAssistantStreamEvent? {
+        switch event {
+        case "started":
+            return .started
+        case "tool":
+            guard let label = field("label", in: json) else { return nil }
+            return .tool(label)
+        case "turn":
+            guard let data = json.data(using: .utf8) else { throw Failure.invalidResponse }
+            return .turn(try JSONDecoder().decode(AIAssistantTurnResponse.self, from: data))
+        case "error":
+            return .error(field("message", in: json) ?? "The assistant could not complete this turn.")
+        case "done":
+            return .done
+        default:
+            return nil
         }
     }
 
