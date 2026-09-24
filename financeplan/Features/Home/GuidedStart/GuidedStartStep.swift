@@ -12,7 +12,7 @@ nonisolated enum GuidedTarget: String, Sendable, CaseIterable {
 
 /// Where an anchor lives. `goalPlanning` is the full-screen cover, which has
 /// its own overlay because anchors do not cross a presentation.
-enum GuidedTab: String, Sendable {
+nonisolated enum GuidedTab: String, Sendable {
   case dashboard
   case portfolio
   case expenses

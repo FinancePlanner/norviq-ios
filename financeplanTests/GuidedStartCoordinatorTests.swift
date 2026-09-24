@@ -100,7 +100,10 @@ struct GuidedStartCoordinatorTests {
     await coordinator.start(.addHolding)
     await coordinator.settle()
     #expect(Array(clock.slept.prefix(6)) == [.seconds(1), .seconds(2), .seconds(4), .seconds(8), .seconds(10), .seconds(10)])
+    #expect(clock.slept.count == 33)
     #expect(analytics.names.last == "guided_start_step_timed_out")
+    let timedOut = analytics.events.first { $0.name == "guided_start_step_timed_out" }
+    #expect((timedOut?.properties?["elapsed_ms"] as? Int ?? 0) >= 300_000)
     #expect(coordinator.phase == .idle)
   }
 
@@ -135,6 +138,8 @@ struct GuidedStartCoordinatorTests {
     #expect(coordinator.phase == .finished)
     #expect(coordinator.isCardVisible)
     #expect(analytics.names.filter { $0 == "guided_start_completed" }.count == 1)
+    await coordinator.dismissCard()
+    #expect(coordinator.isCardVisible == false)
   }
 
   @Test("A failed dismiss restores the card and says so")

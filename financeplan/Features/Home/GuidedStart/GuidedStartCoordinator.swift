@@ -15,10 +15,14 @@ final class GuidedStartCoordinator {
     case finished
 
     /// The card stays while any of these hold, even if a dismissal arrives
-    /// from another device mid-step.
+    /// from another device mid-step. `.finished` is not engaged: once the
+    /// wizard has landed there, a dismissal — local or from another device —
+    /// applies normally, same as the completed card in any other state.
     var isEngaged: Bool {
-      if case .idle = self { return false }
-      return true
+      switch self {
+      case .active, .celebrating: return true
+      case .idle, .finished: return false
+      }
     }
   }
 
@@ -103,6 +107,7 @@ final class GuidedStartCoordinator {
     inlineMessage = nil
     cancelWork()
     await refresh()
+    cancelWork()
 
     guard let target = resolveStart(step) else {
       finishWizard()
@@ -226,6 +231,7 @@ final class GuidedStartCoordinator {
     try? await sleep(Self.celebrationDwell)
     guard case .celebrating(let current) = phase, current == step else { return }
     if allDone {
+      sessionShowsCompletedCard = true
       phase = .finished
       telemetry.completed()
     } else {
@@ -244,6 +250,7 @@ final class GuidedStartCoordinator {
   private func finishWizard() {
     guard phase != .finished else { return }
     requestedTab = nil
+    sessionShowsCompletedCard = true
     phase = .finished
     telemetry.completed()
   }
