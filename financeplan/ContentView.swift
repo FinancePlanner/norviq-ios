@@ -1,6 +1,8 @@
 import Factory
 import Combine
 import OSLog
+import PostHog
+import StockPlanShared
 import SwiftUI
 
 public struct ContentView: View {
@@ -67,6 +69,7 @@ public struct ContentView: View {
                   Task {
                     let userID = await sessionStore.currentUserID
                     await sessionStore.markOnboardingQuestionnaireCompleted(for: userID)
+                    await Container.shared.onboardingStateStore().recordFunnelStep(.import)
                     requiresOnboardingQuestionnaire = false
                   }
                 }
@@ -77,6 +80,7 @@ public struct ContentView: View {
                   Task {
                     let userID = await sessionStore.currentUserID
                     await sessionStore.markInitialStockImportCompleted(for: userID)
+                    await Container.shared.onboardingStateStore().completeFunnel()
                     requiresInitialStockImport = false
                   }
                 },
@@ -130,6 +134,7 @@ public struct ContentView: View {
                   Task {
                     let userID = await sessionStore.currentUserID
                     await sessionStore.markOnboardingQuestionnaireCompleted(for: userID)
+                    await Container.shared.onboardingStateStore().recordFunnelStep(.import)
                     applyAuthenticatedState()
                   }
                 }
@@ -293,9 +298,22 @@ public struct ContentView: View {
     isAuthenticated = true
     Task {
       let userID = await sessionStore.currentUserID
-      requiresOnboardingQuestionnaire = await sessionStore.requiresOnboardingQuestionnaire(for: userID)
-      let hasImported = await sessionStore.hasCompletedInitialStockImport(for: userID)
-      requiresInitialStockImport = userID.isEmpty || !hasImported
+      let onboarding = Container.shared.onboardingStateStore()
+      let server = await onboarding.refresh()
+      let route = OnboardingFunnelRouting.route(
+        server: server,
+        localRequiresQuestionnaire: await sessionStore.requiresOnboardingQuestionnaire(for: userID),
+        localHasImported: await sessionStore.hasCompletedInitialStockImport(for: userID),
+        hasUserID: !userID.isEmpty
+      )
+      if server?.funnelCompletedAt != nil {
+        await sessionStore.markOnboardingQuestionnaireCompleted(for: userID)
+        await sessionStore.markInitialStockImportCompleted(for: userID)
+      } else if server?.funnelStep != nil {
+        PostHogSDK.shared.capture("onboarding_funnel_resumed", properties: ["step": server?.funnelStep ?? ""])
+      }
+      requiresOnboardingQuestionnaire = route.requiresQuestionnaire
+      requiresInitialStockImport = route.requiresImport
 
       let username = await sessionStore.currentUsername
       sessionManager.updateUsername(username)
@@ -335,6 +353,7 @@ public struct ContentView: View {
     billingManager.clearCache()
     sessionManager.reset()
     pushNotificationsCoordinator.handleSessionDidInvalidate()
+    Container.shared.onboardingStateStore().reset()
   }
 
   private func deliverPendingPushNotificationRouteIfPossible() {
