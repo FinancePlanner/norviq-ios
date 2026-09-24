@@ -6,6 +6,7 @@ import SwiftUI
 struct GoalPlanningScreen: View {
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.dismiss) private var dismiss
+  @Environment(GuidedStartCoordinator.self) private var guided: GuidedStartCoordinator?
   @State private var model = GoalPlanningViewModel(service: Container.shared.goalPlanningService())
   @State private var isCreatingGoal = false
 
@@ -42,12 +43,13 @@ struct GoalPlanningScreen: View {
         Button("New goal", systemImage: "plus") { isCreatingGoal = true }
           .disabled(!model.canCreateActiveGoal)
           .accessibilityHint(model.canCreateActiveGoal ? "Opens the goal setup wizard" : "The free active-goal limit is reached")
+          .guidedTarget(.goalCreate, in: .goalPlanning)
       }
     }
     .overlay { if model.isLoading { ProgressView("Loading your plan…") } }
     .task { await model.load() }
     .refreshable { await model.load() }
-    .sheet(isPresented: $isCreatingGoal) {
+    .sheet(isPresented: $isCreatingGoal, onDismiss: { guided?.noteUserAction(.setGoal) }) {
       NavigationStack {
         GoalCreationWizard(model: model) { isCreatingGoal = false }
       }
@@ -134,6 +136,7 @@ struct GoalPlanningScreen: View {
     } actions: {
       Button("Create your first goal") { isCreatingGoal = true }
         .buttonStyle(.borderedProminent)
+        .guidedTarget(.goalCreate, in: .goalPlanning)
     }
   }
 

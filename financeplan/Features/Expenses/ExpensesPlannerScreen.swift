@@ -8,6 +8,7 @@ struct ExpensesPlannerScreen: View {
   @Bindable var viewModel: BudgetPlannerViewModel
 
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(GuidedStartCoordinator.self) private var guided: GuidedStartCoordinator?
   @InjectedObservable(\Container.billingManager) private var billingManager
   @State private var isSalaryEditorPresented = false
   @State private var isTargetEditorPresented = false
@@ -74,6 +75,7 @@ struct ExpensesPlannerScreen: View {
             onCTA: presentSalaryEditor,
             usesBrandIcon: true
           )
+          .guidedTarget(.budgetSalary, in: .expenses)
         } else {
           ScrollView {
             VStack(spacing: 24) {
@@ -179,6 +181,7 @@ struct ExpensesPlannerScreen: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
+                    .guidedTarget(.budgetSalary, in: .expenses)
                   }
                 }
                 .padding(.horizontal, 16)
@@ -201,7 +204,7 @@ struct ExpensesPlannerScreen: View {
           toolbarActions
         }
       }
-      .sheet(isPresented: $isSalaryEditorPresented, content: salaryEditorSheet)
+      .sheet(isPresented: $isSalaryEditorPresented, onDismiss: { guided?.noteUserAction(.setBudget) }, content: salaryEditorSheet)
       .sheet(isPresented: $isTargetEditorPresented, content: targetEditorSheet)
       .sheet(item: $itemDraft, onDismiss: handlePlanItemDismiss) { draft in
         planItemEditorSheet(for: draft)

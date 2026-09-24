@@ -32,6 +32,7 @@ struct DashboardRoot: View {
   @State private var isChartBuilderPresented = false
   @State private var isGoalPlanningPresented = false
   @State private var hasLoadedContent = false
+  @Environment(GuidedStartCoordinator.self) private var guided: GuidedStartCoordinator?
 
   private let dashboardService: any DashboardServicing = Container.shared.dashboardService()
   private let expensesService: any ExpensesServicing = Container.shared.expensesService()
@@ -173,6 +174,9 @@ struct DashboardRoot: View {
         NavigationStack {
           GoalPlanningScreen()
         }
+        // Anchors do not leave a presentation, so the cover spotlights its own.
+        .guidedSpotlight(step: guided?.activeStep, activeTab: .goalPlanning, onSkip: { guided?.skip() })
+        .environment(guided)
       }
     }
   }
@@ -361,10 +365,23 @@ private struct DashboardContentSection: View {
   let onGoalPlanningTap: () -> Void
 
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(GuidedStartCoordinator.self) private var guided: GuidedStartCoordinator?
   @State private var newsTickerViewModel = NewsTickerViewModel()
+
+  private var isGuidedCardVisible: Bool { guided?.isCardVisible ?? false }
 
   var body: some View {
     VStack(spacing: 20) {
+      if let guided, guided.isCardVisible {
+        GuidedStartCard(
+          progress: guided.progress,
+          message: guided.inlineMessage,
+          onSelect: { step in Task { await guided.start(step) } },
+          onDismiss: { Task { await guided.dismissCard() } }
+        )
+        .onAppear { guided.noteCardShown() }
+      }
+
       DashboardHeroCard(
         totalValue: portfolioTotalValue,
         totalSpending: spendingTotalValue,
@@ -376,7 +393,9 @@ private struct DashboardContentSection: View {
       .redacted(reason: isHomeMetricsRedacted ? .placeholder : [])
       .appAnimation(AppMotion.state, value: isHomeMetricsRedacted)
 
-      NewsTickerStrip(viewModel: newsTickerViewModel)
+      if !isGuidedCardVisible {
+        NewsTickerStrip(viewModel: newsTickerViewModel)
+      }
 
       if isSearchResultsVisible {
         AssetSearchCard(viewModel: searchViewModel)
@@ -400,6 +419,7 @@ private struct DashboardContentSection: View {
       TaxForecasterTeaserCard()
 
       GoalPlanningDashboardCard(action: onGoalPlanningTap)
+        .guidedTarget(.goalCard, in: .dashboard)
 
       ChartBuilderDashboardCard(onOpen: onChartBuilderTap)
 

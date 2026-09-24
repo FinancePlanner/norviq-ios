@@ -17,6 +17,7 @@ struct PortfolioScreen: View {
   @Environment(\.modelContext) private var modelContext
   @Environment(\.scenePhase) private var scenePhase
   @Environment(PortfolioViewModel.self) private var viewModel
+  @Environment(GuidedStartCoordinator.self) private var guided: GuidedStartCoordinator?
   @InjectedObservable(\Container.billingManager) private var billingManager
   @Binding var pendingOpenSymbol: String?
   @Binding var pendingThesisWatchOpen: Bool
@@ -285,7 +286,7 @@ struct PortfolioScreen: View {
     .sheet(isPresented: isEditSheetPresented) {
       editSheetContent
     }
-    .sheet(isPresented: $isAddPositionPresented) {
+    .sheet(isPresented: $isAddPositionPresented, onDismiss: { guided?.noteUserAction(.addHolding) }) {
       addPositionSheetContent
     }
     .sheet(isPresented: $isCSVImportPresented) {

@@ -34,6 +34,7 @@ public struct UserProfileView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.displayScale) private var displayScale
+    @Environment(\.norviqReopenGuidedStart) private var reopenGuidedStart
     @InjectedObservable(\Container.appEnvironment) private var environmentManager
     @InjectedObservable(\Container.billingManager) private var billingManager
     @State private var path: [UserProfileDestination] = []
@@ -437,6 +438,14 @@ public struct UserProfileView: View {
 
             // Support
             Section(LocalizedStringKey("Support")) {
+                if let reopenGuidedStart {
+                    Button {
+                        reopenGuidedStart()
+                        dismiss()
+                    } label: {
+                        Label(LocalizedStringKey("Show me around"), systemImage: "sparkles")
+                    }
+                }
                 if let mailURL = URL(string: "mailto:fernandocorreia316@gmail.com") {
                     Link(destination: mailURL) {
                         Label("Contact Developer", systemImage: "envelope.fill")
