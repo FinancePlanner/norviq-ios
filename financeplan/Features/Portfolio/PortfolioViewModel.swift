@@ -433,11 +433,22 @@ final class PortfolioViewModel {
 
       await refreshPortfolioSummary()
       NotificationCenter.default.post(name: .portfolioDataDidChange, object: nil)
+      notePositionAddedForReviewPrompt()
       return nil
     } catch {
       let message = (error as? LocalizedError)?.errorDescription ?? "Failed to create stock."
       errorMessage = message
       return message
+    }
+  }
+
+  /// A hand-entered position is one of the success moments the review prompt counts.
+  private func notePositionAddedForReviewPrompt() {
+    let coordinator = Container.shared.reviewPromptCoordinator()
+    Task {
+      let userID = await Container.shared.authSessionStore().currentUserID
+      guard !userID.isEmpty else { return }
+      coordinator.recordSuccessfulAdd(.position, userID: userID)
     }
   }
 

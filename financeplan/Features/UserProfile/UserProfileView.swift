@@ -48,6 +48,8 @@ public struct UserProfileView: View {
     @State private var faceIDErrorMessage: String?
     @State private var isNotificationsOn = false
     @State private var isEarningsAlertsOn = false
+    @State private var isReviewPromptOn = true
+    @State private var reviewPromptUserID = ""
 
     // Appearance State
     @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system
@@ -448,8 +450,14 @@ public struct UserProfileView: View {
                 // for unprompted moments, it silently spends one of the ~3 system prompts
                 // a user gets per year, and it may show nothing at all.
                 Link(destination: Constants.Norviq.writeReviewUrl) {
-                    Label("Rate on App Store", systemImage: "star.fill")
+                    Label("Rate Norviq on the App Store", systemImage: "star.fill")
                         .foregroundStyle(.primary)
+                }
+                Toggle(isOn: $isReviewPromptOn) {
+                    Label(LocalizedStringKey("Ask me to rate Norviq"), systemImage: "star.bubble")
+                }
+                .onChange(of: isReviewPromptOn) { _, enabled in
+                    updateReviewPrompt(enabled)
                 }
                 ShareLink(
                     item: ShareURLBuilder.app(),
@@ -671,6 +679,9 @@ public struct UserProfileView: View {
         securityCodeEnabled = securityCodeManager.isEnabled
         isNotificationsOn = pushNotificationsCoordinator.isOptedIn
         isEarningsAlertsOn = pushNotificationsCoordinator.earningsAlertsEnabled
+        reviewPromptUserID = await Container.shared.authSessionStore().currentUserID
+        isReviewPromptOn = Container.shared.reviewPromptCoordinator()
+            .promptsEnabled(userID: reviewPromptUserID)
     }
 
     private func retryLoad() {
@@ -872,6 +883,11 @@ public struct UserProfileView: View {
 
     private func updateEarningsAlerts(_ enabled: Bool) {
         Task { await pushNotificationsCoordinator.setEarningsAlertsEnabled(enabled) }
+    }
+
+    private func updateReviewPrompt(_ enabled: Bool) {
+        Container.shared.reviewPromptCoordinator()
+            .setPromptsEnabled(enabled, userID: reviewPromptUserID)
     }
 
     private func enableNotifications() {

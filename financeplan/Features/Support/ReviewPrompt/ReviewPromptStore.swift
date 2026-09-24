@@ -23,6 +23,13 @@ protocol ReviewPromptStoring: Sendable {
 
   func lastFrictionDate(for userID: String) -> Date?
   func setLastFrictionDate(_ date: Date, for userID: String)
+
+  /// Expenses and positions the user has added by hand. Returns the new total.
+  func recordSuccessfulAdd(for userID: String) -> Int
+
+  /// The "Ask me to rate Norviq" setting. Defaults to on when never set.
+  func promptsEnabled(for userID: String) -> Bool
+  func setPromptsEnabled(_ isEnabled: Bool, for userID: String)
 }
 
 final class UserDefaultsReviewPromptStore: ReviewPromptStoring, @unchecked Sendable {
@@ -32,6 +39,8 @@ final class UserDefaultsReviewPromptStore: ReviewPromptStoring, @unchecked Senda
     static let firedTriggers = "review_prompt_fired_triggers"
     static let lastPrompt = "review_prompt_last_prompt"
     static let lastFriction = "review_prompt_last_friction"
+    static let successfulAdds = "review_prompt_successful_adds"
+    static let promptsEnabled = "review_prompt_enabled"
   }
 
   private let defaults: UserDefaults
@@ -95,6 +104,26 @@ final class UserDefaultsReviewPromptStore: ReviewPromptStoring, @unchecked Senda
   func setLastFrictionDate(_ date: Date, for userID: String) {
     guard !normalized(userID).isEmpty else { return }
     defaults.set(date, forKey: key(Keys.lastFriction, userID))
+  }
+
+  // MARK: - Adds
+
+  func recordSuccessfulAdd(for userID: String) -> Int {
+    guard !normalized(userID).isEmpty else { return 0 }
+    let count = defaults.integer(forKey: key(Keys.successfulAdds, userID)) + 1
+    defaults.set(count, forKey: key(Keys.successfulAdds, userID))
+    return count
+  }
+
+  // MARK: - Opt-out
+
+  func promptsEnabled(for userID: String) -> Bool {
+    defaults.object(forKey: key(Keys.promptsEnabled, userID)) as? Bool ?? true
+  }
+
+  func setPromptsEnabled(_ isEnabled: Bool, for userID: String) {
+    guard !normalized(userID).isEmpty else { return }
+    defaults.set(isEnabled, forKey: key(Keys.promptsEnabled, userID))
   }
 
   // MARK: - Helpers

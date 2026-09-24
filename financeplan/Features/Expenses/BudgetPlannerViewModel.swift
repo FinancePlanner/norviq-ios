@@ -850,6 +850,7 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
       }
 
       logger.debug("Expense create succeeded title=\(prepared.title, privacy: .public)")
+      noteExpenseAddedForReviewPrompt()
       await load(force: true)
       notifyDataDidChange()
       return true
@@ -858,6 +859,16 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
       self.errorMessage = message
       logger.error("Expense create failed: \(error.localizedDescription, privacy: .public)")
       return false
+    }
+  }
+
+  /// A hand-entered expense is one of the success moments the review prompt counts.
+  private func noteExpenseAddedForReviewPrompt() {
+    let coordinator = Container.shared.reviewPromptCoordinator()
+    Task {
+      let userID = await Container.shared.authSessionStore().currentUserID
+      guard !userID.isEmpty else { return }
+      coordinator.recordSuccessfulAdd(.expense, userID: userID)
     }
   }
 
