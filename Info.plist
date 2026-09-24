@@ -36,6 +36,16 @@
 				<string>com.googleusercontent.apps.543855343463-8mhma1ss69aboaum7qetf1li2ko8mg5g</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLName</key>
+			<string>deeplink</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>financeplan</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
