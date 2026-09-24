@@ -15,6 +15,8 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
     var firedByUser: [String: Set<String>] = [:]
     var lastPromptByUser: [String: Date] = [:]
     var lastFrictionByUser: [String: Date] = [:]
+    var addsByUser: [String: Int] = [:]
+    var promptsEnabledByUser: [String: Bool] = [:]
 
     func activeDays(for userID: String) -> Set<String> {
       activeDaysByUser[userID] ?? []
@@ -56,6 +58,19 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
 
     func setLastFrictionDate(_ date: Date, for userID: String) {
       lastFrictionByUser[userID] = date
+    }
+
+    func recordSuccessfulAdd(for userID: String) -> Int {
+      addsByUser[userID, default: 0] += 1
+      return addsByUser[userID] ?? 0
+    }
+
+    func promptsEnabled(for userID: String) -> Bool {
+      promptsEnabledByUser[userID] ?? true
+    }
+
+    func setPromptsEnabled(_ isEnabled: Bool, for userID: String) {
+      promptsEnabledByUser[userID] = isEnabled
     }
   }
 
@@ -248,6 +263,157 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
     XCTAssertFalse(coordinator.pendingPrompt)
   }
 
+  func testTriggerSuppressedByASheetFiresOnceTheSheetCloses() async {
+    await Task.yield()
+    let coordinator = makeCoordinator()
+    makeEligibleUser(coordinator)
+
+    // The Home quick-add sheet is still up when its save lands.
+    coordinator.setContextEligible(false)
+    coordinator.consider(.goalCompleted(goalID: "g1"), userID: userID)
+    XCTAssertFalse(coordinator.pendingPrompt)
+
+    coordinator.setContextEligible(true)
+    XCTAssertTrue(coordinator.pendingPrompt, "the moment is deferred, not lost")
+  }
+
+  // MARK: - Hand-entered adds
+
+  func testThirdAddFiresPrompt() async {
+    await Task.yield()
+    let coordinator = makeCoordinator()
+    makeEligibleUser(coordinator)
+
+    coordinator.recordSuccessfulAdd(.expense, userID: userID)
+    coordinator.recordSuccessfulAdd(.expense, userID: userID)
+    XCTAssertFalse(coordinator.pendingPrompt, "two adds should not be enough")
+
+    coordinator.recordSuccessfulAdd(.expense, userID: userID)
+    XCTAssertTrue(coordinator.pendingPrompt)
+  }
+
+  func testExpensesAndPositionsCountTogether() async {
+    await Task.yield()
+    let coordinator = makeCoordinator()
+    makeEligibleUser(coordinator)
+
+    coordinator.recordSuccessfulAdd(.expense, userID: userID)
+    coordinator.recordSuccessfulAdd(.position, userID: userID)
+    coordinator.recordSuccessfulAdd(.expense, userID: userID)
+
+    XCTAssertTrue(coordinator.pendingPrompt)
+  }
+
+  func testAddsOnDayOneDoNotPrompt() async {
+    await Task.yield()
+    let coordinator = makeCoordinator()
+    coordinator.recordAppOpen(userID: userID)
+
+    for _ in 0..<5 {
+      coordinator.recordSuccessfulAdd(.expense, userID: userID)
+    }
+
+    XCTAssertFalse(coordinator.pendingPrompt, "never in the first session")
+  }
+
+  func testAddAfterReachingEngagementFloorFires() async {
+    await Task.yield()
+    let coordinator = makeCoordinator()
+
+    // Three adds on day one are suppressed and so not spent.
+    coordinator.recordAppOpen(userID: userID)
+    for _ in 0..<3 {
+      coordinator.recordSuccessfulAdd(.position, userID: userID)
+    }
+    XCTAssertFalse(coordinator.pendingPrompt)
+
+    makeEligibleUser(coordinator)
+    coordinator.recordSuccessfulAdd(.expense, userID: userID)
+    XCTAssertTrue(coordinator.pendingPrompt)
+  }
+
+  func testAddsTriggerFiresOnlyOnce() async {
+    await Task.yield()
+    let coordinator = makeCoordinator()
+    makeEligibleUser(coordinator)
+
+    for _ in 0..<3 {
+      coordinator.recordSuccessfulAdd(.expense, userID: userID)
+    }
+    coordinator.markPromptShown(userID: userID)
+
+    // Even past the cooldown, more adds are not a new moment.
+    clock.advance(days: ReviewPromptCoordinator.Policy.promptCooldownDays + 1)
+    for _ in 0..<10 {
+      coordinator.recordSuccessfulAdd(.expense, userID: userID)
+    }
+    XCTAssertFalse(coordinator.pendingPrompt)
+  }
+
+  func testThirdAddWithinCooldownIsSuppressed() async {
+    await Task.yield()
+    let coordinator = makeCoordinator()
+    makeEligibleUser(coordinator)
+
+    coordinator.consider(.goalCompleted(goalID: "g1"), userID: userID)
+    coordinator.markPromptShown(userID: userID)
+
+    for _ in 0..<3 {
+      coordinator.recordSuccessfulAdd(.expense, userID: userID)
+    }
+    XCTAssertFalse(coordinator.pendingPrompt)
+  }
+
+  // MARK: - Opt-out
+
+  func testPromptsAreOnByDefault() async {
+    await Task.yield()
+    let coordinator = makeCoordinator()
+
+    XCTAssertTrue(coordinator.promptsEnabled(userID: userID))
+  }
+
+  func testOptedOutUserIsNeverPrompted() async {
+    await Task.yield()
+    let coordinator = makeCoordinator()
+    makeEligibleUser(coordinator)
+
+    coordinator.setPromptsEnabled(false, userID: userID)
+    coordinator.consider(.goalCompleted(goalID: "g1"), userID: userID)
+    for _ in 0..<3 {
+      coordinator.recordSuccessfulAdd(.expense, userID: userID)
+    }
+
+    XCTAssertFalse(coordinator.pendingPrompt)
+    XCTAssertTrue(store.firedTriggers(for: userID).isEmpty, "an opt-out must not spend triggers")
+  }
+
+  func testOptingOutWithdrawsAQueuedPrompt() async {
+    await Task.yield()
+    let coordinator = makeCoordinator()
+    makeEligibleUser(coordinator)
+
+    coordinator.consider(.goalCompleted(goalID: "g1"), userID: userID)
+    XCTAssertTrue(coordinator.pendingPrompt)
+
+    coordinator.setPromptsEnabled(false, userID: userID)
+    XCTAssertFalse(coordinator.pendingPrompt)
+  }
+
+  func testOptingBackInAllowsPromptsAgain() async {
+    await Task.yield()
+    let coordinator = makeCoordinator()
+    makeEligibleUser(coordinator)
+
+    coordinator.setPromptsEnabled(false, userID: userID)
+    coordinator.consider(.goalCompleted(goalID: "g1"), userID: userID)
+    XCTAssertFalse(coordinator.pendingPrompt)
+
+    coordinator.setPromptsEnabled(true, userID: userID)
+    coordinator.consider(.goalCompleted(goalID: "g1"), userID: userID)
+    XCTAssertTrue(coordinator.pendingPrompt)
+  }
+
   // MARK: - Multi-user isolation
 
   func testPromptStateDoesNotLeakBetweenUsers() async {
@@ -275,6 +441,27 @@ final class ReviewPromptCoordinatorTests: XCTestCase {
 
     XCTAssertFalse(coordinator.pendingPrompt)
     XCTAssertTrue(store.activeDaysByUser.isEmpty)
+  }
+
+  // MARK: - UserDefaults store
+
+  func testUserDefaultsStoreKeepsOptOutAndAddsPerUser() async {
+    await Task.yield()
+    let suiteName = "ReviewPromptCoordinatorTests.\(UUID().uuidString)"
+    guard let defaults = UserDefaults(suiteName: suiteName) else {
+      return XCTFail("could not create a defaults suite")
+    }
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+    let store = UserDefaultsReviewPromptStore(defaults: defaults)
+
+    XCTAssertTrue(store.promptsEnabled(for: userID), "the toggle defaults to on")
+    store.setPromptsEnabled(false, for: userID)
+    XCTAssertFalse(store.promptsEnabled(for: userID))
+    XCTAssertTrue(store.promptsEnabled(for: "user-2"), "one account's opt-out is its own")
+
+    XCTAssertEqual(store.recordSuccessfulAdd(for: userID), 1)
+    XCTAssertEqual(store.recordSuccessfulAdd(for: userID), 2)
+    XCTAssertEqual(store.recordSuccessfulAdd(for: "user-2"), 1)
   }
 
   // MARK: - Trigger identity

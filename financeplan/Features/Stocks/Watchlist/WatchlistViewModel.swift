@@ -228,10 +228,21 @@ final class WatchlistViewModel: ObservableObject {
       )
 
       _ = try await service.create(stock: request, portfolioListId: portfolioListId)
+      notePositionAddedForReviewPrompt()
 
       return nil
     } catch {
       return error.localizedDescription
+    }
+  }
+
+  /// A hand-entered position is one of the success moments the review prompt counts.
+  private func notePositionAddedForReviewPrompt() {
+    let coordinator = Container.shared.reviewPromptCoordinator()
+    Task {
+      let userID = await Container.shared.authSessionStore().currentUserID
+      guard !userID.isEmpty else { return }
+      coordinator.recordSuccessfulAdd(.position, userID: userID)
     }
   }
 
