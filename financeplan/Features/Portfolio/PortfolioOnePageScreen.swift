@@ -112,6 +112,16 @@ struct PortfolioOnePageScreen: View {
           Label("Create public link", systemImage: "link.badge.plus")
         }
       }
+      ForEach(share.others, id: \.slug) { other in
+        Button(role: .destructive) {
+          Task { await share.revoke(scope: viewModel.shareScope, target: other.scope) }
+        } label: {
+          Label(
+            other.scope == "all" ? "Stop sharing all portfolios" : "Stop sharing another portfolio",
+            systemImage: "link.badge.minus"
+          )
+        }
+      }
       Text("Shared views show percentages only.")
     } label: {
       Image(systemName: "square.and.arrow.up")

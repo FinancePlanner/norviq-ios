@@ -87,6 +87,7 @@ protocol StockServicing: Sendable {
   func previewWatchlistCsvImport(watchlistListId: String?, csvData: Data) async throws -> WatchlistCsvImportPreviewResponse
   func commitWatchlistCsvImport(watchlistListId: String?, csvData: Data) async throws -> WatchlistCsvImportCommitResponse
   func fetchShareLink(scope: String) async throws -> PortfolioShareLinkResponse?
+  func fetchShareLinks() async throws -> [PortfolioShareLinkResponse]
   func createShareLink(scope: String) async throws -> PortfolioShareLinkResponse
   func revokeShareLink(scope: String) async throws
 }
@@ -94,6 +95,7 @@ protocol StockServicing: Sendable {
 extension StockServicing {
   // Defaults keep test doubles compiling; StockService overrides all three.
   func fetchShareLink(scope _: String) async throws -> PortfolioShareLinkResponse? { nil }
+  func fetchShareLinks() async throws -> [PortfolioShareLinkResponse] { [] }
   func createShareLink(scope _: String) async throws -> PortfolioShareLinkResponse {
     throw StockHTTPClient.Error.api("Sharing is unavailable.")
   }
@@ -302,6 +304,12 @@ final class StockService: StockServicing {
   func fetchShareLink(scope: String) async throws -> PortfolioShareLinkResponse? {
     try await performAuthenticated { client in
       try await client.call(GetPortfolioShareLinkEndpoint(scope: scope)).link
+    }
+  }
+
+  func fetchShareLinks() async throws -> [PortfolioShareLinkResponse] {
+    try await performAuthenticated { client in
+      try await client.call(ListPortfolioShareLinksEndpoint())
     }
   }
 

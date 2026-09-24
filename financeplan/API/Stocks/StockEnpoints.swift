@@ -704,3 +704,14 @@ nonisolated struct RevokePortfolioShareLinkEndpoint: Endpoint {
 
   func asParameters() throws -> Parameters { [:] }
 }
+
+/// Every live link the user owns, across scopes.
+nonisolated struct ListPortfolioShareLinksEndpoint: Endpoint {
+  typealias Response = [PortfolioShareLinkResponse]
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/portfolio/share-links" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
