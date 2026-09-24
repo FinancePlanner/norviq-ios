@@ -15,6 +15,7 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     case rebalancing
     case budget
     case thesisWatch = "thesis_watch"
+    case assistantMessage = "assistant_message"
   }
 
   let kind: Kind
@@ -30,6 +31,9 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
   let eventID: String?
   let snapshotID: String?
   let budgetScope: String?
+  /// Assistant pushes only. Canonical UUID, or nil to open the default conversation.
+  let conversationID: String?
+  let messageID: String?
 
   nonisolated init(
     kind: Kind,
@@ -44,7 +48,9 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     portfolioListID: String? = nil,
     eventID: String? = nil,
     snapshotID: String? = nil,
-    budgetScope: String? = nil
+    budgetScope: String? = nil,
+    conversationID: String? = nil,
+    messageID: String? = nil
   ) {
     self.kind = kind
     self.symbol = symbol
@@ -59,15 +65,47 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     self.eventID = eventID
     self.snapshotID = snapshotID
     self.budgetScope = budgetScope
+    self.conversationID = conversationID
+    self.messageID = messageID
+  }
+
+  /// Opens the assistant; `conversationID` nil means its default conversation.
+  nonisolated static func assistant(conversationID: String?, messageID: String? = nil) -> PushNotificationRoute {
+    PushNotificationRoute(
+      kind: .assistantMessage,
+      symbol: nil,
+      deepLink: conversationID.map { "financeplan://assistant/conversations/\($0)" },
+      conversationID: conversationID,
+      messageID: messageID
+    )
   }
 }
 
 enum PushNotificationPayloadParser {
-  nonisolated static func parse(userInfo: [AnyHashable: Any]) -> PushNotificationRoute? {
+  /// `categoryIdentifier` and `threadIdentifier` come from the notification
+  /// content; they identify an assistant push even when its custom payload is
+  /// missing or malformed, in which case the assistant opens on its default
+  /// conversation.
+  nonisolated static func parse(
+    userInfo: [AnyHashable: Any],
+    categoryIdentifier: String? = nil,
+    threadIdentifier: String? = nil
+  ) -> PushNotificationRoute? {
     let root = normalizeDictionary(userInfo)
     let payload = (root["payload"] as? [String: Any]) ?? root
     let data = (payload["data"] as? [String: Any]) ?? (root["data"] as? [String: Any]) ?? [:]
     let dictionaries = [data, payload, root]
+
+    // `aps` carries the same category/thread when the caller only has userInfo
+    // (launch options, a raw payload).
+    let aps = root["aps"] as? [String: Any]
+    if let assistantRoute = parseAssistant(
+      dictionaries: dictionaries,
+      categoryIdentifier: normalize(categoryIdentifier) ?? normalize(aps?["category"] as? String),
+      threadIdentifier: normalize(threadIdentifier) ?? normalize(aps?["thread-id"] as? String)
+    ) {
+      return assistantRoute
+    }
 
     let rawType = stringValue(for: ["type", "notificationType"], in: dictionaries) ?? PushNotificationRoute.Kind.targetHit.rawValue
     let kind = PushNotificationRoute.Kind(rawValue: rawType) ?? .targetHit
@@ -104,6 +142,28 @@ enum PushNotificationPayloadParser {
       snapshotID: snapshotID,
       budgetScope: budgetScope
     )
+  }
+
+  private nonisolated static func parseAssistant(
+    dictionaries: [[String: Any]],
+    categoryIdentifier: String?,
+    threadIdentifier: String?
+  ) -> PushNotificationRoute? {
+    let rawType = normalize(stringValue(for: ["type", "notificationType"], in: dictionaries))
+    let link = AssistantDeepLink.parse(stringValue(for: ["deepLink", "deep_link"], in: dictionaries))
+    let threadConversationID = AssistantDeepLink.conversationID(fromThread: threadIdentifier)
+    let isAssistant = categoryIdentifier == AssistantDeepLink.category
+      || rawType == AssistantDeepLink.payloadType
+      || (rawType == nil && (link != nil || threadConversationID != nil))
+    guard isAssistant else { return nil }
+
+    let conversationID = AssistantDeepLink.normalizedConversationID(
+      stringValue(for: ["conversationId", "conversation_id"], in: dictionaries)
+    ) ?? link?.conversationID ?? threadConversationID
+    let messageID = AssistantDeepLink.normalizedConversationID(
+      stringValue(for: ["messageId", "message_id"], in: dictionaries)
+    )
+    return .assistant(conversationID: conversationID, messageID: messageID)
   }
 
   private nonisolated static func normalizeDictionary(_ dictionary: [AnyHashable: Any]) -> [String: Any] {
@@ -226,6 +286,12 @@ final class PushNotificationsCoordinator: ObservableObject {
   @Published private(set) var lastErrorMessage: String?
   @Published private(set) var earningsAlertsErrorMessage: String?
   @Published private(set) var pendingNotificationRoute: PushNotificationRoute?
+  /// What the assistant screen shows right now; drives the foreground rule and
+  /// whether a tap presents the assistant or acts on the one already open.
+  private(set) var assistantPresence = AssistantPresence.hidden
+  /// Instructions for the assistant screen already on screen.
+  let assistantCommands = PassthroughSubject<AssistantInPlaceCommand, Never>()
+  private var assistantPresenceToken: UUID?
 
   private let service: PushNotificationsServicing
   private let permissionProvider: PushPermissionProviding
@@ -327,6 +393,8 @@ final class PushNotificationsCoordinator: ObservableObject {
     userAction: PushNotificationUserAction = .openStock
   ) {
     let route: PushNotificationRoute = switch userAction {
+    case _ where parsedRoute.kind == .assistantMessage:
+      parsedRoute
     case .openStock:
       parsedRoute
     case .openPortfolio:
@@ -348,6 +416,65 @@ final class PushNotificationsCoordinator: ObservableObject {
     Self.logger.info(
       "push.route queued kind=\(route.kind.rawValue, privacy: .public) symbol=\(route.symbol ?? "-", privacy: .public) action=\(String(describing: userAction), privacy: .public)"
     )
+  }
+
+  /// Handles `financeplan://assistant/...`. Returns false for URLs that are
+  /// not assistant links so other handlers can take them.
+  @discardableResult
+  func handleDeepLink(_ url: URL) -> Bool {
+    guard let link = AssistantDeepLink.parse(url) else { return false }
+    Self.logger.info("push.route deep_link destination=assistant has_conversation=\(link.conversationID != nil, privacy: .public)")
+    handleIncomingRoute(.assistant(conversationID: link.conversationID))
+    return true
+  }
+
+  // MARK: Assistant presence
+
+  /// Called by the assistant screen when it appears and whenever its
+  /// conversation changes. The token keeps a stale disappear from clearing a
+  /// newer screen's state.
+  func assistantPresenceChanged(token: UUID, conversationID: String?) {
+    assistantPresenceToken = token
+    assistantPresence = AssistantPresence(
+      isVisible: true,
+      conversationID: AssistantDeepLink.normalizedConversationID(conversationID) ?? conversationID
+    )
+  }
+
+  func assistantDidDisappear(token: UUID) {
+    guard assistantPresenceToken == token else { return }
+    assistantPresenceToken = nil
+    assistantPresence = .hidden
+  }
+
+  /// Decides what a routed assistant push or link does given what is on screen.
+  /// Acts on an open assistant directly; `.present` is left to the caller.
+  func resolveAssistantOpen(conversationID: String?) -> AssistantOpenDecision {
+    let decision = AssistantPushRouting.openDecision(conversationID: conversationID, presence: assistantPresence)
+    switch decision {
+    case let .switchVisible(id):
+      assistantCommands.send(.open(conversationID: id))
+    case let .refreshVisible(id):
+      assistantCommands.send(.refresh(conversationID: id))
+    case .present, .keepVisible:
+      break
+    }
+    return decision
+  }
+
+  /// Foreground rule: a banner unless the user is reading that conversation,
+  /// in which case the thread is refetched and nothing is shown.
+  func foregroundPresentationOptions(for route: PushNotificationRoute?) -> UNNotificationPresentationOptions {
+    let defaultOptions: UNNotificationPresentationOptions = [.banner, .list, .sound]
+    guard let route, route.kind == .assistantMessage else { return defaultOptions }
+    switch AssistantPushRouting.foregroundDecision(conversationID: route.conversationID, presence: assistantPresence) {
+    case .showBanner:
+      return defaultOptions
+    case let .refreshThread(id):
+      Self.logger.info("push.analytics delivered source=foreground kind=assistant_message action=refresh_thread")
+      assistantCommands.send(.refresh(conversationID: id))
+      return []
+    }
   }
 
   func consumePendingNotificationRoute() -> PushNotificationRoute? {

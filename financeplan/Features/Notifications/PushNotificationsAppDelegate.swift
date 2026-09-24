@@ -17,6 +17,7 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, UNUse
   private enum CategoryID {
     static let targetAlert = "TARGET_ALERT"
     static let earningsReminder = "EARNINGS_REMINDER"
+    static let assistantMessage = AssistantDeepLink.category
   }
 
   func application(
@@ -61,19 +62,30 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, UNUse
 
   nonisolated func userNotificationCenter(
     _: UNUserNotificationCenter,
-    willPresent notification: UNNotification,
-    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-  ) {
-    let route = PushNotificationPayloadParser.parse(userInfo: notification.request.content.userInfo)
+    willPresent notification: UNNotification
+  ) async -> UNNotificationPresentationOptions {
+    let content = notification.request.content
+    let route = PushNotificationPayloadParser.parse(
+      userInfo: content.userInfo,
+      categoryIdentifier: content.categoryIdentifier,
+      threadIdentifier: content.threadIdentifier
+    )
     logger.info(
       "push.analytics delivered source=foreground kind=\(route?.kind.rawValue ?? "unknown", privacy: .public) symbol=\(route?.symbol ?? "-", privacy: .public)"
     )
+    // An assistant message never navigates on arrival: it shows a banner (or
+    // refreshes the thread being read) and opens only on tap.
+    if route?.kind == .assistantMessage {
+      return await MainActor.run {
+        Container.shared.pushNotificationsCoordinator().foregroundPresentationOptions(for: route)
+      }
+    }
     if let route {
-      Task { @MainActor in
+      await MainActor.run {
         Container.shared.pushNotificationsCoordinator().handleIncomingRoute(route)
       }
     }
-    completionHandler([.banner, .list, .sound])
+    return [.banner, .list, .sound]
   }
 
   nonisolated func userNotificationCenter(
@@ -81,7 +93,12 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, UNUse
     didReceive response: UNNotificationResponse,
     withCompletionHandler completionHandler: @escaping () -> Void
   ) {
-    let route = PushNotificationPayloadParser.parse(userInfo: response.notification.request.content.userInfo)
+    let content = response.notification.request.content
+    let route = PushNotificationPayloadParser.parse(
+      userInfo: content.userInfo,
+      categoryIdentifier: content.categoryIdentifier,
+      threadIdentifier: content.threadIdentifier
+    )
     logger.info(
       "push.analytics tapped action_id=\(response.actionIdentifier, privacy: .public) kind=\(route?.kind.rawValue ?? "unknown", privacy: .public) symbol=\(route?.symbol ?? "-", privacy: .public)"
     )
@@ -134,6 +151,16 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, UNUse
       intentIdentifiers: [],
       options: [.customDismissAction]
     )
-    UNUserNotificationCenter.current().setNotificationCategories([targetCategory, earningsCategory])
+    // No actions: a tap opens the conversation. Registered so the system
+    // knows the category and groups by the backend's `assistant-<id>` thread.
+    let assistantCategory = UNNotificationCategory(
+      identifier: CategoryID.assistantMessage,
+      actions: [],
+      intentIdentifiers: [],
+      options: []
+    )
+    UNUserNotificationCenter.current().setNotificationCategories([
+      targetCategory, earningsCategory, assistantCategory
+    ])
   }
 }

@@ -23,6 +23,11 @@ struct HomeScreen: View {
   @State private var budgetPlannerViewModel = BudgetPlannerViewModel()
   @Environment(\.scenePhase) private var scenePhase
   @State private var isCapturePresented = false
+  /// The assistant opened by a push tap or deep link.
+  @State private var assistantLaunch: AssistantLaunch?
+  /// Held while one of this screen's own sheets closes; iOS ignores a sheet
+  /// presented while another is still up.
+  @State private var pendingAssistantLaunch: AssistantLaunch?
 
   init(onLogout: @escaping () async -> Void) {
     self.onLogout = onLogout
@@ -68,13 +73,16 @@ struct HomeScreen: View {
     // the finger.
     .tabViewStyle(.sidebarAdaptable)
     .reviewPromptPresenter()
-    .sheet(isPresented: $isSettingsPresented) {
+    .sheet(isPresented: $isSettingsPresented, onDismiss: presentPendingAssistant) {
       settingsSheet
     }
-    .sheet(isPresented: $isPaywallPresented) {
+    .sheet(isPresented: $isPaywallPresented, onDismiss: presentPendingAssistant) {
       PaywallView(billingManager: billingManager)
     }
-    .sheet(isPresented: $isCapturePresented) {
+    .sheet(item: $assistantLaunch) { launch in
+      PersistentAssistantView(conversationID: launch.conversationID)
+    }
+    .sheet(isPresented: $isCapturePresented, onDismiss: presentPendingAssistant) {
       HomeQuickExpenseSheet(defaultSharePercent: budgetPlannerViewModel.seededUserSharePercent) { draft in
         await handleCaptureSave(draft)
       }
@@ -85,7 +93,7 @@ struct HomeScreen: View {
       isPaywallPresented = true
     }
     // Never let the review sheet land on top of a settings, paywall, or capture sheet.
-    .onChange(of: isSettingsPresented || isPaywallPresented || isCapturePresented, initial: true) {
+    .onChange(of: isSettingsPresented || isPaywallPresented || isCapturePresented || assistantLaunch != nil, initial: true) {
       _, isCovered in
       Container.shared.reviewPromptCoordinator().setContextEligible(!isCovered)
     }
@@ -111,6 +119,27 @@ struct HomeScreen: View {
       pendingThesisWatchOpen = true
       selectedTab = .portfolio
     }
+    .onReceive(NotificationCenter.default.publisher(for: .openAssistantFromPushNotification)) { notification in
+      openAssistant(conversationID: notification.userInfo?["conversationId"] as? String)
+    }
+  }
+
+  private func openAssistant(conversationID: String?) {
+    let launch = AssistantLaunch(conversationID: conversationID)
+    guard isSettingsPresented || isPaywallPresented || isCapturePresented else {
+      assistantLaunch = launch
+      return
+    }
+    pendingAssistantLaunch = launch
+    isSettingsPresented = false
+    isPaywallPresented = false
+    isCapturePresented = false
+  }
+
+  private func presentPendingAssistant() {
+    guard let launch = pendingAssistantLaunch else { return }
+    pendingAssistantLaunch = nil
+    assistantLaunch = launch
   }
 
   private var settingsSheet: some View {
@@ -217,4 +246,9 @@ struct HomeScreen: View {
     }
     selectedTab = .portfolio
   }
+}
+
+private struct AssistantLaunch: Identifiable {
+  let id = UUID()
+  let conversationID: String?
 }

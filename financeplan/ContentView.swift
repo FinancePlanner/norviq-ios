@@ -190,6 +190,11 @@ public struct ContentView: View {
         break
       }
     }
+    // Cold and warm start alike. Queued like a push route, so it waits for
+    // launch, sign-in and onboarding to finish.
+    .onOpenURL { url in
+      pushNotificationsCoordinator.handleDeepLink(url)
+    }
     .onReceive(pushNotificationsCoordinator.$pendingNotificationRoute.compactMap(\.self)) { _ in
       deliverPendingPushNotificationRouteIfPossible()
     }
@@ -413,6 +418,17 @@ public struct ContentView: View {
         name: .openThesisWatchFromPushNotification,
         object: nil,
         userInfo: ["story_id": route.eventID ?? ""]
+      )
+    case .assistantMessage:
+      let decision = pushNotificationsCoordinator.resolveAssistantOpen(conversationID: route.conversationID)
+      Self.pushLogger.info(
+        "push.analytics routed_success destination=assistant decision=\(String(describing: decision), privacy: .public)"
+      )
+      guard case let .present(conversationID) = decision else { return }
+      NotificationCenter.default.post(
+        name: .openAssistantFromPushNotification,
+        object: nil,
+        userInfo: conversationID.map { ["conversationId": $0] }
       )
     }
   }

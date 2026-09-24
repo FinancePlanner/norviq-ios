@@ -1,3 +1,4 @@
+import Factory
 import StockPlanShared
 import SwiftUI
 
@@ -10,10 +11,17 @@ struct PersistentAssistantView: View {
     /// scrollback with a message nobody typed. The web app's `seed` query
     /// parameter behaves the same way.
     let seed: String?
+    /// Conversation to open on, from a push tap or deep link. Falls back to the
+    /// most recent conversation when nil or when it cannot be loaded.
+    let conversationID: String?
 
-    init(seed: String? = nil) {
+    init(seed: String? = nil, conversationID: String? = nil) {
         self.seed = seed
+        self.conversationID = conversationID
     }
+
+    private let pushCoordinator = Container.shared.pushNotificationsCoordinator()
+    @State private var presenceToken = UUID()
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
@@ -60,12 +68,21 @@ struct PersistentAssistantView: View {
                 }
             }
             .task {
-                await viewModel.load()
+                await viewModel.load(preferredConversationID: conversationID)
                 // After `load`, which selects or creates the conversation and
                 // would otherwise clear the field.
                 if let seed, viewModel.draft.isEmpty {
                     viewModel.draft = seed
                 }
+            }
+            // Lets a push for this thread refresh it instead of bannering, and a
+            // tap on another thread switch it here instead of stacking a sheet.
+            .onChange(of: viewModel.activeConversation?.id, initial: true) { _, id in
+                pushCoordinator.assistantPresenceChanged(token: presenceToken, conversationID: id)
+            }
+            .onDisappear { pushCoordinator.assistantDidDisappear(token: presenceToken) }
+            .onReceive(pushCoordinator.assistantCommands) { command in
+                Task { await viewModel.handle(command) }
             }
             .sheet(isPresented: $showsConversations) { conversationsSheet }
             .sheet(isPresented: $showsPreferences) { preferencesSheet }

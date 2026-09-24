@@ -62,7 +62,9 @@ final class PersistentAssistantViewModel {
 
     func composerFocusChanged(_ focused: Bool) { apply(.composerFocus(focused)) }
 
-    func load() async {
+    /// Opens on `preferredConversationID` when given and loadable, otherwise
+    /// on the most recent conversation.
+    func load(preferredConversationID: String? = nil) async {
         guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
@@ -81,7 +83,9 @@ final class PersistentAssistantViewModel {
             usage = loadedUsage
             preferences = loadedPreferences
             pendingActions = loadedActions
-            if let first = conversations.first {
+            if let preferredConversationID, (try? await selectConversation(id: preferredConversationID)) != nil {
+                // Opened from a push or link.
+            } else if let first = conversations.first {
                 try await selectConversation(id: first.id)
             } else {
                 try await createConversation()
@@ -148,6 +152,21 @@ final class PersistentAssistantViewModel {
             )
         } else {
             memoCards[key] = nil
+        }
+    }
+
+    /// A push or link acting on the assistant already on screen.
+    func handle(_ command: AssistantInPlaceCommand) async {
+        switch command {
+        case let .open(conversationID):
+            await select(id: conversationID)
+            await refreshConversations()
+        case let .refresh(conversationID):
+            guard let active = activeConversation?.id,
+                  AssistantDeepLink.normalizedConversationID(active) == AssistantDeepLink.normalizedConversationID(conversationID)
+            else { return }
+            await refreshActiveConversation()
+            await refreshConversations()
         }
     }
 
