@@ -86,9 +86,20 @@ protocol StockServicing: Sendable {
   func deleteWatchlistList(id: String) async throws
   func previewWatchlistCsvImport(watchlistListId: String?, csvData: Data) async throws -> WatchlistCsvImportPreviewResponse
   func commitWatchlistCsvImport(watchlistListId: String?, csvData: Data) async throws -> WatchlistCsvImportCommitResponse
+  func fetchShareLink(scope: String) async throws -> PortfolioShareLinkResponse?
+  func createShareLink(scope: String) async throws -> PortfolioShareLinkResponse
+  func revokeShareLink(scope: String) async throws
 }
 
 extension StockServicing {
+  // Defaults keep test doubles compiling; StockService overrides all three.
+  func fetchShareLink(scope _: String) async throws -> PortfolioShareLinkResponse? { nil }
+  func createShareLink(scope _: String) async throws -> PortfolioShareLinkResponse {
+    throw StockHTTPClient.Error.api("Sharing is unavailable.")
+  }
+
+  func revokeShareLink(scope _: String) async throws {}
+
   func create(stock: StockRequest) async throws -> StockResponse {
     try await create(stock: stock, portfolioListId: nil)
   }
@@ -285,6 +296,24 @@ final class StockService: StockServicing {
   func fetchPnl(portfolioListId: String? = nil) async throws -> PnlResponse {
     try await performAuthenticated { client in
       return try await client.call(GetPnlEndpoint(portfolioListId: portfolioListId))
+    }
+  }
+
+  func fetchShareLink(scope: String) async throws -> PortfolioShareLinkResponse? {
+    try await performAuthenticated { client in
+      try await client.call(GetPortfolioShareLinkEndpoint(scope: scope)).link
+    }
+  }
+
+  func createShareLink(scope: String) async throws -> PortfolioShareLinkResponse {
+    try await performAuthenticated { client in
+      try await client.call(CreatePortfolioShareLinkEndpoint(scope: scope))
+    }
+  }
+
+  func revokeShareLink(scope: String) async throws {
+    try await performAuthenticated { client in
+      try await client.callWithoutResponse(RevokePortfolioShareLinkEndpoint(scope: scope))
     }
   }
 
