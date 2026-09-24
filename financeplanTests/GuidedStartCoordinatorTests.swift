@@ -6,13 +6,17 @@ import Testing
 actor FakeOnboardingClient: OnboardingClientProtocol {
   var state: OnboardingStateDTO
   var failPatch = false
+  private(set) var getCount = 0
 
   init(_ state: OnboardingStateDTO) { self.state = state }
 
   func set(_ state: OnboardingStateDTO) { self.state = state }
   func setFailPatch(_ fail: Bool) { failPatch = fail }
 
-  func get() async throws -> OnboardingStateDTO { state }
+  func get() async throws -> OnboardingStateDTO {
+    getCount += 1
+    return state
+  }
 
   func patch(_ request: OnboardingPatchRequest) async throws -> OnboardingStateDTO {
     if failPatch { throw URLError(.notConnectedToInternet) }
@@ -142,13 +146,41 @@ struct GuidedStartCoordinatorTests {
     #expect(coordinator.isCardVisible == false)
   }
 
-  @Test("A failed dismiss restores the card and says so")
+  @Test("A failed dismiss restores the card, says so, and reports no dismissal")
   func dismissFailure() async {
-    let (coordinator, client, _, _, _) = makeCoordinator(state())
+    let (coordinator, client, _, analytics, _) = makeCoordinator(state())
     await client.setFailPatch(true)
     await coordinator.dismissCard()
     #expect(coordinator.isCardVisible)
     #expect(coordinator.inlineMessage == GuidedStartCopy.dismissFailed)
+    #expect(analytics.names.contains("guided_start_dismissed") == false)
+  }
+
+  @Test("A dismissal is reported once the server has it, like the web")
+  func dismissReportedAfterPatch() async {
+    let (coordinator, _, _, analytics, _) = makeCoordinator(state())
+    await coordinator.dismissCard()
+    #expect(coordinator.isCardVisible == false)
+    #expect(analytics.names == ["guided_start_dismissed"])
+  }
+
+  @Test("An action with no open step refreshes the card once")
+  func actionWithoutStepRefreshes() async {
+    let (coordinator, client, store, _, _) = makeCoordinator(state())
+    await client.set(state(holding: true))
+    coordinator.noteUserAction(.addHolding)
+    await coordinator.settle()
+    #expect(await client.getCount == 1)
+    #expect(store.state?.addHoldingCompleted == true)
+  }
+
+  @Test("An action for a different open step does not add a refresh")
+  func actionForOtherStepDoesNotRefresh() async {
+    let (coordinator, client, _, _, _) = makeCoordinator(state())
+    await coordinator.start(.addHolding) // one get: start refreshes first
+    coordinator.noteUserAction(.setGoal)
+    #expect(await client.getCount == 1)
+    coordinator.skip()
   }
 
   @Test("A dismissal from another device waits for the open step")

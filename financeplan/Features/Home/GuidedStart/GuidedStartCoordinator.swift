@@ -49,6 +49,7 @@ final class GuidedStartCoordinator {
   @ObservationIgnored private var didFireCardShown = false
   @ObservationIgnored private var locallyActed: Set<GuidedStartStep> = []
   @ObservationIgnored private var work: Task<Void, Never>?
+  @ObservationIgnored private var refreshWork: Task<Void, Never>?
   @ObservationIgnored private var workGeneration = 0
   @ObservationIgnored private var runID = 0
   @ObservationIgnored private var pollIndex = 0
@@ -138,9 +139,19 @@ final class GuidedStartCoordinator {
   }
 
   /// The user did the step's action here. Poll now instead of on the next tick.
+  /// With no step open, refresh instead, so the card's ticks catch up.
   func noteUserAction(_ step: GuidedStartStep) {
     locallyActed.insert(step)
-    guard case .active(let current, let startedAt) = phase, current == step else { return }
+    guard case .active(let current, let startedAt) = phase else {
+      if refreshWork == nil {
+        refreshWork = Task { [weak self] in
+          await self?.refresh()
+          self?.refreshWork = nil
+        }
+      }
+      return
+    }
+    guard current == step else { return }
     let resumeIndex = pollIndex
     cancelWork()
     runID += 1
@@ -152,9 +163,10 @@ final class GuidedStartCoordinator {
   func dismissCard() async {
     dismissOverride = true
     inlineMessage = nil
-    telemetry.dismissed()
     do {
       applySnapshot(try await client.patch(OnboardingPatchRequest(guidedStartDismissed: true)))
+      // Reported only once the server has it, the same as the web.
+      telemetry.dismissed()
     } catch {
       dismissOverride = nil
       inlineMessage = GuidedStartCopy.dismissFailed
@@ -279,6 +291,7 @@ final class GuidedStartCoordinator {
   #if DEBUG
   /// Waits for polling to finish, including work that replaced itself.
   func settle() async {
+    await refreshWork?.value
     for _ in 0..<64 {
       guard let task = work else { return }
       let generation = workGeneration

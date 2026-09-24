@@ -68,6 +68,16 @@ struct HomeScreen: View {
       guard let requested else { return }
       selectedTab = homeTab(for: requested)
     }
+    // Keep the card's ticks current: a latch can flip on another device, or
+    // in a flow no step was open for.
+    .onChange(of: scenePhase) { _, phase in
+      guard phase == .active, let guided else { return }
+      Task { await guided.refresh() }
+    }
+    .onChange(of: selectedTab) { _, tab in
+      guard tab == .dashboard, let guided else { return }
+      Task { await guided.refresh() }
+    }
   }
 
   private func guidedTab(for tab: HomeTab) -> GuidedTab? {
