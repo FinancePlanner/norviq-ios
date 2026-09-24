@@ -45,4 +45,24 @@ struct OnboardingFunnelRoutingTests {
         #expect(route.requiresQuestionnaire == false)
         #expect(route.requiresImport == false)
     }
+
+    @Test("A server step past the paywall outranks a stale device questionnaire flag")
+    func serverStepOutranksLocalFlag() {
+        let route = OnboardingFunnelRouting.route(
+            server: OnboardingStateDTO(funnelStep: "import"),
+            localRequiresQuestionnaire: true, localHasImported: true, hasUserID: true
+        )
+        #expect(route.requiresQuestionnaire == false)
+        #expect(route.requiresImport)
+    }
+
+    @Test("A fresh signup with no server step yet still owes the paywall")
+    func noServerStepYetUsesLocalFlag() {
+        let route = OnboardingFunnelRouting.route(
+            server: OnboardingStateDTO(funnelStep: nil),
+            localRequiresQuestionnaire: true, localHasImported: true, hasUserID: true
+        )
+        #expect(route.requiresQuestionnaire)
+        #expect(route.requiresImport)
+    }
 }

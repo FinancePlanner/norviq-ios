@@ -16,7 +16,7 @@ nonisolated enum OnboardingFunnelRouting {
       return (false, false)
     }
     let step = server.funnelStep.flatMap(OnboardingFunnelStep.init(rawValue:))
-    let owesPaywall = localRequiresQuestionnaire || step == .questionnaire || step == .paywall
+    let owesPaywall = step == .questionnaire || step == .paywall || (step == nil && localRequiresQuestionnaire)
     return (owesPaywall, true)
   }
 }
