@@ -92,7 +92,12 @@ struct PersistentAssistantView: View {
                     if let messages = viewModel.activeConversation?.messages {
                         ForEach(messages, id: \.id) { message in
                             VStack(spacing: 8) {
-                                MuseChatBubble(text: message.content, isUser: message.role == .user)
+                                VStack(spacing: 4) {
+                                    if let caption = MuseMessageCaption.text(for: message) {
+                                        MuseProactiveCaption(text: caption)
+                                    }
+                                    MuseChatBubble(text: message.content, isUser: message.role == .user)
+                                }
                                 if let card = viewModel.memoCards[message.id] {
                                     PositionMemoCardView(
                                         card: card,
@@ -178,19 +183,25 @@ struct PersistentAssistantView: View {
         .padding(.horizontal, 16)
     }
 
+    @ViewBuilder
     private func pendingActionCard(_ action: AIPendingActionResponse) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label("Confirmation required", systemImage: "checkmark.shield").font(.subheadline.weight(.semibold))
-            Text(action.summary).font(.body)
-            HStack(spacing: 8) {
-                Button("Confirm") { Task { await viewModel.confirm(action) } }.buttonStyle(.borderedProminent)
-                Button("Cancel", role: .cancel) { Task { await viewModel.cancel(action) } }.buttonStyle(.bordered)
-                if viewModel.activeActionID == action.id { ProgressView().controlSize(.small) }
-            }
+        let isBusy = viewModel.activeActionID == action.id
+        if let task = viewModel.standingTask(for: action) {
+            MuseStandingTaskCard(
+                task: task,
+                outcome: viewModel.standingTaskOutcomes[action.id],
+                isBusy: isBusy,
+                onConfirm: { Task { await viewModel.confirm(action) } },
+                onNotNow: { Task { await viewModel.cancel(action) } }
+            )
+        } else {
+            AssistantPendingActionCard(
+                action: action,
+                isBusy: isBusy,
+                onConfirm: { Task { await viewModel.confirm(action) } },
+                onCancel: { Task { await viewModel.cancel(action) } }
+            )
         }
-        .padding(16)
-        .background(AppTheme.Colors.cardBackground, in: .rect(cornerRadius: AppTheme.Radius.card))
-        .padding(.horizontal, 16)
     }
 
     private var composer: some View {

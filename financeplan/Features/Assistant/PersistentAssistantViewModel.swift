@@ -21,6 +21,11 @@ final class PersistentAssistantViewModel {
     /// Memo cards keyed by the assistant message that announced them.
     private(set) var memoCards: [String: PositionMemoCard] = [:]
     private(set) var memoBookmarkInFlight: Set<String> = []
+    /// Watch proposals from streamed turns, keyed by pending-action id. After
+    /// a reload they are gone and the card redraws from the action's arguments.
+    private(set) var watchProposals: [String: AIWatchProposalResponse] = [:]
+    /// Standing-task cards the user answered but that stay on screen.
+    private(set) var standingTaskOutcomes: [String: MuseStandingTaskOutcome] = [:]
     var draft = ""
 
     var memoService: any PersistentAssistantServicing { service }
@@ -209,7 +214,10 @@ final class PersistentAssistantViewModel {
                         activeConversation = replacingMessages(in: current, with: current.messages + [turn.message])
                     }
                     if let memo = turn.memo { memoCards[turn.message.id] = memo }
-                    if let action = turn.pendingAction { pendingActions.insert(action, at: 0) }
+                    if let action = turn.pendingAction {
+                        pendingActions.insert(action, at: 0)
+                        if let proposal = turn.watchProposal { watchProposals[action.id] = proposal }
+                    }
                 case let .error(message):
                     throw PersistentAssistantStreamFailure(message: message)
                 case .done:
@@ -235,17 +243,70 @@ final class PersistentAssistantViewModel {
         }
     }
 
+    /// The standing task a pending action proposes, or nil for other actions.
+    func standingTask(for action: AIPendingActionResponse) -> MuseStandingTask? {
+        MuseStandingTask.from(action, proposal: watchProposals[action.id])
+    }
+
     func confirm(_ action: AIPendingActionResponse) async {
-        guard activeActionID == nil else { return }
+        guard activeActionID == nil, standingTaskOutcomes[action.id] == nil else { return }
         activeActionID = action.id
         defer { activeActionID = nil }
+        let isStandingTask = action.toolName == MuseStandingTask.toolName
         do {
             let result = try await service.confirmAction(id: action.id)
-            pendingActions.removeAll { $0.id == action.id }
-            errorMessage = result.message
+            removePendingAction(id: action.id)
+            if isStandingTask {
+                await showStandingTaskConfirmation(result.message, conversationID: action.conversationId)
+            } else {
+                errorMessage = result.message
+            }
+        } catch let error where isStandingTask && (error as? any HTTPClientError)?.statusCode == 409 {
+            // Already confirmed (twice-tapped, or from another device). The
+            // card says so instead of an error; the thread may now hold the
+            // confirmation the first confirm posted.
+            standingTaskOutcomes[action.id] = .alreadySetUp
+            await refreshActiveConversation()
         } catch {
             errorMessage = readable(error, fallback: "The action could not be applied.")
         }
+    }
+
+    /// The server appends the "Standing task" message to the thread; refetch
+    /// to show it with its real id. If the refetch fails or predates it, the
+    /// confirm response's text is shown as that message locally.
+    private func showStandingTaskConfirmation(_ text: String, conversationID: String?) async {
+        guard let conversation = activeConversation,
+              conversationID == nil || conversationID == conversation.id
+        else { return }
+        await refreshActiveConversation()
+        guard let current = activeConversation, current.id == conversation.id,
+              !current.messages.contains(where: { $0.role == .assistant && $0.content == text })
+        else { return }
+        let local = AIMessageResponse(
+            id: UUID().uuidString,
+            conversationId: current.id,
+            role: .assistant,
+            content: text,
+            createdAt: ISO8601DateFormatter().string(from: Date()),
+            origin: .proactive,
+            sourceLabel: "Standing task"
+        )
+        activeConversation = replacingMessages(in: current, with: current.messages + [local])
+    }
+
+    private func refreshActiveConversation() async {
+        guard let id = activeConversation?.id,
+              let refreshed = try? await service.conversation(id: id),
+              activeConversation?.id == id
+        else { return }
+        activeConversation = refreshed
+    }
+
+    private func removePendingAction(id: String) {
+        pendingActions.removeAll { $0.id == id }
+        watchProposals[id] = nil
+        standingTaskOutcomes[id] = nil
     }
 
     func cancel(_ action: AIPendingActionResponse) async {
@@ -254,7 +315,7 @@ final class PersistentAssistantViewModel {
         defer { activeActionID = nil }
         do {
             try await service.cancelAction(id: action.id)
-            pendingActions.removeAll { $0.id == action.id }
+            removePendingAction(id: action.id)
         } catch {
             errorMessage = readable(error, fallback: "The action could not be cancelled.")
         }
