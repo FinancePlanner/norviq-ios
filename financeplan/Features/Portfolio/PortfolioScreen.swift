@@ -24,6 +24,7 @@ struct PortfolioScreen: View {
   @Query(sort: \SDPortfolioStock.symbol) private var stocks: [SDPortfolioStock]
 
   @State private var isAddPositionPresented = false
+  @State private var isOnePagePresented = false
   @State private var isCSVImportPresented = false
   @State private var isScreenshotImportPresented = false
   @State private var destructiveFeedbackTrigger = 0
@@ -281,6 +282,9 @@ struct PortfolioScreen: View {
       ToolbarItem(placement: .topBarTrailing) {
         portfolioActionsMenu
       }
+    }
+    .navigationDestination(isPresented: $isOnePagePresented) {
+      PortfolioOnePageScreen(viewModel: viewModel)
     }
     .sheet(isPresented: isEditSheetPresented) {
       editSheetContent
@@ -623,6 +627,12 @@ struct PortfolioScreen: View {
         presentScreenshotImportSheet()
       } label: {
         Label("Import from screenshots", systemImage: "photo.on.rectangle.angled")
+      }
+
+      Button {
+        isOnePagePresented = true
+      } label: {
+        Label("One-page view", systemImage: "list.bullet.rectangle")
       }
 
       Button {

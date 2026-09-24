@@ -667,3 +667,51 @@ nonisolated struct DeleteWatchlistListEndpoint: Endpoint {
 
   func asParameters() throws -> Parameters { [:] }
 }
+
+// MARK: - Portfolio share links
+
+/// Scope is a portfolio id or "all"; it rides in the path so GET, POST and
+/// DELETE are encoded identically.
+nonisolated struct GetPortfolioShareLinkEndpoint: Endpoint {
+  typealias Response = PortfolioShareLinkStatusResponse
+  let scope: String
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/portfolio/share-links/\(scope)" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+nonisolated struct CreatePortfolioShareLinkEndpoint: Endpoint {
+  typealias Response = PortfolioShareLinkResponse
+  let scope: String
+
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/portfolio/share-links/\(scope)" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+nonisolated struct RevokePortfolioShareLinkEndpoint: Endpoint {
+  typealias Response = EmptyAPIResponse
+  let scope: String
+
+  var method: HTTPMethod { .delete }
+  var path: String { "/v1/portfolio/share-links/\(scope)" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+/// Every live link the user owns, across scopes.
+nonisolated struct ListPortfolioShareLinksEndpoint: Endpoint {
+  typealias Response = [PortfolioShareLinkResponse]
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/portfolio/share-links" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}

@@ -61,6 +61,18 @@ final class PortfolioViewModel {
   var isSaving = false
   var isDeletingStock = false
   private(set) var cashBalance: Double = 0
+  /// Last summary for the selected scope; the one-page view reads totals from it.
+  private(set) var summary: PortfolioSummaryResponse?
+
+  var onePageModel: PortfolioOnePageModel {
+    PortfolioOnePageModel(pnl: Array(pnlBySymbol.values))
+  }
+
+  /// Backend share scope: the selected portfolio's id, or every actual portfolio.
+  var shareScope: String {
+    guard let id = selectedPortfolioListId, !id.isEmpty else { return "all" }
+    return id
+  }
   private(set) var sectorExposure: PortfolioSectorExposureResponse?
   private(set) var portfolioLists: [PortfolioListDTOResponse] = []
   var selectedPortfolioListId: String?
@@ -151,6 +163,7 @@ final class PortfolioViewModel {
       await syncWithSwiftData(fullSnapshot.items, listId: selectedPortfolioListId)
       nextCursor = fullSnapshot.nextCursor
       cashBalance = extractCashBalance(from: summary)
+      self.summary = summary
       self.sectorExposure = await sectorExposureTask.value
       pnlBySymbol = await pnlTask.value
       targetAlertsBySymbol = Self.makeTargetAlertsBySymbol(targets)
@@ -523,6 +536,7 @@ final class PortfolioViewModel {
       let summary = try await summaryTask
       let sectorExposure = await sectorExposureTask.value
       cashBalance = extractCashBalance(from: summary)
+      self.summary = summary
       self.sectorExposure = sectorExposure
     } catch {
       portfolioViewModelLogger.error("Failed to refresh portfolio summary: \(error.localizedDescription, privacy: .public)")
