@@ -277,7 +277,7 @@
 				60543E262F48D90000B67ADA /* XCRemoteSwiftPackageReference "MarkdownUI" */,
 				60543E272F48D90000B67ADA /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				60543E282F48D90000B67ADA /* XCRemoteSwiftPackageReference "SwiftyCrop" */,
-				70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "norviq-shared" */,
+				70B0AA003C5E11AA00F01001 /* XCLocalSwiftPackageReference "norviq-shared-guided" */,
 				70B002A53C5E11AA00F02001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 				B14D0000000000000000A003 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */,
 				60543D592F48C8B400B67ADA /* XCRemoteSwiftPackageReference "AnyAPI" */,
@@ -926,14 +926,6 @@
 				revision = 972510b97e37ff0a1bfb45325e3ccf2046c0742b;
 			};
 		};
-		70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "norviq-shared" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/FinancePlanner/norviq-shared.git";
-			requirement = {
-				kind = exactVersion;
-				version = 5.12.0;
-			};
-		};
 		70B002A53C5E11AA00F02001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
@@ -959,6 +951,13 @@
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		70B0AA003C5E11AA00F01001 /* XCLocalSwiftPackageReference "norviq-shared-guided" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../norviq-shared-guided;
+		};
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		6040CE392FA64C4B0087919E /* TelemetryDeck */ = {
@@ -1023,7 +1022,7 @@
 		};
 		70B001A23C5E11AA00F01001 /* StockPlanShared */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "norviq-shared" */;
+			package = 70B0AA003C5E11AA00F01001 /* XCLocalSwiftPackageReference "norviq-shared-guided" */;
 			productName = StockPlanShared;
 		};
 		70B002A23C5E11AA00F02001 /* RevenueCat */ = {
