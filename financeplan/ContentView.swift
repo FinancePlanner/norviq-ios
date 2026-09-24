@@ -309,8 +309,11 @@ public struct ContentView: View {
       if server?.funnelCompletedAt != nil {
         await sessionStore.markOnboardingQuestionnaireCompleted(for: userID)
         await sessionStore.markInitialStockImportCompleted(for: userID)
-      } else if server?.funnelStep != nil {
-        PostHogSDK.shared.capture("onboarding_funnel_resumed", properties: ["step": server?.funnelStep ?? ""])
+      } else if route.repairCompletion {
+        // Finished on this device before the server tracked the funnel.
+        await onboarding.completeFunnel()
+      } else if let step = server?.funnelStep, FunnelResumedOnce.shared.take() {
+        PostHogSDK.shared.capture("onboarding_funnel_resumed", properties: ["step": step])
       }
       requiresOnboardingQuestionnaire = route.requiresQuestionnaire
       requiresInitialStockImport = route.requiresImport

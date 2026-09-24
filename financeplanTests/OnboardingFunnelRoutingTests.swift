@@ -27,7 +27,7 @@ struct OnboardingFunnelRoutingTests {
         #expect(route.requiresImport)
     }
 
-    @Test("A funnel left at import or budget resumes in the import flow", arguments: [nil, "welcome", "import", "budget"])
+    @Test("A funnel left at import or budget resumes in the import flow", arguments: ["welcome", "import", "budget"])
     func importFlow(_ step: String?) {
         let route = OnboardingFunnelRouting.route(
             server: OnboardingStateDTO(funnelStep: step),
@@ -35,6 +35,37 @@ struct OnboardingFunnelRoutingTests {
         )
         #expect(route.requiresQuestionnaire == false)
         #expect(route.requiresImport)
+        #expect(route.repairCompletion == false)
+    }
+
+    @Test("A signed-in user with no server step who has not imported yet goes to the import flow")
+    func noStepNotImported() {
+        let route = OnboardingFunnelRouting.route(
+            server: OnboardingStateDTO(funnelStep: nil),
+            localRequiresQuestionnaire: false, localHasImported: false, hasUserID: true
+        )
+        #expect(route.requiresQuestionnaire == false)
+        #expect(route.requiresImport)
+        #expect(route.repairCompletion == false)
+    }
+
+    @Test("An old-app user who finished on this device goes Home and repairs the server")
+    func repairsOldAppCompletion() {
+        let route = OnboardingFunnelRouting.route(
+            server: OnboardingStateDTO(funnelStep: nil, funnelCompletedAt: nil),
+            localRequiresQuestionnaire: false, localHasImported: true, hasUserID: true
+        )
+        #expect(route.requiresQuestionnaire == false)
+        #expect(route.requiresImport == false)
+        #expect(route.repairCompletion)
+    }
+
+    @Test("onboarding_funnel_resumed is taken once per app session")
+    @MainActor
+    func resumedOncePerSession() {
+        let once = FunnelResumedOnce()
+        #expect(once.take())
+        #expect(once.take() == false)
     }
 
     @Test("An unreadable server falls back to the device flags")
@@ -64,5 +95,6 @@ struct OnboardingFunnelRoutingTests {
         )
         #expect(route.requiresQuestionnaire)
         #expect(route.requiresImport)
+        #expect(route.repairCompletion == false)
     }
 }
