@@ -14,6 +14,16 @@ nonisolated public protocol HTTPClientError: LocalizedError, Equatable, Sendable
     static func makeInvalidStatus(_ code: Int) -> Self
     static func makeUnauthorized(_ message: String?) -> Self
     static func makeAPI(_ message: String) -> Self
+    /// A non-2xx response other than 401. Override to keep a status the
+    /// caller must tell apart (e.g. 409) even when the body has a message.
+    static func makeStatus(_ code: Int, message: String?) -> Self
+}
+
+nonisolated public extension HTTPClientError {
+    static func makeStatus(_ code: Int, message: String?) -> Self {
+        if let message, !message.isEmpty { return makeAPI(message) }
+        return makeInvalidStatus(code)
+    }
 }
 
 /// Shared HTTP client logic.
@@ -257,10 +267,7 @@ nonisolated public struct BaseHTTPClient: Sendable {
             if response.statusCode == 401 {
                 throw ErrorType.makeUnauthorized(message)
             }
-            if let message, !message.isEmpty {
-                throw ErrorType.makeAPI(message)
-            }
-            throw ErrorType.makeInvalidStatus(response.statusCode)
+            throw ErrorType.makeStatus(response.statusCode, message: message)
         }
     }
     

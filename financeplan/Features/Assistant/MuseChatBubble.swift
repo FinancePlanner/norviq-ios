@@ -49,9 +49,26 @@ extension MuseChatBubble where Content == Text {
     }
 }
 
+/// Caption above a proactive agent bubble: 11pt uppercase, secondary, aligned
+/// with the bubble's text ("STANDING TASK", "DAILY TIP").
+struct MuseProactiveCaption: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11, weight: .semibold))
+            .textCase(.uppercase)
+            .tracking(0.6)
+            .foregroundStyle(AppTheme.Colors.secondaryText)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 32)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
 /// Gives the bubble at most `fraction` of the row width and pins it to one
 /// edge, without the bubble stretching when its text is short.
-private struct BubbleWidthLayout: Layout {
+struct BubbleWidthLayout: Layout {
     let fraction: CGFloat
     let trailing: Bool
 

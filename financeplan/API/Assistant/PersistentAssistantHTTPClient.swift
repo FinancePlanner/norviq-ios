@@ -9,6 +9,8 @@ nonisolated struct PersistentAssistantHTTPClient: Sendable {
         case invalidStatus(Int)
         case unauthorized(String?)
         case api(String)
+        /// 409: e.g. confirming an action that is no longer pending.
+        case conflict(String?)
 
         nonisolated var errorDescription: String? {
             switch self {
@@ -16,18 +18,27 @@ nonisolated struct PersistentAssistantHTTPClient: Sendable {
             case let .invalidStatus(code): return "Request failed (\(code))."
             case let .unauthorized(message): return message ?? "Your session expired. Please sign in again."
             case let .api(message): return message
+            case let .conflict(message): return message ?? "This was already done."
             }
         }
 
         nonisolated var statusCode: Int? {
-            if case let .invalidStatus(code) = self { return code }
-            return nil
+            switch self {
+            case let .invalidStatus(code): code
+            case .conflict: 409
+            default: nil
+            }
         }
 
         static func makeInvalidResponse() -> Error { .invalidResponse }
         static func makeInvalidStatus(_ code: Int) -> Error { .invalidStatus(code) }
         static func makeUnauthorized(_ message: String?) -> Error { .unauthorized(message) }
         static func makeAPI(_ message: String) -> Error { .api(message) }
+        static func makeStatus(_ code: Int, message: String?) -> Error {
+            if code == 409 { return .conflict(message) }
+            if let message, !message.isEmpty { return .api(message) }
+            return .invalidStatus(code)
+        }
     }
 
     private let client: BaseHTTPClient
@@ -125,6 +136,7 @@ nonisolated extension PersistentAssistantHTTPClient.Error: Equatable {
         case let (.invalidStatus(lhs), .invalidStatus(rhs)): lhs == rhs
         case let (.unauthorized(lhs), .unauthorized(rhs)): lhs == rhs
         case let (.api(lhs), .api(rhs)): lhs == rhs
+        case let (.conflict(lhs), .conflict(rhs)): lhs == rhs
         default: false
         }
     }
