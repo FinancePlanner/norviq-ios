@@ -28,6 +28,7 @@ struct PortfolioPositionsSection: View {
           Button("Add Position", action: onAddPosition)
             .buttonStyle(.borderedProminent)
             .accessibilityIdentifier("portfolio.addPositionButton")
+            .guidedTarget(.holdingAdd, in: .portfolio)
         }
         .padding(.vertical, 24)
       } else {

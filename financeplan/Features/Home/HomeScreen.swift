@@ -28,6 +28,7 @@ struct HomeScreen: View {
   /// Held while one of this screen's own sheets closes; iOS ignores a sheet
   /// presented while another is still up.
   @State private var pendingAssistantLaunch: AssistantLaunch?
+  @State private var guided: GuidedStartCoordinator?
 
   init(onLogout: @escaping () async -> Void) {
     self.onLogout = onLogout
@@ -49,6 +50,51 @@ struct HomeScreen: View {
       tabView
     }
     .appAnimation(AppMotion.structural, value: billingManager.shouldShowTrialEndedBanner)
+    .guidedSpotlight(step: guided?.activeStep, activeTab: guidedTab(for: selectedTab), onSkip: { guided?.skip() })
+    .environment(guided)
+    .environment(\.norviqReopenGuidedStart, guided.map { coordinator in
+      {
+        selectedTab = .dashboard
+        Task { await coordinator.showMeAround() }
+      }
+    })
+    .task {
+      guard guided == nil else { return }
+      let coordinator = GuidedStartCoordinator.live()
+      guided = coordinator
+      await coordinator.refresh()
+    }
+    .onChange(of: guided?.requestedTab) { _, requested in
+      guard let requested else { return }
+      selectedTab = homeTab(for: requested)
+    }
+    // Keep the card's ticks current: a latch can flip on another device, or
+    // in a flow no step was open for.
+    .onChange(of: scenePhase) { _, phase in
+      guard phase == .active, let guided else { return }
+      Task { await guided.refresh() }
+    }
+    .onChange(of: selectedTab) { _, tab in
+      guard tab == .dashboard, let guided else { return }
+      Task { await guided.refresh() }
+    }
+  }
+
+  private func guidedTab(for tab: HomeTab) -> GuidedTab? {
+    switch tab {
+    case .dashboard: .dashboard
+    case .portfolio: .portfolio
+    case .expenses: .expenses
+    default: nil
+    }
+  }
+
+  private func homeTab(for tab: GuidedTab) -> HomeTab {
+    switch tab {
+    case .dashboard, .goalPlanning: .dashboard
+    case .portfolio: .portfolio
+    case .expenses: .expenses
+    }
   }
 
   private var tabView: some View {

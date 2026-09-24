@@ -32,6 +32,12 @@ struct DashboardRoot: View {
   @State private var isChartBuilderPresented = false
   @State private var isGoalPlanningPresented = false
   @State private var hasLoadedContent = false
+  @Environment(GuidedStartCoordinator.self) private var guided: GuidedStartCoordinator?
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  /// The goal card sits below the fold; set_goal scrolls it into view so its
+  /// spotlight has something to point at.
+  static let goalCardScrollID = "guided.goalCard"
 
   private let dashboardService: any DashboardServicing = Container.shared.dashboardService()
   private let expensesService: any ExpensesServicing = Container.shared.expensesService()
@@ -94,34 +100,42 @@ struct DashboardRoot: View {
 
   var body: some View {
     NavigationStack {
-      ScrollView {
-        Group {
-          DashboardContentSection(
-            portfolioTotalValue: portfolioTotalValue,
-            spendingTotalValue: spendingTotalValue,
-            portfolioChange: portfolioChange,
-            spendingDeltaPercent: spendingDeltaPercent,
-            portfolioChartPoints: portfolioChartPoints,
-            spendingChartPoints: spendingChartPoints,
-            isHomeMetricsRedacted: isHomeMetricsRedacted,
-            isSearchResultsVisible: isSearchResultsVisible,
-            searchViewModel: searchViewModel,
-            activityViewModel: activityViewModel,
-            recentExpenses: budgetStore.recentExpenseActivities,
-            financialHealth: dashboardInsights?.financialHealth,
-            isFinancialHealthLoading: isInsightsLoading,
-            financialHealthUnavailable: insightsLoadFailed,
-            insightCards: insightCards,
-            focusPointsViewModel: focusPointsViewModel,
-            onChartBuilderTap: presentChartBuilder,
-            onGoalPlanningTap: { isGoalPlanningPresented = true }
-          )
+      ScrollViewReader { scrollProxy in
+        ScrollView {
+          Group {
+            DashboardContentSection(
+              portfolioTotalValue: portfolioTotalValue,
+              spendingTotalValue: spendingTotalValue,
+              portfolioChange: portfolioChange,
+              spendingDeltaPercent: spendingDeltaPercent,
+              portfolioChartPoints: portfolioChartPoints,
+              spendingChartPoints: spendingChartPoints,
+              isHomeMetricsRedacted: isHomeMetricsRedacted,
+              isSearchResultsVisible: isSearchResultsVisible,
+              searchViewModel: searchViewModel,
+              activityViewModel: activityViewModel,
+              recentExpenses: budgetStore.recentExpenseActivities,
+              financialHealth: dashboardInsights?.financialHealth,
+              isFinancialHealthLoading: isInsightsLoading,
+              financialHealthUnavailable: insightsLoadFailed,
+              insightCards: insightCards,
+              focusPointsViewModel: focusPointsViewModel,
+              onChartBuilderTap: presentChartBuilder,
+              onGoalPlanningTap: { isGoalPlanningPresented = true }
+            )
+          }
+          .padding(.horizontal, 16)
+          .padding(.vertical, 20)
+          // Center the dashboard column on iPad rather than stretching data
+          // edge-to-edge (Guideline 4). Background below still fills the screen.
+          .maxContentWidth(regularSizeClass: ContentWidth.dense)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 20)
-        // Center the dashboard column on iPad rather than stretching data
-        // edge-to-edge (Guideline 4). Background below still fills the screen.
-        .maxContentWidth(regularSizeClass: ContentWidth.dense)
+        .onChange(of: guided?.activeStep == .setGoal, initial: true) { _, isSettingGoal in
+          guard isSettingGoal else { return }
+          withAnimation(reduceMotion ? AppMotion.reduced : AppMotion.structural) {
+            scrollProxy.scrollTo(Self.goalCardScrollID, anchor: .center)
+          }
+        }
       }
       .vigilScreenBackground()
       .navigationTitle(greetingText)
@@ -173,6 +187,9 @@ struct DashboardRoot: View {
         NavigationStack {
           GoalPlanningScreen()
         }
+        // Anchors do not leave a presentation, so the cover spotlights its own.
+        .guidedSpotlight(step: guided?.activeStep, activeTab: .goalPlanning, onSkip: { guided?.skip() })
+        .environment(guided)
       }
     }
   }
@@ -361,10 +378,23 @@ private struct DashboardContentSection: View {
   let onGoalPlanningTap: () -> Void
 
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(GuidedStartCoordinator.self) private var guided: GuidedStartCoordinator?
   @State private var newsTickerViewModel = NewsTickerViewModel()
+
+  private var isGuidedCardVisible: Bool { guided?.isCardVisible ?? false }
 
   var body: some View {
     VStack(spacing: 20) {
+      if let guided, guided.isCardVisible {
+        GuidedStartCard(
+          progress: guided.progress,
+          message: guided.inlineMessage,
+          onSelect: { step in Task { await guided.start(step) } },
+          onDismiss: { Task { await guided.dismissCard() } }
+        )
+        .onAppear { guided.noteCardShown() }
+      }
+
       DashboardHeroCard(
         totalValue: portfolioTotalValue,
         totalSpending: spendingTotalValue,
@@ -376,7 +406,9 @@ private struct DashboardContentSection: View {
       .redacted(reason: isHomeMetricsRedacted ? .placeholder : [])
       .appAnimation(AppMotion.state, value: isHomeMetricsRedacted)
 
-      NewsTickerStrip(viewModel: newsTickerViewModel)
+      if !isGuidedCardVisible {
+        NewsTickerStrip(viewModel: newsTickerViewModel)
+      }
 
       if isSearchResultsVisible {
         AssetSearchCard(viewModel: searchViewModel)
@@ -400,6 +432,8 @@ private struct DashboardContentSection: View {
       TaxForecasterTeaserCard()
 
       GoalPlanningDashboardCard(action: onGoalPlanningTap)
+        .guidedTarget(.goalCard, in: .dashboard)
+        .id(DashboardRoot.goalCardScrollID)
 
       ChartBuilderDashboardCard(onOpen: onChartBuilderTap)
 
