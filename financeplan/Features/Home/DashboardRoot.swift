@@ -33,6 +33,11 @@ struct DashboardRoot: View {
   @State private var isGoalPlanningPresented = false
   @State private var hasLoadedContent = false
   @Environment(GuidedStartCoordinator.self) private var guided: GuidedStartCoordinator?
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  /// The goal card sits below the fold; set_goal scrolls it into view so its
+  /// spotlight has something to point at.
+  static let goalCardScrollID = "guided.goalCard"
 
   private let dashboardService: any DashboardServicing = Container.shared.dashboardService()
   private let expensesService: any ExpensesServicing = Container.shared.expensesService()
@@ -95,34 +100,42 @@ struct DashboardRoot: View {
 
   var body: some View {
     NavigationStack {
-      ScrollView {
-        Group {
-          DashboardContentSection(
-            portfolioTotalValue: portfolioTotalValue,
-            spendingTotalValue: spendingTotalValue,
-            portfolioChange: portfolioChange,
-            spendingDeltaPercent: spendingDeltaPercent,
-            portfolioChartPoints: portfolioChartPoints,
-            spendingChartPoints: spendingChartPoints,
-            isHomeMetricsRedacted: isHomeMetricsRedacted,
-            isSearchResultsVisible: isSearchResultsVisible,
-            searchViewModel: searchViewModel,
-            activityViewModel: activityViewModel,
-            recentExpenses: budgetStore.recentExpenseActivities,
-            financialHealth: dashboardInsights?.financialHealth,
-            isFinancialHealthLoading: isInsightsLoading,
-            financialHealthUnavailable: insightsLoadFailed,
-            insightCards: insightCards,
-            focusPointsViewModel: focusPointsViewModel,
-            onChartBuilderTap: presentChartBuilder,
-            onGoalPlanningTap: { isGoalPlanningPresented = true }
-          )
+      ScrollViewReader { scrollProxy in
+        ScrollView {
+          Group {
+            DashboardContentSection(
+              portfolioTotalValue: portfolioTotalValue,
+              spendingTotalValue: spendingTotalValue,
+              portfolioChange: portfolioChange,
+              spendingDeltaPercent: spendingDeltaPercent,
+              portfolioChartPoints: portfolioChartPoints,
+              spendingChartPoints: spendingChartPoints,
+              isHomeMetricsRedacted: isHomeMetricsRedacted,
+              isSearchResultsVisible: isSearchResultsVisible,
+              searchViewModel: searchViewModel,
+              activityViewModel: activityViewModel,
+              recentExpenses: budgetStore.recentExpenseActivities,
+              financialHealth: dashboardInsights?.financialHealth,
+              isFinancialHealthLoading: isInsightsLoading,
+              financialHealthUnavailable: insightsLoadFailed,
+              insightCards: insightCards,
+              focusPointsViewModel: focusPointsViewModel,
+              onChartBuilderTap: presentChartBuilder,
+              onGoalPlanningTap: { isGoalPlanningPresented = true }
+            )
+          }
+          .padding(.horizontal, 16)
+          .padding(.vertical, 20)
+          // Center the dashboard column on iPad rather than stretching data
+          // edge-to-edge (Guideline 4). Background below still fills the screen.
+          .maxContentWidth(regularSizeClass: ContentWidth.dense)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 20)
-        // Center the dashboard column on iPad rather than stretching data
-        // edge-to-edge (Guideline 4). Background below still fills the screen.
-        .maxContentWidth(regularSizeClass: ContentWidth.dense)
+        .onChange(of: guided?.activeStep == .setGoal, initial: true) { _, isSettingGoal in
+          guard isSettingGoal else { return }
+          withAnimation(reduceMotion ? AppMotion.reduced : AppMotion.structural) {
+            scrollProxy.scrollTo(Self.goalCardScrollID, anchor: .center)
+          }
+        }
       }
       .vigilScreenBackground()
       .navigationTitle(greetingText)
@@ -420,6 +433,7 @@ private struct DashboardContentSection: View {
 
       GoalPlanningDashboardCard(action: onGoalPlanningTap)
         .guidedTarget(.goalCard, in: .dashboard)
+        .id(DashboardRoot.goalCardScrollID)
 
       ChartBuilderDashboardCard(onOpen: onChartBuilderTap)
 
