@@ -6,7 +6,7 @@ import SwiftUI
 struct PortfolioOnePageScreen: View {
   let viewModel: PortfolioViewModel
   @State private var share = PortfolioShareViewModel()
-  @State private var shareImage: Image?
+  @State private var shareImages: [PortfolioShareCard.Style: Image] = [:]
 
   private var model: PortfolioOnePageModel { viewModel.onePageModel }
   private var currencyCode: String { viewModel.summary?.baseCurrency ?? "USD" }
@@ -38,7 +38,7 @@ struct PortfolioOnePageScreen: View {
     .navigationBarTitleDisplayMode(.inline)
     .toolbar { ToolbarItem(placement: .topBarTrailing) { shareMenu } }
     .task { await share.load(scope: viewModel.shareScope) }
-    .task(id: model) { renderImage() }
+    .task(id: model) { renderImages() }
     .alert(
       "Sharing failed",
       isPresented: Binding(get: { share.errorMessage != nil }, set: { if !$0 { share.errorMessage = nil } })
@@ -91,9 +91,14 @@ struct PortfolioOnePageScreen: View {
 
   private var shareMenu: some View {
     Menu {
-      if let shareImage {
-        ShareLink(item: shareImage, preview: SharePreview("My portfolio", image: shareImage)) {
-          Label("Share image", systemImage: "photo")
+      ForEach(PortfolioShareCard.Style.allCases) { style in
+        if let image = shareImages[style] {
+          ShareLink(item: image, preview: SharePreview("My portfolio", image: image)) {
+            Label(
+              style == .pie ? "Share as pie chart" : "Share as list",
+              systemImage: style == .pie ? "chart.pie" : "list.bullet"
+            )
+          }
         }
       }
       if let url = share.link.flatMap({ URL(string: $0.url) }) {
@@ -130,13 +135,19 @@ struct PortfolioOnePageScreen: View {
     .accessibilityLabel("Share portfolio")
   }
 
-  private func renderImage() {
-    let card = PortfolioShareCard(
-      model: model,
-      totalReturnPercent: viewModel.summary?.unrealizedPnlPercent,
-      dayChangePercent: viewModel.summary?.dayChangePercent
-    )
-    shareImage = ChartExporter.exportToImage(card, size: CGSize(width: 1080, height: 1350), scale: 1)
-      .map { Image(uiImage: $0) }
+  /// Both styles are rendered up front so either menu item shares instantly.
+  private func renderImages() {
+    var images: [PortfolioShareCard.Style: Image] = [:]
+    for style in PortfolioShareCard.Style.allCases {
+      let card = PortfolioShareCard(
+        model: model,
+        totalReturnPercent: viewModel.summary?.unrealizedPnlPercent,
+        dayChangePercent: viewModel.summary?.dayChangePercent,
+        style: style
+      )
+      images[style] = ChartExporter.exportToImage(card, size: CGSize(width: 1080, height: 1350), scale: 1)
+        .map { Image(uiImage: $0) }
+    }
+    shareImages = images
   }
 }
