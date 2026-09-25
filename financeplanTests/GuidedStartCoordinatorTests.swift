@@ -54,8 +54,18 @@ private func state(holding: Bool = false, budget: Bool = false, goal: Bool = fal
   )
 }
 
+/// Everything a test may need to drive or inspect a coordinator. A struct rather
+/// than a five-member tuple, which SwiftLint's large_tuple rule rejects.
+private struct Harness {
+  let coordinator: GuidedStartCoordinator
+  let client: FakeOnboardingClient
+  let store: OnboardingStateStore
+  let analytics: RecordingAnalytics
+  let clock: Clock
+}
+
 @MainActor
-private func makeCoordinator(_ initial: OnboardingStateDTO) -> (GuidedStartCoordinator, FakeOnboardingClient, OnboardingStateStore, RecordingAnalytics, Clock) {
+private func makeCoordinator(_ initial: OnboardingStateDTO) -> Harness {
   let client = FakeOnboardingClient(initial)
   let store = OnboardingStateStore(client: client)
   store.apply(initial)
@@ -73,7 +83,7 @@ private func makeCoordinator(_ initial: OnboardingStateDTO) -> (GuidedStartCoord
     snapshot: { store.state },
     applySnapshot: { store.apply($0) }
   )
-  return (coordinator, client, store, analytics, clock)
+  return Harness(coordinator: coordinator, client: client, store: store, analytics: analytics, clock: clock)
 }
 
 @Suite("Guided start coordinator")
@@ -81,15 +91,17 @@ private func makeCoordinator(_ initial: OnboardingStateDTO) -> (GuidedStartCoord
 struct GuidedStartCoordinatorTests {
   @Test("Card visibility follows the contract")
   func visibility() {
-    #expect(makeCoordinator(state()).0.isCardVisible)
-    #expect(makeCoordinator(state(funnelDone: false)).0.isCardVisible == false)
-    #expect(makeCoordinator(state(dismissed: true)).0.isCardVisible == false)
-    #expect(makeCoordinator(state(holding: true, budget: true, goal: true)).0.isCardVisible == false)
+    #expect(makeCoordinator(state()).coordinator.isCardVisible)
+    #expect(makeCoordinator(state(funnelDone: false)).coordinator.isCardVisible == false)
+    #expect(makeCoordinator(state(dismissed: true)).coordinator.isCardVisible == false)
+    #expect(makeCoordinator(state(holding: true, budget: true, goal: true)).coordinator.isCardVisible == false)
   }
 
   @Test("Starting a done step skips ahead and asks for that step's tab")
   func skipAhead() async {
-    let (coordinator, _, _, analytics, _) = makeCoordinator(state(holding: true))
+    let harness = makeCoordinator(state(holding: true))
+    let coordinator = harness.coordinator
+    let analytics = harness.analytics
     await coordinator.start(.addHolding)
     #expect(coordinator.activeStep == .setBudget)
     #expect(coordinator.requestedTab == .expenses)
@@ -100,7 +112,10 @@ struct GuidedStartCoordinatorTests {
 
   @Test("Polls on 1s, 2s, 4s, 8s, then 10s, and times out after 5 minutes")
   func pollScheduleAndTimeout() async {
-    let (coordinator, _, _, analytics, clock) = makeCoordinator(state())
+    let harness = makeCoordinator(state())
+    let coordinator = harness.coordinator
+    let analytics = harness.analytics
+    let clock = harness.clock
     await coordinator.start(.addHolding)
     await coordinator.settle()
     #expect(Array(clock.slept.prefix(6)) == [.seconds(1), .seconds(2), .seconds(4), .seconds(8), .seconds(10), .seconds(10)])
@@ -113,7 +128,10 @@ struct GuidedStartCoordinatorTests {
 
   @Test("A local action polls at once and completes without completed_elsewhere")
   func localCompletion() async {
-    let (coordinator, client, _, analytics, _) = makeCoordinator(state())
+    let harness = makeCoordinator(state())
+    let coordinator = harness.coordinator
+    let client = harness.client
+    let analytics = harness.analytics
     await coordinator.start(.addHolding)
     await client.set(state(holding: true))
     coordinator.noteUserAction(.addHolding)
@@ -125,7 +143,10 @@ struct GuidedStartCoordinatorTests {
 
   @Test("A latch flipping without a local action is completed elsewhere")
   func elsewhereCompletion() async {
-    let (coordinator, client, _, analytics, _) = makeCoordinator(state())
+    let harness = makeCoordinator(state())
+    let coordinator = harness.coordinator
+    let client = harness.client
+    let analytics = harness.analytics
     await coordinator.start(.setGoal)
     await client.set(state(goal: true))
     await coordinator.settle()
@@ -135,7 +156,10 @@ struct GuidedStartCoordinatorTests {
 
   @Test("Finishing the last step shows the completed card, then fires completed once")
   func lastStep() async {
-    let (coordinator, client, _, analytics, _) = makeCoordinator(state(holding: true, budget: true))
+    let harness = makeCoordinator(state(holding: true, budget: true))
+    let coordinator = harness.coordinator
+    let client = harness.client
+    let analytics = harness.analytics
     await coordinator.start(.setGoal)
     await client.set(state(holding: true, budget: true, goal: true))
     await coordinator.settle()
@@ -148,7 +172,10 @@ struct GuidedStartCoordinatorTests {
 
   @Test("A failed dismiss restores the card, says so, and reports no dismissal")
   func dismissFailure() async {
-    let (coordinator, client, _, analytics, _) = makeCoordinator(state())
+    let harness = makeCoordinator(state())
+    let coordinator = harness.coordinator
+    let client = harness.client
+    let analytics = harness.analytics
     await client.setFailPatch(true)
     await coordinator.dismissCard()
     #expect(coordinator.isCardVisible)
@@ -158,7 +185,9 @@ struct GuidedStartCoordinatorTests {
 
   @Test("A dismissal is reported once the server has it, like the web")
   func dismissReportedAfterPatch() async {
-    let (coordinator, _, _, analytics, _) = makeCoordinator(state())
+    let harness = makeCoordinator(state())
+    let coordinator = harness.coordinator
+    let analytics = harness.analytics
     await coordinator.dismissCard()
     #expect(coordinator.isCardVisible == false)
     #expect(analytics.names == ["guided_start_dismissed"])
@@ -166,7 +195,10 @@ struct GuidedStartCoordinatorTests {
 
   @Test("An action with no open step refreshes the card once")
   func actionWithoutStepRefreshes() async {
-    let (coordinator, client, store, _, _) = makeCoordinator(state())
+    let harness = makeCoordinator(state())
+    let coordinator = harness.coordinator
+    let client = harness.client
+    let store = harness.store
     await client.set(state(holding: true))
     coordinator.noteUserAction(.addHolding)
     await coordinator.settle()
@@ -176,7 +208,9 @@ struct GuidedStartCoordinatorTests {
 
   @Test("An action for a different open step does not add a refresh")
   func actionForOtherStepDoesNotRefresh() async {
-    let (coordinator, client, _, _, _) = makeCoordinator(state())
+    let harness = makeCoordinator(state())
+    let coordinator = harness.coordinator
+    let client = harness.client
     await coordinator.start(.addHolding) // one get: start refreshes first
     coordinator.noteUserAction(.setGoal)
     #expect(await client.getCount == 1)
@@ -185,7 +219,9 @@ struct GuidedStartCoordinatorTests {
 
   @Test("A dismissal from another device waits for the open step")
   func dismissalElsewhereWaitsForOpenStep() async {
-    let (coordinator, _, store, _, _) = makeCoordinator(state())
+    let harness = makeCoordinator(state())
+    let coordinator = harness.coordinator
+    let store = harness.store
     await coordinator.start(.addHolding)
     store.apply(state(dismissed: true))
     #expect(coordinator.isCardVisible, "an engaged step keeps the card")
@@ -195,7 +231,9 @@ struct GuidedStartCoordinatorTests {
 
   @Test("Show me around on a finished wizard shows the completed card this session")
   func showMeAround() async {
-    let (coordinator, _, _, analytics, _) = makeCoordinator(state(holding: true, budget: true, goal: true, dismissed: true))
+    let harness = makeCoordinator(state(holding: true, budget: true, goal: true, dismissed: true))
+    let coordinator = harness.coordinator
+    let analytics = harness.analytics
     await coordinator.showMeAround()
     #expect(coordinator.isCardVisible)
     #expect(analytics.names == ["guided_start_reopened"])
