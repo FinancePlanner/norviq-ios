@@ -8,6 +8,8 @@
 	<array>
 		<string>applinks:norviqaapp.com</string>
 		<string>applinks:www.norviqaapp.com</string>
+		<string>applinks:norviq.org</string>
+		<string>applinks:www.norviq.org</string>
 	</array>
 </dict>
 </plist>

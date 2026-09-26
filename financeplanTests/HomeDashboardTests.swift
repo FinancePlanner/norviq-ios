@@ -43,13 +43,13 @@ final class HomeDashboardTests: XCTestCase {
     let src = try String(contentsOf: url, encoding: .utf8)
     let primary = src.range(of: "HomeTab.primaryTabs")
     let more = src.range(of: "HomeTab.moreMenuTabs")
-    XCTAssertNotNil(primary, "HomeScreen must register primaryTabs so iPhone shows Home/Portfolio/Expenses/Crypto.")
+    XCTAssertNotNil(primary, "HomeScreen must register primaryTabs so iPhone shows Home/Portfolio/Friends/Expenses.")
     XCTAssertNotNil(more, "HomeScreen must register moreMenuTabs after the primary four.")
     if let primary, let more {
       XCTAssertLessThan(
         primary.lowerBound,
         more.lowerBound,
-        "primaryTabs must be registered first or Expenses/Crypto fall into More."
+        "primaryTabs must be registered first or Friends/Expenses fall into More."
       )
     }
   }
