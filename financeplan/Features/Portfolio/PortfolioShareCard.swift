@@ -18,6 +18,10 @@ struct PortfolioShareCard: View {
     let color: Color
   }
 
+  /// Printed on every card and sent as the share message, so whoever sees the
+  /// image can find the app.
+  static let appURL = URL(string: "https://norviq.org")!
+
   let model: PortfolioOnePageModel
   let totalReturnPercent: Double?
   let dayChangePercent: Double?
@@ -36,11 +40,26 @@ struct PortfolioShareCard: View {
       case .pie: pie
       }
       Spacer(minLength: 0)
-      Text("norviq.org").font(.system(size: 30, weight: .medium)).foregroundStyle(.secondary)
+      footer
     }
     .padding(72)
     .frame(width: 1080, height: 1350, alignment: .topLeading)
     .background(Color(.systemBackground))
+  }
+
+  /// Brand strip on both styles: the full logo and the site address.
+  private var footer: some View {
+    HStack(alignment: .center) {
+      Image("NorviqFullLogo")
+        .resizable()
+        .scaledToFit()
+        .frame(height: 64)
+        .accessibilityLabel("Norviq")
+      Spacer()
+      Text(Self.appURL.absoluteString)
+        .font(.system(size: 30, weight: .semibold))
+        .foregroundStyle(AppTheme.Colors.tint)
+    }
   }
 
   private var list: some View {
@@ -79,7 +98,7 @@ struct PortfolioShareCard: View {
         .foregroundStyle(slice.color)
       }
       .chartLegend(.hidden)
-      .frame(width: 560, height: 560)
+      .frame(width: 500, height: 500)
       .frame(maxWidth: .infinity)
       LazyVGrid(columns: [GridItem(.flexible(), spacing: 32), GridItem(.flexible())], alignment: .leading, spacing: 14) {
         ForEach(slices) { slice in

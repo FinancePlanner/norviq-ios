@@ -93,7 +93,11 @@ struct PortfolioOnePageScreen: View {
     Menu {
       ForEach(PortfolioShareCard.Style.allCases) { style in
         if let image = shareImages[style] {
-          ShareLink(item: image, preview: SharePreview("My portfolio", image: image)) {
+          ShareLink(
+            item: image,
+            message: Text("Tracked with Norviq — \(PortfolioShareCard.appURL.absoluteString)"),
+            preview: SharePreview("My portfolio", image: image)
+          ) {
             Label(
               style == .pie ? "Share as pie chart" : "Share as list",
               systemImage: style == .pie ? "chart.pie" : "list.bullet"
