@@ -115,6 +115,8 @@ jobs:
             -only-testing:financeplanTests/StockComparisonFormattingTests \
             -only-testing:financeplanTests/StockComparisonSortingTests \
             -only-testing:financeplanTests/TelegramLinkViewModelTests \
+            -only-testing:financeplanTests/SocialDeepLinkTests \
+            -only-testing:financeplanTests/SocialStoreTests \
             -parallel-testing-enabled NO \
             -quiet
 

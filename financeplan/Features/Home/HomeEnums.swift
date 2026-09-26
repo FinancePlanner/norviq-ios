@@ -10,15 +10,16 @@ enum HomeTab: Hashable, CaseIterable {
   case reports
   case tax
   case insights
+  case social
 
   /// Always-visible iPhone tabs, registered first so the system bar shows
   /// these before overflow. iPad sidebar still lists every destination.
-  static let primaryTabs: [HomeTab] = [.dashboard, .portfolio, .expenses, .crypto]
+  static let primaryTabs: [HomeTab] = [.dashboard, .portfolio, .social, .expenses]
 
   /// Destinations that sit after the primary four. On iPhone they land in
   /// More; on iPad they appear in the sidebar. A tab in neither list is
   /// unreachable — which is how Markets shipped invisible once already.
-  static let moreMenuTabs: [HomeTab] = [.markets, .economy, .reports, .tax, .insights]
+  static let moreMenuTabs: [HomeTab] = [.markets, .crypto, .economy, .reports, .tax, .insights]
 
   var title: String {
     switch self {
@@ -40,6 +41,8 @@ enum HomeTab: Hashable, CaseIterable {
       return String(localized: "Tax")
     case .insights:
       return String(localized: "Insights")
+    case .social:
+      return String(localized: "Friends")
     }
   }
 
@@ -63,6 +66,8 @@ enum HomeTab: Hashable, CaseIterable {
       return "building.columns.fill"
     case .insights:
       return "sparkles"
+    case .social:
+      return "person.2.fill"
     }
   }
 }

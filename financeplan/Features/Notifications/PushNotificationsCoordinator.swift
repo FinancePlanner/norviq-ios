@@ -16,6 +16,10 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     case budget
     case thesisWatch = "thesis_watch"
     case assistantMessage = "assistant_message"
+    case friendRequest = "friend_request"
+    case friendAccepted = "friend_accepted"
+    /// Never sent by the server: an invite link opened the app.
+    case socialInvite = "social_invite"
   }
 
   let kind: Kind
@@ -34,6 +38,8 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
   /// Assistant pushes only. Canonical UUID, or nil to open the default conversation.
   let conversationID: String?
   let messageID: String?
+  /// Invite links only.
+  let inviteCode: String?
 
   nonisolated init(
     kind: Kind,
@@ -50,7 +56,8 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     snapshotID: String? = nil,
     budgetScope: String? = nil,
     conversationID: String? = nil,
-    messageID: String? = nil
+    messageID: String? = nil,
+    inviteCode: String? = nil
   ) {
     self.kind = kind
     self.symbol = symbol
@@ -67,6 +74,7 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     self.budgetScope = budgetScope
     self.conversationID = conversationID
     self.messageID = messageID
+    self.inviteCode = inviteCode
   }
 
   /// Opens the assistant; `conversationID` nil means its default conversation.
@@ -393,7 +401,7 @@ final class PushNotificationsCoordinator: ObservableObject {
     userAction: PushNotificationUserAction = .openStock
   ) {
     let route: PushNotificationRoute = switch userAction {
-    case _ where parsedRoute.kind == .assistantMessage:
+    case _ where [PushNotificationRoute.Kind.assistantMessage, .friendRequest, .friendAccepted, .socialInvite].contains(parsedRoute.kind):
       parsedRoute
     case .openStock:
       parsedRoute
@@ -418,10 +426,15 @@ final class PushNotificationsCoordinator: ObservableObject {
     )
   }
 
-  /// Handles `financeplan://assistant/...`. Returns false for URLs that are
-  /// not assistant links so other handlers can take them.
+  /// Handles `financeplan://assistant/...` and invite links. Returns false
+  /// for other URLs so other handlers can take them.
   @discardableResult
   func handleDeepLink(_ url: URL) -> Bool {
+    if case let .invite(code) = SocialDeepLink.parse(url) {
+      Self.logger.info("push.route deep_link destination=social_invite")
+      handleIncomingRoute(PushNotificationRoute(kind: .socialInvite, symbol: nil, inviteCode: code))
+      return true
+    }
     guard let link = AssistantDeepLink.parse(url) else { return false }
     Self.logger.info("push.route deep_link destination=assistant has_conversation=\(link.conversationID != nil, privacy: .public)")
     handleIncomingRoute(.assistant(conversationID: link.conversationID))

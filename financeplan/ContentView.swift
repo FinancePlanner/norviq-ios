@@ -357,6 +357,7 @@ public struct ContentView: View {
     sessionManager.reset()
     pushNotificationsCoordinator.handleSessionDidInvalidate()
     Container.shared.onboardingStateStore().reset()
+    Container.shared.socialStore().reset()
   }
 
   private func deliverPendingPushNotificationRouteIfPossible() {
@@ -440,6 +441,16 @@ public struct ContentView: View {
         name: .openThesisWatchFromPushNotification,
         object: nil,
         userInfo: ["story_id": route.eventID ?? ""]
+      )
+    case .friendRequest, .friendAccepted:
+      Self.pushLogger.info("push.analytics routed_success destination=social kind=\(route.kind.rawValue, privacy: .public)")
+      NotificationCenter.default.post(name: .openSocialFromPushNotification, object: nil)
+    case .socialInvite:
+      Self.pushLogger.info("push.analytics routed_success destination=social_invite")
+      NotificationCenter.default.post(
+        name: .openSocialFromPushNotification,
+        object: nil,
+        userInfo: route.inviteCode.map { ["inviteCode": $0] }
       )
     case .assistantMessage:
       let decision = pushNotificationsCoordinator.resolveAssistantOpen(conversationID: route.conversationID)

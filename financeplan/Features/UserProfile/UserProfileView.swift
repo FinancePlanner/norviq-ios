@@ -24,6 +24,8 @@ private enum UserProfileDestination: Hashable {
     case integrationsHub
     case telegram
     case subscription
+    case socialPrivacy
+    case blockedUsers
 }
 
 @MainActor
@@ -37,6 +39,7 @@ public struct UserProfileView: View {
     @Environment(\.norviqReopenGuidedStart) private var reopenGuidedStart
     @InjectedObservable(\Container.appEnvironment) private var environmentManager
     @InjectedObservable(\Container.billingManager) private var billingManager
+    @InjectedObservable(\Container.socialStore) private var socialStore
     @State private var path: [UserProfileDestination] = []
     @State private var isEditPresented = false
     @State private var isAssistantPresented = false
@@ -418,6 +421,18 @@ public struct UserProfileView: View {
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
 
+            if socialStore.config.enabled {
+                Section(LocalizedStringKey("Friends")) {
+                    NavigationLink(value: UserProfileDestination.socialPrivacy) {
+                        Label(LocalizedStringKey("Friends privacy"), systemImage: "hand.raised.fill")
+                    }
+                    NavigationLink(value: UserProfileDestination.blockedUsers) {
+                        Label(LocalizedStringKey("Blocked people"), systemImage: "nosign")
+                    }
+                }
+                .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
+            }
+
             // Subscription
             Section(LocalizedStringKey("Subscription")) {
                 NavigationLink(value: UserProfileDestination.subscription) {
@@ -676,6 +691,10 @@ public struct UserProfileView: View {
             TelegramConnectView()
         case .subscription:
             SubscriptionSettingsView()
+        case .socialPrivacy:
+            SocialPrivacySettingsView()
+        case .blockedUsers:
+            BlockedUsersView()
         }
     }
 

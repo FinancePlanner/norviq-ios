@@ -12,6 +12,7 @@ struct HomeScreen: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.colorScheme) private var colorScheme
   @InjectedObservable(\Container.billingManager) private var billingManager
+  @InjectedObservable(\Container.socialStore) private var socialStore
   @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
   let onLogout: () async -> Void
   @State private var selectedTab: HomeTab = .dashboard
@@ -29,6 +30,8 @@ struct HomeScreen: View {
   /// presented while another is still up.
   @State private var pendingAssistantLaunch: AssistantLaunch?
   @State private var guided: GuidedStartCoordinator?
+  /// An invite link that opened the app, shown once the Friends tab is up.
+  @State private var pendingInviteCode: String?
 
   init(onLogout: @escaping () async -> Void) {
     self.onLogout = onLogout
@@ -99,10 +102,11 @@ struct HomeScreen: View {
 
   private var tabView: some View {
     TabView(selection: $selectedTab) {
-      ForEach(HomeTab.primaryTabs, id: \.self) { tab in
+      ForEach(HomeTab.primaryTabs.filter(isAvailable), id: \.self) { tab in
         Tab(tab.title, systemImage: tab.systemImage, value: tab) {
           root(for: tab)
         }
+        .badge(tab == .social ? socialStore.badgeCount : 0)
       }
       ForEach(HomeTab.moreMenuTabs, id: \.self) { tab in
         Tab(tab.title, systemImage: tab.systemImage, value: tab) {
@@ -168,6 +172,28 @@ struct HomeScreen: View {
     .onReceive(NotificationCenter.default.publisher(for: .openAssistantFromPushNotification)) { notification in
       openAssistant(conversationID: notification.userInfo?["conversationId"] as? String)
     }
+    .onReceive(NotificationCenter.default.publisher(for: .openSocialFromPushNotification)) { notification in
+      pendingInviteCode = notification.userInfo?["inviteCode"] as? String
+      if socialStore.config.enabled { selectedTab = .social }
+    }
+    // A cold start from an invite link can beat the config fetch.
+    .onChange(of: socialStore.config.enabled) { _, enabled in
+      if enabled, pendingInviteCode != nil { selectedTab = .social }
+    }
+    // Loaded up front so the tab badge shows pending requests before the tab is opened.
+    .task { await loadSocial() }
+  }
+
+  /// Friends stays hidden until the server switches social on: a tab with
+  /// nothing behind it is the "incomplete feature" App Review rejects.
+  private func isAvailable(_ tab: HomeTab) -> Bool {
+    tab != .social || socialStore.config.enabled
+  }
+
+  private func loadSocial() async {
+    await socialStore.loadConfig()
+    guard socialStore.config.enabled else { return }
+    await socialStore.load()
   }
 
   private func openAssistant(conversationID: String?) {
@@ -235,6 +261,9 @@ struct HomeScreen: View {
     case .insights:
       InsightsScreen()
         .accessibilityIdentifier("tab.insights")
+    case .social:
+      SocialRoot(pendingInviteCode: $pendingInviteCode)
+        .accessibilityIdentifier("tab.social")
     }
   }
 
