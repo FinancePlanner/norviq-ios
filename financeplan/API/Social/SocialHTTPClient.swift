@@ -129,4 +129,16 @@ nonisolated struct SocialHTTPClient: Sendable {
   func report(_ request: ReportRequest) async throws {
     try await client.callWithoutResponse(SubmitReportEndpoint(payload: request), errorType: Error.self)
   }
+
+  func matchContacts(_ request: ContactMatchRequest) async throws -> ContactMatchResponse {
+    try await client.call(MatchContactsEndpoint(payload: request), errorType: Error.self)
+  }
+
+  func startXImport(redirectURI: String) async throws -> OAuthStartResponsePayload {
+    try await client.call(XImportStartEndpoint(redirectURI: redirectURI), errorType: Error.self)
+  }
+
+  func finishXImport(_ request: OAuthExchangeRequestPayload) async throws -> XImportMatchesResponse {
+    try await client.call(XImportExchangeEndpoint(payload: request), errorType: Error.self)
+  }
 }

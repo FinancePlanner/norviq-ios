@@ -157,3 +157,40 @@ nonisolated struct SubmitReportEndpoint: Endpoint {
     return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
   }
 }
+
+nonisolated struct MatchContactsEndpoint: Endpoint {
+  typealias Response = ContactMatchResponse
+  let payload: ContactMatchRequest
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/social/discovery/contacts/match" }
+  var decoder: JSONDecoder { .stockPlanShared }
+  func asParameters() throws -> Parameters {
+    let data = try JSONEncoder.stockPlanShared.encode(payload)
+    return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+  }
+}
+
+nonisolated struct XImportStartEndpoint: Endpoint {
+  typealias Response = OAuthStartResponsePayload
+  let redirectURI: String
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/social/discovery/x/start" }
+  var decoder: JSONDecoder { .stockPlanShared }
+  func asParameters() throws -> Parameters { ["redirectURI": redirectURI] }
+}
+
+nonisolated struct XImportExchangeEndpoint: Endpoint {
+  typealias Response = XImportMatchesResponse
+  let payload: OAuthExchangeRequestPayload
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/social/discovery/x/exchange" }
+  var decoder: JSONDecoder { .stockPlanShared }
+  func asParameters() throws -> Parameters {
+    [
+      "flowId": payload.flowId.uuidString,
+      "code": payload.code,
+      "state": payload.state,
+      "redirectURI": payload.redirectURI
+    ]
+  }
+}

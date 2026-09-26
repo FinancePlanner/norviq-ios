@@ -1,5 +1,6 @@
 import Factory
 import Foundation
+import StockPlanShared
 
 protocol SocialServicing: Sendable {
   func config() async throws -> SocialConfig
@@ -19,6 +20,9 @@ protocol SocialServicing: Sendable {
   func blockedUsers() async throws -> [SocialUserSummary]
   func setBlocked(userId: String, blocked: Bool) async throws
   func report(_ request: ReportRequest) async throws
+  func matchContacts(_ request: ContactMatchRequest) async throws -> [ContactMatch]
+  func startXImport(redirectURI: String) async throws -> OAuthStartResponsePayload
+  func finishXImport(_ request: OAuthExchangeRequestPayload) async throws -> XImportMatchesResponse
 }
 
 struct DefaultSocialService: SocialServicing {
@@ -51,4 +55,13 @@ struct DefaultSocialService: SocialServicing {
   func blockedUsers() async throws -> [SocialUserSummary] { try await client.blockedUsers().users }
   func setBlocked(userId: String, blocked: Bool) async throws { try await client.setBlocked(userId: userId, blocked: blocked) }
   func report(_ request: ReportRequest) async throws { try await client.report(request) }
+  func matchContacts(_ request: ContactMatchRequest) async throws -> [ContactMatch] {
+    try await client.matchContacts(request).matches
+  }
+  func startXImport(redirectURI: String) async throws -> OAuthStartResponsePayload {
+    try await client.startXImport(redirectURI: redirectURI)
+  }
+  func finishXImport(_ request: OAuthExchangeRequestPayload) async throws -> XImportMatchesResponse {
+    try await client.finishXImport(request)
+  }
 }

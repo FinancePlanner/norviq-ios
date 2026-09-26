@@ -34,6 +34,9 @@ private final class MockSocialService: SocialServicing, @unchecked Sendable {
   func blockedUsers() async throws -> [SocialUserSummary] { [] }
   func setBlocked(userId: String, blocked: Bool) async throws { blockCalls.append((userId, blocked)) }
   func report(_ request: ReportRequest) async throws { reports.append(request) }
+  func matchContacts(_ request: ContactMatchRequest) async throws -> [ContactMatch] { [] }
+  func startXImport(redirectURI: String) async throws -> OAuthStartResponsePayload { throw Failure() }
+  func finishXImport(_ request: OAuthExchangeRequestPayload) async throws -> XImportMatchesResponse { throw Failure() }
 }
 
 private extension SocialUserSummary {

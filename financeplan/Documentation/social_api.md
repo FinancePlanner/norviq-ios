@@ -3,8 +3,8 @@
 This is the contract for Norviq's social layer: friends, discovery, XP and leaderboards, and DMs. The iOS app implements the client side, and the backend implements this document.
 
 **Status:**
-- Phase 1 (friends, invites, privacy, block/report) is built in the app, behind `GET /v1/social/config`.
-- Phases 2–4 are specified here and not built yet.
+- Phases 1 and 2 are built in the app and in `norviq-backend`, behind `GET /v1/social/config`: friends, invites, privacy, block/report, contact matching and X import.
+- Phases 3–4 are specified here and not built yet.
 
 **Conventions:**
 - Every path is under `/v1` and requires `Authorization: Bearer <access token>`.
@@ -68,24 +68,38 @@ The Swift types live in `financeplan/API/Social/SocialDTOs.swift`. They move to 
 
 **Account deletion:** the existing delete-account endpoint must also delete friendships, requests, blocks, reports filed by the user, and invite codes.
 
-## Phase 2: discovery (specified, not built)
+## Phase 2: discovery (built)
+
+The backend lives in `norviq-backend` under `Sources/StockPlanBackend/Social/`.
+
+**Server switches:**
+- `SOCIAL_ENABLED` turns on everything below `/social/config`. It is off by default, and while it's off every other social route returns 404.
+- `SOCIAL_CONTACT_PEPPER` turns on contact matching. `SOCIAL_CONTACTS_ENABLED` (default on) can turn it back off.
+- `SOCIAL_X_IMPORT_ENABLED` (default off) turns on X import. It also needs `OAUTH_X_CLIENT_ID`, and the X app must be on a tier that allows `follows.read`.
+- `SOCIAL_INVITE_BASE_URL` sets the invite link base. It defaults to `https://norviq.org`.
+
+**`GET /social/config`:**
+- Adds `contactHashVersion` (`1`) and `contactPepper` while contact matching is on.
+- For signed-in users, calling it refreshes their own contact hash. That is what makes them findable from other people's address books.
 
 **`POST /social/discovery/contacts/match`**
-- **Body:** `{ "hashVersion": 1, "items": [{ "hash", "kind": "phone" | "email" }] }`, up to 1,000 items per call.
-- **How the client hashes:** it normalizes each value, then applies HMAC-SHA256 with the `contactPepper` from `SocialConfig`.
-  - Emails are trimmed and lowercased.
-  - Phones are converted to E.164, with the device region as the default.
-- **Response:** `{ "matches": [{ "hash", "user": SocialUserSummary }] }`.
+- **Body:** `{ "hashVersion": 1, "items": [{ "hash", "kind": "email" }] }`, up to 1,000 items per call.
+- **Hash:** `hex(HMAC-SHA256(key: contactPepper, message: lowercase(trim(email))))`, lowercase hex.
+  - The app (`ContactHashing`) and the server (`SocialContactHash`) share the test vector `test-pepper` / `Ana@Example.com` → `daee8730…737f`.
+- **Email only.** Accounts have no phone numbers, so `phone` items are ignored.
+- **Response:** `{ "matches": [{ "hash", "user" }] }`.
 - **Rules:**
-  - Match only users with `discoverableByContacts = true`.
-  - Store neither the hashes nor the non-matches.
-  - Apply strict per-user rate limits.
+  - Matches only users with `discoverableByContacts = true` who have a current hash.
+  - Excludes blocks in either direction.
+  - Stores nothing that was submitted.
+  - Rate limit: 10 requests per minute per user.
 
-**`POST /social/discovery/x/start`** and **`POST /social/discovery/x/exchange`**
-- Server-side OAuth 2.0 PKCE with the scopes `follows.read users.read`. This needs X API Basic tier.
-- `exchange` returns `{ "matches": [{ "xHandle", "user" }], "totalFollowingScanned" }`.
-- Keep only the matched ids, and discard the X token.
-- Match only users with `discoverableByX = true`.
+**`POST /social/discovery/x/start`** (`{ redirectURI }` → `{ flowId, authorizationURL, expiresIn }`) and **`POST /social/discovery/x/exchange`** (`{ flowId, code, state, redirectURI }`)
+- This is a separate OAuth flow (purpose `social_x_import`) with the scopes `tweet.read users.read follows.read`.
+- It uses the same redirect URI and allowlist as linking X in Settings.
+- The server reads up to 5,000 accounts the user follows (5 pages), then drops the token.
+- It matches them against `oauth_identities` for provider `x`, excluding users with `discoverableByX = false` and blocks either way.
+- **Response:** `{ "matches": [{ "xHandle", "user" }], "totalFollowingScanned" }`.
 
 **Not supported:**
 - Instagram has no friends API, so it is invite-link only.
@@ -151,5 +165,5 @@ The Swift types live in `financeplan/API/Social/SocialDTOs.swift`. They move to 
   - The terms/EULA forbid objectionable content.
   - The support contact is published.
 - **Demo account:** the reviewer demo account has one pre-added friend, so reviewers can reach these screens.
-- **Contacts (Phase 2):** add `NSContactsUsageDescription`, update `PrivacyInfo.xcprivacy` and the App Store privacy label.
+- **Contacts (Phase 2):** `NSContactsUsageDescription` and the `PrivacyInfo.xcprivacy` entry ship in the app. The App Store privacy label also needs "Contacts, not linked, App Functionality".
 - **Metadata:** change App Store metadata and onboarding copy to the social positioning only in the release that turns `enabled` on. Metadata must describe what the build does (Guideline 2.3.1).
