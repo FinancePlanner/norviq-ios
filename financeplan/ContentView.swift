@@ -358,6 +358,7 @@ public struct ContentView: View {
     pushNotificationsCoordinator.handleSessionDidInvalidate()
     Container.shared.onboardingStateStore().reset()
     Container.shared.socialStore().reset()
+    Container.shared.gamificationStore().reset()
   }
 
   private func deliverPendingPushNotificationRouteIfPossible() {

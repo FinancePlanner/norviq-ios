@@ -3,8 +3,8 @@
 This is the contract for Norviq's social layer: friends, discovery, XP and leaderboards, and DMs. The iOS app implements the client side, and the backend implements this document.
 
 **Status:**
-- Phases 1 and 2 are built in the app and in `norviq-backend`, behind `GET /v1/social/config`: friends, invites, privacy, block/report, contact matching and X import.
-- Phases 3–4 are specified here and not built yet.
+- Phases 1–3 are built in the app and in `norviq-backend`, behind `GET /v1/social/config`: friends, invites, privacy, block/report, contact matching, X import, XP, streaks and friends leaderboards.
+- Phase 4 is specified here and not built yet.
 
 **Conventions:**
 - Every path is under `/v1` and requires `Authorization: Bearer <access token>`.
@@ -14,7 +14,7 @@ This is the contract for Norviq's social layer: friends, discovery, XP and leade
 - **Blocking is invisible.** When either user has blocked the other, every endpoint that names the other user returns `404`, never `403`, so nobody can detect a block.
 - **Money never appears in social payloads.** Only percentages, counts and levels do. The server must reject any payload that carries amounts.
 
-The Swift types live in `financeplan/API/Social/SocialDTOs.swift`. They move to `norviq-shared` unchanged once the backend ships them.
+The Swift types live in `financeplan/API/Social/SocialDTOs.swift` and `financeplan/API/Gamification/GamificationDTOs.swift`. They move to `norviq-shared` unchanged once the backend ships them.
 
 ## Rollout switch
 
@@ -105,26 +105,62 @@ The backend lives in `norviq-backend` under `Sources/StockPlanBackend/Social/`.
 - Instagram has no friends API, so it is invite-link only.
 - Facebook friend matching is deferred.
 
-## Phase 3: XP, streaks, leaderboards (specified, not built)
+## Phase 3: XP, streaks, leaderboards (built)
 
-**XP and streaks:**
+The backend lives in `norviq-backend` under `Sources/StockPlanBackend/Gamification/` (`XPService`, `LeaderboardService`, `GamificationController`). The app side is `API/Gamification/` and `Features/Gamification/`.
 
-| Method | Path | Notes |
+**Server switches:**
+- Everything below needs `SOCIAL_ENABLED`. `SOCIAL_LEADERBOARDS_ENABLED` (default on when social is on) drives `SocialConfig.leaderboards`; while it's off every route in this section returns 404 and no XP is written.
+- The app shows the Leaderboard segment on the Friends tab and the XP/check-in card on the dashboard only when `enabled` and `leaderboards` are both true.
+
+**Rules:**
+- The server awards all XP; the client reports facts only. Every award has a dedupe key that is unique per user, so retries and races pay once.
+- Local days come from the `X-Timezone` header (an IANA id such as `Europe/Lisbon`; UTC when missing or unknown). The app sends it on every gamification call. Weeks start on Monday; months are calendar months, both in that time zone.
+
+| Method | Path | Body | Response | Notes |
+|---|---|---|---|---|
+| GET | `/gamification/xp` | — | `{ total, level, levelProgress, weekXP }` | `levelProgress` is 0–1 toward the next level. `weekXP` is XP earned since Monday. |
+| GET | `/gamification/xp/events?cursor=&limit=` | — | `{ events: [{ id, type, points, createdAt }], nextCursor }` | Newest first, 30 per page (max 100). The cursor is opaque. |
+| GET | `/gamification/streaks` | — | `{ checkInCurrent, checkInLongest, budgetMonths, lastCheckInDate }` | `lastCheckInDate` is `YYYY-MM-DD` in the zone of that check-in. |
+| POST | `/gamification/check-in` | — | `{ streak, xpAwarded, alreadyCheckedIn }` | Idempotent per local day: a second call returns `alreadyCheckedIn: true` and `xpAwarded: 0`. |
+| POST | `/gamification/streaks/budget` | `{ months }` | `StreakSummary` | The server derives the streak from expense data itself (the dashboard's rule: consecutive months at or under a non-zero plan) and stores the lower of that and `months`, clamped to 0…120. |
+
+**XP table:**
+
+| Type | Points | Paid |
 |---|---|---|
-| GET | `/gamification/xp` | Returns `{ total, level, levelProgress, weekXP }`. |
-| GET | `/gamification/xp/events` | Paginated `{ id, type, points, createdAt }`. `type` is one of `check_in`, `streak_milestone`, `badge_earned`, `expense_logged`, `budget_streak_month`. |
-| GET | `/gamification/streaks` | Returns `{ checkInCurrent, checkInLongest, budgetMonths, lastCheckInDate }`. |
-| POST | `/gamification/check-in` | Idempotent per local day, using the `X-Timezone` header. Returns `{ streak, xpAwarded, alreadyCheckedIn }`. |
-| POST | `/gamification/streaks/budget` | `{ months }`. The server validates it against expense data. |
+| `check_in` | 10 | once per local day |
+| `streak_milestone` | 50 / 150 / 500 | on the day a check-in streak reaches 7 / 30 / 100 |
+| `budget_streak_month` | 25 per month level | once per budget-streak level ever reached (reaching 4 after a best of 3 pays 25; falling back and climbing again pays nothing) |
+| `badge_earned` | 25 / 50 / 100 | when a bronze / silver / gold badge tier is first persisted |
+| `expense_logged` | 5 | at most once per UTC day, when an expense is created through `POST /expenses` |
 
-- The server awards XP. The client reports only facts, never XP amounts.
+- Unknown `type` values decode as `.other` in the app.
+
+**Levels:** reaching level L takes `50·L·(L−1)` XP in total: level 2 at 100, level 3 at 300, level 4 at 600, level 5 at 1,000. Going from L to L+1 costs `100·L`.
+
+**Check-in streaks:** a streak is the run of consecutive local days ending at the latest check-in. It stays alive through the next day, so it only breaks once a whole day passes without one.
 
 **`GET /social/leaderboards?metric=&period=`**
-- `metric` is one of `return_percent`, `xp`, `check_in_streak`, `budget_streak`.
-- `period` is `week` or `month`.
-- **Who is ranked:** the caller and their friends. Only users with `leaderboardOptIn` appear.
-- **Return % leaderboards** also require `showReturnPercent`. Return % is time-weighted and computed server-side.
-- **Entry shape:** `{ rank, user, value, isMe }`. `value` is a percent or an integer, never money.
+- `metric` is one of `return_percent`, `xp`, `check_in_streak`, `budget_streak` (default `xp`); `period` is `week` or `month` (default `week`). Anything else is a 400.
+- **Response:** `{ metric, period, entries: [{ rank, user, value, isMe }], periodStart, periodEnd }`. Ties share a rank (1, 1, 3). `value` is a percent (`4.2` means +4.2%) for `return_percent`, otherwise a count. Money never appears.
+- **Who is ranked:** the caller and their friends, minus blocks either way, users a moderator suspended, and anyone with `leaderboardOptIn = false` (the caller included).
+  - `return_percent` also needs `showReturnPercent` (off by default).
+  - `xp` also needs `showXP`; both streak metrics need `showStreaks`.
+- **Values:**
+  - `xp`: XP earned inside the period.
+  - `check_in_streak` and `budget_streak`: the current streak (the period only sets `periodStart`/`periodEnd`).
+  - `return_percent`: time-weighted return over the period, from the daily `portfolio_value_snapshots` the performance chart already reads (active `actual` portfolio lists, days where every list has a row). Daily returns are chained from the last recorded day on or before the period start to the latest day, treating each day's change in cost basis as money moved in or out. Holdings only; cash is excluded because deposits land there.
+- **Known limits of `return_percent`:** snapshots carry no sell log, so on a day with a sale the realized gain looks like money leaving and that day's return is understated. Users with fewer than two usable snapshot days in the window are left off the board rather than shown as 0%.
+
+**Profiles:** `GET /social/users/{id}` now fills `streakDays` (current check-in streak) and `xpLevel` when the owner's `showStreaks` / `showXP` allow it. People always see their own.
+
+**Account deletion:** XP events, check-ins and the budget streak cascade with the user row.
+
+**TODO:**
+- A local check-in reminder notification (the plan's "optional local reminder") is not built.
+- XP for other facts (a goal reached, a portfolio import) needs a server-side hook each; add them to `XPRules` when those flows have an obvious single write point.
+- Expenses created by CSV import or bank sync don't award `expense_logged`; only `POST /expenses` does.
 
 ## Phase 4: DMs and realtime (specified, not built)
 

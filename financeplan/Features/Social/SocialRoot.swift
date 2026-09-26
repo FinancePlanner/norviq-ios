@@ -1,8 +1,8 @@
 import Factory
 import SwiftUI
 
-/// The Friends tab: invite, pending requests and the friend list.
-/// Leaderboards and messages join this screen in later phases.
+/// The Friends tab: friends-only leaderboards (when the server turns them on),
+/// invites, pending requests and the friend list. Messages join in Phase 4.
 struct SocialRoot: View {
   @Binding var pendingInviteCode: String?
   @InjectedObservable(\Container.socialStore) private var store
@@ -11,6 +11,7 @@ struct SocialRoot: View {
   @State private var isContactsPresented = false
   @State private var isXImportPresented = false
   @State private var redeemingInvite: InviteCodeItem?
+  @State private var section: SocialSection = .friends
   @State private var path = NavigationPath()
 
   var body: some View {
@@ -54,6 +55,31 @@ struct SocialRoot: View {
 
   @ViewBuilder
   private var content: some View {
+    if store.config.leaderboards {
+      VStack(spacing: 0) {
+        Picker("Section", selection: $section) {
+          ForEach(SocialSection.allCases) { item in
+            Text(item.title).tag(item)
+          }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+
+        switch section {
+        case .leaderboard:
+          LeaderboardView(onInvite: { isInvitePresented = true })
+        case .friends:
+          friendsContent
+        }
+      }
+    } else {
+      friendsContent
+    }
+  }
+
+  @ViewBuilder
+  private var friendsContent: some View {
     if !store.hasLoaded, store.isLoading {
       ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
     } else {
@@ -131,6 +157,20 @@ struct SocialRoot: View {
       } label: {
         Label("Friend settings", systemImage: "ellipsis.circle")
       }
+    }
+  }
+}
+
+enum SocialSection: String, CaseIterable, Identifiable {
+  case leaderboard
+  case friends
+
+  var id: String { rawValue }
+
+  var title: LocalizedStringKey {
+    switch self {
+    case .leaderboard: "Leaderboard"
+    case .friends: "Friends"
     }
   }
 }
