@@ -316,6 +316,22 @@ final class AssistantPushCoordinatorTests: XCTestCase {
     XCTAssertEqual(coordinator.consumePendingNotificationRoute(), .assistant(conversationID: conversationID))
   }
 
+  func testInviteLinkQueuesSocialRoute() async throws {
+    await Task.yield()
+    let coordinator = makeCoordinator()
+    XCTAssertTrue(coordinator.handleDeepLink(try XCTUnwrap(URL(string: "https://norviq.org/i/abc123"))))
+    let route = coordinator.consumePendingNotificationRoute()
+    XCTAssertEqual(route?.kind, .socialInvite)
+    XCTAssertEqual(route?.inviteCode, "abc123")
+  }
+
+  func testPortfolioActionDoesNotRewriteASocialRoute() async {
+    await Task.yield()
+    let coordinator = makeCoordinator()
+    coordinator.handleIncomingRoute(PushNotificationRoute(kind: .friendRequest, symbol: nil), userAction: .openPortfolio)
+    XCTAssertEqual(coordinator.consumePendingNotificationRoute()?.kind, .friendRequest)
+  }
+
   func testForegroundOptionsFollowWhatIsOnScreen() async {
     await Task.yield()
     let coordinator = makeCoordinator()
