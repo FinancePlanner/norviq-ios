@@ -117,6 +117,7 @@ jobs:
             -only-testing:financeplanTests/TelegramLinkViewModelTests \
             -only-testing:financeplanTests/SocialDeepLinkTests \
             -only-testing:financeplanTests/SocialStoreTests \
+            -only-testing:financeplanTests/ContactHashingTests \
             -parallel-testing-enabled NO \
             -quiet
 

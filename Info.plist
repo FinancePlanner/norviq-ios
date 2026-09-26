@@ -51,6 +51,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSContactsUsageDescription</key>
+	<string>Norviq checks which of your contacts are on Norviq so you can add them as friends. Email addresses are turned into one-way codes on your iPhone and are never uploaded or stored.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Norviq uses the camera to scan receipt QR codes and photograph receipts for expense entry.</string>
 	<key>NSFaceIDUsageDescription</key>

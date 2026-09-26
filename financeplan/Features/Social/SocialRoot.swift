@@ -8,6 +8,8 @@ struct SocialRoot: View {
   @InjectedObservable(\Container.socialStore) private var store
   @State private var isSearchPresented = false
   @State private var isInvitePresented = false
+  @State private var isContactsPresented = false
+  @State private var isXImportPresented = false
   @State private var redeemingInvite: InviteCodeItem?
   @State private var path = NavigationPath()
 
@@ -31,6 +33,8 @@ struct SocialRoot: View {
         }
         .sheet(isPresented: $isSearchPresented) { UserSearchView() }
         .sheet(isPresented: $isInvitePresented) { InviteFriendsView() }
+        .sheet(isPresented: $isContactsPresented) { ContactsDiscoveryView() }
+        .sheet(isPresented: $isXImportPresented) { XImportView() }
         .sheet(item: $redeemingInvite) { item in InviteRedeemSheet(code: item.code) }
         .onChange(of: pendingInviteCode, initial: true) { _, code in
           guard let code else { return }
@@ -60,6 +64,16 @@ struct SocialRoot: View {
           }
           Button { isSearchPresented = true } label: {
             Label("Find people by username", systemImage: "magnifyingglass")
+          }
+          if store.config.contactsDiscovery {
+            Button { isContactsPresented = true } label: {
+              Label("Find friends from contacts", systemImage: "person.crop.circle.badge.checkmark")
+            }
+          }
+          if store.config.xImport {
+            Button { isXImportPresented = true } label: {
+              Label("Find people you follow on X", systemImage: "person.2.wave.2")
+            }
           }
         } footer: {
           Text("Share your invite link on Instagram, Facebook, X or WhatsApp.")

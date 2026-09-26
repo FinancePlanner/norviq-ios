@@ -185,8 +185,49 @@ nonisolated struct SocialConfig: Codable, Sendable, Hashable {
   let xImport: Bool
   let leaderboards: Bool
   let messaging: Bool
+  /// Sent only while contact matching is on. The pepper keys the on-device
+  /// hash; it is not a secret, it just rules out precomputed tables.
+  var contactHashVersion: Int?
+  var contactPepper: String?
 
   static let disabled = SocialConfig(
     enabled: false, contactsDiscovery: false, xImport: false, leaderboards: false, messaging: false
   )
+}
+
+// MARK: - Discovery (Phase 2)
+
+nonisolated enum ContactHashKind: String, Codable, Sendable, Hashable {
+  case email
+  case phone
+}
+
+nonisolated struct ContactHashItem: Codable, Sendable, Hashable {
+  let hash: String
+  let kind: ContactHashKind
+}
+
+nonisolated struct ContactMatchRequest: Codable, Sendable, Hashable {
+  let hashVersion: Int
+  let items: [ContactHashItem]
+}
+
+nonisolated struct ContactMatch: Codable, Sendable, Hashable {
+  let hash: String
+  let user: SocialUserSummary
+}
+
+nonisolated struct ContactMatchResponse: Codable, Sendable, Hashable {
+  let matches: [ContactMatch]
+}
+
+nonisolated struct XImportMatch: Codable, Sendable, Hashable, Identifiable {
+  let xHandle: String
+  let user: SocialUserSummary
+  var id: String { user.id }
+}
+
+nonisolated struct XImportMatchesResponse: Codable, Sendable, Hashable {
+  let matches: [XImportMatch]
+  let totalFollowingScanned: Int
 }
