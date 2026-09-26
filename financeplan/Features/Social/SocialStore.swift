@@ -33,7 +33,8 @@ final class SocialStore {
       async let friends = service.friends()
       async let requests = service.friendRequests()
       let (friendList, requestList) = try await (friends, requests)
-      self.friends = friendList.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+      self.friends = friendList
+      sortFriends()
       incoming = requestList.incoming
       outgoing = requestList.outgoing
       errorMessage = nil
@@ -93,13 +94,17 @@ final class SocialStore {
         friend.friendshipStatus = .friends
         friends.removeAll { $0.id == friend.id }
         friends.append(friend)
-        friends.sort { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        sortFriends()
       }
       return true
     } catch {
       errorMessage = error.localizedDescription
       return false
     }
+  }
+
+  private func sortFriends() {
+    friends.sort { $0.sortName.localizedCaseInsensitiveCompare($1.sortName) == .orderedAscending }
   }
 
   func cancel(_ request: FriendRequest) async {

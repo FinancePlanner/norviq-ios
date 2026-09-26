@@ -61,6 +61,7 @@ final class SocialStoreTests: XCTestCase {
     )
     let store = SocialStore(service: service)
     await store.load()
+    // "bo" has no display name; the "@" in its title must not sort it first.
     XCTAssertEqual(store.friends.map(\.id), ["ana", "bo"])
     XCTAssertEqual(store.badgeCount, 1)
     XCTAssertTrue(store.hasLoaded)
@@ -133,7 +134,7 @@ final class SocialStoreTests: XCTestCase {
   func testUnknownFriendshipStatusDecodesAsNone() throws {
     let json = Data(#"{"id":"x","username":"x","friendshipStatus":"super_friends"}"#.utf8)
     let user = try JSONDecoder.stockPlanShared.decode(SocialUserSummary.self, from: json)
-    XCTAssertEqual(user.friendshipStatus, .none)
+    XCTAssertEqual(user.friendshipStatus, FriendshipStatus.none)
   }
 
   func testPrivacyDefaultsKeepReturnPercentPrivate() {

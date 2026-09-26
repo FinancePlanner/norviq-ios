@@ -46,6 +46,13 @@ nonisolated struct SocialUserSummary: Codable, Sendable, Hashable, Identifiable 
     guard let displayName, !displayName.trimmingCharacters(in: .whitespaces).isEmpty else { return "@\(username)" }
     return displayName
   }
+
+  /// What lists sort by: the display name, else the bare username. Sorting by
+  /// `title` would float every "@handle" above the named friends.
+  var sortName: String {
+    guard let displayName, !displayName.trimmingCharacters(in: .whitespaces).isEmpty else { return username }
+    return displayName
+  }
 }
 
 /// A profile as the viewer is allowed to see it. Every stat is optional: the
