@@ -116,8 +116,15 @@ final class LeaderboardViewModelTests: XCTestCase {
     XCTAssertFalse(viewModel.showsReturnPercentNote)
   }
 
-  // Round-trips through the shared coders instead of hand-written JSON, so the
-  // test doesn't depend on which date format `.stockPlanShared` uses.
+  /// Encodes the way the backend does (default camelCase keys, ISO 8601
+  /// dates) and decodes with the app's shared decoder, so this is the real
+  /// wire path.
+  private static let serverEncoder: JSONEncoder = {
+    let encoder = JSONEncoder()
+    encoder.dateEncodingStrategy = .iso8601
+    return encoder
+  }()
+
   func testLeaderboardUsesTheServerWireNames() throws {
     let original = LeaderboardResponse(
       metric: .returnPercent,
@@ -126,18 +133,20 @@ final class LeaderboardViewModelTests: XCTestCase {
       periodStart: Date(timeIntervalSince1970: 1_790_000_000),
       periodEnd: Date(timeIntervalSince1970: 1_790_604_800)
     )
-    let data = try JSONEncoder.stockPlanShared.encode(original)
+    let data = try Self.serverEncoder.encode(original)
     let json = try XCTUnwrap(String(data: data, encoding: .utf8))
     XCTAssertTrue(json.contains("\"return_percent\""), json)
     XCTAssertTrue(json.contains("\"isMe\""), json)
     let decoded = try JSONDecoder.stockPlanShared.decode(LeaderboardResponse.self, from: data)
     XCTAssertEqual(decoded.metric, .returnPercent)
     XCTAssertEqual(decoded.entries.first?.value, 4.2)
+    XCTAssertEqual(decoded.entries.first?.isMe, false)
+    XCTAssertEqual(decoded.periodEnd, original.periodEnd)
   }
 
   func testUnknownXPEventTypeDecodesAsOther() throws {
     let known = XPEvent(id: "1", type: .checkIn, points: 5, createdAt: Date(timeIntervalSince1970: 1_790_000_000))
-    let json = try XCTUnwrap(String(data: JSONEncoder.stockPlanShared.encode(known), encoding: .utf8))
+    let json = try XCTUnwrap(String(data: Self.serverEncoder.encode(known), encoding: .utf8))
     XCTAssertTrue(json.contains("\"check_in\""), json)
     let unknown = Data(json.replacingOccurrences(of: "\"check_in\"", with: "\"quest_done\"").utf8)
     let event = try JSONDecoder.stockPlanShared.decode(XPEvent.self, from: unknown)
