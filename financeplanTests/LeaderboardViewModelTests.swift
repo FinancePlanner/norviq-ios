@@ -116,19 +116,31 @@ final class LeaderboardViewModelTests: XCTestCase {
     XCTAssertFalse(viewModel.showsReturnPercentNote)
   }
 
-  func testLeaderboardDecodesFromServerJSON() throws {
-    let json = Data(#"""
-    {"metric":"return_percent","period":"week","periodStart":"2026-09-21T00:00:00Z","periodEnd":"2026-09-28T00:00:00Z",
-     "entries":[{"rank":1,"user":{"id":"ana","username":"ana","friendshipStatus":"friends"},"value":4.2,"isMe":false}]}
-    """#.utf8)
-    let response = try JSONDecoder.stockPlanShared.decode(LeaderboardResponse.self, from: json)
-    XCTAssertEqual(response.metric, .returnPercent)
-    XCTAssertEqual(response.entries.first?.value, 4.2)
+  // Round-trips through the shared coders instead of hand-written JSON, so the
+  // test doesn't depend on which date format `.stockPlanShared` uses.
+  func testLeaderboardUsesTheServerWireNames() throws {
+    let original = LeaderboardResponse(
+      metric: .returnPercent,
+      period: .week,
+      entries: [LeaderboardEntry(rank: 1, user: .ana, value: 4.2, isMe: false)],
+      periodStart: Date(timeIntervalSince1970: 1_790_000_000),
+      periodEnd: Date(timeIntervalSince1970: 1_790_604_800)
+    )
+    let data = try JSONEncoder.stockPlanShared.encode(original)
+    let json = try XCTUnwrap(String(data: data, encoding: .utf8))
+    XCTAssertTrue(json.contains("\"return_percent\""), json)
+    XCTAssertTrue(json.contains("\"isMe\""), json)
+    let decoded = try JSONDecoder.stockPlanShared.decode(LeaderboardResponse.self, from: data)
+    XCTAssertEqual(decoded.metric, .returnPercent)
+    XCTAssertEqual(decoded.entries.first?.value, 4.2)
   }
 
   func testUnknownXPEventTypeDecodesAsOther() throws {
-    let json = Data(#"{"id":"1","type":"quest_done","points":5,"createdAt":"2026-09-21T00:00:00Z"}"#.utf8)
-    let event = try JSONDecoder.stockPlanShared.decode(XPEvent.self, from: json)
+    let known = XPEvent(id: "1", type: .checkIn, points: 5, createdAt: Date(timeIntervalSince1970: 1_790_000_000))
+    let json = try XCTUnwrap(String(data: JSONEncoder.stockPlanShared.encode(known), encoding: .utf8))
+    XCTAssertTrue(json.contains("\"check_in\""), json)
+    let unknown = Data(json.replacingOccurrences(of: "\"check_in\"", with: "\"quest_done\"").utf8)
+    let event = try JSONDecoder.stockPlanShared.decode(XPEvent.self, from: unknown)
     XCTAssertEqual(event.type, .other)
   }
 }
