@@ -106,7 +106,7 @@ final class LeaderboardViewModelTests: XCTestCase {
     XCTAssertTrue(viewModel.entries.isEmpty)
   }
 
-  func testReturnPercentShowsTheOptInNoteAndSignedPercent() {
+  func testReturnPercentShowsTheOptInNoteAndSignedPercent() async {
     let viewModel = LeaderboardViewModel(service: MockGamificationService())
     viewModel.metric = .returnPercent
     XCTAssertTrue(viewModel.showsReturnPercentNote)

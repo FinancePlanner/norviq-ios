@@ -57,7 +57,7 @@ final class LeaderboardViewModel {
   var selectionKey: String { "\(metric.rawValue)-\(period.rawValue)" }
 
   /// How a value reads in a row: "+4.2%" for return, a plain count otherwise.
-  static func formattedValue(_ value: Double, metric: LeaderboardMetric) -> String {
+  nonisolated static func formattedValue(_ value: Double, metric: LeaderboardMetric) -> String {
     switch metric {
     case .returnPercent:
       let percent = (value / 100).formatted(.percent.precision(.fractionLength(1)))
