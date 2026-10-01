@@ -176,6 +176,25 @@ jobs:
             -only-testing:financeplanUITests/StockDetailTabTests \
             -quiet
 
+      # TEMPORARY (drop before merge): the -quiet log never names the failing
+      # test. Print each result bundle's failures and raise them as annotations.
+      - name: Print test failures (temporary)
+        if: failure()
+        run: |
+          for r in $(ls -td ~/Library/Developer/Xcode/DerivedData/*/Logs/Test/*.xcresult 2>/dev/null); do
+            echo "== $r"
+            xcrun xcresulttool get test-results summary --path "$r" --compact > /tmp/summary.json || continue
+            head -c 6000 /tmp/summary.json; echo
+            python3 - <<'PY'
+          import json
+          s = json.load(open("/tmp/summary.json"))
+          print("::error title=xcresult::result=%s total=%s failed=%s" % (s.get("result"), s.get("totalTestCount"), s.get("failedTests")))
+          for f in s.get("testFailures", [])[:30]:
+              text = (f.get("failureText") or "").replace("\n", " ")[:300]
+              print("::error title=%s::%s" % (f.get("testIdentifierString") or f.get("testName"), text))
+          PY
+          done
+
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
