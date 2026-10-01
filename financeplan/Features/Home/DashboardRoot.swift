@@ -287,6 +287,7 @@ struct DashboardRoot: View {
           let insights = try await dashboardService.getInsights()
           dashboardInsights = insights
           await considerBudgetStreakReview(insights.budgetStreak)
+          await reportBudgetStreak(insights.budgetStreak)
       } catch {
           dashboardInsights = nil
           insightsLoadFailed = true
@@ -310,6 +311,17 @@ struct DashboardRoot: View {
       guard !userID.isEmpty else { return }
       Container.shared.reviewPromptCoordinator()
           .consider(.budgetStreakReached(months: streakMonths), userID: userID)
+  }
+
+  /// The server awards budget-streak XP from this fact. The store sends it at
+  /// most once per session, and only once the social layer is known to be on;
+  /// the dashboard XP card flushes it if the config arrives later.
+  private func reportBudgetStreak(_ streakMonths: Int) async {
+      let gamification = Container.shared.gamificationStore()
+      gamification.noteBudgetStreak(months: streakMonths)
+      let config = Container.shared.socialStore().config
+      guard config.enabled, config.leaderboards else { return }
+      await gamification.reportBudgetStreakIfNeeded()
   }
 
   private static let apiDateFormatter: DateFormatter = {
@@ -409,6 +421,8 @@ private struct DashboardContentSection: View {
       if !isGuidedCardVisible {
         NewsTickerStrip(viewModel: newsTickerViewModel)
       }
+
+      GamificationDashboardCard()
 
       if isSearchResultsVisible {
         AssetSearchCard(viewModel: searchViewModel)
