@@ -264,6 +264,11 @@ struct HomeScreen: View {
     case .social:
       SocialRoot(pendingInviteCode: $pendingInviteCode)
         .accessibilityIdentifier("tab.social")
+    case .boards:
+      overflowTabHost {
+        BoardsRoot()
+      }
+      .accessibilityIdentifier("tab.boards")
     }
   }
 
