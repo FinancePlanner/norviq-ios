@@ -17,11 +17,38 @@ enum BubbleSizeMetric: String, CaseIterable, Identifiable {
     }
 }
 
+/// What the engine needs per coin, independent of the API type.
+struct CryptoBubbleInput: Equatable {
+    let symbol: String
+    let name: String
+    /// FMP symbol for the detail screen; nil when FMP has no history.
+    let detailSymbol: String?
+    let changePercent: Double
+    let marketCap: Double
+    let price: Double
+
+    /// Coins without a value for the window have nothing to show and are left out.
+    static func from(_ coins: [CryptoMarketCoin]) -> [CryptoBubbleInput] {
+        coins.compactMap { coin in
+            guard let change = coin.changePct else { return nil }
+            return CryptoBubbleInput(
+                symbol: coin.symbol,
+                name: coin.name,
+                detailSymbol: coin.fmpSymbol,
+                changePercent: change,
+                marketCap: coin.marketCap ?? 0,
+                price: coin.price
+            )
+        }
+    }
+}
+
 /// A single floating bubble in the simulation.
 struct CryptoBubble: Identifiable {
     let id: String          // symbol
     let symbol: String
     let name: String
+    let detailSymbol: String?
     let changePercent: Double
     let marketCap: Double
     let price: Double
@@ -54,10 +81,10 @@ final class BubbleEngine {
     private let centerPull: CGFloat = 0.6
     private let damping: CGFloat = 0.86
 
-    func configure(quotes: [CryptoQuoteResponse], bounds: CGSize, metric: BubbleSizeMetric) {
+    func configure(inputs: [CryptoBubbleInput], bounds: CGSize, metric: BubbleSizeMetric) {
         self.bounds = bounds
         self.metric = metric
-        guard !quotes.isEmpty, bounds.width > 0, bounds.height > 0 else {
+        guard !inputs.isEmpty, bounds.width > 0, bounds.height > 0 else {
             bubbles = []
             return
         }
@@ -65,23 +92,31 @@ final class BubbleEngine {
         // Preserve positions for bubbles that already exist (smooth metric toggles).
         let existing = Dictionary(uniqueKeysWithValues: bubbles.map { ($0.id, $0) })
 
-        let raw = quotes.map { quoteMetric($0) }
-        let maxRaw = max(raw.max() ?? 1, 1)
+        let raw = inputs.map { inputMetric($0) }
+        // Changes are small numbers (a 0.4% day); only market caps need the floor.
+        let maxRaw = max(raw.max() ?? 1, .leastNonzeroMagnitude)
 
-        bubbles = quotes.map { quote in
-            let value = quoteMetric(quote)
+        bubbles = inputs.map { input in
+            let value = inputMetric(input)
             let radius = radiusFor(value: value, maxValue: maxRaw)
-            if var prior = existing[quote.symbol] {
-                prior.radius = radius
-                return prior
+            if let prior = existing[input.symbol] {
+                // Keep the position (smooth timeframe/metric switches) but take
+                // the new window's numbers.
+                return CryptoBubble(
+                    id: prior.id, symbol: prior.symbol, name: input.name,
+                    detailSymbol: input.detailSymbol, changePercent: input.changePercent,
+                    marketCap: input.marketCap, price: input.price,
+                    position: prior.position, velocity: prior.velocity, radius: radius
+                )
             }
             return CryptoBubble(
-                id: quote.symbol,
-                symbol: quote.symbol,
-                name: quote.name,
-                changePercent: quote.changePercentage,
-                marketCap: quote.marketCap ?? 0,
-                price: quote.price,
+                id: input.symbol,
+                symbol: input.symbol,
+                name: input.name,
+                detailSymbol: input.detailSymbol,
+                changePercent: input.changePercent,
+                marketCap: input.marketCap,
+                price: input.price,
                 position: randomPoint(),
                 velocity: CGVector(dx: CGFloat.random(in: -20...20), dy: CGFloat.random(in: -20...20)),
                 radius: radius
@@ -93,8 +128,8 @@ final class BubbleEngine {
         bounds = size
     }
 
-    func setMetric(_ metric: BubbleSizeMetric, quotes: [CryptoQuoteResponse]) {
-        configure(quotes: quotes, bounds: bounds, metric: metric)
+    func setMetric(_ metric: BubbleSizeMetric, inputs: [CryptoBubbleInput]) {
+        configure(inputs: inputs, bounds: bounds, metric: metric)
     }
 
     /// Advances the simulation to the given timestamp.
@@ -136,10 +171,10 @@ final class BubbleEngine {
 
     // MARK: - Private
 
-    private func quoteMetric(_ quote: CryptoQuoteResponse) -> Double {
+    private func inputMetric(_ input: CryptoBubbleInput) -> Double {
         switch metric {
-        case .marketCap: return max(quote.marketCap ?? 0, 0)
-        case .changeMagnitude: return abs(quote.changePercentage)
+        case .marketCap: return max(input.marketCap, 0)
+        case .changeMagnitude: return abs(input.changePercent)
         }
     }
 

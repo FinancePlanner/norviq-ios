@@ -18,8 +18,9 @@ final class CryptoViewModel: ObservableObject {
     @Published var sentimentLabel: String = "Unavailable"
     @Published var ethGasGwei: Int = 0
     @Published var dominance: [DominanceData] = []
-    @Published var topGainers: [CryptoQuoteResponse] = []
-    @Published var topLosers: [CryptoQuoteResponse] = []
+    @Published var topGainers: [CryptoMarketCoin] = []
+    @Published var topLosers: [CryptoMarketCoin] = []
+    @Published var btcSparkline: [Double] = []
 
     struct DominanceData: Identifiable {
         let id = UUID()
@@ -51,12 +52,18 @@ final class CryptoViewModel: ObservableObject {
             async let fetchHoldings = cryptoService.fetchPortfolio()
             async let fetchMarket = cryptoService.fetchCryptoList()
             async let fetchNews = cryptoService.fetchGeneralCryptoNews()
-            async let fetchWatchlist = cryptoService.fetchWatchlist()
+            // Non-fatal: not every backend build serves /v1/crypto/watchlist,
+            // and a 404 there must not blank the whole overview.
+            async let fetchWatchlist = try? cryptoService.fetchWatchlist()
+            // Ranked 24h movers across the whole market. Optional: an older
+            // backend has no markets route, and then the quote sample below
+            // still fills the cards.
+            async let fetchMarkets = try? cryptoService.fetchCryptoMarkets(timeframe: .oneDay, limit: 20)
 
-            let (holdings, market, news, watchlist) = try await (fetchHoldings, fetchMarket, fetchNews, fetchWatchlist)
+            let (holdings, market, news) = try await (fetchHoldings, fetchMarket, fetchNews)
 
             self.userHoldings = holdings
-            self.watchlist = watchlist
+            self.watchlist = await fetchWatchlist ?? []
             self.marketNews = news.map { item in
                 StockNews(
                     title: item.headline,
@@ -73,24 +80,37 @@ final class CryptoViewModel: ObservableObject {
             market.prefix(15).forEach { symbolsToFetch.insert($0.symbol) }
             holdings.forEach { symbolsToFetch.insert($0.symbol) }
 
+            let markets = await fetchMarkets
+
             if !symbolsToFetch.isEmpty {
                 let commaSeparated = symbolsToFetch.joined(separator: ",")
-                let quotes = try await cryptoService.fetchCryptoQuote(symbols: commaSeparated)
-                self.topAssets = quotes
-
-                // Sort for Gainers/Losers
-                let sorted = quotes.sorted { $0.changePercentage > $1.changePercentage }
-                self.topGainers = Array(sorted.prefix(5))
-                self.topLosers = Array(sorted.reversed().prefix(5))
-
-                // Derive market dominance + sentiment from real quote data.
-                self.dominance = Self.makeDominance(from: quotes)
-                let (sentiment, sentimentLabel) = Self.makeSentiment(from: quotes)
-                self.sentimentValue = sentiment
-                self.sentimentLabel = sentimentLabel
+                do {
+                    let quotes = try await cryptoService.fetchCryptoQuote(symbols: commaSeparated)
+                    self.topAssets = quotes
+                    self.dominance = Self.makeDominance(from: quotes)
+                } catch {
+                    // Multi-symbol quotes need a higher FMP plan. With the
+                    // markets feed the overview still has movers and breadth.
+                    guard markets != nil else { throw error }
+                    self.topAssets = []
+                }
             } else {
                 self.topAssets = []
             }
+
+            let (gainers, losers) = Self.makeMovers(markets: markets, quotes: topAssets)
+            self.topGainers = gainers
+            self.topLosers = losers
+            self.btcSparkline = markets?.coins.first { $0.id == "bitcoin" }?.sparkline7d ?? []
+
+            // Breadth: the whole market when available, else the quote sample.
+            let (sentiment, sentimentLabel) = if let summary = markets?.summary, summary.advancers + summary.decliners > 0 {
+                Self.makeSentiment(advancers: summary.advancers, total: summary.advancers + summary.decliners)
+            } else {
+                Self.makeSentiment(from: topAssets)
+            }
+            self.sentimentValue = sentiment
+            self.sentimentLabel = sentimentLabel
 
             hasLoadedOnce = true
 
@@ -161,11 +181,45 @@ final class CryptoViewModel: ObservableObject {
         return result
     }
 
+    /// Top/bottom five 24h movers: the market-wide ranking when the markets
+    /// feed answered, else the fetched quote sample.
+    static func makeMovers(
+        markets: CryptoMarketsResponse?,
+        quotes: [CryptoQuoteResponse]
+    ) -> (gainers: [CryptoMarketCoin], losers: [CryptoMarketCoin]) {
+        if let markets, !markets.gainers.isEmpty || !markets.losers.isEmpty {
+            return (Array(markets.gainers.prefix(5)), Array(markets.losers.prefix(5)))
+        }
+        let coins = quotes.map { quote in
+            CryptoMarketCoin(
+                id: quote.symbol,
+                symbol: quote.symbol.replacingOccurrences(of: "USD", with: ""),
+                fmpSymbol: quote.symbol,
+                name: quote.name,
+                sector: "Other",
+                price: quote.price,
+                marketCap: quote.marketCap,
+                volume24h: quote.volume,
+                changePct: quote.changePercentage
+            )
+        }
+        let sorted = coins.sorted { ($0.changePct ?? 0) > ($1.changePct ?? 0) }
+        return (
+            Array(sorted.filter { ($0.changePct ?? 0) > 0 }.prefix(5)),
+            Array(sorted.reversed().filter { ($0.changePct ?? 0) < 0 }.prefix(5))
+        )
+    }
+
     /// Fear/greed-style sentiment (0–100) from the share of coins trading up.
     static func makeSentiment(from quotes: [CryptoQuoteResponse]) -> (value: Int, label: String) {
         guard !quotes.isEmpty else { return (50, "Neutral") }
         let positive = quotes.filter { $0.changePercentage >= 0 }.count
-        let value = Int((Double(positive) / Double(quotes.count) * 100).rounded())
+        return makeSentiment(advancers: positive, total: quotes.count)
+    }
+
+    static func makeSentiment(advancers: Int, total: Int) -> (value: Int, label: String) {
+        guard total > 0 else { return (50, "Neutral") }
+        let value = Int((Double(advancers) / Double(total) * 100).rounded())
         let label: String
         switch value {
         case ..<25: label = "Extreme Fear"

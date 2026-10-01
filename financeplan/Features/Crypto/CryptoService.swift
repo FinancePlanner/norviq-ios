@@ -2,7 +2,7 @@ import Foundation
 import StockPlanShared
 
 @MainActor
-protocol CryptoServicing: Sendable {
+protocol CryptoServicing: CryptoMarketsFetching {
     func fetchCryptoList() async throws -> [CryptoAssetResponse]
     func fetchCryptoQuote(symbols: String) async throws -> [CryptoQuoteResponse]
     func fetchCryptoBatchQuotes(short: Bool) async throws -> [CryptoQuoteShortResponse]
@@ -54,6 +54,12 @@ final class CryptoHTTPService: CryptoServicing {
     func fetchGeneralCryptoNews() async throws -> [NewsItemResponse] {
         try await performAuthenticated { client in
             try await client.fetchGeneralCryptoNews()
+        }
+    }
+
+    func fetchCryptoMarkets(timeframe: CryptoMarketsTimeframe, limit: Int) async throws -> CryptoMarketsResponse {
+        try await performAuthenticated { client in
+            try await client.fetchCryptoMarkets(timeframe: timeframe, limit: limit)
         }
     }
 

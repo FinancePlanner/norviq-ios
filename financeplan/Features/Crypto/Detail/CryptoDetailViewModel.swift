@@ -65,12 +65,22 @@ final class CryptoDetailViewModel: ObservableObject {
                 to: range.toDateString()
             )
             // Backend/FMP returns newest-first; sort ascending for charting.
-            points = raw
+            let sorted = raw
                 .compactMap(CryptoChartPoint.init)
                 .sorted { $0.date < $1.date }
+            // "All" is ~15 years of dailies; Swift Charts stutters well before
+            // that, and a phone screen cannot show more than ~1k points anyway.
+            points = Self.thinned(sorted, maxCount: 1000)
         } catch {
             errorMessage = error.localizedDescription
             points = []
         }
+    }
+
+    /// Evenly spaced subset that always keeps the first and last point.
+    static func thinned(_ points: [CryptoChartPoint], maxCount: Int) -> [CryptoChartPoint] {
+        guard maxCount > 1, points.count > maxCount else { return points }
+        let step = Double(points.count - 1) / Double(maxCount - 1)
+        return (0..<maxCount).map { points[Int((Double($0) * step).rounded())] }
     }
 }

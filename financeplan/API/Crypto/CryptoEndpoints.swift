@@ -57,6 +57,20 @@ nonisolated struct GetCryptoHistoryEndpoint: Endpoint {
     }
 }
 
+/// Ranked universe for one timeframe: bubbles, performers, heatmap and the
+/// all-time-high board in one payload.
+nonisolated struct GetCryptoMarketsEndpoint: Endpoint {
+    typealias Response = CryptoMarketsResponse
+    let timeframe: CryptoMarketsTimeframe
+    let limit: Int
+    var method: HTTPMethod { .get }
+    var path: String { "/v1/crypto/markets" }
+    var decoder: JSONDecoder { .stockPlanShared }
+    func asParameters() throws -> Parameters {
+        ["timeframe": timeframe.rawValue, "limit": String(limit)]
+    }
+}
+
 // MARK: - Portfolio Endpoints
 
 nonisolated struct ListCryptoPortfolioEndpoint: Endpoint {

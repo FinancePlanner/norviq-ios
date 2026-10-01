@@ -1,44 +1,11 @@
-import Combine
-import Factory
 import Foundation
 import StockPlanShared
 import SwiftUI
 
-@MainActor
-final class CryptoBubblesViewModel: ObservableObject {
-    @Published var quotes: [CryptoQuoteResponse] = []
-    @Published var isLoading = false
-    @Published var errorMessage: String?
-
-    private let cryptoService: any CryptoServicing
-    private let maxCoins = 60
-
-    init(cryptoService: any CryptoServicing = Container.shared.cryptoService()) {
-        self.cryptoService = cryptoService
-    }
-
-    func load() async {
-        guard quotes.isEmpty else { return }
-        isLoading = true
-        errorMessage = nil
-        defer { isLoading = false }
-        do {
-            let list = try await cryptoService.fetchCryptoList()
-            let symbols = list.prefix(maxCoins).map(\.symbol)
-            guard !symbols.isEmpty else { return }
-            let fetched = try await cryptoService.fetchCryptoQuote(symbols: symbols.joined(separator: ","))
-            // Keep only coins with a usable market cap, largest first.
-            quotes = fetched
-                .filter { ($0.marketCap ?? 0) > 0 }
-                .sorted { ($0.marketCap ?? 0) > ($1.marketCap ?? 0) }
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-}
-
+/// Full-screen bubbles for the shared markets timeframe. Colour follows the
+/// server's scale for the window, so a 3% day and a 3% year do not look alike.
 struct CryptoBubblesView: View {
-    @StateObject private var viewModel = CryptoBubblesViewModel()
+    @ObservedObject var viewModel: CryptoMarketsViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
@@ -53,17 +20,25 @@ struct CryptoBubblesView: View {
             ZStack {
                 Color.black.ignoresSafeArea()
 
-                if viewModel.isLoading && viewModel.quotes.isEmpty {
+                if viewModel.isLoading && viewModel.response == nil {
                     ProgressView()
                         .tint(.white)
-                } else if let error = viewModel.errorMessage, viewModel.quotes.isEmpty {
+                } else if let error = viewModel.errorMessage, viewModel.response == nil {
                     errorState(error)
                 } else {
                     bubbleField
                 }
 
                 VStack {
+                    CryptoTimeframePicker(viewModel: viewModel, onDark: true)
+                        .padding(.horizontal)
+                        .padding(.top, 8)
                     Spacer()
+                    if let attribution = viewModel.response?.attribution {
+                        Text(attribution)
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.6))
+                    }
                     metricPicker
                         .padding(.bottom, 12)
                 }
@@ -80,10 +55,10 @@ struct CryptoBubblesView: View {
             }
             .task {
                 await viewModel.load()
-                engine.configure(quotes: viewModel.quotes, bounds: canvasSize, metric: metric)
+                engine.configure(inputs: inputs, bounds: canvasSize, metric: metric)
             }
-            .onChange(of: viewModel.quotes.count) { _, _ in
-                engine.configure(quotes: viewModel.quotes, bounds: canvasSize, metric: metric)
+            .onChange(of: inputs) { _, newInputs in
+                engine.configure(inputs: newInputs, bounds: canvasSize, metric: metric)
             }
             .toolbarColorScheme(.dark, for: .navigationBar)
         }
@@ -103,14 +78,14 @@ struct CryptoBubblesView: View {
             .gesture(
                 SpatialTapGesture()
                     .onEnded { value in
-                        if let hit = engine.hitTest(value.location) {
-                            path.append(CryptoDetailRoute(symbol: hit.symbol, name: hit.name))
+                        if let hit = engine.hitTest(value.location), let detail = hit.detailSymbol {
+                            path.append(CryptoDetailRoute(symbol: detail, name: hit.name))
                         }
                     }
             )
             .onAppear {
                 canvasSize = proxy.size
-                engine.configure(quotes: viewModel.quotes, bounds: proxy.size, metric: metric)
+                engine.configure(inputs: inputs, bounds: proxy.size, metric: metric)
             }
             .onChange(of: proxy.size) { _, newSize in
                 canvasSize = newSize
@@ -120,8 +95,13 @@ struct CryptoBubblesView: View {
     }
 
     private func draw(_ bubble: CryptoBubble, in context: inout GraphicsContext) {
-        let isUp = bubble.changePercent >= 0
-        let magnitude = min(abs(bubble.changePercent) / 10.0, 1.0)
+        let shade = CryptoHeatColor.fraction(
+            bubble.changePercent,
+            scaleMax: viewModel.response?.colorScaleMaxPct ?? 10,
+            mode: viewModel.response?.colorMode ?? .change
+        )
+        let isUp = shade >= 0
+        let magnitude = abs(shade)
         let base: Color = isUp ? .green : .red
         let fill = base.opacity(0.25 + 0.45 * magnitude)
         let stroke = base.opacity(0.9)
@@ -144,10 +124,14 @@ struct CryptoBubblesView: View {
             .foregroundStyle(.white)
         context.draw(symbolText, at: CGPoint(x: bubble.position.x, y: bubble.position.y - bubble.radius * 0.18))
 
-        let pctText = Text("\(isUp ? "+" : "")\(bubble.changePercent, specifier: "%.1f")%")
+        let pctText = Text(formatCryptoPercent(bubble.changePercent, digits: 1))
             .font(.system(size: min(bubble.radius * 0.30, 13), weight: .semibold))
             .foregroundStyle(.white.opacity(0.9))
         context.draw(pctText, at: CGPoint(x: bubble.position.x, y: bubble.position.y + bubble.radius * 0.30))
+    }
+
+    private var inputs: [CryptoBubbleInput] {
+        CryptoBubbleInput.from(viewModel.response?.coins ?? [])
     }
 
     private func displaySymbol(_ symbol: String) -> String {
@@ -163,7 +147,7 @@ struct CryptoBubblesView: View {
         .pickerStyle(.segmented)
         .padding(.horizontal, 40)
         .onChange(of: metric) { _, newMetric in
-            engine.setMetric(newMetric, quotes: viewModel.quotes)
+            engine.setMetric(newMetric, inputs: inputs)
         }
     }
 

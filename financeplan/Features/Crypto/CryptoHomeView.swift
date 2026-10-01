@@ -6,6 +6,9 @@ import OSLog
 struct CryptoHomeView: View {
     @Binding var isSettingsPresented: Bool
     @StateObject private var viewModel = CryptoViewModel()
+    /// Shared by the Market segment and the bubbles screen so both keep the
+    /// same timeframe.
+    @StateObject private var marketsViewModel = CryptoMarketsViewModel()
     @State private var selectedSegment: CryptoSegment = .overview
     @Environment(\.colorScheme) private var colorScheme
     @State private var isAddCryptoPresented = false
@@ -108,7 +111,7 @@ struct CryptoHomeView: View {
                 AddCryptoWatchlistSheet(viewModel: viewModel)
             }
             .fullScreenCover(isPresented: $isBubblesPresented) {
-                CryptoBubblesView()
+                CryptoBubblesView(viewModel: marketsViewModel)
             }
             .sheet(item: $editingHolding) { holding in
                 EditCryptoHoldingSheet(viewModel: viewModel, holding: holding)
@@ -183,7 +186,7 @@ struct CryptoHomeView: View {
         case .watchlist:
             CryptoWatchlistSection(viewModel: viewModel, onAdd: presentAddWatchlistSheet)
         case .market:
-            CryptoMarketSection(viewModel: viewModel)
+            CryptoMarketSection(viewModel: marketsViewModel)
         case .news:
             CryptoNewsSection(viewModel: viewModel)
         }
@@ -195,6 +198,9 @@ struct CryptoHomeView: View {
 
     private func reloadCrypto(force: Bool = false) async {
         await viewModel.load(force: force)
+        if force, selectedSegment == .market {
+            await marketsViewModel.load(force: true)
+        }
     }
 
     private func presentAddHoldingSheet() {
