@@ -4,26 +4,50 @@ This is everything needed to switch on friends, discovery and leaderboards in pr
 
 ## 1. Deploy the backend
 
-- **Merge:** norviq-backend `main` must include the social, moderation and gamification PRs.
-- **Redeploy:** use the usual VPS path, `/opt/stockplan`, `docker compose` with `.env.production`.
+- **Merge:** norviq-backend `main` must include the social, moderation and gamification PRs. Merging to `main` builds the image and the promote job deploys it; there is no VPS step any more.
   - Migrations run on boot and add these tables: `social_*`, `gamification_*`, and the moderation columns.
 - **Check the build:** `GET /v1/social/config` with a signed-in token should answer `{"enabled": false, …}` before step 2.
 
-## 2. Server settings (`/opt/stockplan/.env.production`)
+## 2. Server settings (infra repo)
 
-```
-SOCIAL_ENABLED=1
-SOCIAL_CONTACT_PEPPER=<paste the output of: openssl rand -hex 32>
-SOCIAL_MODERATOR_EMAILS=you@example.com,cofounder@example.com
-SOCIAL_LEADERBOARDS_ENABLED=1
-# SOCIAL_X_IMPORT_ENABLED=1   # leave off until the X API plan allows follows.read
+The API runs on the `maat` cluster from `LuminaVault/LuminaVaultInfra` (`~/Work/production/platform/infra`), and ArgoCD deploys whatever is merged to `main`. `/opt/stockplan/.env.production` no longer deploys anything; editing it changes nothing.
+
+Do staging (`norviq-staging`) first, check it, then production (`norviq`).
+
+**Plain settings.** Add them to the `env:` list in **both** `apps/norviq/api/values-staging.yaml` and `apps/norviq/api/values-production.yaml` (Helm replaces `env:` lists rather than merging them, so `values-common.yaml` doesn't reach the pod):
+
+```yaml
+  - name: SOCIAL_ENABLED
+    value: "1"
+  - name: SOCIAL_LEADERBOARDS_ENABLED
+    value: "1"
+  - name: SOCIAL_MODERATOR_EMAILS
+    value: you@example.com,cofounder@example.com
+  # - name: SOCIAL_X_IMPORT_ENABLED   # leave off until the X API plan allows follows.read
+  #   value: "1"
 ```
 
-- **After editing:** restart the API container, then check that `/v1/social/config` answers `enabled: true` and `contactsDiscovery: true`.
-- **The pepper:** generate it once and keep it.
+**The pepper.** It's sealed into the existing `api-env` secret, once per namespace (see `secrets/norviq/README.md`):
+
+```sh
+kubeseal --fetch-cert --controller-name sealed-secrets-controller \
+  --controller-namespace kube-system > /tmp/sealed-secrets.pem
+printf '%s' "$(openssl rand -hex 32)" | kubeseal --raw --cert /tmp/sealed-secrets.pem \
+  --namespace norviq-staging --name api-env   # then again with --namespace norviq
+```
+
+Paste each output under `encryptedData:` in `secrets/norviq/{staging,production}/api-env.yaml` as `SOCIAL_CONTACT_PEPPER: AgB…`.
+
+- **Namespace:** seal for `norviq` / `norviq-staging`, never `production`. A blob sealed for the wrong namespace decrypts to nothing, with no error.
+- **`printf`, not `echo`:** otherwise a trailing newline is sealed into the value.
+- **Generate it once and keep it.**
   - **Changing it:** every contact hash goes stale until each user opens the app again.
-  - **What it is:** it's sent to the app by design. It isn't a password, so it doesn't need to be kept secret from clients. It just shouldn't live in git.
-- **Discord alerts:** `DISCORD_WEBHOOK_URL`, which is already set, now also receives a message for every report.
+  - **What it is:** it's sent to the app by design. It isn't a password, so it doesn't need to be kept secret from clients. It just shouldn't live in git in plain text.
+
+**After the infra PR merges and Argo syncs:** `kubectl rollout restart deploy/api -n <namespace>` (env from the secret is only read at pod start), then check that `/v1/social/config` answers `enabled: true`, `contactsDiscovery: true` and `leaderboards: true`.
+
+- **X import:** besides `SOCIAL_X_IMPORT_ENABLED`, the X app must allow `follows.read`, and `OAUTH_ALLOWED_REDIRECT_URIS` in `api-env` must contain each callback in use (the app uses `https://api.norviq.org/v1/auth/oauth/x/callback`).
+- **Discord alerts:** `DISCORD_WEBHOOK_URL`, already set in production, now also receives a message for every report. Staging has none.
 
 ## 3. Invite links (norviq.org)
 
