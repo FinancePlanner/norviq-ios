@@ -249,6 +249,18 @@ final class PortfolioViewModelTests: XCTestCase {
     XCTAssertFalse(viewModel.isDeletingStock)
   }
 
+  func testDeleteInAPilotManagedPortfolioShowsTheServerReason() async {
+    let service = MockStockService()
+    let reason = "This portfolio is managed by a pilot follow. Stop following to edit it."
+    service.deleteResult = .failure(StockHTTPClient.Error.api(reason))
+
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
+    let ok = await viewModel.delete(id: "nvda")
+
+    XCTAssertFalse(ok)
+    XCTAssertEqual(viewModel.errorMessage, reason)
+  }
+
   func testSaveNewPositionCreatesAndInsertsStock() async {
     let service = MockStockService()
     let created = makeStock(id: "nvda", symbol: "NVDA", shares: 3, buyPrice: 120)
