@@ -86,7 +86,7 @@ final class PilotFollowFailureTests: XCTestCase {
     XCTAssertEqual(PilotFollowFailure.from(rejected(409, "This pilot has no disclosures yet. Try again later."), isPro: true), .message("This pilot has no disclosures yet. Try again later."))
     XCTAssertEqual(PilotFollowFailure.from(rejected(409, nil), isPro: true), .message("No trades seen yet for this pilot. Try again later."))
     XCTAssertEqual(PilotFollowFailure.from(rejected(422, nil), isPro: true), .message("Choose an empty watchlist, or let Norviq create one."))
-    XCTAssertEqual(PilotFollowFailure.from(rejected(400, nil), isPro: true), .message("Enter a starting amount between $1 and $10,000,000."))
+    XCTAssertEqual(PilotFollowFailure.from(rejected(400, nil), isPro: true), .message("Starting capital must be more than $0 and at most $10,000,000."))
   }
 
   func testOtherErrorsUseTheirDescription() {

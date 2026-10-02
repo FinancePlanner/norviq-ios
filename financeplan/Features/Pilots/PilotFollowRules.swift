@@ -64,7 +64,7 @@ enum PilotFollowFailure: Equatable {
       }
       return .message(reason)
     case 400:
-      return .message(reason.isEmpty ? String(localized: "Enter a starting amount between $1 and $10,000,000.") : reason)
+      return .message(reason.isEmpty ? String(localized: "Starting capital must be more than $0 and at most $10,000,000.") : reason)
     case 409:
       return .message(reason.isEmpty ? String(localized: "No trades seen yet for this pilot. Try again later.") : reason)
     case 422:
