@@ -120,4 +120,24 @@ nonisolated struct BoardsHTTPClient: Sendable {
   func sanction(_ request: CreateSanctionRequest) async throws -> UserSanction {
     try await client.call(AdminCreateSanctionEndpoint(payload: request), errorType: Error.self)
   }
+
+  func notifications(cursor: String?) async throws -> BoardNotificationPage {
+    try await client.call(ListBoardNotificationsEndpoint(cursor: cursor), errorType: Error.self)
+  }
+
+  func unreadCount() async throws -> Int {
+    try await client.call(BoardUnreadCountEndpoint(), errorType: Error.self).unreadCount
+  }
+
+  func markRead(ids: [UUID]?) async throws {
+    try await client.callWithoutResponse(MarkBoardNotificationsReadEndpoint(ids: ids), errorType: Error.self)
+  }
+
+  func notificationSettings() async throws -> BoardNotificationSettings {
+    try await client.call(GetBoardNotificationSettingsEndpoint(), errorType: Error.self)
+  }
+
+  func updateNotificationSettings(_ settings: BoardNotificationSettings) async throws -> BoardNotificationSettings {
+    try await client.call(UpdateBoardNotificationSettingsEndpoint(settings: settings), errorType: Error.self)
+  }
 }

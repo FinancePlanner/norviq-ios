@@ -20,6 +20,17 @@ struct BoardsRoot: View {
       }
     }
     .task { await viewer.load() }
+    // A push or link opens the post over whatever Boards screen is showing.
+    .sheet(item: Binding(get: { viewer.pendingPost }, set: { viewer.pendingPost = $0 })) { pending in
+      NavigationStack {
+        BoardPostDetailScreen(postId: pending.id, title: String(localized: "Post"))
+          .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+              Button("Done") { viewer.pendingPost = nil }
+            }
+          }
+      }
+    }
   }
 }
 
@@ -62,9 +73,22 @@ struct BoardsDirectoryScreen: View {
     .refreshable {
       await viewer.load()
       await model.load()
+      await viewer.refreshUnreadCount()
     }
-    .task { await model.load() }
+    .task {
+      await model.load()
+      await viewer.refreshUnreadCount()
+    }
     .toolbar {
+      ToolbarItem(placement: .topBarLeading) {
+        NavigationLink {
+          BoardsActivityScreen()
+        } label: {
+          Image(systemName: viewer.unreadCount > 0 ? "bell.badge.fill" : "bell")
+            .accessibilityLabel(viewer.unreadCount > 0 ? "Activity, \(viewer.unreadCount) new" : "Activity")
+        }
+        .accessibilityIdentifier("boards.activity")
+      }
       if viewer.canWrite {
         ToolbarItem(placement: .primaryAction) {
           Button("New board", systemImage: "plus") { isCreating = true }

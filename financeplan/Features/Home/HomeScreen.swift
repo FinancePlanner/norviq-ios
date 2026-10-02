@@ -13,6 +13,7 @@ struct HomeScreen: View {
   @Environment(\.colorScheme) private var colorScheme
   @InjectedObservable(\Container.billingManager) private var billingManager
   @InjectedObservable(\Container.socialStore) private var socialStore
+  @InjectedObservable(\Container.boardsViewerStore) private var boardsViewer
   @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
   let onLogout: () async -> Void
   @State private var selectedTab: HomeTab = .dashboard
@@ -175,6 +176,11 @@ struct HomeScreen: View {
     .onReceive(NotificationCenter.default.publisher(for: .openSocialFromPushNotification)) { notification in
       pendingInviteCode = notification.userInfo?["inviteCode"] as? String
       if socialStore.config.enabled { selectedTab = .social }
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .openBoardPostFromPushNotification)) { notification in
+      guard let raw = notification.userInfo?["postId"] as? String, let postID = UUID(uuidString: raw) else { return }
+      selectedTab = .boards
+      boardsViewer.open(postID: postID)
     }
     // A cold start from an invite link can beat the config fetch.
     .onChange(of: socialStore.config.enabled) { _, enabled in
