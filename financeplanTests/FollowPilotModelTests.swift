@@ -42,7 +42,7 @@ final class FollowPilotModelTests: XCTestCase {
 
   func testInvalidCapitalNeverReachesTheServer() async {
     let (model, service, _) = makeModel(isPro: true)
-    for text in ["", "abc", "0", "20000000"] {
+    for text in ["", "abc", "0", "20000000", "-500", "\u{2212}500"] {
       model.capitalText = text
       let follow = await model.submit(isPro: true)
       XCTAssertNil(follow, text)

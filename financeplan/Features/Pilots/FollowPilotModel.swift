@@ -39,7 +39,7 @@ final class FollowPilotModel {
 
   /// Why the form can't be sent yet, or nil.
   var formProblem: String? {
-    target == .portfolio ? PilotFollowRules.capitalProblem(capital) : nil
+    target == .portfolio ? PilotFollowRules.capitalProblem(text: capitalText) : nil
   }
 
   var failureMessage: String? {
@@ -59,7 +59,7 @@ final class FollowPilotModel {
   func makeRequest() -> PilotFollowCreateRequest? {
     switch target {
     case .portfolio:
-      guard PilotFollowRules.capitalProblem(capital) == nil, let capital else { return nil }
+      guard PilotFollowRules.capitalProblem(text: capitalText) == nil, let capital else { return nil }
       return PilotFollowCreateRequest(
         pilotSlug: pilot.slug, targetKind: .portfolio,
         portfolioListId: nil, watchlistListId: nil, startingCapital: capital

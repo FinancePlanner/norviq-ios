@@ -7,20 +7,10 @@ enum MoneyInputParser {
   /// with three decimals to someone on a Portuguese keypad and four thousand
   /// to someone on a US one. The locale settles it — a separator that matches
   /// the locale's decimal mark is a decimal mark, whatever follows it.
-  ///
-  /// A leading minus ("-" or "−") makes the value negative; callers that need
-  /// a positive amount reject it rather than silently dropping the sign.
   static func parse(_ raw: String, locale: Locale = .current) -> Double? {
     let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return nil }
 
-    guard let first = trimmed.first, first == "-" || first == "\u{2212}" else {
-      return parseUnsigned(trimmed, locale: locale)
-    }
-    return parseUnsigned(String(trimmed.dropFirst()), locale: locale).map { -$0 }
-  }
-
-  private static func parseUnsigned(_ trimmed: String, locale: Locale) -> Double? {
     let filtered = trimmed.filter { $0.isNumber || $0 == "," || $0 == "." }
     guard !filtered.isEmpty else { return nil }
     guard filtered.contains(where: \.isNumber) else { return nil }

@@ -54,10 +54,10 @@ final class MoneyInputParserTests: XCTestCase {
     XCTAssertEqual(MoneyInputParser.parse("1.234.567,89", locale: portugal), 1_234_567.89)
   }
 
-  func testALeadingMinusIsNegative() {
-    XCTAssertEqual(MoneyInputParser.parse("-500", locale: unitedStates), -500)
-    XCTAssertEqual(MoneyInputParser.parse(" -1,234.56", locale: unitedStates), -1234.56)
-    XCTAssertEqual(MoneyInputParser.parse("\u{2212}4,12", locale: portugal), -4.12)
-    XCTAssertNil(MoneyInputParser.parse("-", locale: unitedStates))
+  func testTheSignIsIgnoredAsBefore() {
+    // Shared by many screens that don't check for a positive amount, so a
+    // minus is dropped rather than producing a negative. Screens that must
+    // refuse a minus check the raw text (see PilotFollowRules.capitalProblem(text:)).
+    XCTAssertEqual(MoneyInputParser.parse("-500", locale: unitedStates), 500)
   }
 }

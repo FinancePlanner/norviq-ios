@@ -30,6 +30,15 @@ enum PilotFollowRules {
     guard capital <= maxStartingCapital else { return String(localized: "The most you can start with is $10,000,000.") }
     return nil
   }
+
+  /// Same rule for what the user typed. The shared `MoneyInputParser` drops a
+  /// minus sign, so a typed "-500" is refused here rather than read as 500.
+  static func capitalProblem(text: String, locale: Locale = .current) -> String? {
+    if text.contains("-") || text.contains("\u{2212}") {
+      return String(localized: "Enter an amount above zero.")
+    }
+    return capitalProblem(MoneyInputParser.parse(text, locale: locale))
+  }
 }
 
 /// What the follow sheet does with a failed `POST /v1/pilot-follows`.

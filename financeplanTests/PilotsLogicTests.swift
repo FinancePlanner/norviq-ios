@@ -27,11 +27,14 @@ final class PilotFollowRulesTests: XCTestCase {
     XCTAssertNil(PilotFollowRules.capitalProblem(10_000_000))
   }
 
-  func testTypedAmountsReachTheCapitalRuleWithTheirSignAndGrouping() {
+  func testTypedCapitalIsCheckedFromTheRawText() {
     let enUS = Locale(identifier: "en_US")
-    XCTAssertNil(PilotFollowRules.capitalProblem(MoneyInputParser.parse("10,000,000", locale: enUS)))
-    XCTAssertEqual(PilotFollowRules.capitalProblem(MoneyInputParser.parse("10,000,001", locale: enUS)), "The most you can start with is $10,000,000.")
-    XCTAssertEqual(PilotFollowRules.capitalProblem(MoneyInputParser.parse("-500", locale: enUS)), "Enter an amount above zero.")
+    XCTAssertNil(PilotFollowRules.capitalProblem(text: "10,000,000", locale: enUS))
+    XCTAssertEqual(PilotFollowRules.capitalProblem(text: "10,000,001", locale: enUS), "The most you can start with is $10,000,000.")
+    XCTAssertEqual(PilotFollowRules.capitalProblem(text: "", locale: enUS), "Enter a starting amount.")
+    // The shared parser drops a minus; the capital rule refuses it instead.
+    XCTAssertEqual(PilotFollowRules.capitalProblem(text: "-500", locale: enUS), "Enter an amount above zero.")
+    XCTAssertEqual(PilotFollowRules.capitalProblem(text: "\u{2212}500", locale: enUS), "Enter an amount above zero.")
   }
 }
 
