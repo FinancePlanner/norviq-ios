@@ -116,7 +116,7 @@ final class PilotFollowDetailModelTests: XCTestCase {
     XCTAssertNil(model.errorMessage)
   }
 
-  func testLoadingAFollowThatIsGoneRemovesItAndSaysSo() async {
+  func testLoadingAFollowThatIsGoneSaysSoThenRemovesItOnDismiss() async {
     let service = MockPilotsService()
     service.eventsResult = .failure(PilotsHTTPClient.Error.rejected(status: 404, message: "Not Found"))
     let (model, store) = makeModel(service: service)
@@ -125,10 +125,16 @@ final class PilotFollowDetailModelTests: XCTestCase {
 
     XCTAssertEqual(model.errorMessage, "This follow isn't available any more.")
     XCTAssertTrue(model.isGone)
+    // Kept until the alert is dismissed, so the link that opened this screen
+    // doesn't vanish (and pop the screen) before the message is read.
+    XCTAssertEqual(store.follows.count, 1)
+
+    model.acknowledgeGone()
+
     XCTAssertTrue(store.follows.isEmpty)
   }
 
-  func testPausingAFollowThatIsGoneRemovesItAndSaysSo() async {
+  func testPausingAFollowThatIsGoneSaysSoThenRemovesItOnDismiss() async {
     let service = MockPilotsService()
     service.statusError = PilotsHTTPClient.Error.rejected(status: 404, message: "Follow not found.")
     let (model, store) = makeModel(service: service)
@@ -137,6 +143,12 @@ final class PilotFollowDetailModelTests: XCTestCase {
 
     XCTAssertEqual(model.errorMessage, "This follow isn't available any more.")
     XCTAssertTrue(model.isGone)
+    // Kept until the alert is dismissed, so the link that opened this screen
+    // doesn't vanish (and pop the screen) before the message is read.
+    XCTAssertEqual(store.follows.count, 1)
+
+    model.acknowledgeGone()
+
     XCTAssertTrue(store.follows.isEmpty)
   }
 

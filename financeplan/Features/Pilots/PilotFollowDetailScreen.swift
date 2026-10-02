@@ -82,8 +82,12 @@ struct PilotFollowDetailScreen: View {
     }
     .alert("Something went wrong", isPresented: boardsErrorBinding($model.errorMessage)) {
       Button("OK", role: .cancel) {
-        // The follow no longer exists: leave its screen once the user has read why.
-        if model.isGone { dismiss() }
+        // The follow no longer exists: once the user has read why, drop it
+        // everywhere and leave its screen.
+        if model.isGone {
+          model.acknowledgeGone()
+          dismiss()
+        }
       }
     } message: {
       Text(model.errorMessage ?? "")

@@ -12,8 +12,8 @@ final class PilotFollowDetailModel {
   private(set) var isLoading = false
   private(set) var isSaving = false
   /// The follow no longer exists on the server (404: stopped elsewhere, or
-  /// the feature was switched off). The screen pops once the user has read
-  /// `errorMessage`.
+  /// the feature was switched off). The screen removes it and pops once the
+  /// user has dismissed `errorMessage`.
   private(set) var isGone = false
   var errorMessage: String?
 
@@ -74,11 +74,19 @@ final class PilotFollowDetailModel {
     }
   }
 
-  /// Same outcome as a 404 on stop: drop the follow everywhere, say why.
+  /// A 404: say why, and keep the follow in the store until the user has read
+  /// it (`acknowledgeGone()`), so the link that opened this screen doesn't
+  /// disappear and pop it first.
   private func markGone() {
-    store.remove(followId: follow.id)
     isGone = true
     errorMessage = String(localized: "This follow isn't available any more.")
+  }
+
+  /// The user dismissed the "isn't available" alert: drop the follow
+  /// everywhere. The screen pops right after.
+  func acknowledgeGone() {
+    guard isGone else { return }
+    store.remove(followId: follow.id)
   }
 
   /// True once the follow is gone, so the screen can pop. A 404 means it was
