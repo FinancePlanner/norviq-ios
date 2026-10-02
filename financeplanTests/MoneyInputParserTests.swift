@@ -41,4 +41,23 @@ final class MoneyInputParserTests: XCTestCase {
     XCTAssertNil(MoneyInputParser.parse(",", locale: portugal))
     XCTAssertNil(MoneyInputParser.parse("abc", locale: portugal))
   }
+
+  func testTheSameSeparatorRepeatedIsGroupingInEitherLocale() {
+    XCTAssertEqual(MoneyInputParser.parse("10,000,000", locale: unitedStates), 10_000_000)
+    XCTAssertEqual(MoneyInputParser.parse("10.000.000", locale: portugal), 10_000_000)
+    XCTAssertEqual(MoneyInputParser.parse("10,000,000", locale: portugal), 10_000_000)
+    XCTAssertEqual(MoneyInputParser.parse("1.000.000", locale: unitedStates), 1_000_000)
+  }
+
+  func testMixedSeparatorsStillReadTheLastAsDecimal() {
+    XCTAssertEqual(MoneyInputParser.parse("1,234,567.89", locale: unitedStates), 1_234_567.89)
+    XCTAssertEqual(MoneyInputParser.parse("1.234.567,89", locale: portugal), 1_234_567.89)
+  }
+
+  func testALeadingMinusIsNegative() {
+    XCTAssertEqual(MoneyInputParser.parse("-500", locale: unitedStates), -500)
+    XCTAssertEqual(MoneyInputParser.parse(" -1,234.56", locale: unitedStates), -1234.56)
+    XCTAssertEqual(MoneyInputParser.parse("\u{2212}4,12", locale: portugal), -4.12)
+    XCTAssertNil(MoneyInputParser.parse("-", locale: unitedStates))
+  }
 }
