@@ -37,6 +37,10 @@ private final class MockSocialService: SocialServicing, @unchecked Sendable {
   func matchContacts(_ request: ContactMatchRequest) async throws -> [ContactMatch] { [] }
   func startXImport(redirectURI: String) async throws -> OAuthStartResponsePayload { throw Failure() }
   func finishXImport(_ request: OAuthExchangeRequestPayload) async throws -> XImportMatchesResponse { throw Failure() }
+  func importFacebookFriends(_ request: FacebookLimitedLoginRequest) async throws -> FacebookImportMatchesResponse {
+    throw Failure()
+  }
+  func disconnectFacebook() async throws {}
 }
 
 private extension SocialUserSummary {

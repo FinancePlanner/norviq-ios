@@ -141,4 +141,12 @@ nonisolated struct SocialHTTPClient: Sendable {
   func finishXImport(_ request: OAuthExchangeRequestPayload) async throws -> XImportMatchesResponse {
     try await client.call(XImportExchangeEndpoint(payload: request), errorType: Error.self)
   }
+
+  func importFacebookFriends(_ request: FacebookLimitedLoginRequest) async throws -> FacebookImportMatchesResponse {
+    try await client.call(FacebookLimitedImportEndpoint(payload: request), errorType: Error.self)
+  }
+
+  func disconnectFacebook() async throws {
+    try await client.callWithoutResponse(DisconnectFacebookEndpoint(), errorType: Error.self)
+  }
 }

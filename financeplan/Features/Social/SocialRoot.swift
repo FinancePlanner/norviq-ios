@@ -10,6 +10,7 @@ struct SocialRoot: View {
   @State private var isInvitePresented = false
   @State private var isContactsPresented = false
   @State private var isXImportPresented = false
+  @State private var isFacebookImportPresented = false
   @State private var redeemingInvite: InviteCodeItem?
   @State private var section: SocialSection = .friends
   @State private var path = NavigationPath()
@@ -36,6 +37,7 @@ struct SocialRoot: View {
         .sheet(isPresented: $isInvitePresented) { InviteFriendsView() }
         .sheet(isPresented: $isContactsPresented) { ContactsDiscoveryView() }
         .sheet(isPresented: $isXImportPresented) { XImportView() }
+        .sheet(isPresented: $isFacebookImportPresented) { FacebookImportView() }
         .sheet(item: $redeemingInvite) { item in InviteRedeemSheet(code: item.code) }
         .onChange(of: pendingInviteCode, initial: true) { _, code in
           guard let code else { return }
@@ -99,6 +101,11 @@ struct SocialRoot: View {
           if store.config.xImport {
             Button { isXImportPresented = true } label: {
               Label("Find people you follow on X", systemImage: "person.2.wave.2")
+            }
+          }
+          if store.config.facebookImport && FacebookConnect.isAvailable {
+            Button { isFacebookImportPresented = true } label: {
+              Label("Find friends from Facebook", systemImage: "person.2.badge.key")
             }
           }
         } footer: {
