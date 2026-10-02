@@ -17,12 +17,19 @@ nonisolated public protocol HTTPClientError: LocalizedError, Equatable, Sendable
     /// A non-2xx response other than 401. Override to keep a status the
     /// caller must tell apart (e.g. 409) even when the body has a message.
     static func makeStatus(_ code: Int, message: String?) -> Self
+    /// Same as `makeStatus(_:message:)`, with the raw body for clients that
+    /// read structured error fields. Defaults to ignoring the body.
+    static func makeStatus(_ code: Int, message: String?, body: Data) -> Self
 }
 
 nonisolated public extension HTTPClientError {
     static func makeStatus(_ code: Int, message: String?) -> Self {
         if let message, !message.isEmpty { return makeAPI(message) }
         return makeInvalidStatus(code)
+    }
+
+    static func makeStatus(_ code: Int, message: String?, body: Data) -> Self {
+        makeStatus(code, message: message)
     }
 }
 
@@ -267,7 +274,7 @@ nonisolated public struct BaseHTTPClient: Sendable {
             if response.statusCode == 401 {
                 throw ErrorType.makeUnauthorized(message)
             }
-            throw ErrorType.makeStatus(response.statusCode, message: message)
+            throw ErrorType.makeStatus(response.statusCode, message: message, body: data)
         }
     }
     
