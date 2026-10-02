@@ -4,6 +4,7 @@ import SwiftUI
 
 struct PortfolioWorkspaceScreen: View {
   @InjectedObservable(\.billingManager) private var billingManager
+  @InjectedObservable(\Container.pilotsStore) private var pilots
   @State private var model = PortfolioWorkspaceViewModel()
   @State private var isCreating = false
   @State private var isComparing = false
@@ -27,6 +28,17 @@ struct PortfolioWorkspaceScreen: View {
             "Your personal portfolio remains available. Upgrade for joint, retirement, and what-if portfolios."
           )
         )
+      }
+
+      if pilots.isAvailable {
+        Section {
+          NavigationLink {
+            PilotsBrowseScreen()
+          } label: {
+            PilotsEntryRow(followCount: pilots.follows.count)
+          }
+          .accessibilityIdentifier("portfolios.followPilot")
+        }
       }
 
       Section("Portfolios") {
@@ -57,8 +69,13 @@ struct PortfolioWorkspaceScreen: View {
           .labelStyle(.iconOnly)
       }
     }
-    .task { await model.load() }
-    .refreshable { await model.load() }
+    // Re-runs when a follow starts or stops: a portfolio follow creates a portfolio.
+    .task(id: pilots.followsRevision) { await model.load() }
+    .task { await pilots.load() }
+    .refreshable {
+      await model.load()
+      await pilots.load()
+    }
     .sheet(isPresented: $isCreating) {
       CreatePortfolioSheet(model: model, isPro: billingManager.isPro)
     }

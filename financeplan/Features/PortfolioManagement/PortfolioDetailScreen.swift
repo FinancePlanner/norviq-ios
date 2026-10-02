@@ -1,9 +1,11 @@
+import Factory
 import StockPlanShared
 import SwiftUI
 
 struct PortfolioDetailScreen: View {
   let portfolio: Portfolio
   let model: PortfolioWorkspaceViewModel
+  @InjectedObservable(\Container.pilotsStore) private var pilots
   @Environment(\.dismiss) private var dismiss
   @State private var isInviting = false
   @State private var isAddingCash = false
@@ -20,6 +22,16 @@ struct PortfolioDetailScreen: View {
         )
         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
         .listRowBackground(Color.clear)
+      }
+
+      if let follow = pilots.follow(forPortfolioId: portfolio.id) {
+        Section {
+          NavigationLink {
+            PilotFollowDetailScreen(follow: follow)
+          } label: {
+            PilotFollowBanner(follow: follow)
+          }
+        }
       }
 
       Section("Details") {

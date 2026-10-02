@@ -86,4 +86,14 @@ final class PilotsStoreTests: XCTestCase {
     XCTAssertFalse(PilotsStore.isFeatureOff(PilotsHTTPClient.Error.rejected(status: 403, message: nil)))
     XCTAssertFalse(PilotsStore.isFeatureOff(URLError(.notConnectedToInternet)))
   }
+
+  func testFollowForPortfolioMatchesTheListIdIgnoringCase() async {
+    let store = PilotsStore(service: MockPilotsService())
+    store.insert(.fixture(id: "p", portfolioListId: "AAAAAAAA-0000-0000-0000-000000000001"))
+    store.insert(.fixture(id: "w", targetKind: .watchlist))
+
+    XCTAssertEqual(store.follow(forPortfolioId: "aaaaaaaa-0000-0000-0000-000000000001")?.id, "p")
+    XCTAssertNil(store.follow(forPortfolioId: "33333333-3333-3333-3333-333333333333"))
+    XCTAssertNil(store.follow(forPortfolioId: "BBBBBBBB-0000-0000-0000-000000000001"))
+  }
 }

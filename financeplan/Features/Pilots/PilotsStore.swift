@@ -78,6 +78,12 @@ final class PilotsStore {
     follows.filter { $0.pilot.slug == slug }
   }
 
+  /// The follow that writes into this portfolio, if any. Compared without
+  /// case: both sides are UUID strings and must not depend on their casing.
+  func follow(forPortfolioId portfolioId: String) -> PilotFollowResponse? {
+    follows.first { $0.portfolioListId?.caseInsensitiveCompare(portfolioId) == .orderedSame }
+  }
+
   /// Every pilots route answers 404 while the feature flag is off.
   static func isFeatureOff(_ error: any Error) -> Bool {
     (error as? any HTTPClientError)?.statusCode == 404
