@@ -4,12 +4,15 @@ import StockPlanShared
 struct FeaturedCryptoCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let asset: CryptoQuoteResponse
+    /// Real last-7-days prices when the markets feed has them.
+    var history: [Double] = []
     @Environment(\.colorScheme) private var colorScheme
     @State private var chartProgress: CGFloat = 0
     @State private var isPressed = false
 
     private var sparklineValues: [CGFloat] {
-        let points: [Double] = [
+        // Without history, approximate a shape from the day's quote fields.
+        let points: [Double] = history.count >= 2 ? history : [
             asset.dayLow ?? asset.price * 0.97,
             asset.open ?? asset.price * 0.99,
             asset.priceAvg50 ?? asset.price,

@@ -22,6 +22,9 @@ enum CryptoChartRange: String, CaseIterable, Identifiable {
     case month
     case quarter
     case year
+    case ytd
+    /// Everything FMP has; daily closes back to listing.
+    case allTime
 
     var id: String { rawValue }
 
@@ -33,6 +36,8 @@ enum CryptoChartRange: String, CaseIterable, Identifiable {
         case .month: return "1M"
         case .quarter: return "3M"
         case .year: return "1Y"
+        case .ytd: return "YTD"
+        case .allTime: return "All"
         }
     }
 
@@ -41,12 +46,12 @@ enum CryptoChartRange: String, CaseIterable, Identifiable {
         case .hour: return .oneMin
         case .day: return .fiveMin
         case .week: return .oneHour
-        case .month, .quarter, .year: return .light
+        case .month, .quarter, .year, .ytd, .allTime: return .light
         }
     }
 
-    /// Number of days to look back from "now" for this range.
-    private var lookbackDays: Int {
+    /// Number of days to look back from "now" for the rolling ranges.
+    private var lookbackDays: Int? {
         switch self {
         case .hour: return 1
         case .day: return 2
@@ -54,13 +59,23 @@ enum CryptoChartRange: String, CaseIterable, Identifiable {
         case .month: return 31
         case .quarter: return 93
         case .year: return 366
+        case .ytd, .allTime: return nil
         }
     }
 
     /// `from` query value (yyyy-MM-dd) for this range, relative to `now`.
     func fromDateString(now: Date = Date()) -> String {
-        let start = Calendar.current.date(byAdding: .day, value: -lookbackDays, to: now) ?? now
-        return CryptoChartDateParser.dayString(from: start)
+        switch self {
+        case .ytd:
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = TimeZone(identifier: "UTC")!
+            return "\(calendar.component(.year, from: now))-01-01"
+        case .allTime:
+            return "2010-01-01"
+        default:
+            let start = Calendar.current.date(byAdding: .day, value: -(lookbackDays ?? 0), to: now) ?? now
+            return CryptoChartDateParser.dayString(from: start)
+        }
     }
 
     /// `to` query value (yyyy-MM-dd).

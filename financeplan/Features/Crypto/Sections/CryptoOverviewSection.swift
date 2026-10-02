@@ -25,7 +25,7 @@ struct CryptoOverviewSection: View {
 
             // Featured Card
             if let btc = viewModel.topAssets.first(where: { $0.symbol.contains("BTC") }) {
-                FeaturedCryptoCard(asset: btc)
+                FeaturedCryptoCard(asset: btc, history: viewModel.btcSparkline)
                     .padding(.horizontal)
 
                 MarketQuickStatsCard(asset: btc)

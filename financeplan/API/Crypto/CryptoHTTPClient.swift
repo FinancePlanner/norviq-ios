@@ -83,6 +83,10 @@ nonisolated struct CryptoHTTPClient: Sendable {
         try await client.call(GetGeneralCryptoNewsEndpoint(), errorType: Error.self)
     }
 
+    func fetchCryptoMarkets(timeframe: CryptoMarketsTimeframe, limit: Int) async throws -> CryptoMarketsResponse {
+        try await client.call(GetCryptoMarketsEndpoint(timeframe: timeframe, limit: limit), errorType: Error.self)
+    }
+
     func fetchHistory(
         symbol: String,
         resolution: CryptoChartResolution,
