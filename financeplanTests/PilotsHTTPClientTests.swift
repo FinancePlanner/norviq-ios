@@ -233,4 +233,25 @@ final class PilotsHTTPClientTests: XCTestCase {
       XCTAssertTrue(PilotsStore.isCancellation(error))
     }
   }
+
+  func testUpgradeRequiredKeepsTheLimitAndCurrentCount() async {
+    PilotsMockURLProtocol.handler = { _ in
+      (403, #"{"success":false,"code":"upgrade_required","error":"Upgrade required. feature=pilot_follows plan=pro limit=10 current=10","feature":"pilot_follows","plan":"pro","requiredPlan":"pro","limit":10,"current":10}"#)
+    }
+    let request = PilotFollowCreateRequest(pilotSlug: "nancy-pelosi", targetKind: .watchlist, portfolioListId: nil, watchlistListId: nil, startingCapital: nil)
+
+    do {
+      _ = try await client.follow(request, idempotencyKey: "k")
+      XCTFail("Expected a 403")
+    } catch let error as PilotsHTTPClient.Error {
+      XCTAssertEqual(error, .upgradeRequired(
+        feature: "pilot_follows",
+        message: "Upgrade required. feature=pilot_follows plan=pro limit=10 current=10",
+        limit: 10,
+        current: 10
+      ))
+    } catch {
+      XCTFail("Unexpected error: \(error)")
+    }
+  }
 }

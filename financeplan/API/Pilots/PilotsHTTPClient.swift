@@ -17,7 +17,8 @@ nonisolated struct PilotsHTTPClient: Sendable {
     /// (`code: "upgrade_required"`). `feature` is the plan feature that hit
     /// its limit, e.g. `pilot_follows` or `portfolio_lists`. Read from the
     /// structured body, never from the reason text.
-    case upgradeRequired(feature: String, message: String?)
+    /// `limit` and `current` are the body's counts, when it sends them.
+    case upgradeRequired(feature: String, message: String?, limit: Int? = nil, current: Int? = nil)
     /// The request was cancelled (the screen went away). Not a failure to show.
     case cancelled
 
@@ -50,7 +51,8 @@ nonisolated struct PilotsHTTPClient: Sendable {
       case let (.unauthorized(l), .unauthorized(r)): return l == r
       case let (.api(l), .api(r)): return l == r
       case let (.rejected(ls, lm), .rejected(rs, rm)): return ls == rs && lm == rm
-      case let (.upgradeRequired(lf, lm), .upgradeRequired(rf, rm)): return lf == rf && lm == rm
+      case let (.upgradeRequired(lf, lm, ll, lc), .upgradeRequired(rf, rm, rl, rc)):
+        return lf == rf && lm == rm && ll == rl && lc == rc
       case (.cancelled, .cancelled): return true
       default: return false
       }
@@ -77,7 +79,7 @@ nonisolated struct PilotsHTTPClient: Sendable {
          let billing = try? JSONDecoder().decode(UpgradeRequiredBody.self, from: body),
          billing.code == "upgrade_required",
          let feature = billing.feature, !feature.isEmpty {
-        return .upgradeRequired(feature: feature, message: message)
+        return .upgradeRequired(feature: feature, message: message, limit: billing.limit, current: billing.current)
       }
       return makeStatus(code, message: message)
     }
@@ -88,6 +90,8 @@ nonisolated struct PilotsHTTPClient: Sendable {
   nonisolated private struct UpgradeRequiredBody: Decodable {
     let code: String?
     let feature: String?
+    let limit: Int?
+    let current: Int?
   }
 
   private let client: BaseHTTPClient

@@ -47,10 +47,25 @@ final class PilotFollowFailureTests: XCTestCase {
       message: "Upgrade required. feature=pilot_follows plan=free required=pro"
     )
     XCTAssertEqual(PilotFollowFailure.from(error, isPro: false), .needsPro)
+    // No limit in the body: neutral copy, no invented number.
     XCTAssertEqual(
       PilotFollowFailure.from(error, isPro: true),
-      .message("You're following 10 pilots, the most your plan allows. Stop following one to add another.")
+      .message("You've reached your pilot follow limit. Stop one to follow another.")
     )
+  }
+
+  func testProAtTheLimitIsToldTheNumbersFromTheServer() {
+    let atLimit = PilotsHTTPClient.Error.upgradeRequired(
+      feature: "pilot_follows",
+      message: "Upgrade required. feature=pilot_follows plan=pro limit=10 current=10",
+      limit: 10,
+      current: 10
+    )
+    XCTAssertEqual(
+      PilotFollowFailure.from(atLimit, isPro: true),
+      .message("You're following 10 of the 10 pilots your plan allows. Stop one to follow another.")
+    )
+    XCTAssertEqual(PilotFollowFailure.from(atLimit, isPro: false), .needsPro)
   }
 
   func testPortfolioCapExplainsArchiving() {

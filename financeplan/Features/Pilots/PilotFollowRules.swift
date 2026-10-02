@@ -42,13 +42,11 @@ enum PilotFollowFailure: Equatable {
   static func from(_ error: any Error, isPro: Bool) -> PilotFollowFailure {
     // The billing 403 carries the feature that hit its limit in a structured
     // field; the client decodes it, so the reason text is never parsed.
-    if case let .upgradeRequired(feature, _)? = error as? PilotsHTTPClient.Error {
+    if case let .upgradeRequired(feature, _, limit, current)? = error as? PilotsHTTPClient.Error {
       if feature == "portfolio_lists" {
         return .message(String(localized: "You've reached the portfolio limit for your plan. Archive a portfolio, then try again."))
       }
-      return isPro
-        ? .message(String(localized: "You're following 10 pilots, the most your plan allows. Stop following one to add another."))
-        : .needsPro
+      return isPro ? .message(followLimitMessage(limit: limit, current: current)) : .needsPro
     }
     guard case let .rejected(status, message)? = error as? PilotsHTTPClient.Error else {
       return .message(error.localizedDescription)
@@ -71,6 +69,18 @@ enum PilotFollowFailure: Equatable {
       return .message(reason.isEmpty ? String(localized: "Choose an empty watchlist, or let Norviq create one.") : reason)
     default:
       return .message(error.localizedDescription)
+    }
+  }
+
+  /// Uses the counts the server sent; never assumes the plan's number.
+  private static func followLimitMessage(limit: Int?, current: Int?) -> String {
+    switch (limit, current) {
+    case let (limit?, current?):
+      return String(localized: "You're following \(current) of the \(limit) pilots your plan allows. Stop one to follow another.")
+    case let (limit?, nil):
+      return String(localized: "Your plan allows \(limit) pilot follows. Stop one to follow another.")
+    default:
+      return String(localized: "You've reached your pilot follow limit. Stop one to follow another.")
     }
   }
 }
