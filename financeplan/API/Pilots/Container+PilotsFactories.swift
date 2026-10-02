@@ -7,4 +7,10 @@ extension Container {
       DefaultPilotsService(environmentManager: self.appEnvironment())
     }
   }
+
+  /// Shared so the workspace row, the portfolio banner and the pilot screens
+  /// see the same follows.
+  var pilotsStore: Factory<PilotsStore> {
+    self { @MainActor in PilotsStore() }.singleton
+  }
 }
