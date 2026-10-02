@@ -12,15 +12,33 @@ final class MockPilotsService: PilotsServicing, @unchecked Sendable {
   var eventsResult: Result<[PilotFollowEventResponse], Error> = .success([])
   var snapshotsResult: Result<[PilotFollowSnapshotResponse], Error> = .success([])
   var watchlistsResult: Result<[WatchlistListDTOResponse], Error> = .success([])
+  /// When set, `pilots()`, `pilot(slug:)` and `events(followId:)` wait this
+  /// long first (returning early if cancelled), so tests can overlap or
+  /// cancel loads.
+  var delay: Duration?
 
   private(set) var followRequests: [PilotFollowCreateRequest] = []
   private(set) var idempotencyKeys: [String] = []
   private(set) var statusRequests: [PilotFollowStatus] = []
   private(set) var stoppedFollowIds: [String] = []
   private(set) var snapshotCalls = 0
+  private(set) var pilotsCalls = 0
 
-  func pilots() async throws -> [PilotSummary] { try pilotsResult.get() }
-  func pilot(slug: String) async throws -> PilotDetail { try detailResult.get() }
+  private func wait() async {
+    if let delay { try? await Task.sleep(for: delay) }
+  }
+
+  func pilots() async throws -> [PilotSummary] {
+    pilotsCalls += 1
+    await wait()
+    return try pilotsResult.get()
+  }
+
+  func pilot(slug: String) async throws -> PilotDetail {
+    await wait()
+    return try detailResult.get()
+  }
+
   func follows() async throws -> [PilotFollowResponse] { try followsResult.get() }
 
   func follow(_ request: PilotFollowCreateRequest, idempotencyKey: String) async throws -> PilotFollowResponse {
@@ -40,7 +58,10 @@ final class MockPilotsService: PilotsServicing, @unchecked Sendable {
     stoppedFollowIds.append(followId)
   }
 
-  func events(followId: String) async throws -> [PilotFollowEventResponse] { try eventsResult.get() }
+  func events(followId: String) async throws -> [PilotFollowEventResponse] {
+    await wait()
+    return try eventsResult.get()
+  }
 
   func snapshots(followId: String) async throws -> [PilotFollowSnapshotResponse] {
     snapshotCalls += 1

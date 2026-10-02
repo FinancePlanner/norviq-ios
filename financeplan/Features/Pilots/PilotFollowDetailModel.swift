@@ -47,9 +47,8 @@ final class PilotFollowDetailModel {
         valuePoints = []
       }
       errorMessage = nil
-    } catch is CancellationError {
-      return
     } catch {
+      if Task.isCancelled || PilotsStore.isCancellation(error) { return }
       errorMessage = error.localizedDescription
     }
   }
@@ -64,6 +63,7 @@ final class PilotFollowDetailModel {
       store.replace(updated)
       errorMessage = nil
     } catch {
+      if PilotsStore.isCancellation(error) { return }
       errorMessage = error.localizedDescription
     }
   }
@@ -79,6 +79,7 @@ final class PilotFollowDetailModel {
     } catch let error where PilotsStore.isFeatureOff(error) {
       // Nothing left to stop.
     } catch {
+      if PilotsStore.isCancellation(error) { return false }
       errorMessage = error.localizedDescription
       return false
     }

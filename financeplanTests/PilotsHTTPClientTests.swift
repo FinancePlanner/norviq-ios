@@ -11,6 +11,8 @@ private final class PilotsMockURLProtocol: URLProtocol {
 
   /// Returns (status, JSON body) for a request.
   nonisolated(unsafe) static var handler: ((URLRequest) -> (Int, String))?
+  /// When set, the request fails with this error instead of calling `handler`.
+  nonisolated(unsafe) static var failure: URLError?
   nonisolated(unsafe) static var recorded: [Recorded] = []
 
   override class func canInit(with request: URLRequest) -> Bool { true }
@@ -18,6 +20,10 @@ private final class PilotsMockURLProtocol: URLProtocol {
 
   override func startLoading() {
     Self.recorded.append(Recorded(request: request, body: Self.readBody(of: request)))
+    if let failure = Self.failure {
+      client?.urlProtocol(self, didFailWithError: failure)
+      return
+    }
     guard let handler = Self.handler, let url = request.url else {
       fatalError("PilotsMockURLProtocol.handler must be set before use")
     }
@@ -72,6 +78,7 @@ final class PilotsHTTPClientTests: XCTestCase {
 
   override func tearDown() async throws {
     PilotsMockURLProtocol.handler = nil
+    PilotsMockURLProtocol.failure = nil
     PilotsMockURLProtocol.recorded = []
     client = nil
   }
@@ -212,5 +219,18 @@ final class PilotsHTTPClientTests: XCTestCase {
     XCTAssertEqual(events.first?.quantity, 12.5)
     XCTAssertEqual(snapshots.map(\.date), ["2026-09-30", "2026-10-01"])
     XCTAssertEqual(PilotsMockURLProtocol.recorded.map { $0.request.url?.path }, ["/v1/pilot-follows/f1/events", "/v1/pilot-follows/f1/snapshots"])
+  }
+
+  func testACancelledRequestThrowsCancelledNotAnAPIError() async {
+    PilotsMockURLProtocol.failure = URLError(.cancelled)
+    let request = PilotFollowCreateRequest(pilotSlug: "nancy-pelosi", targetKind: .watchlist, portfolioListId: nil, watchlistListId: nil, startingCapital: nil)
+
+    do {
+      _ = try await client.follow(request, idempotencyKey: "k")
+      XCTFail("Expected cancellation")
+    } catch {
+      XCTAssertEqual(error as? PilotsHTTPClient.Error, .cancelled)
+      XCTAssertTrue(PilotsStore.isCancellation(error))
+    }
   }
 }

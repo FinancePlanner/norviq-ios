@@ -20,6 +20,9 @@ nonisolated public protocol HTTPClientError: LocalizedError, Equatable, Sendable
     /// Same as `makeStatus(_:message:)`, with the raw body for clients that
     /// read structured error fields. Defaults to ignoring the body.
     static func makeStatus(_ code: Int, message: String?, body: Data) -> Self
+    /// A failure that never got an HTTP response (transport error,
+    /// cancellation, decoding). Defaults to `makeAPI` with its description.
+    static func makeTransport(_ error: Error) -> Self
 }
 
 nonisolated public extension HTTPClientError {
@@ -30,6 +33,10 @@ nonisolated public extension HTTPClientError {
 
     static func makeStatus(_ code: Int, message: String?, body: Data) -> Self {
         makeStatus(code, message: message)
+    }
+
+    static func makeTransport(_ error: Error) -> Self {
+        makeAPI((error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
     }
 }
 
@@ -282,8 +289,7 @@ nonisolated public struct BaseHTTPClient: Sendable {
         if let typed = error as? ErrorType {
             return typed
         }
-        let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-        return ErrorType.makeAPI(message)
+        return ErrorType.makeTransport(error)
     }
     
     public func shouldRetry(error: Error, attempt: Int, endpoint: any Endpoint) -> Bool {

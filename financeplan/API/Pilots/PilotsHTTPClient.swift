@@ -18,6 +18,8 @@ nonisolated struct PilotsHTTPClient: Sendable {
     /// its limit, e.g. `pilot_follows` or `portfolio_lists`. Read from the
     /// structured body, never from the reason text.
     case upgradeRequired(feature: String, message: String?)
+    /// The request was cancelled (the screen went away). Not a failure to show.
+    case cancelled
 
     nonisolated var errorDescription: String? {
       switch self {
@@ -28,6 +30,7 @@ nonisolated struct PilotsHTTPClient: Sendable {
       case let .rejected(status, message): return message ?? "Request failed (\(status))."
       // The server's text ("Upgrade required. feature=… plan=…") is for logs.
       case .upgradeRequired: return "This needs Norviq Pro."
+      case .cancelled: return "The request was cancelled."
       }
     }
 
@@ -48,6 +51,7 @@ nonisolated struct PilotsHTTPClient: Sendable {
       case let (.api(l), .api(r)): return l == r
       case let (.rejected(ls, lm), .rejected(rs, rm)): return ls == rs && lm == rm
       case let (.upgradeRequired(lf, lm), .upgradeRequired(rf, rm)): return lf == rf && lm == rm
+      case (.cancelled, .cancelled): return true
       default: return false
       }
     }
@@ -56,6 +60,12 @@ nonisolated struct PilotsHTTPClient: Sendable {
     static func makeInvalidStatus(_ code: Int) -> Error { .invalidStatus(code) }
     static func makeUnauthorized(_ message: String?) -> Error { .unauthorized(message) }
     static func makeAPI(_ message: String) -> Error { .api(message) }
+
+    /// Keeps cancellation recognisable instead of turning it into `.api("cancelled")`.
+    static func makeTransport(_ error: Swift.Error) -> Error {
+      if error is CancellationError || (error as? URLError)?.code == .cancelled { return .cancelled }
+      return .api((error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
+    }
     static func makeStatus(_ code: Int, message: String?) -> Error {
       if [400, 403, 404, 409, 422].contains(code) { return .rejected(status: code, message: message) }
       if let message, !message.isEmpty { return .api(message) }

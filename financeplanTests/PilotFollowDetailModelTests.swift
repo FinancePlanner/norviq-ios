@@ -92,4 +92,27 @@ final class PilotFollowDetailModelTests: XCTestCase {
     XCTAssertEqual(store.follows.count, 1)
     XCTAssertEqual(model.errorMessage, "Request failed (500).")
   }
+
+  func testACancelledLoadIsNotAnError() async {
+    let service = MockPilotsService()
+    service.eventsResult = .failure(URLError(.cancelled))
+    let (model, _) = makeModel(service: service)
+
+    await model.load()
+
+    XCTAssertNil(model.errorMessage)
+  }
+
+  func testAFailureAfterTheScreenWentAwayIsNotShown() async {
+    let service = MockPilotsService()
+    service.delay = .seconds(5)
+    service.eventsResult = .failure(PilotsHTTPClient.Error.invalidStatus(500))
+    let (model, _) = makeModel(.fixture(targetKind: .watchlist), service: service)
+
+    let load = Task { await model.load() }
+    load.cancel()
+    await load.value
+
+    XCTAssertNil(model.errorMessage)
+  }
 }

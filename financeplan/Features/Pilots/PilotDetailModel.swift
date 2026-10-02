@@ -24,9 +24,8 @@ final class PilotDetailModel {
     do {
       detail = try await service.pilot(slug: slug)
       errorMessage = nil
-    } catch is CancellationError {
-      return
     } catch {
+      if Task.isCancelled || PilotsStore.isCancellation(error) { return }
       errorMessage = PilotsStore.isFeatureOff(error)
         ? String(localized: "This pilot isn't available right now.")
         : error.localizedDescription

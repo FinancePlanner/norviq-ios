@@ -96,4 +96,34 @@ final class PilotsStoreTests: XCTestCase {
     XCTAssertNil(store.follow(forPortfolioId: "33333333-3333-3333-3333-333333333333"))
     XCTAssertNil(store.follow(forPortfolioId: "BBBBBBBB-0000-0000-0000-000000000001"))
   }
+
+  func testACancelledLoadIsNotAnError() async {
+    for cancellation in [PilotsHTTPClient.Error.cancelled, URLError(.cancelled), CancellationError()] as [any Error] {
+      let service = MockPilotsService()
+      service.pilotsResult = .failure(cancellation)
+      let store = PilotsStore(service: service)
+
+      await store.load()
+
+      XCTAssertNil(store.errorMessage, "\(cancellation)")
+      XCTAssertEqual(store.availability, .unknown, "\(cancellation)")
+    }
+  }
+
+  func testConcurrentLoadsShareOneFetchAndACancelledCallerDoesNotStopIt() async {
+    let service = MockPilotsService()
+    service.delay = .milliseconds(100)
+    let store = PilotsStore(service: service)
+
+    let first = Task { await store.load(); return store.pilots.map(\.slug) }
+    let second = Task { await store.load(); return store.pilots.map(\.slug) }
+    first.cancel()
+    let (firstSlugs, secondSlugs) = await (first.value, second.value)
+
+    XCTAssertEqual(service.pilotsCalls, 1)
+    XCTAssertEqual(firstSlugs, ["nancy-pelosi"])
+    XCTAssertEqual(secondSlugs, ["nancy-pelosi"])
+    XCTAssertEqual(store.availability, .available)
+    XCTAssertNil(store.errorMessage)
+  }
 }

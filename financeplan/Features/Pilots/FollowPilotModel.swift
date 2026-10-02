@@ -91,6 +91,8 @@ final class FollowPilotModel {
       failure = nil
       return follow
     } catch {
+      // A cancelled attempt is not a failure; the same key makes a retry safe.
+      if PilotsStore.isCancellation(error) { return nil }
       failure = PilotFollowFailure.from(error, isPro: isPro)
       return nil
     }

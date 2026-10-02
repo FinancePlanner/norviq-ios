@@ -34,8 +34,25 @@ final class PilotsStore {
 
   var isAvailable: Bool { availability == .available }
 
+  /// The load in flight, shared by every caller. It is unstructured on
+  /// purpose: a screen that goes away cancels its own wait, not the load the
+  /// other screens are waiting on.
+  private var loadTask: Task<Void, Never>?
+
   func load() async {
-    guard !isLoading else { return }
+    if let loadTask {
+      await loadTask.value
+      return
+    }
+    let task = Task {
+      await performLoad()
+      loadTask = nil
+    }
+    loadTask = task
+    await task.value
+  }
+
+  private func performLoad() async {
     isLoading = true
     defer { isLoading = false }
     do {
@@ -44,9 +61,8 @@ final class PilotsStore {
       (self.pilots, self.follows) = try await (pilots, follows)
       availability = .available
       errorMessage = nil
-    } catch is CancellationError {
-      return
     } catch {
+      if Task.isCancelled || Self.isCancellation(error) { return }
       if Self.isFeatureOff(error) {
         availability = .unavailable
         pilots = []
@@ -82,6 +98,16 @@ final class PilotsStore {
   /// case: both sides are UUID strings and must not depend on their casing.
   func follow(forPortfolioId portfolioId: String) -> PilotFollowResponse? {
     follows.first { $0.portfolioListId?.caseInsensitiveCompare(portfolioId) == .orderedSame }
+  }
+
+  /// A request that stopped because its caller went away, however it
+  /// surfaced: Swift's `CancellationError`, `URLError(.cancelled)`, or the
+  /// client's `.cancelled`. Never shown to the user.
+  static func isCancellation(_ error: any Error) -> Bool {
+    if error is CancellationError { return true }
+    if (error as? URLError)?.code == .cancelled { return true }
+    if case .cancelled? = error as? PilotsHTTPClient.Error { return true }
+    return false
   }
 
   /// Every pilots route answers 404 while the feature flag is off.
