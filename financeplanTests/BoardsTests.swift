@@ -46,6 +46,18 @@ private final class MockBoardsService: BoardsServicing, @unchecked Sendable {
   func report(_ request: BoardReportRequest) async throws {}
   func deleteBoard(slug: String) async throws {}
   func sanction(_ request: CreateSanctionRequest) async throws -> UserSanction { throw Failure() }
+
+  var notificationPage = BoardNotificationPage(items: [], nextCursor: nil, unreadCount: 0)
+  var markedRead: [[UUID]?] = []
+  var savedSettings: [BoardNotificationSettings] = []
+  func notifications(cursor: String?) async throws -> BoardNotificationPage { notificationPage }
+  func unreadCount() async throws -> Int { notificationPage.unreadCount }
+  func markRead(ids: [UUID]?) async throws { markedRead.append(ids) }
+  func notificationSettings() async throws -> BoardNotificationSettings { savedSettings.last ?? .default }
+  func updateNotificationSettings(_ settings: BoardNotificationSettings) async throws -> BoardNotificationSettings {
+    savedSettings.append(settings)
+    return settings
+  }
 }
 
 private extension BoardSummary {
@@ -172,5 +184,63 @@ final class BoardsModelTests: XCTestCase {
     let created = await model.create(slug: "dca", name: "DCA", description: "")
     XCTAssertNil(created)
     XCTAssertEqual(model.errorMessage, "That board address is taken.")
+  }
+}
+
+private func notification(_ kind: BoardNotificationKind, read: Bool) -> BoardNotification {
+  BoardNotification(
+    id: UUID(), kind: kind, actorUsername: "bo", postId: UUID(), boardSlug: "dca", postTitle: "Why I DCA",
+    commentId: nil, excerpt: nil, createdAt: .now, isRead: read
+  )
+}
+
+@MainActor
+final class BoardsNotificationsTests: XCTestCase {
+  func testBoardPushParsesToABoardRouteWithItsPost() {
+    let postID = UUID().uuidString
+    let route = PushNotificationPayloadParser.parse(userInfo: ["type": "board_reply", "postId": postID, "boardSlug": "dca"])
+    XCTAssertEqual(route?.kind, .boardReply)
+    XCTAssertEqual(route?.boardPostID, postID)
+    XCTAssertEqual(PushNotificationPayloadParser.parse(userInfo: ["type": "board_upvote", "postId": postID])?.kind, .boardUpvote)
+    XCTAssertNil(PushNotificationPayloadParser.parse(userInfo: ["type": "board_reply"]), "a board push without a post is dropped")
+    XCTAssertNil(PushNotificationPayloadParser.parse(userInfo: ["type": "board_reply", "postId": "../x"]))
+  }
+
+  func testBoardDeepLinkParsesOnlyPostLinks() throws {
+    let id = UUID()
+    XCTAssertEqual(BoardDeepLink.postID(from: try XCTUnwrap(URL(string: "financeplan://boards/dca/posts/\(id.uuidString)"))), id)
+    XCTAssertNil(BoardDeepLink.postID(from: try XCTUnwrap(URL(string: "financeplan://boards/dca"))))
+    XCTAssertNil(BoardDeepLink.postID(from: try XCTUnwrap(URL(string: "https://norviq.org/boards/dca/posts/\(id.uuidString)"))))
+  }
+
+  func testActivityHighlightsUnreadMarksAllReadAndDropsUnknownKinds() async {
+    let service = MockBoardsService()
+    let unread = notification(.reply, read: false)
+    service.notificationPage = BoardNotificationPage(
+      items: [unread, notification(.upvote, read: true), notification(.other, read: false)],
+      nextCursor: nil,
+      unreadCount: 2
+    )
+    let model = BoardsActivityModel(service: service)
+    await model.load()
+    XCTAssertEqual(model.items.count, 2, "unknown kinds are not rendered")
+    XCTAssertTrue(model.highlighted.contains(unread.id))
+    XCTAssertEqual(service.markedRead.count, 1)
+    XCTAssertNil(service.markedRead.first ?? [UUID()], "marks everything read")
+  }
+
+  func testSavingSettingsKeepsTheServerAnswer() async {
+    let service = MockBoardsService()
+    let model = BoardsActivityModel(service: service)
+    await model.save(BoardNotificationSettings(replyPush: true, upvotePush: false))
+    XCTAssertEqual(model.settings, BoardNotificationSettings(replyPush: true, upvotePush: false))
+    XCTAssertEqual(service.savedSettings.count, 1)
+  }
+
+  func testViewerStoreOpensAPendingPost() async {
+    let store = BoardsViewerStore(service: MockBoardsService())
+    let id = UUID()
+    store.open(postID: id)
+    XCTAssertEqual(store.pendingPost?.id, id)
   }
 }

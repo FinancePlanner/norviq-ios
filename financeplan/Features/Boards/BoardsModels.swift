@@ -9,6 +9,10 @@ import StockPlanShared
 @Observable
 final class BoardsViewerStore {
   private(set) var status: CommunityViewerStatus?
+  /// Unread Boards activity, for the bell badge.
+  private(set) var unreadCount = 0
+  /// A post a push or link asked to open; `BoardsRoot` presents it.
+  var pendingPost: BoardsPendingPost?
   var errorMessage: String?
 
   private let service: any BoardsServicing
@@ -33,6 +37,18 @@ final class BoardsViewerStore {
     } catch {
       errorMessage = error.localizedDescription
     }
+  }
+
+  func refreshUnreadCount() async {
+    if let count = try? await service.unreadCount() { unreadCount = count }
+  }
+
+  func clearUnread() {
+    unreadCount = 0
+  }
+
+  func open(postID: UUID) {
+    pendingPost = BoardsPendingPost(id: postID)
   }
 
   func acceptGuidelines() async {
@@ -303,6 +319,67 @@ enum BoardAge {
     case ..<86400: return "\(Int(seconds / 3600))h"
     case ..<(30 * 86400): return "\(Int(seconds / 86400))d"
     default: return date.formatted(date: .abbreviated, time: .omitted)
+    }
+  }
+}
+
+struct BoardsPendingPost: Identifiable, Equatable {
+  let id: UUID
+}
+
+@MainActor
+@Observable
+final class BoardsActivityModel {
+  private(set) var items: [BoardNotification] = []
+  private(set) var nextCursor: String?
+  private(set) var isLoading = false
+  /// Unread when the screen opened; kept so those rows stay highlighted after
+  /// they are marked read.
+  private(set) var highlighted: Set<UUID> = []
+  var settings = BoardNotificationSettings.default
+  var errorMessage: String?
+
+  private let service: any BoardsServicing
+
+  init(service: any BoardsServicing = Container.shared.boardsService()) {
+    self.service = service
+  }
+
+  /// Loads the first page, then marks everything read.
+  func load() async {
+    isLoading = true
+    defer { isLoading = false }
+    do {
+      let page = try await service.notifications(cursor: nil)
+      items = page.items.filter { $0.kind != .other }
+      nextCursor = page.nextCursor
+      highlighted = Set(page.items.filter { !$0.isRead }.map(\.id))
+      if page.unreadCount > 0 { try await service.markRead(ids: nil) }
+      errorMessage = nil
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+    if let settings = try? await service.notificationSettings() { self.settings = settings }
+  }
+
+  func loadMore() async {
+    guard let cursor = nextCursor, !isLoading else { return }
+    isLoading = true
+    defer { isLoading = false }
+    if let page = try? await service.notifications(cursor: cursor) {
+      items.append(contentsOf: page.items.filter { $0.kind != .other })
+      nextCursor = page.nextCursor
+    }
+  }
+
+  func save(_ settings: BoardNotificationSettings) async {
+    let previous = self.settings
+    self.settings = settings
+    do {
+      self.settings = try await service.updateNotificationSettings(settings)
+    } catch {
+      self.settings = previous
+      errorMessage = error.localizedDescription
     }
   }
 }

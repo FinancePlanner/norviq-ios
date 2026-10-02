@@ -156,3 +156,53 @@ nonisolated struct AdminCreateSanctionEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
   func asParameters() throws -> Parameters { try encodedParameters(payload) }
 }
+
+// MARK: - Notifications
+
+nonisolated struct ListBoardNotificationsEndpoint: Endpoint {
+  typealias Response = BoardNotificationPage
+  let cursor: String?
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/community/notifications" }
+  var decoder: JSONDecoder { .stockPlanShared }
+  func asParameters() throws -> Parameters { cursor.map { ["cursor": $0] } ?? [:] }
+}
+
+nonisolated struct BoardUnreadCountEndpoint: Endpoint {
+  typealias Response = BoardUnreadCount
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/community/notifications/unread-count" }
+  var decoder: JSONDecoder { .stockPlanShared }
+  func asParameters() throws -> Parameters { [:] }
+}
+
+/// Marks `ids` read, or everything when `ids` is nil.
+nonisolated struct MarkBoardNotificationsReadEndpoint: Endpoint {
+  typealias Response = EmptyAPIResponse
+  let ids: [UUID]?
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/community/notifications/read" }
+  var decoder: JSONDecoder { .stockPlanShared }
+  func asParameters() throws -> Parameters {
+    if let ids { return ["ids": ids.map(\.uuidString)] }
+    // An empty dictionary sends no body at all; the server wants `{"ids": null}`.
+    return ["ids": NSNull()]
+  }
+}
+
+nonisolated struct GetBoardNotificationSettingsEndpoint: Endpoint {
+  typealias Response = BoardNotificationSettings
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/community/notification-settings" }
+  var decoder: JSONDecoder { .stockPlanShared }
+  func asParameters() throws -> Parameters { [:] }
+}
+
+nonisolated struct UpdateBoardNotificationSettingsEndpoint: Endpoint {
+  typealias Response = BoardNotificationSettings
+  let settings: BoardNotificationSettings
+  var method: HTTPMethod { .put }
+  var path: String { "/v1/community/notification-settings" }
+  var decoder: JSONDecoder { .stockPlanShared }
+  func asParameters() throws -> Parameters { try encodedParameters(settings) }
+}

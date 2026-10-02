@@ -446,6 +446,13 @@ public struct ContentView: View {
     case .friendRequest, .friendAccepted:
       Self.pushLogger.info("push.analytics routed_success destination=social kind=\(route.kind.rawValue, privacy: .public)")
       NotificationCenter.default.post(name: .openSocialFromPushNotification, object: nil)
+    case .boardReply, .boardUpvote:
+      Self.pushLogger.info("push.analytics routed_success destination=board_post kind=\(route.kind.rawValue, privacy: .public)")
+      NotificationCenter.default.post(
+        name: .openBoardPostFromPushNotification,
+        object: nil,
+        userInfo: route.boardPostID.map { ["postId": $0] }
+      )
     case .socialInvite:
       Self.pushLogger.info("push.analytics routed_success destination=social_invite")
       NotificationCenter.default.post(
