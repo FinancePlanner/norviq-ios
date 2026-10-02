@@ -18,6 +18,11 @@ protocol BoardsServicing: Sendable {
   func report(_ request: BoardReportRequest) async throws
   func deleteBoard(slug: String) async throws
   func sanction(_ request: CreateSanctionRequest) async throws -> UserSanction
+  func notifications(cursor: String?) async throws -> BoardNotificationPage
+  func unreadCount() async throws -> Int
+  func markRead(ids: [UUID]?) async throws
+  func notificationSettings() async throws -> BoardNotificationSettings
+  func updateNotificationSettings(_ settings: BoardNotificationSettings) async throws -> BoardNotificationSettings
 }
 
 struct DefaultBoardsService: BoardsServicing {
@@ -52,4 +57,11 @@ struct DefaultBoardsService: BoardsServicing {
   func report(_ request: BoardReportRequest) async throws { try await client.report(request) }
   func deleteBoard(slug: String) async throws { try await client.deleteBoard(slug: slug) }
   func sanction(_ request: CreateSanctionRequest) async throws -> UserSanction { try await client.sanction(request) }
+  func notifications(cursor: String?) async throws -> BoardNotificationPage { try await client.notifications(cursor: cursor) }
+  func unreadCount() async throws -> Int { try await client.unreadCount() }
+  func markRead(ids: [UUID]?) async throws { try await client.markRead(ids: ids) }
+  func notificationSettings() async throws -> BoardNotificationSettings { try await client.notificationSettings() }
+  func updateNotificationSettings(_ settings: BoardNotificationSettings) async throws -> BoardNotificationSettings {
+    try await client.updateNotificationSettings(settings)
+  }
 }

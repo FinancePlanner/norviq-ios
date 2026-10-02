@@ -1,5 +1,5 @@
 {
-  "originHash" : "152ee71e8b166ca2eda4a82f66f350006a71d8d5c467fcc7560c01d95c7cb998",
+  "originHash" : "f0cd5b7c40111d0562d41f340b3d350d051731e86a353737b0a410c7015a25b2",
   "pins" : [
     {
       "identity" : "alamofire",
@@ -118,6 +118,15 @@
       }
     },
     {
+      "identity" : "facebook-ios-sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/facebook/facebook-ios-sdk",
+      "state" : {
+        "revision" : "619d1772808425faa010d92293b26eeb9bc1d630",
+        "version" : "17.4.0"
+      }
+    },
+    {
       "identity" : "factory",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/hmlongco/Factory",
@@ -175,8 +184,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FinancePlanner/norviq-shared.git",
       "state" : {
-        "revision" : "8d9cf53edb1605b8395cc8e52bc4818938f9df89",
-        "version" : "5.17.0"
+        "revision" : "5732aa67d7349492998b64bf3a3ef054932bc8af",
+        "version" : "5.18.0"
       }
     },
     {

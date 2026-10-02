@@ -20,6 +20,10 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     case friendAccepted = "friend_accepted"
     /// Never sent by the server: an invite link opened the app.
     case socialInvite = "social_invite"
+    case boardReply = "board_reply"
+    case boardUpvote = "board_upvote"
+
+    var isBoard: Bool { self == .boardReply || self == .boardUpvote }
   }
 
   let kind: Kind
@@ -40,6 +44,8 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
   let messageID: String?
   /// Invite links only.
   let inviteCode: String?
+  /// Board pushes only: the post to open.
+  let boardPostID: String?
 
   nonisolated init(
     kind: Kind,
@@ -57,7 +63,8 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     budgetScope: String? = nil,
     conversationID: String? = nil,
     messageID: String? = nil,
-    inviteCode: String? = nil
+    inviteCode: String? = nil,
+    boardPostID: String? = nil
   ) {
     self.kind = kind
     self.symbol = symbol
@@ -75,6 +82,7 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     self.conversationID = conversationID
     self.messageID = messageID
     self.inviteCode = inviteCode
+    self.boardPostID = boardPostID
   }
 
   /// Opens the assistant; `conversationID` nil means its default conversation.
@@ -121,6 +129,17 @@ enum PushNotificationPayloadParser {
 
     if (kind == .targetHit || kind == .earningsReminder), normalizedSymbol == nil {
       return nil
+    }
+
+    if kind.isBoard {
+      let postID = normalize(stringValue(for: ["postId", "post_id"], in: dictionaries))
+      guard let postID, UUID(uuidString: postID) != nil else { return nil }
+      return PushNotificationRoute(
+        kind: kind,
+        symbol: nil,
+        deepLink: normalize(stringValue(for: ["deepLink", "deep_link"], in: dictionaries)),
+        boardPostID: postID
+      )
     }
 
     let scenario = normalize(stringValue(for: ["scenario"], in: dictionaries))
@@ -401,7 +420,8 @@ final class PushNotificationsCoordinator: ObservableObject {
     userAction: PushNotificationUserAction = .openStock
   ) {
     let route: PushNotificationRoute = switch userAction {
-    case _ where [PushNotificationRoute.Kind.assistantMessage, .friendRequest, .friendAccepted, .socialInvite].contains(parsedRoute.kind):
+    case _ where [PushNotificationRoute.Kind.assistantMessage, .friendRequest, .friendAccepted, .socialInvite, .boardReply, .boardUpvote]
+      .contains(parsedRoute.kind):
       parsedRoute
     case .openStock:
       parsedRoute
@@ -430,6 +450,11 @@ final class PushNotificationsCoordinator: ObservableObject {
   /// for other URLs so other handlers can take them.
   @discardableResult
   func handleDeepLink(_ url: URL) -> Bool {
+    if let postID = BoardDeepLink.postID(from: url) {
+      Self.logger.info("push.route deep_link destination=board_post")
+      handleIncomingRoute(PushNotificationRoute(kind: .boardReply, symbol: nil, deepLink: url.absoluteString, boardPostID: postID.uuidString))
+      return true
+    }
     if case let .invite(code) = SocialDeepLink.parse(url) {
       Self.logger.info("push.route deep_link destination=social_invite")
       handleIncomingRoute(PushNotificationRoute(kind: .socialInvite, symbol: nil, inviteCode: code))

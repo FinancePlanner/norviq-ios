@@ -24,6 +24,8 @@
 		70B002A33C5E11AA00F02001 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 70B002A43C5E11AA00F02001 /* RevenueCatUI */; };
 		A0B003A13C5E11AA00F03001 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = A0B003A23C5E11AA00F03001 /* PostHog */; };
 		B14D0000000000000000A001 /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = B14D0000000000000000A002 /* LinkKit */; };
+		FB0A00053C5E11AA00F04001 /* FacebookCore in Frameworks */ = {isa = PBXBuildFile; productRef = FB0A00033C5E11AA00F04001 /* FacebookCore */; };
+		FB0A00043C5E11AA00F04001 /* FacebookLogin in Frameworks */ = {isa = PBXBuildFile; productRef = FB0A00023C5E11AA00F04001 /* FacebookLogin */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -90,6 +92,8 @@
 				B14D0000000000000000A001 /* LinkKit in Frameworks */,
 				70B001A13C5E11AA00F01001 /* StockPlanShared in Frameworks */,
 				A0B003A13C5E11AA00F03001 /* PostHog in Frameworks */,
+				FB0A00053C5E11AA00F04001 /* FacebookCore in Frameworks */,
+				FB0A00043C5E11AA00F04001 /* FacebookLogin in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -184,6 +188,8 @@
 				605462E32F9B5F3C001A3351 /* AmplitudeUnified */,
 				A0B003A23C5E11AA00F03001 /* PostHog */,
 				6040CE392FA64C4B0087919E /* TelemetryDeck */,
+				FB0A00033C5E11AA00F04001 /* FacebookCore */,
+				FB0A00023C5E11AA00F04001 /* FacebookLogin */,
 			);
 			productName = financeplan;
 			productReference = 60AFA7F82F3E406900FA3135 /* financeplan.app */;
@@ -286,6 +292,7 @@
 				605462DB2F9B5B3C001A3351 /* XCRemoteSwiftPackageReference "AmplitudeUnified-Swift" */,
 				A0B003A33C5E11AA00F03001 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 				6040CE382FA64C4B0087919E /* XCRemoteSwiftPackageReference "SwiftSDK" */,
+				FB0A00013C5E11AA00F04001 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 60AFA7F92F3E406900FA3135 /* Products */;
@@ -500,6 +507,9 @@
 				CURRENT_PROJECT_VERSION = 25;
 				DEVELOPMENT_TEAM = 84X9WYBF36;
 				ENABLE_PREVIEWS = YES;
+				FACEBOOK_APP_ID = "";
+				FACEBOOK_CLIENT_TOKEN = "";
+				FACEBOOK_URL_SCHEME = "fb$(FACEBOOK_APP_ID:default=-unset-norviq)";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Norviq;
@@ -541,6 +551,9 @@
 				CURRENT_PROJECT_VERSION = 25;
 				DEVELOPMENT_TEAM = 84X9WYBF36;
 				ENABLE_PREVIEWS = YES;
+				FACEBOOK_APP_ID = "";
+				FACEBOOK_CLIENT_TOKEN = "";
+				FACEBOOK_URL_SCHEME = "fb$(FACEBOOK_APP_ID:default=-unset-norviq)";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Norviq;
@@ -747,6 +760,9 @@
 				CURRENT_PROJECT_VERSION = 25;
 				DEVELOPMENT_TEAM = 84X9WYBF36;
 				ENABLE_PREVIEWS = YES;
+				FACEBOOK_APP_ID = "";
+				FACEBOOK_CLIENT_TOKEN = "";
+				FACEBOOK_URL_SCHEME = "fb$(FACEBOOK_APP_ID:default=-unset-norviq)";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Norviq Beta";
@@ -931,7 +947,7 @@
 			repositoryURL = "https://github.com/FinancePlanner/norviq-shared.git";
 			requirement = {
 				kind = exactVersion;
-				version = 5.17.0;
+				version = 5.18.0;
 			};
 		};
 		70B002A53C5E11AA00F02001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
@@ -956,6 +972,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 5.0.0;
+			};
+		};
+		FB0A00013C5E11AA00F04001 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/facebook/facebook-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 17.4.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -1045,6 +1069,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B14D0000000000000000A003 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */;
 			productName = LinkKit;
+		};
+		FB0A00033C5E11AA00F04001 /* FacebookCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FB0A00013C5E11AA00F04001 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */;
+			productName = FacebookCore;
+		};
+		FB0A00023C5E11AA00F04001 /* FacebookLogin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FB0A00013C5E11AA00F04001 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */;
+			productName = FacebookLogin;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

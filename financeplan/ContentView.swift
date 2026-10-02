@@ -198,6 +198,8 @@ public struct ContentView: View {
     // Cold and warm start alike. Queued like a push route, so it waits for
     // launch, sign-in and onboarding to finish.
     .onOpenURL { url in
+      // Facebook's login callback belongs to its SDK, not to the router.
+      if FacebookConnect.handle(url) { return }
       pushNotificationsCoordinator.handleDeepLink(url)
     }
     .onReceive(pushNotificationsCoordinator.$pendingNotificationRoute.compactMap(\.self)) { _ in
@@ -446,6 +448,13 @@ public struct ContentView: View {
     case .friendRequest, .friendAccepted:
       Self.pushLogger.info("push.analytics routed_success destination=social kind=\(route.kind.rawValue, privacy: .public)")
       NotificationCenter.default.post(name: .openSocialFromPushNotification, object: nil)
+    case .boardReply, .boardUpvote:
+      Self.pushLogger.info("push.analytics routed_success destination=board_post kind=\(route.kind.rawValue, privacy: .public)")
+      NotificationCenter.default.post(
+        name: .openBoardPostFromPushNotification,
+        object: nil,
+        userInfo: route.boardPostID.map { ["postId": $0] }
+      )
     case .socialInvite:
       Self.pushLogger.info("push.analytics routed_success destination=social_invite")
       NotificationCenter.default.post(

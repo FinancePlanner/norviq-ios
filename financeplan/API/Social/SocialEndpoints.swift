@@ -194,3 +194,20 @@ nonisolated struct XImportExchangeEndpoint: Endpoint {
     ]
   }
 }
+
+nonisolated struct FacebookLimitedImportEndpoint: Endpoint {
+  typealias Response = FacebookImportMatchesResponse
+  let payload: FacebookLimitedLoginRequest
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/social/discovery/facebook/limited" }
+  var decoder: JSONDecoder { .stockPlanShared }
+  func asParameters() throws -> Parameters { ["idToken": payload.idToken, "nonce": payload.nonce] }
+}
+
+nonisolated struct DisconnectFacebookEndpoint: Endpoint {
+  typealias Response = EmptyAPIResponse
+  var method: HTTPMethod { .delete }
+  var path: String { "/v1/social/discovery/facebook" }
+  var decoder: JSONDecoder { .stockPlanShared }
+  func asParameters() throws -> Parameters { [:] }
+}

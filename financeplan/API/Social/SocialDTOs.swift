@@ -121,6 +121,7 @@ nonisolated struct SocialPrivacySettings: Codable, Sendable, Hashable {
   var searchVisibility: SearchVisibility
   var discoverableByContacts: Bool
   var discoverableByX: Bool
+  var discoverableByFacebook: Bool
   /// Off by default: return % is only ever shown to friends who opt in.
   var showReturnPercent: Bool
   var showStreaks: Bool
@@ -131,11 +132,28 @@ nonisolated struct SocialPrivacySettings: Codable, Sendable, Hashable {
     searchVisibility: .everyone,
     discoverableByContacts: true,
     discoverableByX: true,
+    discoverableByFacebook: true,
     showReturnPercent: false,
     showStreaks: true,
     showXP: true,
     leaderboardOptIn: true
   )
+}
+
+nonisolated extension SocialPrivacySettings {
+  /// Servers from before Facebook discovery don't send its switch; it reads
+  /// as on, the same as the server's own default.
+  init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    searchVisibility = try container.decode(SearchVisibility.self, forKey: .searchVisibility)
+    discoverableByContacts = try container.decode(Bool.self, forKey: .discoverableByContacts)
+    discoverableByX = try container.decode(Bool.self, forKey: .discoverableByX)
+    discoverableByFacebook = try container.decodeIfPresent(Bool.self, forKey: .discoverableByFacebook) ?? true
+    showReturnPercent = try container.decode(Bool.self, forKey: .showReturnPercent)
+    showStreaks = try container.decode(Bool.self, forKey: .showStreaks)
+    showXP = try container.decode(Bool.self, forKey: .showXP)
+    leaderboardOptIn = try container.decode(Bool.self, forKey: .leaderboardOptIn)
+  }
 }
 
 nonisolated struct BlockedUsersResponse: Codable, Sendable, Hashable {
@@ -183,6 +201,7 @@ nonisolated struct SocialConfig: Codable, Sendable, Hashable {
   let enabled: Bool
   let contactsDiscovery: Bool
   let xImport: Bool
+  var facebookImport = false
   let leaderboards: Bool
   let messaging: Bool
   /// Sent only while contact matching is on. The pepper keys the on-device
@@ -193,6 +212,22 @@ nonisolated struct SocialConfig: Codable, Sendable, Hashable {
   static let disabled = SocialConfig(
     enabled: false, contactsDiscovery: false, xImport: false, leaderboards: false, messaging: false
   )
+}
+
+nonisolated extension SocialConfig {
+  /// `facebookImport` arrived after the other switches; a server that
+  /// doesn't send it has the feature off.
+  init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    enabled = try container.decode(Bool.self, forKey: .enabled)
+    contactsDiscovery = try container.decode(Bool.self, forKey: .contactsDiscovery)
+    xImport = try container.decode(Bool.self, forKey: .xImport)
+    facebookImport = try container.decodeIfPresent(Bool.self, forKey: .facebookImport) ?? false
+    leaderboards = try container.decode(Bool.self, forKey: .leaderboards)
+    messaging = try container.decode(Bool.self, forKey: .messaging)
+    contactHashVersion = try container.decodeIfPresent(Int.self, forKey: .contactHashVersion)
+    contactPepper = try container.decodeIfPresent(String.self, forKey: .contactPepper)
+  }
 }
 
 // MARK: - Discovery (Phase 2)
@@ -230,4 +265,23 @@ nonisolated struct XImportMatch: Codable, Sendable, Hashable, Identifiable {
 nonisolated struct XImportMatchesResponse: Codable, Sendable, Hashable {
   let matches: [XImportMatch]
   let totalFollowingScanned: Int
+}
+
+/// Facebook Limited Login: the OIDC token the SDK returned and the nonce the
+/// app asked for, which the server checks against the token's claim.
+nonisolated struct FacebookLimitedLoginRequest: Codable, Sendable, Hashable {
+  let idToken: String
+  let nonce: String
+}
+
+nonisolated struct FacebookImportMatch: Codable, Sendable, Hashable, Identifiable {
+  let user: SocialUserSummary
+  var id: String { user.id }
+}
+
+nonisolated struct FacebookImportMatchesResponse: Codable, Sendable, Hashable {
+  let matches: [FacebookImportMatch]
+  /// How many friends Facebook shared: only those who also connected
+  /// Facebook to Norviq.
+  let friendsGranted: Int
 }

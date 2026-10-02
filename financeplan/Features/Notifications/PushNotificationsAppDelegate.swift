@@ -21,11 +21,14 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, UNUse
   }
 
   func application(
-    _: UIApplication,
+    _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
     UNUserNotificationCenter.current().delegate = self
     registerNotificationCategories()
+    // The app's only delegate, so it also starts the Facebook SDK (a no-op
+    // until FACEBOOK_APP_ID is set).
+    FacebookConnect.applicationDidFinishLaunching(application, launchOptions: launchOptions)
 
     if let remoteNotification = launchOptions?[.remoteNotification] as? [AnyHashable: Any] {
       let route = PushNotificationPayloadParser.parse(userInfo: remoteNotification)
