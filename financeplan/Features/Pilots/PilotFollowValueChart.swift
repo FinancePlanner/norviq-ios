@@ -19,6 +19,10 @@ struct PilotFollowValueChart: View {
           .interpolationMethod(.monotone)
       }
       .chartYScale(domain: .automatic(includesZero: false))
+      // Points are UTC midnights (snapshot days). Label them in UTC so each
+      // one reads as its own day in every device time zone, not the day before.
+      .environment(\.timeZone, .gmt)
+      .environment(\.calendar, Self.utcCalendar)
       .chartYAxis {
         AxisMarks { value in
           AxisGridLine()
@@ -35,6 +39,12 @@ struct PilotFollowValueChart: View {
       .accessibilityValue(accessibilitySummary)
     }
   }
+
+  private static let utcCalendar: Calendar = {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = .gmt
+    return calendar
+  }()
 
   private var accessibilitySummary: String {
     guard let first = points.first, let last = points.last else { return "" }
