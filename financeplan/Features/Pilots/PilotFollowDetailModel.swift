@@ -11,6 +11,10 @@ final class PilotFollowDetailModel {
   private(set) var valuePoints: [PilotValuePoint] = []
   private(set) var isLoading = false
   private(set) var isSaving = false
+  /// The follow no longer exists on the server (404: stopped elsewhere, or
+  /// the feature was switched off). The screen pops once the user has read
+  /// `errorMessage`.
+  private(set) var isGone = false
   var errorMessage: String?
 
   private let service: any PilotsServicing
@@ -49,6 +53,7 @@ final class PilotFollowDetailModel {
       errorMessage = nil
     } catch {
       if Task.isCancelled || PilotsStore.isCancellation(error) { return }
+      if PilotsStore.isFeatureOff(error) { return markGone() }
       errorMessage = error.localizedDescription
     }
   }
@@ -64,8 +69,16 @@ final class PilotFollowDetailModel {
       errorMessage = nil
     } catch {
       if PilotsStore.isCancellation(error) { return }
+      if PilotsStore.isFeatureOff(error) { return markGone() }
       errorMessage = error.localizedDescription
     }
+  }
+
+  /// Same outcome as a 404 on stop: drop the follow everywhere, say why.
+  private func markGone() {
+    store.remove(followId: follow.id)
+    isGone = true
+    errorMessage = String(localized: "This follow isn't available any more.")
   }
 
   /// True once the follow is gone, so the screen can pop. A 404 means it was

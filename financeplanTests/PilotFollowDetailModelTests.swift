@@ -115,4 +115,40 @@ final class PilotFollowDetailModelTests: XCTestCase {
 
     XCTAssertNil(model.errorMessage)
   }
+
+  func testLoadingAFollowThatIsGoneRemovesItAndSaysSo() async {
+    let service = MockPilotsService()
+    service.eventsResult = .failure(PilotsHTTPClient.Error.rejected(status: 404, message: "Not Found"))
+    let (model, store) = makeModel(service: service)
+
+    await model.load()
+
+    XCTAssertEqual(model.errorMessage, "This follow isn't available any more.")
+    XCTAssertTrue(model.isGone)
+    XCTAssertTrue(store.follows.isEmpty)
+  }
+
+  func testPausingAFollowThatIsGoneRemovesItAndSaysSo() async {
+    let service = MockPilotsService()
+    service.statusError = PilotsHTTPClient.Error.rejected(status: 404, message: "Follow not found.")
+    let (model, store) = makeModel(service: service)
+
+    await model.setPaused(true)
+
+    XCTAssertEqual(model.errorMessage, "This follow isn't available any more.")
+    XCTAssertTrue(model.isGone)
+    XCTAssertTrue(store.follows.isEmpty)
+  }
+
+  func testOtherFailuresKeepTheFollow() async {
+    let service = MockPilotsService()
+    service.statusError = PilotsHTTPClient.Error.invalidStatus(500)
+    let (model, store) = makeModel(service: service)
+
+    await model.setPaused(true)
+
+    XCTAssertFalse(model.isGone)
+    XCTAssertEqual(store.follows.count, 1)
+    XCTAssertEqual(model.errorMessage, "Request failed (500).")
+  }
 }
