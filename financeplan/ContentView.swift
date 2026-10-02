@@ -198,6 +198,8 @@ public struct ContentView: View {
     // Cold and warm start alike. Queued like a push route, so it waits for
     // launch, sign-in and onboarding to finish.
     .onOpenURL { url in
+      // Facebook's login callback belongs to its SDK, not to the router.
+      if FacebookConnect.handle(url) { return }
       pushNotificationsCoordinator.handleDeepLink(url)
     }
     .onReceive(pushNotificationsCoordinator.$pendingNotificationRoute.compactMap(\.self)) { _ in

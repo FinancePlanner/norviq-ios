@@ -29,5 +29,6 @@ final class ContactHashingTests: XCTestCase {
     let config = try JSONDecoder().decode(SocialConfig.self, from: json)
     XCTAssertNil(config.contactPepper)
     XCTAssertTrue(config.enabled)
+    XCTAssertFalse(config.facebookImport)
   }
 }
