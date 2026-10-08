@@ -45,6 +45,8 @@ struct PortfolioShareCard: View {
     .padding(72)
     .frame(width: 1080, height: 1350, alignment: .topLeading)
     .background(Color(.systemBackground))
+    // The shared image looks the same whatever mode the phone is in.
+    .environment(\.colorScheme, .light)
   }
 
   /// Brand strip on both styles: the full logo and the site address.

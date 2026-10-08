@@ -65,3 +65,33 @@ final class PortfolioShareCardPieTests: XCTestCase {
     XCTAssertEqual(slices.reduce(0) { $0 + $1.weight }, 120, accuracy: 0.001)
   }
 }
+
+@MainActor
+final class PortfolioShareCardBrandingTests: XCTestCase {
+  /// Samples the top-left corner, which is plain card background in every style.
+  private func cornerBrightness(_ image: UIImage) throws -> CGFloat {
+    let cg = try XCTUnwrap(image.cgImage)
+    let context = try XCTUnwrap(CGContext(
+      data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ))
+    context.draw(cg, in: CGRect(x: -2, y: -(CGFloat(cg.height) - 3), width: CGFloat(cg.width), height: CGFloat(cg.height)))
+    let pixel = try XCTUnwrap(context.data?.assumingMemoryBound(to: UInt8.self))
+    return (CGFloat(pixel[0]) + CGFloat(pixel[1]) + CGFloat(pixel[2])) / (3 * 255)
+  }
+
+  func testCardIsLightEvenWhenThePhoneIsInDarkMode() throws {
+    for style in PortfolioShareCard.Style.allCases {
+      let card = PortfolioShareCard(
+        model: PortfolioOnePageModel(pnl: [PnlBySymbol(symbol: "AAPL", currency: "USD", realizedPnl: 0, unrealizedPnl: 0, weightPercent: 100)]),
+        totalReturnPercent: 1, dayChangePercent: 1, style: style
+      )
+      .environment(\.colorScheme, .dark)
+      let image = try XCTUnwrap(ChartExporter.exportToImage(card, size: CGSize(width: 1080, height: 1350), scale: 1))
+      XCTAssertGreaterThan(try cornerBrightness(image), 0.9, "\(style) rendered dark")
+      if let dir = ProcessInfo.processInfo.environment["SHARE_CARD_BRAND_PREVIEW_DIR"] {
+        try image.pngData()?.write(to: URL(fileURLWithPath: "\(dir)/share-\(style.rawValue)-dark-phone.png"))
+      }
+    }
+  }
+}
