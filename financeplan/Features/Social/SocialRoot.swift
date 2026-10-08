@@ -109,7 +109,7 @@ struct SocialRoot: View {
             }
           }
         } footer: {
-          Text("Share your invite link on Instagram, Facebook, X or WhatsApp.")
+          Text("Text your invite link or share it on Messenger, Instagram, X or WhatsApp.")
         }
 
         if !store.incoming.isEmpty {

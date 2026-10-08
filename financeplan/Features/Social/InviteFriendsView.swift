@@ -2,13 +2,16 @@ import Factory
 import UIKit
 import SwiftUI
 
-/// The user's invite link as a QR code and a share sheet. Instagram and
-/// Facebook have no friends API, so this link is how people there join.
+/// The user's invite link as a QR code, a share sheet, a text message and a
+/// Messenger send. Instagram and Facebook have no friends API, so this link is
+/// how people there join.
 struct InviteFriendsView: View {
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.openURL) private var openURL
   @State private var invite: InviteLink?
   @State private var errorMessage: String?
   @State private var didCopy = false
+  @State private var isTextPresented = false
   private let service: any SocialServicing = Container.shared.socialService()
 
   var body: some View {
@@ -24,12 +27,34 @@ struct InviteFriendsView: View {
             ShareLink(
               item: url,
               subject: Text("Join me on Norviq"),
-              message: Text("Let's track our goals together on Norviq: \(url.absoluteString)")
+              message: Text(InviteMessage.text(for: url))
             ) {
               Label("Share invite link", systemImage: "square.and.arrow.up")
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            if MessageComposeView.canSendText {
+              Button {
+                isTextPresented = true
+              } label: {
+                Label("Text a friend", systemImage: "message")
+                  .frame(maxWidth: .infinity)
+              }
+              .buttonStyle(.bordered)
+              .controlSize(.large)
+              .sheet(isPresented: $isTextPresented) {
+                MessageComposeView(body: InviteMessage.text(for: url)) { isTextPresented = false }
+                  .ignoresSafeArea()
+              }
+            }
+            Button {
+              sendOnMessenger(url)
+            } label: {
+              Label("Send on Messenger", systemImage: "bubble.left.and.bubble.right")
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
             .controlSize(.large)
             Button {
               UIPasteboard.general.url = url
@@ -70,6 +95,14 @@ struct InviteFriendsView: View {
         .padding(16)
         .background(.white, in: RoundedRectangle(cornerRadius: 20))
         .accessibilityLabel("QR code for your invite link")
+    }
+  }
+
+  private func sendOnMessenger(_ url: URL) {
+    if UIApplication.shared.canOpenURL(MessengerShare.appScheme), let appURL = MessengerShare.appURL(for: url) {
+      openURL(appURL)
+    } else if let webURL = MessengerShare.webFallbackURL(for: url) {
+      openURL(webURL)
     }
   }
 

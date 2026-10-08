@@ -68,6 +68,7 @@
 		<string>fbapi</string>
 		<string>fbauth2</string>
 		<string>fb-messenger-share-api</string>
+		<string>fb-messenger</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
