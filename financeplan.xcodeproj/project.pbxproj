@@ -161,7 +161,6 @@
 				60AFA7F42F3E406900FA3135 /* Sources */,
 				60AFA7F52F3E406900FA3135 /* Frameworks */,
 				60AFA7F62F3E406900FA3135 /* Resources */,
-				B15CCA71059954D5238ACC72 /* SwiftLint */,
 			);
 			buildRules = (
 			);
@@ -275,21 +274,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin\"\nROOT=\"${PROJECT_DIR}\"\nif [ ! -f \"${ROOT}/.periphery.yml\" ] && [ -f \"${ROOT}/../.periphery.yml\" ]; then\n  ROOT=\"${ROOT}/..\"\nfi\ncd \"${ROOT}\"\nperiphery scan --format xcode\n";
-		};
-		B15CCA71059954D5238ACC72 /* SwiftLint */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = SwiftLint;
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin\"\nROOT=\"${PROJECT_DIR}\"\nif [ ! -f \"${ROOT}/.swiftlint.yml\" ] && [ -f \"${ROOT}/../.swiftlint.yml\" ]; then\n  ROOT=\"${ROOT}/..\"\nfi\ncd \"${ROOT}\"\nif which swiftlint >/dev/null; then\n  swiftlint\nelse\n  echo \"warning: SwiftLint not installed\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
