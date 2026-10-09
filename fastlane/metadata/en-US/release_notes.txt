@@ -1,5 +1,6 @@
 What's new in Norviq:
 
+• Terminal position sizing — set a future market cap and share count and see how many shares your target takes (your assumptions, not advice)
 • Invite friends by text message or Messenger
 • Portfolio share cards stay readable when your phone is in dark mode
 • Stability improvements
