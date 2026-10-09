@@ -26,6 +26,8 @@ struct StockOverviewTab: View {
 
             StockPressureCard(symbol: symbol)
 
+            StockTerminalCard(symbol: symbol)
+
             if let marketSnapshot {
                 StockMarketSnapshotCard(snapshot: marketSnapshot)
             } else {
