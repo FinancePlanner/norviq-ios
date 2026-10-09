@@ -45,4 +45,46 @@ final class TerminalCardModelsTests: XCTestCase {
 
     XCTAssertEqual(model.state, .loading)
   }
+
+  func testStockCardFiltersByTheSymbolAndShowsTheFirstRow() async {
+    let service = MockTerminalPositionsService()
+    service.listResult = .success(.fixture([.fixture(id: "first"), .fixture(id: "second")], currency: "EUR"))
+    let model = StockTerminalCardModel(service: service)
+
+    await model.load(symbol: "AMZN")
+
+    XCTAssertEqual(service.listTickers, ["AMZN"])
+    XCTAssertEqual(model.state, .position(.fixture(id: "first"), currency: "EUR"))
+  }
+
+  func testStockCardWithNoRowOffersToAddOne() async {
+    let service = MockTerminalPositionsService()
+    service.listResult = .success(.fixture([], currency: "USD"))
+    let model = StockTerminalCardModel(service: service)
+
+    await model.load(symbol: "NVDA")
+
+    XCTAssertEqual(model.state, .empty(currency: "USD"))
+  }
+
+  func testStockCardNotFoundHides() async {
+    let service = MockTerminalPositionsService()
+    service.listResult = .failure(TerminalPositionsHTTPClient.Error.rejected(status: 404, message: "Not Found"))
+    let model = StockTerminalCardModel(service: service)
+
+    await model.load(symbol: "AMZN")
+
+    XCTAssertEqual(model.state, .hidden)
+  }
+
+  func testSavingFromTheStockCardShowsTheNewRow() async {
+    let service = MockTerminalPositionsService()
+    service.listResult = .success(.fixture([], currency: "GBP"))
+    let model = StockTerminalCardModel(service: service)
+    await model.load(symbol: "AMZN")
+
+    model.saved(.fixture(id: "new"))
+
+    XCTAssertEqual(model.state, .position(.fixture(id: "new"), currency: "GBP"))
+  }
 }
