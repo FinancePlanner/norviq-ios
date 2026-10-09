@@ -50,11 +50,18 @@ private final class MockBoardsService: BoardsServicing, @unchecked Sendable {
   var notificationPage = BoardNotificationPage(items: [], nextCursor: nil, unreadCount: 0)
   var markedRead: [[UUID]?] = []
   var savedSettings: [BoardNotificationSettings] = []
-  func notifications(cursor: String?) async throws -> BoardNotificationPage { notificationPage }
+  /// Runs before a settings save answers; lets a test hold one save open.
+  var beforeSettingsSave: ((BoardNotificationSettings) async throws -> Void)?
+  var notificationsFail = false
+  func notifications(cursor: String?) async throws -> BoardNotificationPage {
+    if notificationsFail { throw Failure() }
+    return notificationPage
+  }
   func unreadCount() async throws -> Int { notificationPage.unreadCount }
   func markRead(ids: [UUID]?) async throws { markedRead.append(ids) }
   func notificationSettings() async throws -> BoardNotificationSettings { savedSettings.last ?? .default }
   func updateNotificationSettings(_ settings: BoardNotificationSettings) async throws -> BoardNotificationSettings {
+    try await beforeSettingsSave?(settings)
     savedSettings.append(settings)
     return settings
   }
@@ -235,6 +242,37 @@ final class BoardsNotificationsTests: XCTestCase {
     await model.save(BoardNotificationSettings(replyPush: true, upvotePush: false))
     XCTAssertEqual(model.settings, BoardNotificationSettings(replyPush: true, upvotePush: false))
     XCTAssertEqual(service.savedSettings.count, 1)
+  }
+
+  func testAnEarlierSaveFailingAfterALaterOneDoesNotUndoIt() async {
+    let service = MockBoardsService()
+    let first = BoardNotificationSettings(replyPush: false, upvotePush: true)
+    let second = BoardNotificationSettings(replyPush: false, upvotePush: false)
+    var heldSave: CheckedContinuation<Void, Error>?
+    service.beforeSettingsSave = { settings in
+      guard settings == first else { return }
+      try await withCheckedThrowingContinuation { heldSave = $0 }
+    }
+    let model = BoardsActivityModel(service: service)
+
+    let firstSave = Task { await model.save(first) }
+    while heldSave == nil { await Task.yield() }
+    await model.save(second)
+    heldSave?.resume(throwing: MockBoardsService.Failure())
+    await firstSave.value
+
+    XCTAssertEqual(model.settings, second, "the older save's rollback must not overwrite the newer choice")
+    XCTAssertNil(model.errorMessage, "a superseded save has nothing left to report")
+  }
+
+  func testAFailedNextPageIsReported() async {
+    let service = MockBoardsService()
+    service.notificationPage = BoardNotificationPage(items: [notification(.reply, read: true)], nextCursor: "next", unreadCount: 0)
+    let model = BoardsActivityModel(service: service)
+    await model.load()
+    service.notificationsFail = true
+    await model.loadMore()
+    XCTAssertNotNil(model.errorMessage)
   }
 
   func testViewerStoreOpensAPendingPost() async {

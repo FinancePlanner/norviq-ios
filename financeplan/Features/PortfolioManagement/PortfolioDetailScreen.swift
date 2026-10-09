@@ -26,9 +26,7 @@ struct PortfolioDetailScreen: View {
 
       if let follow = pilots.follow(forPortfolioId: portfolio.id) {
         Section {
-          NavigationLink {
-            PilotFollowDetailScreen(follow: follow)
-          } label: {
+          NavigationLink(value: PilotRoute.follow(follow)) {
             PilotFollowBanner(follow: follow)
           }
         }

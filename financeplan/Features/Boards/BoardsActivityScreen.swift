@@ -38,7 +38,7 @@ struct BoardsActivityScreen: View {
     .navigationTitle("Activity")
     .refreshable { await reload() }
     .task { await reload() }
-    .alert("Something went wrong", isPresented: boardsErrorBinding($model.errorMessage)) {
+    .alert("Something went wrong", isPresented: errorAlertBinding($model.errorMessage)) {
       Button("OK", role: .cancel) {}
     } message: {
       Text(model.errorMessage ?? "")
@@ -47,7 +47,8 @@ struct BoardsActivityScreen: View {
 
   private func reload() async {
     await model.load()
-    viewer.clearUnread()
+    // A failed load marked nothing read, so the badge must stay.
+    if model.errorMessage == nil { viewer.clearUnread() }
   }
 
   private func binding(_ keyPath: KeyPath<BoardNotificationSettings, Bool>) -> Binding<Bool> {
@@ -74,7 +75,7 @@ struct BoardsActivityRow: View {
         .foregroundStyle(AppTheme.Colors.tint)
         .frame(width: 20)
       VStack(alignment: .leading, spacing: 3) {
-        Text(headline).font(.subheadline)
+        headline.font(.subheadline)
         if let excerpt = item.excerpt, !excerpt.isEmpty {
           Text(excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(2)
         }
@@ -88,12 +89,13 @@ struct BoardsActivityRow: View {
     .padding(.vertical, 2)
   }
 
-  private var headline: AttributedString {
-    var actor = AttributedString(item.actorUsername ?? String(localized: "Someone"))
-    actor.foregroundColor = AppTheme.Colors.tint
-    let verb = item.kind == .upvote ? String(localized: " upvoted ") : String(localized: " replied on ")
-    var title = AttributedString(item.postTitle)
-    title.font = .subheadline.weight(.semibold)
-    return actor + AttributedString(verb) + title
+  /// One localized sentence per kind, so a translation can order the actor,
+  /// the verb and the post title however its grammar needs.
+  private var headline: Text {
+    let actor = Text(item.actorUsername ?? String(localized: "Someone")).foregroundStyle(AppTheme.Colors.tint)
+    let title = Text(item.postTitle).font(.subheadline.weight(.semibold))
+    return item.kind == .upvote
+      ? Text("\(actor) upvoted \(title)", comment: "Boards activity row. First placeholder: who upvoted. Second: the post title.")
+      : Text("\(actor) replied on \(title)", comment: "Boards activity row. First placeholder: who replied. Second: the post title.")
   }
 }

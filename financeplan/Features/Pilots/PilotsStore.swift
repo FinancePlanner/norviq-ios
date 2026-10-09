@@ -18,7 +18,15 @@ final class PilotsStore {
   }
 
   private(set) var availability: Availability = .unknown
-  private(set) var pilots: [PilotSummary] = []
+  private(set) var pilots: [PilotSummary] = [] {
+    didSet {
+      politicians = pilots.filter { $0.kind == .politician }
+      funds = pilots.filter { $0.kind == .fund }
+    }
+  }
+  /// `pilots` split by kind once per load, not on every browse-screen body.
+  private(set) var politicians: [PilotSummary] = []
+  private(set) var funds: [PilotSummary] = []
   private(set) var follows: [PilotFollowResponse] = []
   /// Bumped when a follow is added or removed, so screens can reload what a
   /// follow creates (a new portfolio) with `.task(id:)`.

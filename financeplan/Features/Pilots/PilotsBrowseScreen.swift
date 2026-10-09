@@ -21,17 +21,15 @@ struct PilotsBrowseScreen: View {
       if !store.follows.isEmpty {
         Section("Following") {
           ForEach(store.follows) { follow in
-            NavigationLink {
-              PilotFollowDetailScreen(follow: follow)
-            } label: {
+            NavigationLink(value: PilotRoute.follow(follow)) {
               PilotFollowRow(follow: follow)
             }
           }
         }
       }
 
-      PilotListSection(title: "Politicians", pilots: store.pilots.filter { $0.kind == .politician })
-      PilotListSection(title: "Funds", pilots: store.pilots.filter { $0.kind == .fund })
+      PilotListSection(title: "Politicians", pilots: store.politicians)
+      PilotListSection(title: "Funds", pilots: store.funds)
     }
     .overlay {
       if store.availability == .unavailable {
@@ -49,18 +47,11 @@ struct PilotsBrowseScreen: View {
     .vigilInlineNavigationBar()
     .task { await store.load() }
     .refreshable { await store.load() }
-    .alert("Something went wrong", isPresented: errorBinding) {
+    .alert("Something went wrong", isPresented: errorAlertBinding($store.errorMessage)) {
       Button("OK", role: .cancel) {}
     } message: {
       Text(store.errorMessage ?? "")
     }
-  }
-
-  private var errorBinding: Binding<Bool> {
-    Binding(
-      get: { store.errorMessage != nil },
-      set: { if !$0 { store.errorMessage = nil } }
-    )
   }
 }
 
@@ -72,9 +63,7 @@ private struct PilotListSection: View {
     if !pilots.isEmpty {
       Section(title) {
         ForEach(pilots) { pilot in
-          NavigationLink {
-            PilotDetailScreen(pilot: pilot)
-          } label: {
+          NavigationLink(value: PilotRoute.pilot(pilot)) {
             PilotRow(pilot: pilot)
           }
           .accessibilityIdentifier("pilots.pilot.\(pilot.slug)")

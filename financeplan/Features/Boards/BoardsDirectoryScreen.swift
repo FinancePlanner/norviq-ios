@@ -84,9 +84,9 @@ struct BoardsDirectoryScreen: View {
         NavigationLink {
           BoardsActivityScreen()
         } label: {
-          Image(systemName: viewer.unreadCount > 0 ? "bell.badge.fill" : "bell")
-            .accessibilityLabel(viewer.unreadCount > 0 ? "Activity, \(viewer.unreadCount) new" : "Activity")
+          Label("Activity", systemImage: viewer.unreadCount > 0 ? "bell.badge.fill" : "bell")
         }
+        .accessibilityValue(viewer.unreadCount > 0 ? Text("\(viewer.unreadCount) new") : Text(verbatim: ""))
         .accessibilityIdentifier("boards.activity")
       }
       if viewer.canWrite {
@@ -99,7 +99,7 @@ struct BoardsDirectoryScreen: View {
     .sheet(isPresented: $isCreating) {
       CreateBoardSheet(model: model)
     }
-    .alert("Something went wrong", isPresented: boardsErrorBinding($model.errorMessage)) {
+    .alert("Something went wrong", isPresented: errorAlertBinding($model.errorMessage)) {
       Button("OK", role: .cancel) {}
     } message: {
       Text(model.errorMessage ?? "")
@@ -137,10 +137,4 @@ struct BoardsViewerBanner: View {
     }
     return String(localized: "You're muted. You can still read, report and block.")
   }
-}
-
-/// A Bool binding over an optional error message, for `.alert`.
-@MainActor
-func boardsErrorBinding(_ message: Binding<String?>) -> Binding<Bool> {
-  Binding(get: { message.wrappedValue != nil }, set: { if !$0 { message.wrappedValue = nil } })
 }

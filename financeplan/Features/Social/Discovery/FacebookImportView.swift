@@ -6,8 +6,10 @@ import SwiftUI
 /// Facebook to Norviq. Anyone else is reached with the invite link.
 struct FacebookImportView: View {
   @Environment(\.dismiss) private var dismiss
+  @InjectedObservable(\Container.socialStore) private var store
   @State private var phase: Phase = .explainer
   @State private var isDisconnecting = false
+  @State private var isConfirmingDisconnect = false
   @State private var disconnectError: String?
   private let service: any SocialServicing = Container.shared.socialService()
 
@@ -28,10 +30,7 @@ struct FacebookImportView: View {
             Button("Done") { dismiss() }
           }
         }
-        .alert(
-          "Couldn't disconnect Facebook",
-          isPresented: Binding(get: { disconnectError != nil }, set: { if !$0 { disconnectError = nil } })
-        ) {
+        .alert("Couldn't disconnect Facebook", isPresented: errorAlertBinding($disconnectError)) {
           Button("OK", role: .cancel) {}
         } message: {
           Text(disconnectError ?? "")
@@ -43,26 +42,32 @@ struct FacebookImportView: View {
   private var content: some View {
     switch phase {
     case .explainer:
-      VStack(spacing: 20) {
-        Image(systemName: "person.2.badge.key")
-          .font(.system(size: 56))
-          .foregroundStyle(AppTheme.Colors.tint)
-        Text("Find friends from Facebook")
-          .typography(.headline)
-          .multilineTextAlignment(.center)
-        Text("Norviq sees only your friends who also connected Facebook to Norviq. Nothing is posted to Facebook.")
-          .typography(.body)
-          .foregroundStyle(.secondary)
-          .multilineTextAlignment(.center)
-        Button {
-          Task { await run() }
-        } label: {
-          Text("Continue with Facebook").frame(maxWidth: .infinity)
+      // Scrolls so the button stays reachable at large text sizes and on
+      // short windows.
+      ScrollView {
+        VStack(spacing: 20) {
+          Image(systemName: "person.2.badge.key")
+            .font(.largeTitle)
+            .imageScale(.large)
+            .foregroundStyle(AppTheme.Colors.tint)
+            .accessibilityHidden(true)
+          Text("Find friends from Facebook")
+            .typography(.headline)
+            .multilineTextAlignment(.center)
+          Text("Norviq sees only your friends who also connected Facebook to Norviq. Nothing is posted to Facebook.")
+            .typography(.body)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+          Button {
+            Task { await run() }
+          } label: {
+            Text("Continue with Facebook").frame(maxWidth: .infinity)
+          }
+          .buttonStyle(.borderedProminent)
+          .controlSize(.large)
         }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
+        .padding(24)
       }
-      .padding(24)
     case .working:
       ProgressView("Looking for your Facebook friends…")
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -82,9 +87,16 @@ struct FacebookImportView: View {
 
         Section {
           Button("Disconnect Facebook", role: .destructive) {
-            Task { await disconnect() }
+            isConfirmingDisconnect = true
           }
           .disabled(isDisconnecting)
+          .confirmationDialog("Disconnect Facebook?", isPresented: $isConfirmingDisconnect, titleVisibility: .visible) {
+            Button("Disconnect", role: .destructive) {
+              Task { await disconnect() }
+            }
+          } message: {
+            Text("Your Facebook friends on Norviq stop finding you this way.")
+          }
         } footer: {
           Text("Your Facebook friends on Norviq stop finding you this way.")
         }
@@ -111,8 +123,7 @@ struct FacebookImportView: View {
     isDisconnecting = true
     defer { isDisconnecting = false }
     do {
-      try await service.disconnectFacebook()
-      FacebookConnect.logOut()
+      try await store.disconnectFacebook()
       phase = .explainer
     } catch {
       disconnectError = error.localizedDescription

@@ -32,9 +32,7 @@ struct PortfolioWorkspaceScreen: View {
 
       if pilots.isAvailable {
         Section {
-          NavigationLink {
-            PilotsBrowseScreen()
-          } label: {
+          NavigationLink(value: PilotRoute.browse) {
             PilotsEntryRow(followCount: pilots.follows.count)
           }
           .accessibilityIdentifier("portfolios.followPilot")

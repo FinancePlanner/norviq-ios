@@ -80,7 +80,7 @@ struct PilotFollowDetailScreen: View {
     ) {
       Button("Stop following", role: .destructive) { Task { await stop() } }
     }
-    .alert("Something went wrong", isPresented: boardsErrorBinding($model.errorMessage)) {
+    .alert("Something went wrong", isPresented: errorAlertBinding($model.errorMessage)) {
       Button("OK", role: .cancel) {
         // The follow no longer exists: once the user has read why, drop it
         // everywhere and leave its screen.
