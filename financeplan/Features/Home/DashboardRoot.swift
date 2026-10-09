@@ -31,6 +31,7 @@ struct DashboardRoot: View {
   @State private var spendingChartPoints: [ChartDataPoint] = []
   @State private var isChartBuilderPresented = false
   @State private var isGoalPlanningPresented = false
+  @State private var isTerminalPositionsPresented = false
   @State private var hasLoadedContent = false
   @Environment(GuidedStartCoordinator.self) private var guided: GuidedStartCoordinator?
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -121,7 +122,8 @@ struct DashboardRoot: View {
               insightCards: insightCards,
               focusPointsViewModel: focusPointsViewModel,
               onChartBuilderTap: presentChartBuilder,
-              onGoalPlanningTap: { isGoalPlanningPresented = true }
+              onGoalPlanningTap: { isGoalPlanningPresented = true },
+              onTerminalPositionsTap: { isTerminalPositionsPresented = true }
             )
           }
           .padding(.horizontal, 16)
@@ -143,6 +145,9 @@ struct DashboardRoot: View {
       .aiViewSummary(.home)
       .navigationDestination(isPresented: $isChartBuilderPresented) {
         ChartBuilderStandaloneScreen()
+      }
+      .navigationDestination(isPresented: $isTerminalPositionsPresented) {
+        TerminalPositionsScreen()
       }
       .task {
         await handleInitialTask()
@@ -388,6 +393,7 @@ private struct DashboardContentSection: View {
   let focusPointsViewModel: FocusPointsViewModel
   let onChartBuilderTap: () -> Void
   let onGoalPlanningTap: () -> Void
+  let onTerminalPositionsTap: () -> Void
 
   @Environment(\.colorScheme) private var colorScheme
   @Environment(GuidedStartCoordinator.self) private var guided: GuidedStartCoordinator?
@@ -448,6 +454,8 @@ private struct DashboardContentSection: View {
       GoalPlanningDashboardCard(action: onGoalPlanningTap)
         .guidedTarget(.goalCard, in: .dashboard)
         .id(DashboardRoot.goalCardScrollID)
+
+      TerminalDashboardCard(action: onTerminalPositionsTap)
 
       ChartBuilderDashboardCard(onOpen: onChartBuilderTap)
 
