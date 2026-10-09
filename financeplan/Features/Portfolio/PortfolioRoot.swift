@@ -15,6 +15,7 @@ enum PortfolioRootRoute: Hashable {
   case smartScreens
   case rebalancingRules
   case notifications
+  case terminalPositions
 }
 
 @MainActor
@@ -59,6 +60,9 @@ struct PortfolioRoot: View {
           ProGateView(billingManager: billingManager) { RebalancingRulesScreen() }
         case .notifications:
           NotificationInboxScreen()
+        // Free, like Grow and Retire: only the AI suggestions inside are Pro.
+        case .terminalPositions:
+          TerminalPositionsScreen()
         }
       }
       .navigationDestination(for: PortfolioStockRoute.self) { route in
@@ -114,6 +118,9 @@ struct PortfolioRoot: View {
             }
             NavigationLink(value: PortfolioRootRoute.retire) {
               Label("Retire", systemImage: "beach.umbrella")
+            }
+            NavigationLink(value: PortfolioRootRoute.terminalPositions) {
+              Label("Terminal position sizing", systemImage: "scope")
             }
           }
           .accessibilityLabel("Open planning")
