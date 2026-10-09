@@ -77,6 +77,8 @@ final class TerminalPositionsViewModel {
 
   private let service: any TerminalPositionsServicing
   private let defaults: UserDefaults
+  private var reorderTask: Task<Void, Never>?
+  private var reorderGeneration = 0
 
   init(service: any TerminalPositionsServicing, defaults: UserDefaults = .standard) {
     self.service = service
@@ -140,6 +142,81 @@ final class TerminalPositionsViewModel {
   func dismissSample() {
     defaults.set(true, forKey: TerminalPreferences.sampleDismissedKey)
     isSampleDismissed = true
+  }
+
+  /// The editor's result: replaces the row it edited, or appends a new one.
+  func saved(_ position: TerminalPositionResponse) {
+    if let index = positions.firstIndex(where: { $0.id == position.id }) {
+      positions[index] = position
+    } else {
+      positions.append(position)
+    }
+  }
+
+  func delete(_ position: TerminalPositionResponse) async {
+    guard let index = positions.firstIndex(where: { $0.id == position.id }) else { return }
+    positions.remove(at: index)
+    do {
+      try await service.delete(id: position.id)
+    } catch {
+      // Already deleted on another device: the row is gone either way.
+      if case .rejected(status: 404, message: _)? = error as? TerminalPositionsHTTPClient.Error { return }
+      positions.insert(position, at: min(index, positions.count))
+      show(error, fallback: String(localized: "The row could not be deleted."))
+    }
+  }
+
+  func duplicate(_ position: TerminalPositionResponse) async {
+    do {
+      let copy = try await service.duplicate(id: position.id)
+      let index = positions.firstIndex(where: { $0.id == position.id }).map { $0 + 1 } ?? positions.count
+      positions.insert(copy, at: index)
+    } catch {
+      show(
+        error,
+        fallback: String(localized: "The row could not be duplicated."),
+        notFound: String(localized: "That row no longer exists. Pull to refresh.")
+      )
+    }
+  }
+
+  /// Moves the rows at once (SwiftUI expects `onMove` to change the data
+  /// synchronously), then saves the full order. Saves run one after another.
+  /// Only the newest one applies the server's answer, and if the newest fails,
+  /// the list reloads, so it never shows an order the server doesn't have.
+  @discardableResult
+  func move(fromOffsets source: IndexSet, toOffset destination: Int) -> Task<Void, Never>? {
+    let before = positions.map(\.id)
+    positions.move(fromOffsets: source, toOffset: destination)
+    let ids = positions.map(\.id)
+    guard ids != before else {
+      return nil
+    }
+    reorderGeneration += 1
+    let generation = reorderGeneration
+    let previous = reorderTask
+    let task = Task {
+      await previous?.value
+      await commitOrder(ids, generation: generation)
+    }
+    reorderTask = task
+    return task
+  }
+
+  private func commitOrder(_ ids: [String], generation: Int) async {
+    do {
+      let list = try await service.reorder(ids: ids)
+      guard generation == reorderGeneration else {
+        return
+      }
+      positions = list.positions
+    } catch {
+      guard generation == reorderGeneration, !TerminalPositionsErrorText.isCancellation(error) else {
+        return
+      }
+      errorMessage = String(localized: "The new order could not be saved.")
+      await load()
+    }
   }
 
   private func apply(_ list: AutobuysListResponse) {
