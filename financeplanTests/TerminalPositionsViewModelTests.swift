@@ -229,4 +229,14 @@ final class TerminalPositionsViewModelTests: XCTestCase {
     XCTAssertEqual(model.positions.map(\.id), ["a", "b", "z"])
     XCTAssertEqual(model.positions[0].valueWanted, 2_000_000)
   }
+
+  func testFailedMoveWithFailedReloadRestoresTheLastServerOrder() async {
+    let (model, service) = await loadedModel(ids: ["a", "b", "c"])
+    service.reorderError = TerminalPositionsHTTPClient.Error.invalidStatus(500)
+    service.listResult = .failure(TerminalPositionsHTTPClient.Error.invalidStatus(500))
+
+    await model.move(fromOffsets: IndexSet(integer: 2), toOffset: 0)?.value
+
+    XCTAssertEqual(model.positions.map(\.id), ["a", "b", "c"])
+  }
 }

@@ -79,6 +79,7 @@ final class TerminalPositionsViewModel {
   private let defaults: UserDefaults
   private var reorderTask: Task<Void, Never>?
   private var reorderGeneration = 0
+  private var confirmedOrder: [String]?
 
   init(service: any TerminalPositionsServicing, defaults: UserDefaults = .standard) {
     self.service = service
@@ -98,7 +99,9 @@ final class TerminalPositionsViewModel {
     )
   }
 
-  func load() async {
+  /// Returns true when the list request succeeded.
+  @discardableResult
+  func load() async -> Bool {
     isLoading = true
     defer { isLoading = false }
     async let listRequest = service.list(ticker: nil)
@@ -121,6 +124,7 @@ final class TerminalPositionsViewModel {
         show(error, fallback: String(localized: "Autobuys are unavailable right now."))
       }
     }
+    return !listFailed
   }
 
   func reloadAutobuys() async {
@@ -192,6 +196,10 @@ final class TerminalPositionsViewModel {
     guard ids != before else {
       return nil
     }
+    // The order the server last confirmed: kept until the newest save settles.
+    if confirmedOrder == nil {
+      confirmedOrder = before
+    }
     reorderGeneration += 1
     let generation = reorderGeneration
     let previous = reorderTask
@@ -210,13 +218,31 @@ final class TerminalPositionsViewModel {
         return
       }
       positions = list.positions
+      confirmedOrder = nil
     } catch {
       guard generation == reorderGeneration, !TerminalPositionsErrorText.isCancellation(error) else {
         return
       }
       errorMessage = String(localized: "The new order could not be saved.")
-      await load()
+      let reloaded = await load()
+      // Neither the save nor the reload reached the server: show the last confirmed order.
+      if !reloaded, let confirmed = confirmedOrder {
+        restoreOrder(confirmed)
+      }
+      confirmedOrder = nil
     }
+  }
+
+  /// Puts the rows back in `ids` order. Rows not in `ids` keep their order at the end.
+  private func restoreOrder(_ ids: [String]) {
+    let rank = Dictionary(ids.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
+    positions = positions.enumerated()
+      .sorted { lhs, rhs in
+        let left = rank[lhs.element.id] ?? Int.max
+        let right = rank[rhs.element.id] ?? Int.max
+        return left == right ? lhs.offset < rhs.offset : left < right
+      }
+      .map(\.element)
   }
 
   private func apply(_ list: AutobuysListResponse) {
