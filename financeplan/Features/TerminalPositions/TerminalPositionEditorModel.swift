@@ -42,6 +42,13 @@ final class TerminalPositionEditorModel {
   var inputs: Inputs
   var isSaving = false
   var errorMessage: String?
+  private(set) var shareFacts: ShareFactsSuggestion?
+  private(set) var scenarioSuggestion: TerminalScenarioSuggestion?
+  private(set) var isFetchingShareFacts = false
+  private(set) var isFetchingScenario = false
+  private(set) var aiMessage: String?
+  /// Set when the server answers with the Pro gate; the sheet shows the paywall.
+  var needsUpgrade = false
 
   private let initialInputs: Inputs
   private let service: any TerminalPositionsServicing
@@ -227,6 +234,88 @@ final class TerminalPositionEditorModel {
         notFound: String(localized: "This row was deleted on another device.")
       )
       return nil
+    }
+  }
+
+  // MARK: - AI (Pro). Suggestions only: Accept fills fields, Save writes.
+
+  func fillWithAI() async {
+    guard isTickerValid else {
+      aiMessage = String(localized: "Enter a ticker first.")
+      return
+    }
+    aiMessage = nil
+    isFetchingShareFacts = true
+    defer { isFetchingShareFacts = false }
+    do {
+      shareFacts = try await service.shareFacts(ticker: normalizedTicker)
+    } catch {
+      handleAIError(error)
+    }
+  }
+
+  func suggestScenario() async {
+    guard isTickerValid else {
+      aiMessage = String(localized: "Enter a ticker first.")
+      return
+    }
+    aiMessage = nil
+    isFetchingScenario = true
+    defer { isFetchingScenario = false }
+    do {
+      scenarioSuggestion = try await service.suggestScenario(ticker: normalizedTicker, horizonYears: nil)
+    } catch {
+      handleAIError(error)
+    }
+  }
+
+  /// Fills shares outstanding and today's price, never the market cap or the
+  /// value wanted, and never saves.
+  func acceptShareFacts() {
+    guard let facts = shareFacts else { return }
+    if let shares = facts.sharesOutstanding {
+      inputs.sharesOutstanding = TerminalNumberInput(value: shares, locale: locale)
+    }
+    if let price = facts.currentSharePrice {
+      inputs.currentSharePrice = TerminalNumberInput(value: price, usesUnits: false, locale: locale)
+    }
+    shareFacts = nil
+  }
+
+  /// Fills the future share count and market cap. Never saves.
+  func acceptScenario() {
+    guard let suggestion = scenarioSuggestion else { return }
+    inputs.terminalShareCount = TerminalNumberInput(value: suggestion.terminalShareCount, locale: locale)
+    inputs.terminalMarketCap = TerminalNumberInput(value: suggestion.terminalMarketCap, locale: locale)
+    scenarioSuggestion = nil
+  }
+
+  func dismissShareFacts() { shareFacts = nil }
+
+  func dismissScenario() { scenarioSuggestion = nil }
+
+  /// The lookup can quote a listing in another currency than the plan's.
+  var shareFactsCurrencyNote: String? {
+    guard let suggested = shareFacts?.currency?.uppercased(), !suggested.isEmpty,
+          suggested != currency.uppercased()
+    else { return nil }
+    let planCurrency = currency.uppercased()
+    return String(localized: "This price is in \(suggested); your plan uses \(planCurrency).")
+  }
+
+  private func handleAIError(_ error: Error) {
+    if TerminalPositionsErrorText.isCancellation(error) { return }
+    switch error as? TerminalPositionsHTTPClient.Error {
+    case .upgradeRequired?:
+      needsUpgrade = true
+    case .rejected(status: 503, message: _)?:
+      aiMessage = String(localized: "AI lookup is unavailable right now. You can still enter the numbers yourself.")
+    case .rejected(status: 422, message: _)?:
+      aiMessage = String(localized: "The AI couldn't find usable numbers for this ticker.")
+    case .rejected(status: 429, message: _)?:
+      aiMessage = String(localized: "Too many AI lookups. Try again in a minute.")
+    default:
+      aiMessage = String(localized: "The AI lookup failed. Try again.")
     }
   }
 

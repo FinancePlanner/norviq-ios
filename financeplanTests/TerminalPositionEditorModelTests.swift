@@ -158,4 +158,112 @@ final class TerminalPositionEditorModelTests: XCTestCase {
       "This scenario needs a positive share count and market cap."
     )
   }
+
+  func testFillWithAINeedsATicker() async {
+    let service = MockTerminalPositionsService()
+    let model = TerminalPositionEditorModel(currency: "USD", service: service, locale: english)
+
+    await model.fillWithAI()
+
+    XCTAssertEqual(model.aiMessage, "Enter a ticker first.")
+    XCTAssertTrue(service.shareFactsTickers.isEmpty)
+  }
+
+  func testFillWithAIShowsTheSuggestionWithoutTouchingTheForm() async {
+    let service = MockTerminalPositionsService()
+    let model = filledModel(service)
+    let before = model.inputs
+
+    await model.fillWithAI()
+
+    XCTAssertEqual(service.shareFactsTickers, ["AMZN"])
+    XCTAssertEqual(model.shareFacts, .fixture())
+    XCTAssertEqual(model.inputs, before)
+  }
+
+  func testAcceptingShareFactsFillsOnlySharesOutstandingAndPriceAndNeverSaves() async {
+    let service = MockTerminalPositionsService()
+    let model = filledModel(service)
+    let marketCapBefore = model.inputs.terminalMarketCap
+    let valueWantedBefore = model.inputs.valueWanted
+    await model.fillWithAI()
+
+    model.acceptShareFacts()
+
+    XCTAssertEqual(model.inputs.sharesOutstanding.value(locale: english), 10_600_000_000)
+    XCTAssertEqual(model.inputs.currentSharePrice.value(locale: english), 220.5)
+    XCTAssertEqual(model.inputs.terminalMarketCap, marketCapBefore)
+    XCTAssertEqual(model.inputs.valueWanted, valueWantedBefore)
+    XCTAssertNil(model.shareFacts)
+    XCTAssertTrue(service.createRequests.isEmpty)
+    XCTAssertTrue(service.updateRequests.isEmpty)
+  }
+
+  func testAcceptingAScenarioFillsShareCountAndMarketCapOnly() async {
+    let service = MockTerminalPositionsService()
+    let model = filledModel(service)
+    let valueWantedBefore = model.inputs.valueWanted
+    await model.suggestScenario()
+
+    model.acceptScenario()
+
+    XCTAssertEqual(service.scenarioTickers, ["AMZN"])
+    XCTAssertEqual(model.inputs.terminalShareCount.value(locale: english), 12_000_000_000)
+    XCTAssertEqual(model.inputs.terminalMarketCap.value(locale: english), 8_000_000_000_000)
+    XCTAssertEqual(model.inputs.valueWanted, valueWantedBefore)
+    XCTAssertNil(model.scenarioSuggestion)
+    XCTAssertTrue(service.createRequests.isEmpty)
+  }
+
+  func testUpgradeRequiredAsksForThePaywall() async {
+    let service = MockTerminalPositionsService()
+    service.shareFactsResult = .failure(TerminalPositionsHTTPClient.Error.upgradeRequired(feature: "terminal_position_ai"))
+    let model = filledModel(service)
+
+    await model.fillWithAI()
+
+    XCTAssertTrue(model.needsUpgrade)
+    XCTAssertNil(model.aiMessage)
+  }
+
+  func testPlainForbiddenDoesNotAskForThePaywall() async {
+    let service = MockTerminalPositionsService()
+    service.scenarioResult = .failure(TerminalPositionsHTTPClient.Error.rejected(status: 403, message: "Missing scope"))
+    let model = filledModel(service)
+
+    await model.suggestScenario()
+
+    XCTAssertFalse(model.needsUpgrade)
+    XCTAssertEqual(model.aiMessage, "The AI lookup failed. Try again.")
+  }
+
+  func testAIUnavailableSaysManualEntryStillWorks() async {
+    let service = MockTerminalPositionsService()
+    service.shareFactsResult = .failure(TerminalPositionsHTTPClient.Error.rejected(status: 503, message: "AI lookup unavailable"))
+    let model = filledModel(service)
+
+    await model.fillWithAI()
+
+    XCTAssertEqual(model.aiMessage, "AI lookup is unavailable right now. You can still enter the numbers yourself.")
+  }
+
+  func testUnusableAIAnswerIsExplained() async {
+    let service = MockTerminalPositionsService()
+    service.scenarioResult = .failure(TerminalPositionsHTTPClient.Error.rejected(status: 422, message: "no sources"))
+    let model = filledModel(service)
+
+    await model.suggestScenario()
+
+    XCTAssertEqual(model.aiMessage, "The AI couldn't find usable numbers for this ticker.")
+  }
+
+  func testCurrencyMismatchIsCalledOut() async {
+    let service = MockTerminalPositionsService()
+    service.shareFactsResult = .success(.fixture(currency: "eur"))
+    let model = filledModel(service)
+
+    await model.fillWithAI()
+
+    XCTAssertEqual(model.shareFactsCurrencyNote, "This price is in EUR; your plan uses USD.")
+  }
 }
