@@ -71,6 +71,17 @@ final class TerminalPositionsViewModelTests: XCTestCase {
     XCTAssertNil(model.errorMessage)
   }
 
+  func testBackendDownShowsOnlyThePositionsMessage() async {
+    let service = MockTerminalPositionsService()
+    service.listResult = .failure(TerminalPositionsHTTPClient.Error.rejected(status: 404, message: "Not Found"))
+    service.autobuysResult = .failure(TerminalPositionsHTTPClient.Error.rejected(status: 404, message: "Not Found"))
+    let (model, _, _) = makeModel(service)
+
+    await model.load()
+
+    XCTAssertEqual(model.errorMessage, "Terminal positions are unavailable right now.")
+  }
+
   func testAutobuysFailureStillShowsPositions() async {
     let service = MockTerminalPositionsService()
     service.autobuysResult = .failure(TerminalPositionsHTTPClient.Error.invalidStatus(500))

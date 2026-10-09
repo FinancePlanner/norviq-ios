@@ -101,18 +101,23 @@ final class TerminalPositionsViewModel {
     defer { isLoading = false }
     async let listRequest = service.list(ticker: nil)
     async let autobuysRequest = service.autobuys()
+    var listFailed = false
     do {
       let list = try await listRequest
       positions = list.positions
       currency = list.currency
       hasLoaded = true
     } catch {
+      listFailed = true
       show(error, fallback: String(localized: "Terminal positions are unavailable right now."))
     }
     do {
       apply(try await autobuysRequest)
     } catch {
-      show(error, fallback: String(localized: "Autobuys are unavailable right now."))
+      // When the backend is down both requests fail; the positions message wins.
+      if !listFailed {
+        show(error, fallback: String(localized: "Autobuys are unavailable right now."))
+      }
     }
   }
 
