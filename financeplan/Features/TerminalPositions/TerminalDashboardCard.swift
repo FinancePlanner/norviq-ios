@@ -40,6 +40,16 @@ struct TerminalDashboardCard: View {
   let action: () -> Void
 
   var body: some View {
+    // The task lives on a host that always exists: `.hidden` renders nothing,
+    // and a task on nothing never runs again.
+    ZStack {
+      Color.clear.frame(width: 0, height: 0)
+        .task { await model.load() }
+      card
+    }
+  }
+
+  private var card: some View {
     Group {
       switch model.state {
       case .loading:
@@ -53,7 +63,6 @@ struct TerminalDashboardCard: View {
         card { summaryContent(summary) }
       }
     }
-    .task { await model.load() }
   }
 
   private var prompt: some View {
@@ -87,6 +96,8 @@ struct TerminalDashboardCard: View {
           }
           ProgressView(value: min(max(position.progress ?? 0, 0), 1))
             .tint(AppTheme.Colors.tint(for: colorScheme))
+            .accessibilityLabel(Text("Progress"))
+            .accessibilityValue(Text(TerminalFormat.progress(position.progress ?? 0)))
         }
       }
       if summary.monthlyAutobuyTotal > 0 {

@@ -106,10 +106,19 @@ final class TerminalPositionEditorModel {
     case .sharesOwned:
       return nonNegativeProblem(inputs.sharesOwned)
     case .sharesOutstanding:
-      return nonNegativeProblem(inputs.sharesOutstanding)
+      return positiveProblem(inputs.sharesOutstanding, message: String(localized: "Must be above zero."))
     case .currentSharePrice:
-      return nonNegativeProblem(inputs.currentSharePrice)
+      return positiveProblem(inputs.currentSharePrice, message: String(localized: "Must be above zero."))
     }
+  }
+
+  /// The backend refuses notes over 1,000 characters.
+  static let maxNotesLength = 1_000
+
+  var notesProblem: String? {
+    inputs.notes.trimmingCharacters(in: .whitespacesAndNewlines).count > Self.maxNotesLength
+      ? String(localized: "Use 1,000 characters or fewer.")
+      : nil
   }
 
   /// The shared maths on what is typed now. Nil until the three required
@@ -231,7 +240,10 @@ final class TerminalPositionEditorModel {
       errorMessage = TerminalPositionsErrorText.message(
         for: error,
         fallback: String(localized: "The position could not be saved."),
-        notFound: String(localized: "This row was deleted on another device.")
+        // A 404 on create means the route is missing, not a deleted row.
+        notFound: isEditing
+          ? String(localized: "This row was deleted on another device.")
+          : String(localized: "Terminal positions are unavailable right now.")
       )
       return nil
     }
@@ -245,6 +257,7 @@ final class TerminalPositionEditorModel {
       return
     }
     aiMessage = nil
+    shareFacts = nil
     isFetchingShareFacts = true
     defer { isFetchingShareFacts = false }
     do {
@@ -260,6 +273,7 @@ final class TerminalPositionEditorModel {
       return
     }
     aiMessage = nil
+    scenarioSuggestion = nil
     isFetchingScenario = true
     defer { isFetchingScenario = false }
     do {
@@ -273,6 +287,11 @@ final class TerminalPositionEditorModel {
   /// value wanted, and never saves.
   func acceptShareFacts() {
     guard let facts = shareFacts else { return }
+    // Numbers fetched for another ticker are never filled in.
+    guard facts.ticker.uppercased() == normalizedTicker else {
+      shareFacts = nil
+      return
+    }
     if let shares = facts.sharesOutstanding {
       inputs.sharesOutstanding = TerminalNumberInput(value: shares, locale: locale)
     }
@@ -285,6 +304,10 @@ final class TerminalPositionEditorModel {
   /// Fills the future share count and market cap. Never saves.
   func acceptScenario() {
     guard let suggestion = scenarioSuggestion else { return }
+    guard suggestion.ticker.uppercased() == normalizedTicker else {
+      scenarioSuggestion = nil
+      return
+    }
     inputs.terminalShareCount = TerminalNumberInput(value: suggestion.terminalShareCount, locale: locale)
     inputs.terminalMarketCap = TerminalNumberInput(value: suggestion.terminalMarketCap, locale: locale)
     scenarioSuggestion = nil
@@ -325,6 +348,9 @@ final class TerminalPositionEditorModel {
   private func values() -> Values? {
     guard
       isTickerValid,
+      notesProblem == nil,
+      problem(for: .sharesOutstanding) == nil,
+      problem(for: .currentSharePrice) == nil,
       previewResult != nil,
       let shareCount = inputs.terminalShareCount.value(locale: locale),
       let marketCap = inputs.terminalMarketCap.value(locale: locale),

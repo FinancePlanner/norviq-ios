@@ -87,4 +87,30 @@ final class TerminalCardModelsTests: XCTestCase {
 
     XCTAssertEqual(model.state, .position(.fixture(id: "new"), currency: "GBP"))
   }
+
+  func testStockCardDropsAStaleRowWhenTheSymbolChanges() async {
+    let service = MockTerminalPositionsService()
+    service.listResult = .success(.fixture([.fixture(id: "amzn")]))
+    let model = StockTerminalCardModel(service: service)
+    await model.load(symbol: "AMZN")
+    XCTAssertEqual(model.state, .position(.fixture(id: "amzn"), currency: "USD"))
+
+    service.listResult = .failure(TerminalPositionsHTTPClient.Error.cancelled)
+    await model.load(symbol: "NVDA")
+
+    XCTAssertEqual(model.state, .loading)
+  }
+
+  func testStockCardRecoversAfterBeingHidden() async {
+    let service = MockTerminalPositionsService()
+    service.listResult = .failure(TerminalPositionsHTTPClient.Error.rejected(status: 404, message: "Not Found"))
+    let model = StockTerminalCardModel(service: service)
+    await model.load(symbol: "AMZN")
+    XCTAssertEqual(model.state, .hidden)
+
+    service.listResult = .success(.fixture([.fixture(id: "back")]))
+    await model.load(symbol: "AMZN")
+
+    XCTAssertEqual(model.state, .position(.fixture(id: "back"), currency: "USD"))
+  }
 }

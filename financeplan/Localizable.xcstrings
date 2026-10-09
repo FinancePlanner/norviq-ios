@@ -20366,6 +20366,54 @@
         }
       }
     },
+    "Must be above zero." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Must be above zero."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tem de ser superior a zero."
+          }
+        }
+      }
+    },
+    "Use 80 characters or fewer." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use 80 characters or fewer."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa 80 caracteres ou menos."
+          }
+        }
+      }
+    },
+    "Use 1,000 characters or fewer." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use 1,000 characters or fewer."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa 1000 caracteres ou menos."
+          }
+        }
+      }
+    },
     "The autobuy could not be saved." : {
       "localizations" : {
         "en" : {

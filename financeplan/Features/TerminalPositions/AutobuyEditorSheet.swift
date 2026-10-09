@@ -38,6 +38,9 @@ struct AutobuyEditorSheet: View {
       Form {
         Section {
           TextField("Label", text: $model.inputs.label, prompt: Text("e.g. 401k contribution"))
+          if let problem = model.labelProblem {
+            Text(problem).font(.caption).foregroundStyle(.red)
+          }
           TextField("Ticker (optional)", text: $model.inputs.ticker)
             .textInputAutocapitalization(.characters)
             .autocorrectionDisabled()

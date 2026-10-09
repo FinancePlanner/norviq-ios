@@ -5,10 +5,14 @@ import StockPlanShared
 final class MockTerminalPositionsService: TerminalPositionsServicing, @unchecked Sendable {
   var listResult: Result<TerminalPositionsListResponse, Error> = .success(.fixture())
   var createResult: Result<TerminalPositionResponse, Error> = .success(.fixture(id: "created"))
+  /// Suspends `create` once so a second concurrent call can start.
+  var createYields = false
   var updateResult: Result<TerminalPositionResponse, Error> = .success(.fixture())
   var deleteError: Error?
   var duplicateResult: Result<TerminalPositionResponse, Error> = .success(.fixture(id: "copy"))
   var reorderError: Error?
+  /// Fails every reorder after this many have been recorded.
+  var reorderFailsAfter: Int?
   var summaryResult: Result<TerminalPositionsSummaryResponse, Error> = .success(.fixture())
   var autobuysResult: Result<AutobuysListResponse, Error> = .success(.fixture())
   var createAutobuyResult: Result<AutobuyResponse, Error> = .success(.fixture(id: "new-autobuy"))
@@ -40,6 +44,7 @@ final class MockTerminalPositionsService: TerminalPositionsServicing, @unchecked
 
   func create(_ request: TerminalPositionCreateRequest) async throws -> TerminalPositionResponse {
     createRequests.append(request)
+    if createYields { await Task.yield() }
     return try createResult.get()
   }
 
@@ -63,6 +68,9 @@ final class MockTerminalPositionsService: TerminalPositionsServicing, @unchecked
   func reorder(ids: [String]) async throws -> TerminalPositionsListResponse {
     reorderedIds.append(ids)
     if let reorderError { throw reorderError }
+    if let limit = reorderFailsAfter, reorderedIds.count > limit {
+      throw TerminalPositionsHTTPClient.Error.invalidStatus(500)
+    }
     let known = (try? listResult.get())?.positions ?? []
     return TerminalPositionsListResponse(
       currency: "USD",

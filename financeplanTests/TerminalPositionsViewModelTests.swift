@@ -239,4 +239,34 @@ final class TerminalPositionsViewModelTests: XCTestCase {
 
     XCTAssertEqual(model.positions.map(\.id), ["a", "b", "c"])
   }
+
+  func testDoubleTappingTheSampleCreatesOneRow() async {
+    let service = MockTerminalPositionsService()
+    service.listResult = .success(.fixture([]))
+    service.createYields = true
+    let (model, _, _) = makeModel(service)
+    await model.load()
+
+    async let first: Void = model.useSample()
+    async let second: Void = model.useSample()
+    _ = await (first, second)
+
+    XCTAssertEqual(service.createRequests.count, 1)
+    XCTAssertEqual(model.positions.count, 1)
+    XCTAssertFalse(model.isAddingSample)
+  }
+
+  func testASupersededSaveStillAdvancesTheConfirmedOrder() async {
+    let (model, service) = await loadedModel(ids: ["a", "b", "c"])
+    let first = model.move(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+    let second = model.move(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+    // The newest save fails and the reload fails too: the list falls back to
+    // the order the first (superseded) save confirmed, not the original one.
+    service.reorderFailsAfter = 1
+    service.listResult = .failure(TerminalPositionsHTTPClient.Error.invalidStatus(500))
+    await first?.value
+    await second?.value
+
+    XCTAssertEqual(model.positions.map(\.id), ["c", "a", "b"])
+  }
 }

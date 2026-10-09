@@ -72,6 +72,7 @@ final class TerminalPositionsViewModel {
   private(set) var monthlyAutobuyTotal: Double = 0
   private(set) var hasLoaded = false
   private(set) var isSampleDismissed: Bool
+  private(set) var isAddingSample = false
   var isLoading = false
   var errorMessage: String?
 
@@ -149,6 +150,9 @@ final class TerminalPositionsViewModel {
   }
 
   func useSample() async {
+    guard !isAddingSample else { return }
+    isAddingSample = true
+    defer { isAddingSample = false }
     do {
       positions.append(try await service.create(Self.sampleRequest))
     } catch {
@@ -228,6 +232,8 @@ final class TerminalPositionsViewModel {
     do {
       let list = try await service.reorder(ids: ids)
       guard generation == reorderGeneration else {
+        // A newer move is queued, but this save did reach the server.
+        confirmedOrder = ids
         return
       }
       positions = list.positions

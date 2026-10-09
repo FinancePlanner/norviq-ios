@@ -39,7 +39,9 @@ struct TerminalPositionsScreen: View {
         if model.positions.count > 1 {
           EditButton()
         }
-        Button("Add position", systemImage: "plus") { editorTarget = .new(ticker: nil) }
+        if model.hasLoaded {
+          Button("Add position", systemImage: "plus") { editorTarget = .new(ticker: nil) }
+        }
       }
     }
     .overlay {
@@ -155,6 +157,7 @@ struct TerminalPositionsScreen: View {
       HStack {
         Button("Use AMZN sample") { Task { await model.useSample() } }
           .buttonStyle(.borderedProminent)
+          .disabled(model.isAddingSample)
         Button("Dismiss") { model.dismissSample() }
           .buttonStyle(.bordered)
       }
@@ -191,6 +194,8 @@ struct TerminalPositionRow: View {
         }
         .font(.subheadline)
         ProgressView(value: min(max(position.progress ?? 0, 0), 1))
+          .accessibilityLabel(Text("Progress"))
+          .accessibilityValue(Text(TerminalFormat.progress(position.progress ?? 0)))
         HStack {
           Text(TerminalFormat.progress(position.progress ?? 0))
           Spacer()

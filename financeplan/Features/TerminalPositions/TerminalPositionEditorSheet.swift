@@ -51,6 +51,8 @@ struct TerminalNumberInputField: View {
             Text("Unit")
           }
           .labelsHidden()
+          .accessibilityLabel(Text(title))
+          .accessibilityHint(Text("Unit"))
           .pickerStyle(.menu)
           .fixedSize()
         }
@@ -117,6 +119,9 @@ struct TerminalPositionEditorSheet: View {
         Section("Notes") {
           TextField("Why this scenario?", text: $model.inputs.notes, axis: .vertical)
             .lineLimit(2...6)
+          if let problem = model.notesProblem {
+            Text(problem).font(.caption).foregroundStyle(.red)
+          }
         }
       }
       .navigationTitle(model.isEditing ? LocalizedStringKey("Edit position") : LocalizedStringKey("New position"))
@@ -226,6 +231,8 @@ struct TerminalPositionEditorSheet: View {
           Text(TerminalFormat.progress(result.progress))
         }
         ProgressView(value: min(max(result.progress, 0), 1))
+          .accessibilityLabel(Text("Progress"))
+          .accessibilityValue(Text(TerminalFormat.progress(result.progress)))
         LabeledContent("Still needed") {
           Text(TerminalFormat.shares(result.sharesStillNeeded, roundDown: roundDown))
         }

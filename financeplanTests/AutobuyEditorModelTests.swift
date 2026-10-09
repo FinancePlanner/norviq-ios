@@ -147,4 +147,53 @@ final class AutobuyEditorModelTests: XCTestCase {
     XCTAssertEqual(model.autobuys.map(\.id), ["a2"])
     XCTAssertEqual(model.monthlyAutobuyTotal, 50 * 52 / 12, accuracy: 0.000001)
   }
+
+  func testCreateNotFoundSaysUnavailableNotDeleted() async {
+    let service = MockTerminalPositionsService()
+    service.createAutobuyResult = .failure(TerminalPositionsHTTPClient.Error.rejected(status: 404, message: "Not Found"))
+    let model = newModel(service)
+    model.inputs.amount = TerminalNumberInput(text: "100")
+
+    let saved = await model.save()
+
+    XCTAssertNil(saved)
+    XCTAssertEqual(model.errorMessage, "Autobuys are unavailable right now.")
+  }
+
+  func testEditNotFoundStillSaysDeletedOnAnotherDevice() async {
+    let service = MockTerminalPositionsService()
+    service.updateAutobuyResult = .failure(TerminalPositionsHTTPClient.Error.rejected(status: 404, message: "Not Found"))
+    let model = AutobuyEditorModel(autobuy: .fixture(), currency: "USD", service: service, locale: english)
+    model.inputs.label = "Renamed"
+
+    _ = await model.save()
+
+    XCTAssertEqual(model.errorMessage, "This autobuy was deleted on another device.")
+  }
+
+  func testPercentOfZeroIsRefused() async {
+    let model = newModel()
+    model.inputs.cadence = .percentOfContribution
+    model.inputs.amount = TerminalNumberInput(text: "5000")
+    model.inputs.percent = TerminalNumberInput(text: "0")
+
+    XCTAssertEqual(model.percentProblem, "Enter a percent between 0 and 100.")
+    XCTAssertFalse(model.canSave)
+
+    model.inputs.percent = TerminalNumberInput(text: "100")
+    XCTAssertNil(model.percentProblem)
+    XCTAssertTrue(model.canSave)
+  }
+
+  func testLabelOverEightyCharactersIsRefused() async {
+    let model = newModel()
+    model.inputs.amount = TerminalNumberInput(text: "100")
+    model.inputs.label = String(repeating: "a", count: 80)
+    XCTAssertNil(model.labelProblem)
+    XCTAssertTrue(model.canSave)
+
+    model.inputs.label = String(repeating: "a", count: 81)
+    XCTAssertEqual(model.labelProblem, "Use 80 characters or fewer.")
+    XCTAssertFalse(model.canSave)
+  }
 }

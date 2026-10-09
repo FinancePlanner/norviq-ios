@@ -14,6 +14,7 @@ final class StockTerminalCardModel {
   }
 
   private(set) var state: State = .loading
+  private var loadedSymbol: String?
   private let service: any TerminalPositionsServicing
 
   init(service: any TerminalPositionsServicing = Container.shared.terminalPositionsService()) {
@@ -28,6 +29,9 @@ final class StockTerminalCardModel {
   }
 
   func load(symbol: String) async {
+    // A row for another ticker is never shown (or edited) under this one.
+    if loadedSymbol != symbol { state = .loading }
+    loadedSymbol = symbol
     do {
       let list = try await service.list(ticker: symbol)
       state = list.positions.first.map { .position($0, currency: list.currency) } ?? .empty(currency: list.currency)
@@ -51,6 +55,19 @@ struct StockTerminalCard: View {
   @State private var editorTarget: TerminalEditorTarget?
 
   var body: some View {
+    // The task lives on a host that always exists: `.hidden` renders nothing,
+    // and a task on nothing never runs again.
+    ZStack {
+      Color.clear.frame(width: 0, height: 0)
+        .task(id: symbol) { await model.load(symbol: symbol) }
+      card
+    }
+    .sheet(item: $editorTarget) { target in
+      TerminalPositionEditorSheet(target: target, currency: model.currency) { model.saved($0) }
+    }
+  }
+
+  private var card: some View {
     Group {
       switch model.state {
       case .loading:
@@ -83,10 +100,6 @@ struct StockTerminalCard: View {
         GlassCard { content(position, currency: currency) }
       }
     }
-    .task(id: symbol) { await model.load(symbol: symbol) }
-    .sheet(item: $editorTarget) { target in
-      TerminalPositionEditorSheet(target: target, currency: model.currency) { model.saved($0) }
-    }
   }
 
   private func content(_ position: TerminalPositionResponse, currency: String) -> some View {
@@ -114,6 +127,8 @@ struct StockTerminalCard: View {
           }
         }
         ProgressView(value: min(max(position.progress ?? 0, 0), 1))
+          .accessibilityLabel(Text("Progress"))
+          .accessibilityValue(Text(TerminalFormat.progress(position.progress ?? 0)))
         Text(TerminalFormat.progress(position.progress ?? 0))
           .font(.caption)
           .foregroundStyle(.secondary)

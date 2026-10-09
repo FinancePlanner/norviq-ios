@@ -72,7 +72,7 @@ final class AutobuyEditorModel {
   var isPercentCadence: Bool { inputs.cadence == .percentOfContribution }
 
   var percentFraction: Double? {
-    guard let percent = inputs.percent.value(locale: locale), percent <= 100 else { return nil }
+    guard let percent = inputs.percent.value(locale: locale), percent > 0, percent <= 100 else { return nil }
     return percent / 100
   }
 
@@ -112,13 +112,21 @@ final class AutobuyEditorModel {
     switch inputs.percent.reading(locale: locale) {
     case .empty: return nil
     case .invalid, .negative: return String(localized: "Enter a percent between 0 and 100.")
-    case let .value(percent): return percent <= 100 ? nil : String(localized: "Enter a percent between 0 and 100.")
+    case let .value(percent): return percent > 0 && percent <= 100 ? nil : String(localized: "Enter a percent between 0 and 100.")
     }
+  }
+
+  /// The backend refuses labels over 80 characters.
+  static let maxLabelLength = 80
+
+  var labelProblem: String? {
+    trimmedLabel.count > Self.maxLabelLength ? String(localized: "Use 80 characters or fewer.") : nil
   }
 
   var canSave: Bool {
     !isSaving
       && !trimmedLabel.isEmpty
+      && labelProblem == nil
       && tickerProblem == nil
       && inputs.amount.value(locale: locale) != nil
       && (!isPercentCadence || percentFraction != nil)
@@ -186,7 +194,10 @@ final class AutobuyEditorModel {
       errorMessage = TerminalPositionsErrorText.message(
         for: error,
         fallback: String(localized: "The autobuy could not be saved."),
-        notFound: String(localized: "This autobuy was deleted on another device.")
+        // A 404 on create means the route is missing, not a deleted autobuy.
+        notFound: isEditing
+          ? String(localized: "This autobuy was deleted on another device.")
+          : String(localized: "Autobuys are unavailable right now.")
       )
       return nil
     }

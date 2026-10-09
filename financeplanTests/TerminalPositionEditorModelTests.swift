@@ -266,4 +266,95 @@ final class TerminalPositionEditorModelTests: XCTestCase {
 
     XCTAssertEqual(model.shareFactsCurrencyNote, "This price is in EUR; your plan uses USD.")
   }
+
+  func testCreateNotFoundSaysUnavailableNotDeleted() async {
+    let service = MockTerminalPositionsService()
+    service.createResult = .failure(TerminalPositionsHTTPClient.Error.rejected(status: 404, message: "Not Found"))
+    let model = filledModel(service)
+
+    let saved = await model.save()
+
+    XCTAssertNil(saved)
+    XCTAssertEqual(model.errorMessage, "Terminal positions are unavailable right now.")
+  }
+
+  func testEditNotFoundStillSaysDeletedOnAnotherDevice() async {
+    let service = MockTerminalPositionsService()
+    service.updateResult = .failure(TerminalPositionsHTTPClient.Error.rejected(status: 404, message: "Not Found"))
+    let model = TerminalPositionEditorModel(position: .fixture(), currency: "USD", service: service, locale: english)
+    model.inputs.valueWanted = TerminalNumberInput(text: "2", unit: .million)
+
+    _ = await model.save()
+
+    XCTAssertEqual(model.errorMessage, "This row was deleted on another device.")
+  }
+
+  func testSharesOutstandingAndPriceMustBeAboveZeroWhenPresent() async {
+    let model = filledModel()
+    model.inputs.sharesOutstanding = TerminalNumberInput(text: "0", unit: .billion)
+    XCTAssertEqual(model.problem(for: .sharesOutstanding), "Must be above zero.")
+    XCTAssertFalse(model.canSave)
+
+    model.inputs.sharesOutstanding = TerminalNumberInput(text: "10", unit: .billion)
+    XCTAssertNil(model.problem(for: .sharesOutstanding))
+    XCTAssertTrue(model.canSave)
+
+    model.inputs.currentSharePrice = TerminalNumberInput(text: "0")
+    XCTAssertEqual(model.problem(for: .currentSharePrice), "Must be above zero.")
+    XCTAssertFalse(model.canSave)
+
+    model.inputs.currentSharePrice = TerminalNumberInput(text: "")
+    XCTAssertNil(model.problem(for: .currentSharePrice))
+    XCTAssertTrue(model.canSave)
+  }
+
+  func testNotesOverOneThousandCharactersBlockSave() async {
+    let model = filledModel()
+    model.inputs.notes = String(repeating: "a", count: 1_000)
+    XCTAssertNil(model.notesProblem)
+    XCTAssertTrue(model.canSave)
+
+    model.inputs.notes = String(repeating: "a", count: 1_001)
+    XCTAssertEqual(model.notesProblem, "Use 1,000 characters or fewer.")
+    XCTAssertFalse(model.canSave)
+  }
+
+  func testFailedRefetchLeavesNoStaleShareFactsCard() async {
+    let service = MockTerminalPositionsService()
+    let model = filledModel(service)
+    await model.fillWithAI()
+    XCTAssertNotNil(model.shareFacts)
+
+    service.shareFactsResult = .failure(TerminalPositionsHTTPClient.Error.rejected(status: 503, message: nil))
+    await model.fillWithAI()
+
+    XCTAssertNil(model.shareFacts)
+  }
+
+  func testFailedRescenarioLeavesNoStaleSuggestion() async {
+    let service = MockTerminalPositionsService()
+    let model = filledModel(service)
+    await model.suggestScenario()
+    XCTAssertNotNil(model.scenarioSuggestion)
+
+    service.scenarioResult = .failure(TerminalPositionsHTTPClient.Error.rejected(status: 503, message: nil))
+    await model.suggestScenario()
+
+    XCTAssertNil(model.scenarioSuggestion)
+  }
+
+  func testAcceptingAfterTheTickerChangedDoesNothing() async {
+    let model = filledModel()
+    await model.fillWithAI()
+    await model.suggestScenario()
+    model.inputs.ticker = "NVDA"
+    let before = model.inputs
+
+    model.acceptShareFacts()
+    model.acceptScenario()
+
+    XCTAssertEqual(model.inputs, before)
+    XCTAssertNil(model.shareFacts)
+    XCTAssertNil(model.scenarioSuggestion)
+  }
 }
