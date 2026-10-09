@@ -64,7 +64,7 @@ struct BoardPostDetailScreen: View {
         }
       }
     }
-    .alert("Something went wrong", isPresented: boardsErrorBinding($model.errorMessage)) {
+    .alert("Something went wrong", isPresented: errorAlertBinding($model.errorMessage)) {
       Button("OK", role: .cancel) {}
     } message: {
       Text(model.errorMessage ?? "")

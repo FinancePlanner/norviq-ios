@@ -7,6 +7,7 @@ struct SocialPrivacySettingsView: View {
   @State private var errorMessage: String?
   @State private var facebookNotice: String?
   @State private var isDisconnectingFacebook = false
+  @State private var isConfirmingFacebookDisconnect = false
   /// Set around writes that come from the server, so they aren't saved back.
   @State private var isApplyingServerValue = false
   private let service: any SocialServicing = Container.shared.socialService()
@@ -29,12 +30,25 @@ struct SocialPrivacySettingsView: View {
           Text("Discovery")
         }
 
+        // Gated on the server flag only: the link lives on the server, so it
+        // can be removed even from a build without the Facebook SDK set up.
         if store.config.facebookImport {
           Section {
             Button("Disconnect Facebook", role: .destructive) {
-              Task { await disconnectFacebook() }
+              isConfirmingFacebookDisconnect = true
             }
             .disabled(isDisconnectingFacebook)
+            .confirmationDialog(
+              "Disconnect Facebook?",
+              isPresented: $isConfirmingFacebookDisconnect,
+              titleVisibility: .visible
+            ) {
+              Button("Disconnect", role: .destructive) {
+                Task { await disconnectFacebook() }
+              }
+            } message: {
+              Text("Your Facebook friends on Norviq stop finding you this way.")
+            }
           } footer: {
             Text("Removes the Facebook link used to find friends. Your Facebook friends on Norviq stop finding you this way.")
           }
@@ -57,10 +71,7 @@ struct SocialPrivacySettingsView: View {
       }
     }
     .navigationTitle("Privacy")
-    .alert(
-      "Facebook",
-      isPresented: Binding(get: { facebookNotice != nil }, set: { if !$0 { facebookNotice = nil } })
-    ) {
+    .alert("Facebook", isPresented: errorAlertBinding($facebookNotice)) {
       Button("OK", role: .cancel) {}
     } message: {
       Text(facebookNotice ?? "")
@@ -91,8 +102,7 @@ struct SocialPrivacySettingsView: View {
     isDisconnectingFacebook = true
     defer { isDisconnectingFacebook = false }
     do {
-      try await service.disconnectFacebook()
-      FacebookConnect.logOut()
+      try await store.disconnectFacebook()
       facebookNotice = String(localized: "Facebook is disconnected.")
     } catch {
       facebookNotice = error.localizedDescription

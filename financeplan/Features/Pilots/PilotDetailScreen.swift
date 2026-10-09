@@ -28,8 +28,8 @@ struct PilotDetailScreen: View {
       Section {
         VigilPageHeader(
           watch: .wealth,
-          title: LocalizedStringKey(shownPilot.displayName),
-          subtitle: LocalizedStringKey(PilotFormatting.subtitle(for: shownPilot))
+          verbatimTitle: shownPilot.displayName,
+          verbatimSubtitle: PilotFormatting.subtitle(for: shownPilot)
         )
         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
         .listRowBackground(Color.clear)
@@ -39,6 +39,7 @@ struct PilotDetailScreen: View {
         Section {
           PilotFollowAction(
             block: block,
+            followCount: store.follows.count,
             onFollow: { isFollowSheetPresented = true },
             onUnlock: { isPaywallPresented = true }
           )
@@ -48,9 +49,7 @@ struct PilotDetailScreen: View {
         if !following.isEmpty {
           Section("You follow this pilot") {
             ForEach(following) { follow in
-              NavigationLink {
-                PilotFollowDetailScreen(follow: follow)
-              } label: {
+              NavigationLink(value: PilotRoute.follow(follow)) {
                 PilotFollowRow(follow: follow)
               }
             }
@@ -81,7 +80,7 @@ struct PilotDetailScreen: View {
     .sheet(isPresented: $isPaywallPresented) {
       PaywallView(billingManager: billingManager)
     }
-    .alert("Something went wrong", isPresented: boardsErrorBinding($model.errorMessage)) {
+    .alert("Something went wrong", isPresented: errorAlertBinding($model.errorMessage)) {
       Button("OK", role: .cancel) {}
     } message: {
       Text(model.errorMessage ?? "")
@@ -91,6 +90,7 @@ struct PilotDetailScreen: View {
 
 private struct PilotFollowAction: View {
   let block: PilotFollowRules.Block?
+  let followCount: Int
   let onFollow: () -> Void
   let onUnlock: () -> Void
 
@@ -106,8 +106,10 @@ private struct PilotFollowAction: View {
     case .needsPro?:
       Button("Follow more pilots with Pro", systemImage: "sparkles", action: onUnlock)
     case .atLimit?:
+      // The real count, not the client's copy of the limit: the server
+      // owns the limit and may not match `proFollowLimit`.
       Label(
-        "You follow \(PilotFollowRules.proFollowLimit) pilots, the most a plan allows. Stop one to follow another.",
+        "You follow ^[\(followCount) pilot](inflect: true), the most your plan allows. Stop one to follow another.",
         systemImage: "exclamationmark.circle"
       )
       .foregroundStyle(.secondary)
@@ -143,8 +145,8 @@ private struct PilotDisclosuresSection: View {
       if items.isEmpty {
         Text("No disclosures yet.").foregroundStyle(.secondary)
       }
-      ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-        PilotDisclosureRow(item: item)
+      ForEach(IdentifiedDisclosure.identify(items)) { disclosure in
+        PilotDisclosureRow(item: disclosure.item)
       }
     } header: {
       Text("Recent disclosures")

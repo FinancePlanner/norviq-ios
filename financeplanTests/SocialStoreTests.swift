@@ -40,7 +40,12 @@ private final class MockSocialService: SocialServicing, @unchecked Sendable {
   func importFacebookFriends(_ request: FacebookLimitedLoginRequest) async throws -> FacebookImportMatchesResponse {
     throw Failure()
   }
-  func disconnectFacebook() async throws {}
+  var disconnectCount = 0
+  var disconnectError: Error?
+  func disconnectFacebook() async throws {
+    if let disconnectError { throw disconnectError }
+    disconnectCount += 1
+  }
 }
 
 private extension SocialUserSummary {
@@ -146,5 +151,18 @@ final class SocialStoreTests: XCTestCase {
 
   func testPrivacyDefaultsKeepReturnPercentPrivate() {
     XCTAssertFalse(SocialPrivacySettings.default.showReturnPercent)
+  }
+
+  func testDisconnectFacebookReachesTheServerAndPassesFailuresOn() async {
+    let service = MockSocialService()
+    let store = SocialStore(service: service)
+    try? await store.disconnectFacebook()
+    XCTAssertEqual(service.disconnectCount, 1)
+
+    service.disconnectError = MockSocialService.Failure()
+    do {
+      try await store.disconnectFacebook()
+      XCTFail("a failed disconnect must reach the screen")
+    } catch {}
   }
 }

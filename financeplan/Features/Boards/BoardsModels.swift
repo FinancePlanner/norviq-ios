@@ -366,18 +366,33 @@ final class BoardsActivityModel {
     guard let cursor = nextCursor, !isLoading else { return }
     isLoading = true
     defer { isLoading = false }
-    if let page = try? await service.notifications(cursor: cursor) {
+    do {
+      let page = try await service.notifications(cursor: cursor)
       items.append(contentsOf: page.items.filter { $0.kind != .other })
       nextCursor = page.nextCursor
+    } catch {
+      // The row that asked for this page scrolled away; nothing went wrong.
+      if Task.isCancelled || error is CancellationError || (error as? URLError)?.code == .cancelled { return }
+      errorMessage = error.localizedDescription
     }
   }
 
+  /// Bumped by every save, so only the newest one applies its answer. Without
+  /// it, two quick toggles race: the first save's response, or its rollback
+  /// on failure, lands after the second and puts the screen out of step with
+  /// the server.
+  private var saveGeneration = 0
+
   func save(_ settings: BoardNotificationSettings) async {
+    saveGeneration += 1
+    let generation = saveGeneration
     let previous = self.settings
     self.settings = settings
     do {
-      self.settings = try await service.updateNotificationSettings(settings)
+      let saved = try await service.updateNotificationSettings(settings)
+      if generation == saveGeneration { self.settings = saved }
     } catch {
+      guard generation == saveGeneration else { return }
       self.settings = previous
       errorMessage = error.localizedDescription
     }

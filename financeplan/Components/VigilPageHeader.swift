@@ -8,8 +8,8 @@ struct VigilPageHeader<Trailing: View>: View {
   @Environment(\.colorScheme) private var scheme
 
   let watch: VigilWatch
-  let title: LocalizedStringKey
-  let subtitle: LocalizedStringKey?
+  let title: Text
+  let subtitle: Text?
   let trailing: Trailing
 
   init(
@@ -19,8 +19,23 @@ struct VigilPageHeader<Trailing: View>: View {
     @ViewBuilder trailing: () -> Trailing = { EmptyView() }
   ) {
     self.watch = watch
-    self.title = title
-    self.subtitle = subtitle
+    self.title = Text(title)
+    self.subtitle = subtitle.map { Text($0) }
+    self.trailing = trailing()
+  }
+
+  /// For titles that come from data, such as a fund's name: shown exactly as
+  /// given, with no catalog lookup and no Markdown, so a `*` or `_` in a name
+  /// stays a character.
+  init(
+    watch: VigilWatch,
+    verbatimTitle: String,
+    verbatimSubtitle: String? = nil,
+    @ViewBuilder trailing: () -> Trailing = { EmptyView() }
+  ) {
+    self.watch = watch
+    title = Text(verbatim: verbatimTitle)
+    subtitle = verbatimSubtitle.map { Text(verbatim: $0) }
     self.trailing = trailing()
   }
 
@@ -37,12 +52,12 @@ struct VigilPageHeader<Trailing: View>: View {
           // colouring all of them made the WATCH label compete with the title
           // it introduces. It is a label, so it reads as one.
           .foregroundStyle(.secondary)
-        Text(title)
+        title
           .font(.title2.bold())
           .foregroundStyle(AppTheme.Colors.foreground(for: scheme))
           .fixedSize(horizontal: false, vertical: true)
         if let subtitle {
-          Text(subtitle)
+          subtitle
             .font(.subheadline)
             .foregroundStyle(AppTheme.Colors.secondaryText(for: scheme))
             .fixedSize(horizontal: false, vertical: true)
@@ -59,6 +74,10 @@ struct VigilPageHeader<Trailing: View>: View {
 extension VigilPageHeader where Trailing == EmptyView {
   init(watch: VigilWatch, title: LocalizedStringKey, subtitle: LocalizedStringKey? = nil) {
     self.init(watch: watch, title: title, subtitle: subtitle, trailing: { EmptyView() })
+  }
+
+  init(watch: VigilWatch, verbatimTitle: String, verbatimSubtitle: String? = nil) {
+    self.init(watch: watch, verbatimTitle: verbatimTitle, verbatimSubtitle: verbatimSubtitle, trailing: { EmptyView() })
   }
 }
 

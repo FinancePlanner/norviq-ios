@@ -181,6 +181,13 @@ final class SocialStore {
     }
   }
 
+  /// Drops the server's Facebook link, then the SDK's session. Throws so each
+  /// screen can report the failure in its own place.
+  func disconnectFacebook() async throws {
+    try await service.disconnectFacebook()
+    FacebookConnect.logOut()
+  }
+
   /// Signing out must not leave one account's friends on screen for the next.
   func reset() {
     config = .disabled

@@ -12,6 +12,7 @@ struct InviteFriendsView: View {
   @State private var errorMessage: String?
   @State private var didCopy = false
   @State private var isTextPresented = false
+  @State private var isMessengerInstalled = false
   private let service: any SocialServicing = Container.shared.socialService()
 
   var body: some View {
@@ -51,8 +52,14 @@ struct InviteFriendsView: View {
             Button {
               sendOnMessenger(url)
             } label: {
-              Label("Send on Messenger", systemImage: "bubble.left.and.bubble.right")
-                .frame(maxWidth: .infinity)
+              Group {
+                if isMessengerInstalled {
+                  Label("Send on Messenger", systemImage: "bubble.left.and.bubble.right")
+                } else {
+                  Label("Share on Facebook", systemImage: "globe")
+                }
+              }
+              .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
             .controlSize(.large)
@@ -80,7 +87,10 @@ struct InviteFriendsView: View {
           Button("Done") { dismiss() }
         }
       }
-      .task { if invite == nil { await load() } }
+      .task {
+        isMessengerInstalled = UIApplication.shared.canOpenURL(MessengerShare.appScheme)
+        if invite == nil { await load() }
+      }
     }
   }
 
@@ -99,7 +109,7 @@ struct InviteFriendsView: View {
   }
 
   private func sendOnMessenger(_ url: URL) {
-    if UIApplication.shared.canOpenURL(MessengerShare.appScheme), let appURL = MessengerShare.appURL(for: url) {
+    if isMessengerInstalled, let appURL = MessengerShare.appURL(for: url) {
       openURL(appURL)
     } else if let webURL = MessengerShare.webFallbackURL(for: url) {
       openURL(webURL)

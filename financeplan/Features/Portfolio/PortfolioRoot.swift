@@ -68,6 +68,7 @@ struct PortfolioRoot: View {
       .navigationDestination(for: PortfolioStockRoute.self) { route in
         StockDetailScreen(stockId: route.stockID, initialSymbol: route.symbol)
       }
+      .pilotDestinations()
       .navigationDestination(item: $pendingAutomationDestination) { destination in
         switch destination {
         case let .smartScreen(id): ProGateView(billingManager: billingManager) { SmartScreeningScreen(

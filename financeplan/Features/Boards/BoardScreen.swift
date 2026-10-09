@@ -88,7 +88,7 @@ struct BoardScreen: View {
     .confirmationDialog("Delete this board and hide all its posts?", isPresented: $confirmDeleteBoard, titleVisibility: .visible) {
       Button("Delete board", role: .destructive) { Task { await deleteBoard() } }
     }
-    .alert("Something went wrong", isPresented: boardsErrorBinding($model.errorMessage)) {
+    .alert("Something went wrong", isPresented: errorAlertBinding($model.errorMessage)) {
       Button("OK", role: .cancel) {}
     } message: {
       Text(model.errorMessage ?? "")
