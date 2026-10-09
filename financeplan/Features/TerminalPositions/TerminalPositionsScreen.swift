@@ -6,6 +6,7 @@ struct TerminalPositionsScreen: View {
   @State private var model = TerminalPositionsViewModel(service: Container.shared.terminalPositionsService())
   @AppStorage(TerminalPreferences.roundDownKey) private var roundDown = false
   @State private var editorTarget: TerminalEditorTarget?
+  @State private var autobuyTarget: AutobuyEditorTarget?
 
   var body: some View {
     List {
@@ -23,6 +24,11 @@ struct TerminalPositionsScreen: View {
         positionsSection
         totalsSection
       }
+      TerminalAutobuysSection(
+        model: model,
+        onEdit: { autobuyTarget = .edit($0) },
+        onAdd: { autobuyTarget = .new }
+      )
     }
     .vigilListChrome()
     .vigilScreenBackground()
@@ -45,6 +51,11 @@ struct TerminalPositionsScreen: View {
     .refreshable { await model.load() }
     .sheet(item: $editorTarget) { target in
       TerminalPositionEditorSheet(target: target, currency: model.currency) { model.saved($0) }
+    }
+    .sheet(item: $autobuyTarget) { target in
+      AutobuyEditorSheet(target: target, currency: model.currency) { _ in
+        Task { await model.reloadAutobuys() }
+      }
     }
     .alert("Terminal position sizing", isPresented: errorBinding) {
       Button("OK", role: .cancel) { model.errorMessage = nil }
