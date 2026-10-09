@@ -135,6 +135,19 @@ final class TerminalPositionsViewModel {
     }
   }
 
+  func deleteAutobuy(_ autobuy: AutobuyResponse) async {
+    do {
+      try await service.deleteAutobuy(id: autobuy.id)
+      await reloadAutobuys()
+    } catch {
+      if case .rejected(status: 404, message: _)? = error as? TerminalPositionsHTTPClient.Error {
+        await reloadAutobuys()
+        return
+      }
+      show(error, fallback: String(localized: "The autobuy could not be deleted."))
+    }
+  }
+
   func useSample() async {
     do {
       positions.append(try await service.create(Self.sampleRequest))
