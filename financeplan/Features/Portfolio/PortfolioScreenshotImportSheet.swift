@@ -64,6 +64,7 @@ struct PortfolioScreenshotImportSheet: View {
           reviewSection
         }
       }
+      .aiConsentGate("Screenshot import")
       .navigationTitle("Import from screenshots")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {

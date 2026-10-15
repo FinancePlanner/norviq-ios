@@ -2,6 +2,7 @@ import Factory
 import Combine
 import OSLog
 import PostHog
+import Sentry
 import StockPlanShared
 import SwiftUI
 
@@ -184,6 +185,8 @@ public struct ContentView: View {
         Task {
           await pushNotificationsCoordinator.refreshAuthorizationStatus()
           if isAuthenticated {
+            // Consent may have changed on another device (web settings).
+            Task { await Container.shared.aiConsentStore().refreshIfStale() }
             billingManager.configureForCurrentUser()
             await billingManager.reconcilePendingBackendSyncIfNeeded()
 
@@ -323,6 +326,10 @@ public struct ContentView: View {
       let username = await sessionStore.currentUsername
       sessionManager.updateUsername(username)
 
+      // Decides whether AI surfaces ask for consent first. Not awaited: an
+      // unread flag never blocks AI, so it must not delay the rest of sign-in.
+      Task { await Container.shared.aiConsentStore().refresh(userID: userID) }
+
       billingManager.configureForCurrentUser()
       await billingManager.reconcilePendingBackendSyncIfNeeded()
 
@@ -361,6 +368,9 @@ public struct ContentView: View {
     Container.shared.onboardingStateStore().reset()
     Container.shared.socialStore().reset()
     Container.shared.gamificationStore().reset()
+    Container.shared.aiConsentStore().reset()
+    // Crash reports after sign-out must not carry the previous user's ID.
+    SentrySDK.setUser(nil)
   }
 
   private func deliverPendingPushNotificationRouteIfPossible() {

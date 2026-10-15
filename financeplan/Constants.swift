@@ -5,8 +5,6 @@ import SwiftUI
 // swiftlint:disable force_unwrapping
 enum Constants {
   enum Norviq {
-    static let filesBaseUrl = URL(string: "https://files.norviqa.io")!
-
     static let shareBaseUrl = URL(string: "https://share.norviqa.io")!
 
     /// Norviq on the App Store. The numeric id is the source of truth — the slug in the
@@ -23,15 +21,18 @@ enum Constants {
       string: "https://apps.apple.com/app/id\(appStoreID)?action=write-review"
     )!
 
-    static let webAppBaseUrl = URL(string: "https://www.norviqaapp.com")!
-
     /// Public privacy policy (same document as Settings → About on web).
-    static let privacyPolicyUrl = URL(string: "https://norviq.app/privacy")!
+    static let privacyPolicyUrl = URL(string: "https://www.norviq.org/privacy")!
 
-    /// Apple's standard EULA (Terms of Use) used for auto-renewable subscriptions.
-    static let termsOfUseUrl = URL(
-      string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
-    )!
+    /// Section of the privacy policy that covers the third-party AI providers.
+    static let aiPrivacyUrl = URL(string: "https://www.norviq.org/privacy#ai")!
+
+    /// Norviq Terms of Use. Also the Terms of Use (EULA) link for auto-renewable
+    /// subscriptions — Apple accepts a custom terms URL in place of its standard EULA.
+    static let termsOfUseUrl = URL(string: "https://www.norviq.org/terms")!
+
+    /// Single public contact address for support, privacy and legal requests.
+    static let supportEmail = "fernando@facorreia.com"
 
     static let swiftyCropConfiguration = SwiftyCropConfiguration(
       maxMagnificationScale: 4.0,

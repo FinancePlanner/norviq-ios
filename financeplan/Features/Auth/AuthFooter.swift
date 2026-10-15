@@ -33,7 +33,7 @@ struct AuthFooter: View {
         }
       }
 
-      Text("© 2024 The Editorial Financial Experience. All rights reserved.")
+      Text("© 2026 Norviq")
         .font(.caption2)
         .foregroundStyle(.secondary)
     }

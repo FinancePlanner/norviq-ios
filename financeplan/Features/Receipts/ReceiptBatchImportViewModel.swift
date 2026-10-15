@@ -134,6 +134,8 @@ final class ReceiptBatchImportViewModel {
       if entries.isEmpty, errorMessage == nil {
         errorMessage = "Nothing could be read from those photos."
       }
+    } catch where AIConsentRequired.matches(error) {
+      errorMessage = "Reading receipt photos needs your permission to use AI. Allow it, then try again."
     } catch {
       errorMessage = (error as? any LocalizedError)?.errorDescription
         ?? "Could not read those receipts. Try again, or enter the expense manually."

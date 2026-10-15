@@ -84,6 +84,8 @@ struct TelegramConnectView: View {
           .accessibilityIdentifier("integrations.telegram.open")
         }
         .padding(.vertical, 4)
+      } else if !viewModel.hasAcknowledgedPrivacy {
+        TelegramPrivacyNotice { viewModel.acknowledgePrivacy() }
       } else {
         Button {
           Task { await viewModel.connect() }
@@ -154,5 +156,26 @@ struct TelegramConnectView: View {
       .disabled(viewModel.isWorking)
       .accessibilityIdentifier("integrations.telegram.disconnect")
     }
+  }
+}
+
+/// Shown before a pairing code can be generated. Telegram is the one channel
+/// where Norviq replies leave our infrastructure in readable form.
+private struct TelegramPrivacyNotice: View {
+  let onAcknowledge: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Label(LocalizedStringKey("Before you connect"), systemImage: "lock.open")
+        .font(.subheadline.weight(.semibold))
+      Text(LocalizedStringKey("Telegram chats are not end-to-end encrypted. Replies from Norviq can include your portfolio values, budgets and expenses, and are stored on Telegram's servers. Only link a private chat you control."))
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+      Button(LocalizedStringKey("I understand"), action: onAcknowledge)
+        .buttonStyle(.borderedProminent)
+        .accessibilityIdentifier("integrations.telegram.acknowledgePrivacy")
+    }
+    .padding(.vertical, 4)
   }
 }

@@ -51,6 +51,7 @@ struct ReceiptBatchImportSheet: View {
           }
         }
       }
+      .aiConsentGate("Receipt scanning")
       .navigationTitle("Scan receipts")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {

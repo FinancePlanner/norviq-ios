@@ -293,10 +293,8 @@ final class LoginViewModel: ObservableObject {
 
       let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
       await sessionStore.markPendingOnboardingAfterSignup(email: trimmedEmail)
-      // PostHog: Track new account creation
-      PostHogSDK.shared.capture("user_signed_up", properties: [
-        "username": username.trimmingCharacters(in: .whitespacesAndNewlines),
-      ])
+      // PostHog: Track new account creation. No username/email — analytics carry no PII.
+      PostHogSDK.shared.capture("user_signed_up")
       username = trimmedEmail
       password = ""
       confirmPassword = ""
@@ -311,22 +309,14 @@ final class LoginViewModel: ObservableObject {
   private func persistAuth(_ auth: AuthResponse) async {
     await sessionStore.store(authResponse: auth)
     let userId = auth.userId.uuidString
-    let username = auth.username.trimmingCharacters(in: .whitespacesAndNewlines)
     if await sessionStore.hasPendingOnboardingAfterSignup(email: auth.email) {
       await sessionStore.markOnboardingQuestionnaireRequired(for: userId)
       await sessionStore.clearPendingOnboardingAfterSignup(email: auth.email)
     }
-    // Sentry: attach user to crash reports
-    let sentryUser = Sentry.User(userId: userId)
-    sentryUser.username = username
-    SentrySDK.setUser(sentryUser)
-    // PostHog: Identify user and track login
-    PostHogSDK.shared.identify(userId, userProperties: [
-      "username": username,
-    ])
-    PostHogSDK.shared.capture("user_logged_in", properties: [
-      "username": username,
-    ])
+    // Sentry / PostHog: identify by opaque user ID only — never username or email.
+    SentrySDK.setUser(Sentry.User(userId: userId))
+    PostHogSDK.shared.identify(userId)
+    PostHogSDK.shared.capture("user_logged_in")
     onAuthenticated()
   }
 

@@ -269,7 +269,7 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     var request = URLRequest(url: url)
     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     request.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
-    let (data, response) = try await session.data(for: request)
+    let (data, response) = try await session.data(for: ClientCapabilities.applied(to: request))
     guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
     guard (200..<300).contains(http.statusCode) else {
       throw TaxServiceError.http(statusCode: http.statusCode, message: APIErrorDecoding.message(from: data))
@@ -335,7 +335,7 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     var request = URLRequest(url: url)
     request.httpMethod = method
     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-    let (data, response) = try await session.data(for: request)
+    let (data, response) = try await session.data(for: ClientCapabilities.applied(to: request))
     guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
     guard (200..<300).contains(http.statusCode) else {
       throw TaxServiceError.http(statusCode: http.statusCode, message: APIErrorDecoding.message(from: data))
@@ -362,7 +362,7 @@ final class TaxService: TaxServiceProtocol, @unchecked Sendable {
     for (name, value) in additionalHeaders {
       request.setValue(value, forHTTPHeaderField: name)
     }
-    let (data, response) = try await session.data(for: request)
+    let (data, response) = try await session.data(for: ClientCapabilities.applied(to: request))
     guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
     guard (200..<300).contains(http.statusCode) else {
       throw TaxServiceError.http(statusCode: http.statusCode, message: APIErrorDecoding.message(from: data))

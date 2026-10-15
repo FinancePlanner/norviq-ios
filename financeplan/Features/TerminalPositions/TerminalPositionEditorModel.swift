@@ -328,6 +328,10 @@ final class TerminalPositionEditorModel {
 
   private func handleAIError(_ error: Error) {
     if TerminalPositionsErrorText.isCancellation(error) { return }
+    if AIConsentRequired.matches(error) {
+      aiMessage = String(localized: "AI lookups need your permission to share data with Norviq's AI providers.")
+      return
+    }
     switch error as? TerminalPositionsHTTPClient.Error {
     case .upgradeRequired?:
       needsUpgrade = true

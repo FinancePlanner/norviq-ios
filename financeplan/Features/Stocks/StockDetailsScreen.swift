@@ -470,10 +470,9 @@ struct StockDetailScreen: View {
     private func sellPosition(_ request: SellStockRequest) async -> String? {
         let outcome = await viewModel.sellPosition(request)
         if outcome.shouldDismiss {
-            // PostHog: Track successful position sale
+            // PostHog: Track successful position sale. Ticker only — no quantities.
             PostHogSDK.shared.capture("position_sold", properties: [
                 "symbol": viewModel.details?.symbol ?? initialSymbol,
-                "shares_sold": request.sharesToSell,
             ])
             dismissActiveSheet()
             dismiss()

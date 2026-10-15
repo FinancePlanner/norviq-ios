@@ -57,34 +57,61 @@ nonisolated struct UpdateUsernameEndpoint: Endpoint {
   }
 }
 
+/// `PATCH /v1/users/email` body. Local rather than StockPlanShared's
+/// `UpdateEmailRequest` (pinned by exact version, no password field): the
+/// backend now requires the current password to move the account.
+nonisolated struct ChangeEmailRequest: Sendable, Equatable {
+  let email: String
+  let currentPassword: String
+  /// This device's refresh token. The backend revokes every other session on
+  /// success and spares this one, so the app stays signed in.
+  let refreshToken: String?
+}
+
 nonisolated struct UpdateEmailEndpoint: Endpoint {
   typealias Response = UpdateUserProfileResponse
 
-  let request: UpdateEmailRequest
+  let request: ChangeEmailRequest
 
   var method: HTTPMethod { .patch }
   var path: String { "/v1/users/email" }
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    ["email": request.email]
+    var parameters: Parameters = [
+      "email": request.email,
+      "currentPassword": request.currentPassword,
+    ]
+    if let refreshToken = request.refreshToken, !refreshToken.isEmpty {
+      parameters["refreshToken"] = refreshToken
+    }
+    return parameters
   }
+
+  func encode(to _: Encoder) throws {}
 }
 
 nonisolated struct UpdatePasswordEndpoint: Endpoint {
   typealias Response = APIMessageResponse
 
   let request: UpdatePasswordRequest
+  /// This device's refresh token. The backend revokes every other session on
+  /// success and spares this one, so the app stays signed in.
+  var refreshToken: String?
 
   var method: HTTPMethod { .patch }
   var path: String { "/v1/users/password" }
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {
-    [
+    var parameters: Parameters = [
       "currentPassword": request.currentPassword,
       "newPassword": request.newPassword
     ]
+    if let refreshToken, !refreshToken.isEmpty {
+      parameters["refreshToken"] = refreshToken
+    }
+    return parameters
   }
 }
 

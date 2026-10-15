@@ -463,7 +463,7 @@ public struct UserProfileView: View {
                         Label(LocalizedStringKey("Show me around"), systemImage: "sparkles")
                     }
                 }
-                if let mailURL = URL(string: "mailto:fernandocorreia316@gmail.com") {
+                if let mailURL = URL(string: "mailto:\(Constants.Norviq.supportEmail)") {
                     Link(destination: mailURL) {
                         Label("Contact Developer", systemImage: "envelope.fill")
                             .foregroundStyle(.primary)

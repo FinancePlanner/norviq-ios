@@ -164,6 +164,8 @@ final class ScreenshotImportViewModel {
       if rows.isEmpty, warnings.isEmpty {
         errorMessage = "Nothing could be read from those images."
       }
+    } catch where AIConsentRequired.matches(error) {
+      errorMessage = "Reading screenshots needs your permission to use AI. Allow it, then try again."
     } catch {
       errorMessage = (error as? any LocalizedError)?.errorDescription
         ?? "Could not read those screenshots. Try again, or import a CSV instead."

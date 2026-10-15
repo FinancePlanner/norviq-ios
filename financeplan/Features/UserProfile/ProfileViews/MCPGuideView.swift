@@ -27,6 +27,9 @@ struct MCPGuideView: View {
           Text("Norviq provides the tools; your AI client provides (and bills) the model.")
             .font(.footnote)
             .foregroundStyle(.secondary)
+          Text("Data accessed through a connection or token goes to the AI client you connect, under that client's privacy terms.")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
       }

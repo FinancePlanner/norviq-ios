@@ -29,6 +29,7 @@ struct InsightsScreen: View {
                 }
                 .padding()
             }
+            .aiConsentGate("Insights")
             .vigilScreenBackground()
             .vigilNavigationTitle("Insights")
             .accessibilityIdentifier("insights.screen")

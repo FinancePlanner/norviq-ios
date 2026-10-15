@@ -684,10 +684,9 @@ struct PortfolioScreen: View {
   private func saveEditedStock(_ updated: StockResponse) async -> Bool {
     let ok = await viewModel.saveEdit(updated)
     if ok {
-      // PostHog: Track successful position edit
+      // PostHog: Track successful position edit. Ticker only — no quantities.
       PostHogSDK.shared.capture("position_edited", properties: [
         "symbol": updated.symbol,
-        "shares": updated.shares,
       ])
     }
     return ok

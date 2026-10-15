@@ -17,6 +17,8 @@ struct ReceiptScannerView: View {
   @State private var errorMessage: String?
   @State private var photoItem: PhotosPickerItem?
   @State private var isUploading = false
+  @State private var showsAIConsent = false
+  @InjectedObservable(\.aiConsentStore) private var aiConsent
 
   private var isScannerAvailable: Bool {
     DataScannerViewController.isSupported && DataScannerViewController.isAvailable
@@ -56,12 +58,30 @@ struct ReceiptScannerView: View {
         guard let item else { return }
         Task { await handlePhoto(item) }
       }
+      // QR scanning is on-device; only the photo fallback uses AI.
+      .aiConsentPrompt(isPresented: $showsAIConsent)
     }
   }
 
   // Photo OCR fallback: pick/take a receipt photo and upload it to the backend
   // vision OCR endpoint. Works even when the on-device QR scanner is unavailable.
+  @ViewBuilder
   private var photoPickerBar: some View {
+    if aiConsent.allowsAI {
+      photoPicker
+    } else {
+      Button { showsAIConsent = true } label: {
+        Label("Scan a photo instead", systemImage: "photo")
+          .frame(maxWidth: .infinity)
+          .padding()
+          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+          .padding(.horizontal)
+      }
+      .buttonStyle(.plain)
+    }
+  }
+
+  private var photoPicker: some View {
     PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
       HStack {
         if isUploading {
@@ -99,6 +119,9 @@ struct ReceiptScannerView: View {
       }
       onDraft(draft)
       dismiss()
+    } catch where AIConsentRequired.matches(error) {
+      // The consent sheet is presented by `aiConsentPrompt`.
+      errorMessage = nil
     } catch {
       errorMessage = "Couldn't scan that photo. Try again or enter manually."
     }

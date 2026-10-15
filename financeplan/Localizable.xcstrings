@@ -1,6 +1,550 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "That email is already used by another account." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That email is already used by another account."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esse email já está a ser usado por outra conta."
+          }
+        }
+      }
+    },
+    "Enter your current password to change your password." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter your current password to change your password."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduza a sua palavra-passe atual para alterar a palavra-passe."
+          }
+        }
+      }
+    },
+    "Read and acknowledge the Telegram privacy notice first." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read and acknowledge the Telegram privacy notice first."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leia e confirme primeiro o aviso de privacidade do Telegram."
+          }
+        }
+      }
+    },
+    "Couldn't save your choice. Check your connection and try again." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't save your choice. Check your connection and try again."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível guardar a sua escolha. Verifique a ligação e tente novamente."
+          }
+        }
+      }
+    },
+    "Share data with AI?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share data with AI?"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partilhar dados com a IA?"
+          }
+        }
+      }
+    },
+    "Norviq's AI features send some of your data to Anthropic and OpenRouter, the AI providers that generate the answers." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Norviq's AI features send some of your data to Anthropic and OpenRouter, the AI providers that generate the answers."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As funcionalidades de IA do Norviq enviam alguns dos seus dados à Anthropic e à OpenRouter, os fornecedores de IA que geram as respostas."
+          }
+        }
+      }
+    },
+    "What is sent" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What is sent"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O que é enviado"
+          }
+        }
+      }
+    },
+    "Portfolio totals and holdings" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Portfolio totals and holdings"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Totais e posições do portefólio"
+          }
+        }
+      }
+    },
+    "Spending and budgets" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spending and budgets"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Despesas e orçamentos"
+          }
+        }
+      }
+    },
+    "Receipt and screenshot images you import" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Receipt and screenshot images you import"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imagens de recibos e capturas de ecrã que importa"
+          }
+        }
+      }
+    },
+    "Your messages to the assistant" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your messages to the assistant"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As suas mensagens para o assistente"
+          }
+        }
+      }
+    },
+    "Not used to train AI models" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not used to train AI models"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não são usados para treinar modelos de IA"
+          }
+        }
+      }
+    },
+    "Your name and email are not sent" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your name and email are not sent"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O seu nome e email não são enviados"
+          }
+        }
+      }
+    },
+    "Turn it off anytime in Assistant settings" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn it off anytime in Assistant settings"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pode desativar a qualquer momento nas definições do assistente"
+          }
+        }
+      }
+    },
+    "How AI uses your data" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How AI uses your data"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Como a IA usa os seus dados"
+          }
+        }
+      }
+    },
+    "AI features" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI features"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Funcionalidades de IA"
+          }
+        }
+      }
+    },
+    "Allow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permitir"
+          }
+        }
+      }
+    },
+    "AI features are off. They need your permission to send data to Norviq's AI providers, Anthropic and OpenRouter." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI features are off. They need your permission to send data to Norviq's AI providers, Anthropic and OpenRouter."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As funcionalidades de IA estão desativadas. Precisam da sua autorização para enviar dados aos fornecedores de IA do Norviq, a Anthropic e a OpenRouter."
+          }
+        }
+      }
+    },
+    "Review and allow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Review and allow"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rever e permitir"
+          }
+        }
+      }
+    },
+    "Q, your assistant" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Q, your assistant"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Q, o seu assistente"
+          }
+        }
+      }
+    },
+    "Screenshot import" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshot import"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importação de capturas de ecrã"
+          }
+        }
+      }
+    },
+    "Share data with AI providers" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share data with AI providers"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partilhar dados com fornecedores de IA"
+          }
+        }
+      }
+    },
+    "AI data sharing" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI data sharing"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partilha de dados com IA"
+          }
+        }
+      }
+    },
+    "Off: Q, AI summaries, insights, receipt-photo and screenshot reading stay disabled." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off: Q, AI summaries, insights, receipt-photo and screenshot reading stay disabled."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desativado: o Q, os resumos de IA, as percepções e a leitura de fotos de recibos e capturas de ecrã ficam desativados."
+          }
+        }
+      }
+    },
+    "Q sends your messages and the financial context it needs (portfolio, spending, budgets) to Anthropic and OpenRouter to write replies. Not used to train models; your name and email are not sent. Conversations are encrypted and retained for 30 days. Financial changes always require confirmation." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Q sends your messages and the financial context it needs (portfolio, spending, budgets) to Anthropic and OpenRouter to write replies. Not used to train models; your name and email are not sent. Conversations are encrypted and retained for 30 days. Financial changes always require confirmation."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Q envia as suas mensagens e o contexto financeiro de que precisa (portefólio, despesas, orçamentos) à Anthropic e à OpenRouter para escrever as respostas. Não são usados para treinar modelos; o seu nome e email não são enviados. As conversas são encriptadas e guardadas durante 30 dias. Alterações financeiras exigem sempre confirmação."
+          }
+        }
+      }
+    },
+    "Before you connect" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before you connect"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antes de ligar"
+          }
+        }
+      }
+    },
+    "Telegram chats are not end-to-end encrypted. Replies from Norviq can include your portfolio values, budgets and expenses, and are stored on Telegram's servers. Only link a private chat you control." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telegram chats are not end-to-end encrypted. Replies from Norviq can include your portfolio values, budgets and expenses, and are stored on Telegram's servers. Only link a private chat you control."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As conversas do Telegram não são encriptadas ponto a ponto. As respostas do Norviq podem incluir os valores do seu portefólio, orçamentos e despesas, e ficam guardadas nos servidores do Telegram. Ligue apenas uma conversa privada que controle."
+          }
+        }
+      }
+    },
+    "I understand" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I understand"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compreendo"
+          }
+        }
+      }
+    },
+    "Data accessed through a connection or token goes to the AI client you connect, under that client's privacy terms." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data accessed through a connection or token goes to the AI client you connect, under that client's privacy terms."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os dados acedidos através de uma ligação ou token vão para o cliente de IA que ligar, ao abrigo dos termos de privacidade desse cliente."
+          }
+        }
+      }
+    },
+    "Enter your current password to change your email. Other devices will be signed out." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter your current password to change your email. Other devices will be signed out."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduza a sua palavra-passe atual para alterar o email. A sessão será terminada nos outros dispositivos."
+          }
+        }
+      }
+    },
+    "Enter your current password to change your email." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter your current password to change your email."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduza a sua palavra-passe atual para alterar o email."
+          }
+        }
+      }
+    },
+    "Your current password is incorrect." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your current password is incorrect."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A sua palavra-passe atual está incorreta."
+          }
+        }
+      }
+    },
+    "Your account uses Apple/Google sign-in. Contact fernando@facorreia.com to change your email." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your account uses Apple/Google sign-in. Contact fernando@facorreia.com to change your email."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A sua conta usa o início de sessão Apple/Google. Contacte fernando@facorreia.com para alterar o email."
+          }
+        }
+      }
+    },
+    "AI lookups need your permission to share data with Norviq's AI providers." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI lookups need your permission to share data with Norviq's AI providers."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As pesquisas com IA precisam da sua autorização para partilhar dados com os fornecedores de IA do Norviq."
+          }
+        }
+      }
+    },
     "" : {
 
     },
@@ -1277,20 +1821,20 @@
     "• %@" : {
 
     },
-    "© 2024 The Editorial Financial Experience. All rights reserved." : {
+    "© 2026 Norviq" : {
       "comment" : "Copyright notice.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "© 2024 The Editorial Financial Experience. All rights reserved."
+            "value" : "© 2026 Norviq"
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "© 2024 A Experiência Financeira Editorial. Todos os direitos reservados."
+            "value" : "© 2026 Norviq"
           }
         }
       }
@@ -2464,7 +3008,15 @@
     },
     "AI summary" : {
       "comment" : "A button that opens a sheet with a summary of the user's AI usage.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resumo de IA"
+          }
+        }
+      }
     },
     "Alert on unbudgeted spending" : {
 
@@ -12922,7 +13474,14 @@
 
     },
     "Receipt scanning" : {
-
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leitura de recibos"
+          }
+        }
+      }
     },
     "Receipts" : {
 

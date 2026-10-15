@@ -373,6 +373,7 @@ final class PersistentAssistantViewModel {
     }
 
     private func readable(_ error: Error, fallback: String) -> String {
+        if AIConsentRequired.matches(error) { return "Allow AI data sharing to use the assistant." }
         let value = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         return value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? fallback : value
     }
