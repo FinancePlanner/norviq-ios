@@ -2,10 +2,12 @@ import StockPlanShared
 import SwiftUI
 
 /// Slot title, trading date and generation time, plus a "Limited sources"
-/// badge when web search was unavailable for this brief.
+/// badge when web search was unavailable for this brief, and the share menu.
 struct MarketBriefHeader: View {
   let brief: MarketBriefResponse
   let isFetching: Bool
+  /// Where the share menu reports "Link copied" and channel fallbacks.
+  @Binding var shareToast: ToastData?
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
@@ -42,6 +44,10 @@ struct MarketBriefHeader: View {
           .padding(.vertical, 2)
           .background(AppTheme.Colors.warning.opacity(0.14), in: .capsule)
           .accessibilityHint(Text("Written without live web sources."))
+      }
+
+      if let sharePayload = MarketBriefSharePayload(brief: brief) {
+        MarketBriefShareMenu(payload: sharePayload, toast: $shareToast)
       }
     }
   }

@@ -9,12 +9,13 @@ struct MarketBriefCard: View {
   static let scrollID = "dashboard.marketBrief"
 
   @Bindable var viewModel: MarketBriefViewModel
+  @State private var shareToast: ToastData?
 
   var body: some View {
     if case let .loaded(brief, _) = viewModel.state {
       GlassCard {
         VStack(alignment: .leading, spacing: 16) {
-          MarketBriefHeader(brief: brief, isFetching: viewModel.isFetching)
+          MarketBriefHeader(brief: brief, isFetching: viewModel.isFetching, shareToast: $shareToast)
 
           if viewModel.showsSelector {
             selector
@@ -44,6 +45,7 @@ struct MarketBriefCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
       }
+      .toastOverlay($shareToast)
       .id(Self.scrollID)
     }
   }

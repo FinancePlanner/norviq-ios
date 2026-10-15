@@ -5050,7 +5050,20 @@
 
     },
     "Copy link" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy link"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar ligação"
+          }
+        }
+      }
     },
     "Copy server address" : {
       "comment" : "A button that copies the server address to the clipboard.",
@@ -21514,6 +21527,134 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Não foi possível atualizar os alertas do briefing de mercado."
+          }
+        }
+      }
+    },
+    "Share brief" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share brief"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partilhar briefing"
+          }
+        }
+      }
+    },
+    "Share link…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share link…"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partilhar ligação…"
+          }
+        }
+      }
+    },
+    "Share image…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share image…"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partilhar imagem…"
+          }
+        }
+      }
+    },
+    "Link copied" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link copied"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ligação copiada"
+          }
+        }
+      }
+    },
+    "Could not create the image." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not create the image."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível criar a imagem."
+          }
+        }
+      }
+    },
+    "Could not build share link. Opened iOS share sheet instead." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not build share link. Opened iOS share sheet instead."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível criar a ligação de partilha. Abrimos a folha de partilha do iOS."
+          }
+        }
+      }
+    },
+    "Share target unavailable. Opened iOS share sheet." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share target unavailable. Opened iOS share sheet."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Destino de partilha indisponível. Abrimos a folha de partilha do iOS."
+          }
+        }
+      }
+    },
+    "Opening Discord. Please paste your text there." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opening Discord. Please paste your text there."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A abrir o Discord. Cole lá o seu texto."
           }
         }
       }
