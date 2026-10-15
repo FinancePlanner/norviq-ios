@@ -369,6 +369,7 @@ public struct ContentView: View {
     Container.shared.socialStore().reset()
     Container.shared.gamificationStore().reset()
     Container.shared.aiConsentStore().reset()
+    Container.shared.marketBriefAlertsStore().reset()
     // Crash reports after sign-out must not carry the previous user's ID.
     SentrySDK.setUser(nil)
   }
@@ -472,6 +473,16 @@ public struct ContentView: View {
         object: nil,
         userInfo: route.inviteCode.map { ["inviteCode": $0] }
       )
+    case .marketBrief:
+      Self.pushLogger.info(
+        "push.analytics routed_success destination=market_brief has_brief=\(route.marketBriefRef != nil, privacy: .public)"
+      )
+      var userInfo: [AnyHashable: Any] = [:]
+      if let ref = route.marketBriefRef {
+        userInfo["slot"] = ref.slot.rawValue
+        userInfo["tradingDate"] = ref.tradingDate
+      }
+      NotificationCenter.default.post(name: .openMarketBriefFromPushNotification, object: nil, userInfo: userInfo)
     case .assistantMessage:
       let decision = pushNotificationsCoordinator.resolveAssistantOpen(conversationID: route.conversationID)
       Self.pushLogger.info(

@@ -82,6 +82,20 @@ struct HomeScreen: View {
       guard tab == .dashboard, let guided else { return }
       Task { await guided.refresh() }
     }
+    // Kept off `tabView`, whose modifier chain is at the type checker's limit.
+    .onReceive(NotificationCenter.default.publisher(for: .openMarketBriefFromPushNotification)) { notification in
+      openMarketBrief(notification)
+    }
+  }
+
+  /// A brief push or link: the dashboard tab, with the card on that brief.
+  private func openMarketBrief(_ notification: Notification) {
+    selectedTab = .dashboard
+    let ref = MarketBriefDeepLink.ref(
+      slot: notification.userInfo?["slot"] as? String,
+      date: notification.userInfo?["tradingDate"] as? String
+    )
+    Container.shared.marketBriefRouter().open(ref)
   }
 
   private func guidedTab(for tab: HomeTab) -> GuidedTab? {
