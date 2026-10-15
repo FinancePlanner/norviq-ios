@@ -339,6 +339,8 @@ public struct UserProfileView: View {
                     updateEarningsAlerts(enabled)
                 }
 
+                MarketBriefAlertsToggle()
+
                 HStack(spacing: 12) {
                     Label(LocalizedStringKey("Notification Status"), systemImage: "info.circle")
                     Spacer()
