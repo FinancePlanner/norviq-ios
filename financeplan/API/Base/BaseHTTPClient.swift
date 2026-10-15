@@ -221,6 +221,8 @@ nonisolated public struct BaseHTTPClient: Sendable {
             request.setValue(header.value, forHTTPHeaderField: header.name)
         }
 
+        request = ClientCapabilities.applied(to: request)
+
         if endpoint.method != .get, !parameters.isEmpty {
             request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
         }
@@ -257,7 +259,7 @@ nonisolated public struct BaseHTTPClient: Sendable {
     
     @concurrent
     public func sendRequest<ErrorType: HTTPClientError>(_ request: URLRequest, errorType: ErrorType.Type) async throws -> Data {
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await session.data(for: ClientCapabilities.applied(to: request))
         guard let httpResponse = response as? HTTPURLResponse else {
             throw ErrorType.makeInvalidResponse()
         }
@@ -267,7 +269,7 @@ nonisolated public struct BaseHTTPClient: Sendable {
     
     @concurrent
     public func sendRequestWithResponse<ErrorType: HTTPClientError>(_ request: URLRequest, errorType: ErrorType.Type) async throws -> (Data, HTTPURLResponse) {
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await session.data(for: ClientCapabilities.applied(to: request))
         guard let httpResponse = response as? HTTPURLResponse else {
             throw ErrorType.makeInvalidResponse()
         }
@@ -280,6 +282,9 @@ nonisolated public struct BaseHTTPClient: Sendable {
             let message = APIErrorDecoding.message(from: data)
             if response.statusCode == 401 {
                 throw ErrorType.makeUnauthorized(message)
+            }
+            if AIConsentRequired.matches(statusCode: response.statusCode, body: data) {
+                AIConsentRequired.post()
             }
             throw ErrorType.makeStatus(response.statusCode, message: message, body: data)
         }

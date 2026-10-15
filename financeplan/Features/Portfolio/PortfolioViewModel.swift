@@ -567,10 +567,8 @@ final class PortfolioViewModel {
       selectedPortfolioListId = created.id
       hasLoadedOnce = false
       await load(force: true)
-      // PostHog: Track portfolio list created
-      PostHogSDK.shared.capture("portfolio_list_created", properties: [
-        "name": normalized,
-      ])
+      // PostHog: Track portfolio list created. The name is user-typed text, so it stays out.
+      PostHogSDK.shared.capture("portfolio_list_created")
       return nil
     } catch {
       return error.localizedDescription

@@ -24,6 +24,7 @@ struct EditProfileView: View {
     @State private var username: String
     @State private var email: String
     @State private var currentPassword = ""
+    @State private var emailPassword = ""
     @State private var newPassword = ""
     @State private var successFeedbackTrigger = 0
 
@@ -31,7 +32,11 @@ struct EditProfileView: View {
 
     private let originalProfile: UserProfile
 
-    private enum Field { case username, email, currentPassword, newPassword }
+    private enum Field { case username, email, emailPassword, currentPassword, newPassword }
+
+    private var isEmailChanged: Bool {
+        email.trimmingCharacters(in: .whitespacesAndNewlines) != originalProfile.email
+    }
 
     init(viewModel: UserProfileViewModel, profile: UserProfile) {
         self.viewModel = viewModel
@@ -58,12 +63,23 @@ struct EditProfileView: View {
                         .autocorrectionDisabled()
                 }
 
-                Section("Email") {
+                Section {
                     TextField("Email", text: $email)
                         .focused($focusedField, equals: .email)
                         .textInputAutocapitalization(.never)
                         .keyboardType(.emailAddress)
                         .autocorrectionDisabled()
+                    if isEmailChanged {
+                        SecureField("Current Password", text: $emailPassword)
+                            .focused($focusedField, equals: .emailPassword)
+                            .textContentType(.password)
+                    }
+                } header: {
+                    Text("Email")
+                } footer: {
+                    if isEmailChanged {
+                        Text("Enter your current password to change your email. Other devices will be signed out.")
+                    }
                 }
 
                 Section("Change Password") {
@@ -111,6 +127,12 @@ struct EditProfileView: View {
 
     private func saveProfile() {
         Task {
+            if !newPassword.isEmpty, currentPassword.isEmpty {
+                // Checked before anything is saved, so nothing is half-applied.
+                _ = await viewModel.updatePassword(current: "", new: newPassword)
+                focusedField = .currentPassword
+                return
+            }
             var success = true
 
             // 1. Update Username if changed
@@ -119,19 +141,17 @@ struct EditProfileView: View {
             }
 
             // 2. Update Email if changed
-            if success && email != originalProfile.email {
-                success = await viewModel.updateEmail(email)
+            if success && isEmailChanged {
+                success = await viewModel.updateEmail(
+                    email.trimmingCharacters(in: .whitespacesAndNewlines),
+                    currentPassword: emailPassword
+                )
             }
 
-            // 3. Update Password if provided
+            // 3. Update Password if provided. Without the current password the
+            // view model refuses locally and sends nothing.
             if success && !newPassword.isEmpty {
-                if currentPassword.isEmpty {
-                    _ = await viewModel.save(profile: originalProfile) // Trigger an error if needed or manual setting
-                    // Custom error handling would be better here
-                    success = false
-                } else {
-                    success = await viewModel.updatePassword(current: currentPassword, new: newPassword)
-                }
+                success = await viewModel.updatePassword(current: currentPassword, new: newPassword)
             }
 
             if success {

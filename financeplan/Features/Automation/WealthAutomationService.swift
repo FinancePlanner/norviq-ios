@@ -214,7 +214,7 @@ final class WealthAutomationService: WealthAutomationServicing {
     let token = try await accessToken(forceRefresh: false)
     var request = try makeRequest(path: path, method: method, query: [], token: token)
     request.httpBody = nil
-    let (_, response) = try await session.data(for: request)
+    let (_, response) = try await session.data(for: ClientCapabilities.applied(to: request))
     guard let http = response as? HTTPURLResponse else { throw ServiceError.invalidResponse }
     guard (200..<300).contains(http.statusCode) else { throw ServiceError.requestFailed(http.statusCode, nil) }
   }
@@ -234,7 +234,7 @@ final class WealthAutomationService: WealthAutomationServicing {
     if let body {
       urlRequest.httpBody = try encoder.encode(body)
     }
-    let (data, urlResponse) = try await session.data(for: urlRequest)
+    let (data, urlResponse) = try await session.data(for: ClientCapabilities.applied(to: urlRequest))
     guard let http = urlResponse as? HTTPURLResponse else { throw ServiceError.invalidResponse }
     if http.statusCode == 401, !forceRefresh {
       return try await request(

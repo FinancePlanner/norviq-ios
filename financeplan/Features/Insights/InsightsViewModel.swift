@@ -31,6 +31,9 @@ final class InsightsViewModel: ObservableObject {
         do {
             let card = try await service.generate(kind: kind)
             states[kind] = .loaded(card)
+        } catch where AIConsentRequired.matches(error) {
+            // The consent gate takes over the screen; leave the card ready to retry.
+            states[kind] = .idle
         } catch {
             states[kind] = .failed(error.localizedDescription)
         }

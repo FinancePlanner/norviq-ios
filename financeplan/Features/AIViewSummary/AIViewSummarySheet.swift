@@ -1,3 +1,4 @@
+import Factory
 import StockPlanShared
 import SwiftUI
 
@@ -12,6 +13,7 @@ struct AIViewSummarySheet: View {
 
     @State private var viewModel = AIViewSummaryViewModel()
     @Environment(\.dismiss) private var dismiss
+    @InjectedObservable(\.aiConsentStore) private var aiConsent
 
     var body: some View {
         NavigationStack {
@@ -20,6 +22,8 @@ struct AIViewSummarySheet: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
             }
+            .safeAreaInset(edge: .bottom) { continueInQ }
+            .aiConsentGate("AI summary")
             .vigilScreenBackground()
             .vigilNavigationTitle(scope.displayName.capitalizedFirstLetter)
             .vigilInlineNavigationBar()
@@ -34,13 +38,15 @@ struct AIViewSummarySheet: View {
                         Image(systemName: "arrow.clockwise")
                     }
                     .accessibilityLabel("Regenerate")
-                    .disabled(viewModel.state == .loading)
+                    .disabled(viewModel.state == .loading || !aiConsent.allowsAI)
                 }
             }
-            .safeAreaInset(edge: .bottom) { continueInQ }
         }
         .presentationDetents([.medium, .large])
-        .task { await viewModel.loadIfNeeded(scope: scope) }
+        .task(id: aiConsent.allowsAI) {
+            guard aiConsent.allowsAI else { return }
+            await viewModel.loadIfNeeded(scope: scope)
+        }
     }
 
     @ViewBuilder

@@ -84,12 +84,15 @@ nonisolated struct UserProfileHTTPClient: Sendable {
     return try await client.call(UpdateUsernameEndpoint(request: request), errorType: Error.self)
   }
 
-  func updateEmail(_ request: UpdateEmailRequest) async throws -> UpdateUserProfileResponse {
+  func updateEmail(_ request: ChangeEmailRequest) async throws -> UpdateUserProfileResponse {
     return try await client.call(UpdateEmailEndpoint(request: request), errorType: Error.self)
   }
 
-  func updatePassword(_ request: UpdatePasswordRequest) async throws -> APIMessageResponse {
-    return try await client.call(UpdatePasswordEndpoint(request: request), errorType: Error.self)
+  func updatePassword(_ request: UpdatePasswordRequest, refreshToken: String? = nil) async throws -> APIMessageResponse {
+    return try await client.call(
+      UpdatePasswordEndpoint(request: request, refreshToken: refreshToken),
+      errorType: Error.self
+    )
   }
 
   func deleteProfile(_ request: DeleteUserProfileRequest) async throws -> DeleteUserProfileResponse {

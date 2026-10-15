@@ -22,10 +22,13 @@ final class UserProfileViewModelTests: XCTestCase {
     func updateUsername(_ username: String) async throws -> UserProfile {
       UserProfile(id: "u", email: "u@example.com", username: username)
     }
-    func updateEmail(_ email: String) async throws -> UserProfile {
+    func updateEmail(_ email: String, currentPassword _: String) async throws -> UserProfile {
       UserProfile(id: "u", email: email, username: "u")
     }
-    func updatePassword(current: String, new: String) async throws {}
+    private(set) var updatePasswordCallCount = 0
+    func updatePassword(current: String, new: String) async throws {
+      updatePasswordCallCount += 1
+    }
 
     func deleteAccount() async throws {
       deleteAccountCallCount += 1
@@ -55,5 +58,16 @@ final class UserProfileViewModelTests: XCTestCase {
     XCTAssertFalse(result)
     XCTAssertEqual(viewModel.errorMessage, "Server unavailable")
     XCTAssertFalse(viewModel.isLoading)
+  }
+
+  func testUpdatePassword_WithoutCurrentPassword_SendsNothingAndExplains() async {
+    let mock = MockService()
+    let viewModel = UserProfileViewModel(service: mock)
+
+    let result = await viewModel.updatePassword(current: "", new: "NewPassword123")
+
+    XCTAssertFalse(result)
+    XCTAssertEqual(mock.updatePasswordCallCount, 0)
+    XCTAssertEqual(viewModel.errorMessage, "Enter your current password to change your password.")
   }
 }

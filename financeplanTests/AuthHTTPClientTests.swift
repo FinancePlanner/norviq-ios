@@ -36,7 +36,7 @@ final class AuthHTTPClientTests: XCTestCase {
       XCTAssertEqual(request.httpMethod, "POST")
       XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/auth/login")
       XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
-      XCTAssertEqual(request.value(forHTTPHeaderField: "X-StockPlan-Client-Capabilities"), "mfa-auth-v1")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "X-StockPlan-Client-Capabilities"), "mfa-auth-v1, ai-consent-v1")
 
       let body = try XCTUnwrap(request.httpBody)
       let decoded = try JSONDecoder().decode(AuthLoginRequest.self, from: body)
@@ -331,7 +331,7 @@ final class AuthHTTPClientTests: XCTestCase {
 
     session.handler = { request in
       XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/auth/mfa/verify")
-      XCTAssertEqual(request.value(forHTTPHeaderField: "X-StockPlan-Client-Capabilities"), "mfa-auth-v1")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "X-StockPlan-Client-Capabilities"), "mfa-auth-v1, ai-consent-v1")
       let body = try XCTUnwrap(request.httpBody)
       let payload = try JSONDecoder().decode(AuthMFAVerifyRequestPayload.self, from: body)
       XCTAssertEqual(payload.code, "123456")
@@ -367,7 +367,7 @@ final class AuthHTTPClientTests: XCTestCase {
 
     session.handler = { request in
       XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/auth/mfa/resend")
-      XCTAssertEqual(request.value(forHTTPHeaderField: "X-StockPlan-Client-Capabilities"), "mfa-auth-v1")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "X-StockPlan-Client-Capabilities"), "mfa-auth-v1, ai-consent-v1")
       let body = try XCTUnwrap(request.httpBody)
       let payload = try JSONDecoder().decode(AuthMFAResendRequestPayload.self, from: body)
       XCTAssertEqual(payload.challengeId.uuidString, "22222222-2222-2222-2222-222222222222")

@@ -30,6 +30,7 @@ struct PersistentAssistantView: View {
     @State private var showsConversations = false
     @State private var showsPreferences = false
     @FocusState private var isComposerFocused: Bool
+    @InjectedObservable(\.aiConsentStore) private var aiConsent
 
     var body: some View {
         @Bindable var viewModel = viewModel
@@ -41,6 +42,8 @@ struct PersistentAssistantView: View {
                     conversationBody
                 }
             }
+            .safeAreaInset(edge: .bottom) { composer }
+            .aiConsentGate("Q, your assistant")
             .vigilScreenBackground()
             // The Muse header pill names the agent; a second title would compete with it.
             .vigilNavigationTitle("")
@@ -56,7 +59,6 @@ struct PersistentAssistantView: View {
                         .accessibilityLabel("Assistant settings")
                 }
             }
-            .safeAreaInset(edge: .bottom) { composer }
             .navigationDestination(for: PositionMemoRoute.self) { route in
                 PositionMemoReaderView(id: route.id, service: viewModel.memoService) { id, bookmarked in
                     viewModel.memoChanged(id: id, bookmarked: bookmarked)
@@ -67,7 +69,10 @@ struct PersistentAssistantView: View {
                     viewModel.memoChanged(id: id, bookmarked: bookmarked)
                 }
             }
-            .task {
+            // Re-runs when AI sharing is allowed from the gate; nothing is
+            // fetched while it is off.
+            .task(id: aiConsent.allowsAI) {
+                guard aiConsent.allowsAI else { return }
                 await viewModel.load(preferredConversationID: conversationID)
                 // After `load`, which selects or creates the conversation and
                 // would otherwise clear the field.
@@ -262,6 +267,31 @@ struct PersistentAssistantView: View {
         .presentationDetents([.medium, .large])
     }
 
+    /// Revoke (or re-allow) AI data sharing. Hidden while the consent state is
+    /// unknown, e.g. before the backend serves it.
+    @ViewBuilder
+    private var aiDataSharingSection: some View {
+        if aiConsent.status != .unknown {
+            Section {
+                Toggle("Share data with AI providers", isOn: Binding(
+                    get: { aiConsent.isConsented },
+                    set: { allow in Task { if allow { await aiConsent.allow() } else { await aiConsent.revoke() } } }
+                ))
+                .disabled(aiConsent.isSaving)
+                Link("How AI uses your data", destination: Constants.Norviq.aiPrivacyUrl)
+                    .font(.footnote)
+            } header: {
+                Text("AI data sharing")
+            } footer: {
+                if let error = aiConsent.errorMessage {
+                    Text(error).foregroundStyle(.red)
+                } else if !aiConsent.isConsented {
+                    Text("Off: Q, AI summaries, insights, receipt-photo and screenshot reading stay disabled.")
+                }
+            }
+        }
+    }
+
     private var preferencesSheet: some View {
         NavigationStack {
             Form {
@@ -275,12 +305,13 @@ struct PersistentAssistantView: View {
                         set: { value in Task { await viewModel.updatePreferences(pushEnabled: value) } }
                     ))
                 }
-                Section { Text("Conversations are encrypted and retained for 30 days. Financial changes always require confirmation.").font(.footnote).foregroundStyle(.secondary) }
+                aiDataSharingSection
+                Section { Text("Q sends your messages and the financial context it needs (portfolio, spending, budgets) to Anthropic and OpenRouter to write replies. Not used to train models; your name and email are not sent. Conversations are encrypted and retained for 30 days. Financial changes always require confirmation.").font(.footnote).foregroundStyle(.secondary) }
             }
             .navigationTitle("Assistant settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showsPreferences = false } } }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
     }
 }

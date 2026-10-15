@@ -57,6 +57,10 @@ struct NorviqApp: App {
         options.environment = environment
         options.tracesSampleRate = 0.2
         options.enableAppHangTracking = true
+        // No IP address or other default PII. Failed-request capture (5xx only by default)
+        // records URL + query string, method, status, body *sizes* and headers with
+        // Authorization/Cookie stripped — never request or response bodies — so it stays on.
+        options.sendDefaultPii = false
         options.enableCaptureFailedRequests = true
         options.beforeSend = { event in
           event.tags?["platform"] = "cocoa"

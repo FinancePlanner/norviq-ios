@@ -25,8 +25,11 @@ final class TelegramLinkViewModelTests: XCTestCase {
       return try statusResult.get()
     }
 
+    var createCodeCalls = 0
+
     func createCode() async throws -> TelegramPairingCode {
-      try codeResult.get()
+      createCodeCalls += 1
+      return try codeResult.get()
     }
 
     func disconnect() async throws {
@@ -95,6 +98,7 @@ final class TelegramLinkViewModelTests: XCTestCase {
     let service = ServiceMock()
     let viewModel = TelegramLinkViewModel(service: service)
 
+    viewModel.acknowledgePrivacy()
     await viewModel.connect()
 
     XCTAssertEqual(viewModel.pairingCode?.code, "ABCD2345")
@@ -106,6 +110,7 @@ final class TelegramLinkViewModelTests: XCTestCase {
   func testCodeIsClearedOnceConnected() async {
     let service = ServiceMock()
     let viewModel = TelegramLinkViewModel(service: service)
+    viewModel.acknowledgePrivacy()
     await viewModel.connect()
     XCTAssertNotNil(viewModel.pairingCode)
 
@@ -177,5 +182,52 @@ final class TelegramLinkViewModelTests: XCTestCase {
       kind: "brand_new_kind", enabled: false, quietHoursStart: nil, quietHoursEnd: nil, timezone: "UTC"
     )
     XCTAssertEqual(unknown.label, "brand_new_kind", "an unknown kind should stay visible, not render blank")
+  }
+
+  /// The notice is enforced in the view model, not just hidden in the view:
+  /// no pairing code is requested before "I understand".
+  func testConnectRequiresPrivacyAcknowledgement() async throws {
+    let suite = "TelegramLinkViewModelTests.\(UUID().uuidString)"
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let service = ServiceMock()
+    let viewModel = TelegramLinkViewModel(service: service, defaults: defaults, currentUserID: { "user-1" })
+
+    await viewModel.connect()
+    XCTAssertNil(viewModel.pairingCode)
+    XCTAssertNotNil(viewModel.errorMessage)
+    XCTAssertEqual(service.createCodeCalls, 0)
+
+    viewModel.acknowledgePrivacy()
+    await viewModel.connect()
+    XCTAssertEqual(viewModel.pairingCode?.code, "ABCD2345")
+    XCTAssertEqual(service.createCodeCalls, 1)
+  }
+
+  /// The E2E notice is acknowledged once per link: remembered per user, and
+  /// asked again after a disconnect.
+  func testPrivacyAcknowledgementPersistsPerUserAndResetsOnDisconnect() async throws {
+    let suite = "TelegramLinkViewModelTests.\(UUID().uuidString)"
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let service = ServiceMock()
+
+    let first = TelegramLinkViewModel(service: service, defaults: defaults, currentUserID: { "user-1" })
+    await first.load()
+    XCTAssertFalse(first.hasAcknowledgedPrivacy)
+    first.acknowledgePrivacy()
+
+    let reopened = TelegramLinkViewModel(service: service, defaults: defaults, currentUserID: { "user-1" })
+    await reopened.load()
+    XCTAssertTrue(reopened.hasAcknowledgedPrivacy)
+
+    let otherUser = TelegramLinkViewModel(service: service, defaults: defaults, currentUserID: { "user-2" })
+    await otherUser.load()
+    XCTAssertFalse(otherUser.hasAcknowledgedPrivacy)
+
+    service.statusResult = .success(connectedStatus())
+    await reopened.load()
+    await reopened.disconnect()
+    XCTAssertFalse(reopened.hasAcknowledgedPrivacy)
   }
 }

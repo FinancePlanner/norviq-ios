@@ -71,13 +71,13 @@ public final class UserProfileViewModel {
     }
 
     @discardableResult
-    public func updateEmail(_ email: String) async -> Bool {
+    public func updateEmail(_ email: String, currentPassword: String) async -> Bool {
         guard !isLoading else { return false }
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
         do {
-            self.profile = try await service.updateEmail(email)
+            self.profile = try await service.updateEmail(email, currentPassword: currentPassword)
             return true
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to update email."
@@ -88,6 +88,11 @@ public final class UserProfileViewModel {
     @discardableResult
     public func updatePassword(current: String, new: String) async -> Bool {
         guard !isLoading else { return false }
+        guard !current.isEmpty else {
+            // Nothing is sent: the backend would refuse it anyway.
+            errorMessage = PasswordChangeError.currentPasswordRequired.errorDescription
+            return false
+        }
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }

@@ -45,6 +45,9 @@ final class AIViewSummaryViewModel {
             // Dismissing the sheet cancels the task. Returning to idle lets a
             // reopen try again instead of showing a stale error.
             state = .idle
+        } catch where AIConsentRequired.matches(error) {
+            // The consent gate takes over; idle lets the sheet load once allowed.
+            state = .idle
         } catch {
             state = .failed(error.localizedDescription)
         }

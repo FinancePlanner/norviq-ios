@@ -133,4 +133,68 @@ final class UserProfileHTTPClientTests: XCTestCase {
       XCTFail("Unexpected error: \(error)")
     }
   }
+
+  private final class AuthSessionMock: AuthSessionManaging, @unchecked Sendable {
+    var invalidateCalls = 0
+    var refreshCalls = 0
+    func restoreSessionIfNeeded() async -> Bool { true }
+    func validAccessToken() async throws -> String? { "expired-token" }
+    func refreshAccessToken() async throws -> String? {
+      refreshCalls += 1
+      return "fresh-token"
+    }
+    func logout() async {}
+    func invalidateSession() async { invalidateCalls += 1 }
+  }
+
+  /// Expired token, then a wrong current password on the retry: the user must
+  /// see "incorrect password", not be signed out.
+  func testUpdateEmail_WrongPasswordAfterTokenRefresh_DoesNotInvalidateSession() async throws {
+    let session = SessionMock()
+    var calls = 0
+    session.handler = { request in
+      calls += 1
+      let isRetry = request.value(forHTTPHeaderField: "Authorization") == "Bearer fresh-token"
+      let body = isRetry
+        ? #"{"error":true,"reason":"Invalid current password"}"#
+        : #"{"error":true,"reason":"Unauthorized"}"#
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 401, httpVersion: nil, headerFields: nil)
+      )
+      return (Data(body.utf8), response)
+    }
+    let auth = AuthSessionMock()
+    let environment = AppEnvironmentManager()
+    let service = UserProfileHTTPService(environmentManager: environment, session: session, authSessionManager: auth)
+
+    do {
+      _ = try await service.updateEmail("new@example.com", currentPassword: "wrong")
+      XCTFail("Expected a wrong-password error")
+    } catch let error as EmailChangeError {
+      XCTAssertEqual(error, .wrongPassword)
+    }
+    XCTAssertEqual(auth.refreshCalls, 1)
+    XCTAssertEqual(auth.invalidateCalls, 0)
+    XCTAssertEqual(calls, 2)
+  }
+
+  func testUpdatePassword_InvalidCurrentPassword_MapsToReadableError() async throws {
+    let session = SessionMock()
+    session.handler = { request in
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 400, httpVersion: nil, headerFields: nil)
+      )
+      return (Data(#"{"error":true,"reason":"INVALID_CURRENT_PASSWORD"}"#.utf8), response)
+    }
+    let auth = AuthSessionMock()
+    let service = UserProfileHTTPService(environmentManager: AppEnvironmentManager(), session: session, authSessionManager: auth)
+
+    do {
+      try await service.updatePassword(current: "wrong", new: "NewPassword123")
+      XCTFail("Expected a wrong-password error")
+    } catch let error as PasswordChangeError {
+      XCTAssertEqual(error, .wrongPassword)
+    }
+    XCTAssertEqual(auth.invalidateCalls, 0)
+  }
 }

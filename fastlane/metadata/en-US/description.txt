@@ -32,5 +32,5 @@ BUILT FOR HANDS-ON INVESTORS
 
 Stop juggling a broker app, a budget spreadsheet, and market Twitter. Track, understand, and decide with context.
 
-Privacy Policy: https://norviq.org/privacy
-Terms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+Privacy Policy: https://www.norviq.org/privacy
+Terms of Use: https://www.norviq.org/terms

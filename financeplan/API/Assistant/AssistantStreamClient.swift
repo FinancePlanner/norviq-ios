@@ -50,6 +50,7 @@ struct AssistantStreamClient: Sendable {
         case unauthorized
         case upgradeRequired
         case rateLimited
+        case aiConsentRequired
         case server(Int)
 
         var errorDescription: String? {
@@ -58,6 +59,7 @@ struct AssistantStreamClient: Sendable {
             case .unauthorized: "Please sign in again to use the assistant."
             case .upgradeRequired: "The assistant requires Norviq Pro."
             case .rateLimited: "You've reached today's assistant limit. Try again tomorrow."
+            case .aiConsentRequired: "Allow AI data sharing to use the assistant."
             case let .server(code): "The assistant is unavailable (\(code)). Please try again."
             }
         }
@@ -77,6 +79,16 @@ struct AssistantStreamClient: Sendable {
         self.authTokenProvider = authTokenProvider
     }
 
+    /// Reads a small error body to tell "allow AI first" apart from "upgrade".
+    private static func isConsentRequired(_ bytes: URLSession.AsyncBytes) async throws -> Bool {
+        var body = Data()
+        for try await byte in bytes {
+            body.append(byte)
+            if body.count >= 4_096 { break }
+        }
+        return AIConsentRequired.matches(statusCode: 403, body: body)
+    }
+
     /// Sends the conversation and returns an async stream of assistant events.
     func stream(messages: [AssistantChatMessageDTO]) -> AsyncThrowingStream<AssistantStreamEvent, Error> {
         AsyncThrowingStream { continuation in
@@ -91,9 +103,13 @@ struct AssistantStreamClient: Sendable {
                     }
                     request.httpBody = try JSONEncoder().encode(AssistantChatRequestDTO(messages: messages))
 
-                    let (bytes, response) = try await session.bytes(for: request)
+                    let (bytes, response) = try await session.bytes(for: ClientCapabilities.applied(to: request))
                     guard let http = response as? HTTPURLResponse else {
                         throw Failure.invalidResponse
+                    }
+                    if http.statusCode == 403, try await Self.isConsentRequired(bytes) {
+                        AIConsentRequired.post()
+                        throw Failure.aiConsentRequired
                     }
                     switch http.statusCode {
                     case 200: break
@@ -144,9 +160,13 @@ struct AssistantStreamClient: Sendable {
                     }
                     request.httpBody = try JSONEncoder().encode(PersistentAssistantTurnRequestDTO(content: content))
 
-                    let (bytes, response) = try await session.bytes(for: request)
+                    let (bytes, response) = try await session.bytes(for: ClientCapabilities.applied(to: request))
                     guard let http = response as? HTTPURLResponse else {
                         throw Failure.invalidResponse
+                    }
+                    if http.statusCode == 403, try await Self.isConsentRequired(bytes) {
+                        AIConsentRequired.post()
+                        throw Failure.aiConsentRequired
                     }
                     switch http.statusCode {
                     case 200: break

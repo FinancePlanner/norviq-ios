@@ -340,7 +340,7 @@ final class ScenarioPlanningService: ScenarioPlanningServiceProtocol, @unchecked
     var request = URLRequest(url: url); request.httpMethod = method
     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization"); request.setValue("application/json", forHTTPHeaderField: "Accept")
     if let body { request.setValue("application/json", forHTTPHeaderField: "Content-Type"); request.httpBody = try JSONSerialization.data(withJSONObject: body) }
-    let (data, response) = try await session.data(for: request)
+    let (data, response) = try await session.data(for: ClientCapabilities.applied(to: request))
     guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
     guard (200..<300).contains(http.statusCode) else { throw ScenarioAPIError(method: method, path: path, statusCode: http.statusCode) }
     if let empty = EmptyResponse() as? Response { return empty }
