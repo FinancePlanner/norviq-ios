@@ -21643,6 +21643,22 @@
         }
       }
     },
+    "Choose Discord, then pick the channel. The text is also copied." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose Discord, then pick the channel. The text is also copied."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolha o Discord e depois o canal. O texto também foi copiado."
+          }
+        }
+      }
+    },
     "Opening Discord. Please paste your text there." : {
       "localizations" : {
         "en" : {

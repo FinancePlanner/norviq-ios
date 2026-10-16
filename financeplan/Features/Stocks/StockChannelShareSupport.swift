@@ -304,7 +304,7 @@ struct StockChannelShareActions: View {
         fallbackItems: [payload.body]
       )
     case .discord:
-      launcher.copyForDiscordAndOpen(payload.body)
+      launcher.shareToDiscord(payload.body)
     }
   }
 
