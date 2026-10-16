@@ -22,6 +22,8 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     case socialInvite = "social_invite"
     case boardReply = "board_reply"
     case boardUpvote = "board_upvote"
+    /// A morning or evening market brief went out.
+    case marketBrief = "market_brief"
 
     var isBoard: Bool { self == .boardReply || self == .boardUpvote }
   }
@@ -46,6 +48,8 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
   let inviteCode: String?
   /// Board pushes only: the post to open.
   let boardPostID: String?
+  /// Market brief pushes only: the brief to show, or nil for the latest.
+  let marketBriefRef: MarketBriefRef?
 
   nonisolated init(
     kind: Kind,
@@ -64,7 +68,8 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     conversationID: String? = nil,
     messageID: String? = nil,
     inviteCode: String? = nil,
-    boardPostID: String? = nil
+    boardPostID: String? = nil,
+    marketBriefRef: MarketBriefRef? = nil
   ) {
     self.kind = kind
     self.symbol = symbol
@@ -83,6 +88,7 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     self.messageID = messageID
     self.inviteCode = inviteCode
     self.boardPostID = boardPostID
+    self.marketBriefRef = marketBriefRef
   }
 
   /// Opens the assistant; `conversationID` nil means its default conversation.
@@ -94,6 +100,11 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
       conversationID: conversationID,
       messageID: messageID
     )
+  }
+
+  /// Opens the dashboard's market brief card; `ref` nil shows the latest brief.
+  nonisolated static func marketBrief(_ ref: MarketBriefRef?, deepLink: String? = nil) -> PushNotificationRoute {
+    PushNotificationRoute(kind: .marketBrief, symbol: nil, deepLink: deepLink, marketBriefRef: ref)
   }
 }
 
@@ -121,6 +132,14 @@ enum PushNotificationPayloadParser {
       threadIdentifier: normalize(threadIdentifier) ?? normalize(aps?["thread-id"] as? String)
     ) {
       return assistantRoute
+    }
+
+    if let marketBriefRoute = parseMarketBrief(
+      dictionaries: dictionaries,
+      categoryIdentifier: normalize(categoryIdentifier) ?? normalize(aps?["category"] as? String),
+      threadIdentifier: normalize(threadIdentifier) ?? normalize(aps?["thread-id"] as? String)
+    ) {
+      return marketBriefRoute
     }
 
     let rawType = stringValue(for: ["type", "notificationType"], in: dictionaries) ?? PushNotificationRoute.Kind.targetHit.rawValue
@@ -191,6 +210,30 @@ enum PushNotificationPayloadParser {
       stringValue(for: ["messageId", "message_id"], in: dictionaries)
     )
     return .assistant(conversationID: conversationID, messageID: messageID)
+  }
+
+  /// Category `MARKET_BRIEF`, thread `market-brief`, `type: market_brief` or
+  /// a `financeplan://market/brief` link. The brief comes from `slot` and
+  /// `tradingDate`, falling back to the link's query; neither means "latest".
+  private nonisolated static func parseMarketBrief(
+    dictionaries: [[String: Any]],
+    categoryIdentifier: String?,
+    threadIdentifier: String?
+  ) -> PushNotificationRoute? {
+    let rawType = normalize(stringValue(for: ["type", "notificationType"], in: dictionaries))
+    let rawLink = normalize(stringValue(for: ["deepLink", "deep_link"], in: dictionaries))
+    let link = MarketBriefDeepLink.parse(rawLink)
+    let isMarketBrief = categoryIdentifier == MarketBriefDeepLink.category
+      || threadIdentifier == MarketBriefDeepLink.threadIdentifier
+      || rawType == MarketBriefDeepLink.payloadType
+      || (rawType == nil && link != nil)
+    guard isMarketBrief else { return nil }
+
+    let ref = MarketBriefDeepLink.ref(
+      slot: stringValue(for: ["slot"], in: dictionaries),
+      date: stringValue(for: ["tradingDate", "trading_date", "date"], in: dictionaries)
+    ) ?? link?.ref
+    return .marketBrief(ref, deepLink: rawLink)
   }
 
   private nonisolated static func normalizeDictionary(_ dictionary: [AnyHashable: Any]) -> [String: Any] {
@@ -420,7 +463,7 @@ final class PushNotificationsCoordinator: ObservableObject {
     userAction: PushNotificationUserAction = .openStock
   ) {
     let route: PushNotificationRoute = switch userAction {
-    case _ where [PushNotificationRoute.Kind.assistantMessage, .friendRequest, .friendAccepted, .socialInvite, .boardReply, .boardUpvote]
+    case _ where [PushNotificationRoute.Kind.assistantMessage, .friendRequest, .friendAccepted, .socialInvite, .boardReply, .boardUpvote, .marketBrief]
       .contains(parsedRoute.kind):
       parsedRoute
     case .openStock:
@@ -446,10 +489,15 @@ final class PushNotificationsCoordinator: ObservableObject {
     )
   }
 
-  /// Handles `financeplan://assistant/...` and invite links. Returns false
-  /// for other URLs so other handlers can take them.
+  /// Handles `financeplan://assistant/...`, `financeplan://market/brief`, board
+  /// and invite links. Returns false for other URLs so other handlers can take them.
   @discardableResult
   func handleDeepLink(_ url: URL) -> Bool {
+    if let link = MarketBriefDeepLink.parse(url) {
+      Self.logger.info("push.route deep_link destination=market_brief has_brief=\(link.ref != nil, privacy: .public)")
+      handleIncomingRoute(.marketBrief(link.ref, deepLink: url.absoluteString))
+      return true
+    }
     if let postID = BoardDeepLink.postID(from: url) {
       Self.logger.info("push.route deep_link destination=board_post")
       handleIncomingRoute(PushNotificationRoute(kind: .boardReply, symbol: nil, deepLink: url.absoluteString, boardPostID: postID.uuidString))

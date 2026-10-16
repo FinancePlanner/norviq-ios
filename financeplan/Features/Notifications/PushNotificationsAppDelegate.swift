@@ -18,6 +18,7 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, UNUse
     static let targetAlert = "TARGET_ALERT"
     static let earningsReminder = "EARNINGS_REMINDER"
     static let assistantMessage = AssistantDeepLink.category
+    static let marketBrief = MarketBriefDeepLink.category
   }
 
   func application(
@@ -82,6 +83,14 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, UNUse
       return await MainActor.run {
         Container.shared.pushNotificationsCoordinator().foregroundPresentationOptions(for: route)
       }
+    }
+    // A new brief never pulls the reader to the dashboard on arrival: it shows
+    // a banner, and a card already on screen refreshes. A tap opens it.
+    if route?.kind == .marketBrief {
+      await MainActor.run {
+        Container.shared.marketBriefRouter().notePublished()
+      }
+      return [.banner, .list, .sound]
     }
     if let route {
       await MainActor.run {
@@ -162,8 +171,16 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, UNUse
       intentIdentifiers: [],
       options: []
     )
+    // No actions either: a tap opens the dashboard on that brief. Grouped by
+    // the backend's `market-brief` thread.
+    let marketBriefCategory = UNNotificationCategory(
+      identifier: CategoryID.marketBrief,
+      actions: [],
+      intentIdentifiers: [],
+      options: []
+    )
     UNUserNotificationCenter.current().setNotificationCategories([
-      targetCategory, earningsCategory, assistantCategory
+      targetCategory, earningsCategory, assistantCategory, marketBriefCategory
     ])
   }
 }

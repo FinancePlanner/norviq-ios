@@ -1,9 +1,6 @@
 import Foundation
 import SwiftUI
 import StockPlanShared
-#if canImport(UIKit)
-import UIKit
-#endif
 
 struct StockSharePayload: Equatable {
   let title: String
@@ -302,12 +299,12 @@ struct StockChannelShareActions: View {
     let payload = payload(for: destination)
     switch destination {
     case .x:
-      openPrefilledURL(
-        "https://x.com/intent/tweet?text=\(percentEncoded(payload.body))",
+      launcher.open(
+        URL(string: "https://x.com/intent/tweet?text=\(percentEncoded(payload.body))"),
         fallbackItems: [payload.body]
       )
     case .discord:
-      copyForDiscordAndOpen(payload.body)
+      launcher.copyForDiscordAndOpen(payload.body)
     }
   }
 
@@ -315,46 +312,18 @@ struct StockChannelShareActions: View {
     destinationPayload?(destination) ?? payload
   }
 
-  private func openPrefilledURL(_ rawURL: String, fallbackItems: [Any]) {
-    guard let url = URL(string: rawURL) else {
-      showBanner("Could not build share link. Opened iOS share sheet instead.", style: .error)
-      openShareSheet(items: fallbackItems)
-      return
-    }
-
-    openURL(url) { accepted in
-      if !accepted {
-        showBanner("Share target unavailable. Opened iOS share sheet.", style: .info)
-        openShareSheet(items: fallbackItems)
-      }
-    }
-  }
-
-  private func copyForDiscordAndOpen(_ body: String) {
-#if canImport(UIKit)
-    UIPasteboard.general.string = body
-#endif
-    showBanner("Opening Discord. Please paste your text there.", style: .success)
-
-    guard let discordAppURL = URL(string: "discord://") else { return }
-    openURL(discordAppURL) { accepted in
-      guard !accepted else { return }
-      if let webURL = URL(string: "https://discord.com/channels/@me") {
-        openURL(webURL)
-      }
-    }
-  }
-
-  private func openShareSheet(items: [Any]) {
-    shareSheetItems = items
-    isShareSheetPresented = true
+  private var launcher: ChannelShareLauncher {
+    ChannelShareLauncher(
+      openURL: openURL,
+      presentShareSheet: { items in
+        shareSheetItems = items
+        isShareSheetPresented = true
+      },
+      showToast: { bannerToast = $0 }
+    )
   }
 
   private func percentEncoded(_ value: String) -> String {
     value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value
-  }
-
-  private func showBanner(_ message: String, style: ToastBanner.Style) {
-    bannerToast = ToastData(message: message, style: style)
   }
 }

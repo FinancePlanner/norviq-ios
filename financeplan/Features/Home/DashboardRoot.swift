@@ -35,6 +35,7 @@ struct DashboardRoot: View {
   @State private var hasLoadedContent = false
   @Environment(GuidedStartCoordinator.self) private var guided: GuidedStartCoordinator?
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @InjectedObservable(\Container.marketBriefRouter) private var marketBriefRouter
 
   /// The goal card sits below the fold; set_goal scrolls it into view so its
   /// spotlight has something to point at.
@@ -136,6 +137,12 @@ struct DashboardRoot: View {
           guard isSettingGoal else { return }
           withAnimation(reduceMotion ? AppMotion.reduced : AppMotion.structural) {
             scrollProxy.scrollTo(Self.goalCardScrollID, anchor: .center)
+          }
+        }
+        // A brief push or link: bring the card into view.
+        .onChange(of: marketBriefRouter.openCount) {
+          withAnimation(reduceMotion ? AppMotion.reduced : AppMotion.structural) {
+            scrollProxy.scrollTo(MarketBriefCard.scrollID, anchor: .top)
           }
         }
       }
@@ -398,6 +405,7 @@ private struct DashboardContentSection: View {
   @Environment(\.colorScheme) private var colorScheme
   @Environment(GuidedStartCoordinator.self) private var guided: GuidedStartCoordinator?
   @State private var newsTickerViewModel = NewsTickerViewModel()
+  @State private var marketBriefViewModel = MarketBriefViewModel()
 
   private var isGuidedCardVisible: Bool { guided?.isCardVisible ?? false }
 
@@ -423,6 +431,9 @@ private struct DashboardContentSection: View {
       )
       .redacted(reason: isHomeMetricsRedacted ? .placeholder : [])
       .appAnimation(AppMotion.state, value: isHomeMetricsRedacted)
+
+      // Outside the guided-start condition: a brief push must land on a card.
+      MarketBriefCard(viewModel: marketBriefViewModel)
 
       if !isGuidedCardVisible {
         NewsTickerStrip(viewModel: newsTickerViewModel)
@@ -469,6 +480,7 @@ private struct DashboardContentSection: View {
       .tint(AppTheme.Colors.tint(for: colorScheme))
     }
     .appAnimation(AppMotion.structural, value: isSearchResultsVisible)
+    .marketBriefLifecycle(marketBriefViewModel)
   }
 }
 

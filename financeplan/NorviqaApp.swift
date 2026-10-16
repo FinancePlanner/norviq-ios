@@ -115,7 +115,14 @@ struct NorviqApp: App {
           startAnalyticsIfNeeded()
         }
         .onChange(of: appLanguageRawValue) { _, newValue in
-          AppLanguage.applyBundleLanguage(AppLanguage.from(newValue))
+          let language = AppLanguage.from(newValue)
+          AppLanguage.applyBundleLanguage(language)
+          // Brief pushes are written in the app language; move them with it.
+          // Here because the root view is rebuilt on a language change.
+          Task {
+            guard await !Container.shared.authSessionStore().authToken.isEmpty else { return }
+            await Container.shared.marketBriefAlertsStore().languageChanged(to: language.rawValue)
+          }
         }
     }
     .modelContainer(sharedModelContainer)
