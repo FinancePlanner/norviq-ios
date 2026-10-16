@@ -1,3 +1,9 @@
+New: the market brief
+
+• Morning brief before the open and a market close recap every weekday, in English and Portuguese
+• Optional alerts when each brief is ready
+• Share a brief as a link or an image to X, Reddit, WhatsApp, Discord and more
+
 Privacy and security update:
 
 • Clearer privacy policy and terms of use
