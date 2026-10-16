@@ -92,7 +92,7 @@ struct MarketBriefShareMenu: View {
     case .whatsapp:
       launcher.open(payload.whatsAppURL, fallbackItems: [payload.whatsAppText])
     case .discord:
-      launcher.copyForDiscordAndOpen(payload.discordMarkdown)
+      launcher.shareToDiscord(payload.discordMarkdown)
     case .copyLink:
       launcher.copyToPasteboard(payload.permalink(for: .copyLink).absoluteString)
       toast = .success(String(localized: "Link copied"))

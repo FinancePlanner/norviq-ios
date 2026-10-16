@@ -5,7 +5,8 @@ import UIKit
 
 /// Hands share text to a channel outside the app. Channels with a web intent
 /// (X, Reddit, WhatsApp) open a prefilled URL and fall back to the system share
-/// sheet; Discord has no intent URL, so its text is copied and the app opened.
+/// sheet. Discord goes through the share sheet, whose Discord extension asks
+/// for the server and channel.
 ///
 /// Shared by the stock share buttons and the market brief share menu, which
 /// each own the share sheet and toast it drives.
@@ -32,19 +33,13 @@ struct ChannelShareLauncher {
     }
   }
 
-  /// Copies `text`, then opens the Discord app, or Discord on the web when the
-  /// app is not installed.
-  func copyForDiscordAndOpen(_ text: String) {
+  /// Discord has no URL that opens its server and channel picker, but its
+  /// share extension does, so the text goes to the system share sheet. It is
+  /// also copied, for when the Discord extension isn't enabled on the device.
+  func shareToDiscord(_ text: String) {
     copyToPasteboard(text)
-    showToast(.success(String(localized: "Opening Discord. Please paste your text there.")))
-
-    guard let discordAppURL = URL(string: "discord://") else { return }
-    openURL(discordAppURL) { accepted in
-      guard !accepted else { return }
-      if let webURL = URL(string: "https://discord.com/channels/@me") {
-        openURL(webURL)
-      }
-    }
+    showToast(.info(String(localized: "Choose Discord, then pick the channel. The text is also copied.")))
+    presentShareSheet([text])
   }
 
   func copyToPasteboard(_ text: String) {
