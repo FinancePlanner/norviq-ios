@@ -1,550 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "That email is already used by another account." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "That email is already used by another account."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esse email já está a ser usado por outra conta."
-          }
-        }
-      }
-    },
-    "Enter your current password to change your password." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter your current password to change your password."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Introduza a sua palavra-passe atual para alterar a palavra-passe."
-          }
-        }
-      }
-    },
-    "Read and acknowledge the Telegram privacy notice first." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Read and acknowledge the Telegram privacy notice first."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Leia e confirme primeiro o aviso de privacidade do Telegram."
-          }
-        }
-      }
-    },
-    "Couldn't save your choice. Check your connection and try again." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't save your choice. Check your connection and try again."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível guardar a sua escolha. Verifique a ligação e tente novamente."
-          }
-        }
-      }
-    },
-    "Share data with AI?" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Share data with AI?"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Partilhar dados com a IA?"
-          }
-        }
-      }
-    },
-    "Norviq's AI features send some of your data to Anthropic and OpenRouter, the AI providers that generate the answers." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Norviq's AI features send some of your data to Anthropic and OpenRouter, the AI providers that generate the answers."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "As funcionalidades de IA do Norviq enviam alguns dos seus dados à Anthropic e à OpenRouter, os fornecedores de IA que geram as respostas."
-          }
-        }
-      }
-    },
-    "What is sent" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "What is sent"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O que é enviado"
-          }
-        }
-      }
-    },
-    "Portfolio totals and holdings" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Portfolio totals and holdings"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Totais e posições do portefólio"
-          }
-        }
-      }
-    },
-    "Spending and budgets" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Spending and budgets"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Despesas e orçamentos"
-          }
-        }
-      }
-    },
-    "Receipt and screenshot images you import" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Receipt and screenshot images you import"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Imagens de recibos e capturas de ecrã que importa"
-          }
-        }
-      }
-    },
-    "Your messages to the assistant" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your messages to the assistant"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "As suas mensagens para o assistente"
-          }
-        }
-      }
-    },
-    "Not used to train AI models" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not used to train AI models"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não são usados para treinar modelos de IA"
-          }
-        }
-      }
-    },
-    "Your name and email are not sent" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your name and email are not sent"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O seu nome e email não são enviados"
-          }
-        }
-      }
-    },
-    "Turn it off anytime in Assistant settings" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Turn it off anytime in Assistant settings"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pode desativar a qualquer momento nas definições do assistente"
-          }
-        }
-      }
-    },
-    "How AI uses your data" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "How AI uses your data"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Como a IA usa os seus dados"
-          }
-        }
-      }
-    },
-    "AI features" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI features"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Funcionalidades de IA"
-          }
-        }
-      }
-    },
-    "Allow" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Allow"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permitir"
-          }
-        }
-      }
-    },
-    "AI features are off. They need your permission to send data to Norviq's AI providers, Anthropic and OpenRouter." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI features are off. They need your permission to send data to Norviq's AI providers, Anthropic and OpenRouter."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "As funcionalidades de IA estão desativadas. Precisam da sua autorização para enviar dados aos fornecedores de IA do Norviq, a Anthropic e a OpenRouter."
-          }
-        }
-      }
-    },
-    "Review and allow" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Review and allow"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rever e permitir"
-          }
-        }
-      }
-    },
-    "Q, your assistant" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Q, your assistant"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Q, o seu assistente"
-          }
-        }
-      }
-    },
-    "Screenshot import" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Screenshot import"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Importação de capturas de ecrã"
-          }
-        }
-      }
-    },
-    "Share data with AI providers" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Share data with AI providers"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Partilhar dados com fornecedores de IA"
-          }
-        }
-      }
-    },
-    "AI data sharing" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI data sharing"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Partilha de dados com IA"
-          }
-        }
-      }
-    },
-    "Off: Q, AI summaries, insights, receipt-photo and screenshot reading stay disabled." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Off: Q, AI summaries, insights, receipt-photo and screenshot reading stay disabled."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Desativado: o Q, os resumos de IA, as percepções e a leitura de fotos de recibos e capturas de ecrã ficam desativados."
-          }
-        }
-      }
-    },
-    "Q sends your messages and the financial context it needs (portfolio, spending, budgets) to Anthropic and OpenRouter to write replies. Not used to train models; your name and email are not sent. Conversations are encrypted and retained for 30 days. Financial changes always require confirmation." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Q sends your messages and the financial context it needs (portfolio, spending, budgets) to Anthropic and OpenRouter to write replies. Not used to train models; your name and email are not sent. Conversations are encrypted and retained for 30 days. Financial changes always require confirmation."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O Q envia as suas mensagens e o contexto financeiro de que precisa (portefólio, despesas, orçamentos) à Anthropic e à OpenRouter para escrever as respostas. Não são usados para treinar modelos; o seu nome e email não são enviados. As conversas são encriptadas e guardadas durante 30 dias. Alterações financeiras exigem sempre confirmação."
-          }
-        }
-      }
-    },
-    "Before you connect" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Before you connect"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Antes de ligar"
-          }
-        }
-      }
-    },
-    "Telegram chats are not end-to-end encrypted. Replies from Norviq can include your portfolio values, budgets and expenses, and are stored on Telegram's servers. Only link a private chat you control." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Telegram chats are not end-to-end encrypted. Replies from Norviq can include your portfolio values, budgets and expenses, and are stored on Telegram's servers. Only link a private chat you control."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "As conversas do Telegram não são encriptadas ponto a ponto. As respostas do Norviq podem incluir os valores do seu portefólio, orçamentos e despesas, e ficam guardadas nos servidores do Telegram. Ligue apenas uma conversa privada que controle."
-          }
-        }
-      }
-    },
-    "I understand" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I understand"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compreendo"
-          }
-        }
-      }
-    },
-    "Data accessed through a connection or token goes to the AI client you connect, under that client's privacy terms." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Data accessed through a connection or token goes to the AI client you connect, under that client's privacy terms."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Os dados acedidos através de uma ligação ou token vão para o cliente de IA que ligar, ao abrigo dos termos de privacidade desse cliente."
-          }
-        }
-      }
-    },
-    "Enter your current password to change your email. Other devices will be signed out." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter your current password to change your email. Other devices will be signed out."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Introduza a sua palavra-passe atual para alterar o email. A sessão será terminada nos outros dispositivos."
-          }
-        }
-      }
-    },
-    "Enter your current password to change your email." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter your current password to change your email."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Introduza a sua palavra-passe atual para alterar o email."
-          }
-        }
-      }
-    },
-    "Your current password is incorrect." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your current password is incorrect."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A sua palavra-passe atual está incorreta."
-          }
-        }
-      }
-    },
-    "Your account uses Apple/Google sign-in. Contact fernando@facorreia.com to change your email." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your account uses Apple/Google sign-in. Contact fernando@facorreia.com to change your email."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A sua conta usa o início de sessão Apple/Google. Contacte fernando@facorreia.com para alterar o email."
-          }
-        }
-      }
-    },
-    "AI lookups need your permission to share data with Norviq's AI providers." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI lookups need your permission to share data with Norviq's AI providers."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "As pesquisas com IA precisam da sua autorização para partilhar dados com os fornecedores de IA do Norviq."
-          }
-        }
-      }
-    },
     "" : {
 
     },
@@ -870,6 +326,22 @@
         }
       }
     },
+    "%@ a month" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ a month"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ por mês"
+          }
+        }
+      }
+    },
     "%@ allocated, %@ held as cash." : {
       "localizations" : {
         "en" : {
@@ -1035,6 +507,17 @@
         }
       }
     },
+    "%@ replied on %@" : {
+      "comment" : "Boards activity row. First placeholder: who replied. Second: the post title.",
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ respondeu em %@"
+          }
+        }
+      }
+    },
     "%@ sh" : {
       "comment" : "A column of text that shows the number of shares traded in a market pressure insider's trade. The argument is the string “%.1fB”, the string “%.1fM”, the string “%.1fK”, or the string “%.0f”.",
       "isCommentAutoGenerated" : true
@@ -1093,6 +576,17 @@
       "comment" : "A message in the \"Prepare this adjustment?\" confirmation dialog, showing the explanation of a goal suggestion.",
       "isCommentAutoGenerated" : true
     },
+    "%@ upvoted %@" : {
+      "comment" : "Boards activity row. First placeholder: who upvoted. Second: the post title.",
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ deu um voto positivo em %@"
+          }
+        }
+      }
+    },
     "%@ was added to your portfolio." : {
       "comment" : "A confirmation dialog message that appears when a watchlist item is removed. The argument is the ticker symbol of the item that was removed.",
       "extractionState" : "stale",
@@ -1124,6 +618,22 @@
         }
       }
     },
+    "%@, %@, down %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@, %@, down %@"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@, a descer %3$@"
+          }
+        }
+      }
+    },
     "%@, %@, spent %@ against %@" : {
       "comment" : "A row that shows a title, a progress bar, and a value.",
       "isCommentAutoGenerated" : true,
@@ -1132,6 +642,38 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@, %2$@, spent %3$@ against %4$@"
+          }
+        }
+      }
+    },
+    "%@, %@, unchanged" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@, %@, unchanged"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@, sem alteração"
+          }
+        }
+      }
+    },
+    "%@, %@, up %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@, %@, up %@"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@, a subir %3$@"
           }
         }
       }
@@ -1869,6 +1411,7 @@
     },
     "~24 hours" : {
       "comment" : "A response time for support inquiries.",
+      "extractionState" : "stale",
       "isCommentAutoGenerated" : true,
       "localizations" : {
         "en" : {
@@ -2301,6 +1844,7 @@
     },
     "Activity" : {
       "comment" : "A label displayed above a list of user's activities.",
+      "isCommentAutoGenerated" : true,
       "localizations" : {
         "pt-PT" : {
           "stringUnit" : {
@@ -2308,8 +1852,7 @@
             "value" : "Atividade"
           }
         }
-      },
-      "isCommentAutoGenerated" : true
+      }
     },
     "Activity Feed" : {
       "comment" : "A label displayed above the user's activity feed.",
@@ -2448,6 +1991,22 @@
     "Add a holding" : {
 
     },
+    "Add a monthly base" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a monthly base"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adiciona uma base mensal"
+          }
+        }
+      }
+    },
     "Add an expense, review your spending, or look up a stock." : {
 
     },
@@ -2471,6 +2030,22 @@
     },
     "Add as expense" : {
 
+    },
+    "Add autobuy" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add autobuy"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar compra automática"
+          }
+        }
+      }
     },
     "Add cash position" : {
       "comment" : "A button that adds a cash position to a portfolio.",
@@ -2774,6 +2349,22 @@
         }
       }
     },
+    "Add terminal scenario" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add terminal scenario"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar cenário terminal"
+          }
+        }
+      }
+    },
     "Add ticker" : {
       "comment" : "A placeholder for a text field that lets the user add a ticker symbol.",
       "isCommentAutoGenerated" : true
@@ -2990,6 +2581,102 @@
       "comment" : "A tax capital gains taxation mode.",
       "isCommentAutoGenerated" : true
     },
+    "AI assist" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI assist"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Assistência IA"
+          }
+        }
+      }
+    },
+    "AI data sharing" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI data sharing"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partilha de dados com IA"
+          }
+        }
+      }
+    },
+    "AI features" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI features"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Funcionalidades de IA"
+          }
+        }
+      }
+    },
+    "AI features are off. They need your permission to send data to Norviq's AI providers, Anthropic and OpenRouter." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI features are off. They need your permission to send data to Norviq's AI providers, Anthropic and OpenRouter."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As funcionalidades de IA estão desativadas. Precisam da sua autorização para enviar dados aos fornecedores de IA do Norviq, a Anthropic e a OpenRouter."
+          }
+        }
+      }
+    },
+    "AI lookup is unavailable right now. You can still enter the numbers yourself." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI lookup is unavailable right now. You can still enter the numbers yourself."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A pesquisa com IA não está disponível de momento. Podes introduzir os números manualmente."
+          }
+        }
+      }
+    },
+    "AI lookups need your permission to share data with Norviq's AI providers." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI lookups need your permission to share data with Norviq's AI providers."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As pesquisas com IA precisam da sua autorização para partilhar dados com os fornecedores de IA do Norviq."
+          }
+        }
+      }
+    },
     "AI Model Integrations" : {
       "localizations" : {
         "en" : {
@@ -3002,6 +2689,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Integrações de modelos de IA"
+          }
+        }
+      }
+    },
+    "AI scenario" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI scenario"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cenário da IA"
+          }
+        }
+      }
+    },
+    "AI suggestion" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI suggestion"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sugestão da IA"
           }
         }
       }
@@ -3108,6 +2827,22 @@
     },
     "Allocation view" : {
 
+    },
+    "Allow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permitir"
+          }
+        }
+      }
     },
     "Allow Contacts for Norviq in Settings to find friends this way." : {
 
@@ -3529,6 +3264,54 @@
         }
       }
     },
+    "Autobuys" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autobuys"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compras automáticas"
+          }
+        }
+      }
+    },
+    "Autobuys are unavailable right now." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autobuys are unavailable right now."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As compras automáticas não estão disponíveis de momento."
+          }
+        }
+      }
+    },
+    "Autobuys: %@ a month" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autobuys: %@ a month"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compras automáticas: %@ por mês"
+          }
+        }
+      }
+    },
     "Automation" : {
 
     },
@@ -3758,6 +3541,22 @@
     "Before inflation: %@." : {
 
     },
+    "Before you connect" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before you connect"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antes de ligar"
+          }
+        }
+      }
+    },
     "Before you follow" : {
 
     },
@@ -3855,6 +3654,22 @@
     },
     "Breaking news" : {
 
+    },
+    "Brief" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brief"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Briefing"
+          }
+        }
+      }
     },
     "Bring your portfolio and budgets together in one secure place." : {
 
@@ -4160,6 +3975,22 @@
     "Can read, can't post, comment or vote." : {
 
     },
+    "Can't be negative." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't be negative."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não pode ser negativo."
+          }
+        }
+      }
+    },
     "Cancel" : {
       "localizations" : {
         "en" : {
@@ -4192,6 +4023,22 @@
     },
     "Capital" : {
 
+    },
+    "Capital at today's prices" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capital at today's prices"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capital aos preços de hoje"
+          }
+        }
+      }
     },
     "Capture expense" : {
       "comment" : "A button that opens a sheet for capturing a new expense.",
@@ -4413,6 +4260,22 @@
     "Checking your contacts…" : {
 
     },
+    "Checking your terminal scenario…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checking your terminal scenario…"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A verificar o teu cenário terminal…"
+          }
+        }
+      }
+    },
     "Checklist" : {
 
     },
@@ -4432,6 +4295,22 @@
     },
     "Choose an empty watchlist, or let Norviq create one." : {
 
+    },
+    "Choose Discord, then pick the channel. The text is also copied." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose Discord, then pick the channel. The text is also copied."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolha o Discord e depois o canal. O texto também foi copiado."
+          }
+        }
+      }
     },
     "Choose file" : {
       "comment" : "A button that lets the user choose a file.",
@@ -4608,6 +4487,7 @@
     },
     "Community Discord" : {
       "comment" : "A label for the Discord community.",
+      "extractionState" : "stale",
       "isCommentAutoGenerated" : true,
       "localizations" : {
         "en" : {
@@ -4626,6 +4506,22 @@
     },
     "Community guidelines" : {
 
+    },
+    "Company" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Company"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Empresa"
+          }
+        }
+      }
     },
     "Compare" : {
       "comment" : "A label for the \"Compare\" section of the chart builder.",
@@ -4946,6 +4842,7 @@
     },
     "Contact Us" : {
       "comment" : "A section title for links to contact Norviq support.",
+      "extractionState" : "stale",
       "isCommentAutoGenerated" : true,
       "localizations" : {
         "en" : {
@@ -5036,10 +4933,6 @@
       "comment" : "A label for a button that opens a sheet showing the user's conversation history",
       "isCommentAutoGenerated" : true
     },
-    "Conversations are encrypted and retained for 30 days. Financial changes always require confirmation." : {
-      "comment" : "A description of the privacy and security of the app.",
-      "isCommentAutoGenerated" : true
-    },
     "Convexity (optional)" : {
 
     },
@@ -5091,8 +4984,56 @@
       "comment" : "A section that allows users to configure the correlation between the returns of multiple assets.",
       "isCommentAutoGenerated" : true
     },
+    "Cost at today's price" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cost at today's price"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Custo ao preço de hoje"
+          }
+        }
+      }
+    },
     "Cost of life, monthly" : {
 
+    },
+    "Could not build share link. Opened iOS share sheet instead." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not build share link. Opened iOS share sheet instead."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível criar a ligação de partilha. Abrimos a folha de partilha do iOS."
+          }
+        }
+      }
+    },
+    "Could not create the image." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not create the image."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível criar a imagem."
+          }
+        }
+      }
     },
     "Could not generate" : {
 
@@ -5151,6 +5092,22 @@
     "Couldn't load inflation data" : {
 
     },
+    "Couldn't load market brief alerts." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load market brief alerts."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível carregar os alertas do briefing de mercado."
+          }
+        }
+      }
+    },
     "Couldn't load policy watch" : {
 
     },
@@ -5160,6 +5117,38 @@
     "Couldn’t load Thesis Watch" : {
       "comment" : "A title for a view that displays an error message.",
       "isCommentAutoGenerated" : true
+    },
+    "Couldn't save your choice. Check your connection and try again." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't save your choice. Check your connection and try again."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível guardar a sua escolha. Verifique a ligação e tente novamente."
+          }
+        }
+      }
+    },
+    "Couldn't update market brief alerts." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't update market brief alerts."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível atualizar os alertas do briefing de mercado."
+          }
+        }
+      }
     },
     "Country" : {
       "comment" : "A label for the country picker.",
@@ -5574,6 +5563,22 @@
         }
       }
     },
+    "Data accessed through a connection or token goes to the AI client you connect, under that client's privacy terms." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data accessed through a connection or token goes to the AI client you connect, under that client's privacy terms."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os dados acedidos através de uma ligação ou token vão para o cliente de IA que ligar, ao abrigo dos termos de privacidade desse cliente."
+          }
+        }
+      }
+    },
     "Data Availability" : {
       "localizations" : {
         "en" : {
@@ -5761,6 +5766,22 @@
     "Debt-service guidance" : {
       "comment" : "A section that provides guidance on how the loan will affect your debt-service ratio.",
       "isCommentAutoGenerated" : true
+    },
+    "Decide the future market cap and share count. Norviq tells you how many shares that target is." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Decide the future market cap and share count. Norviq tells you how many shares that target is."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Define a capitalização bolsista e o número de ações futuros. O Norviq diz-te quantas ações esse objetivo representa."
+          }
+        }
+      }
     },
     "Decline" : {
 
@@ -5997,6 +6018,7 @@
     },
     "Disconnect" : {
       "comment" : "A button that disconnects a broker.",
+      "isCommentAutoGenerated" : true,
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6010,8 +6032,7 @@
             "value" : "Desligar"
           }
         }
-      },
-      "isCommentAutoGenerated" : true
+      }
     },
     "Disconnect and remove synced holdings" : {
 
@@ -6022,6 +6043,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Desligar o Facebook"
+          }
+        }
+      }
+    },
+    "Disconnect Facebook?" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desligar o Facebook?"
           }
         }
       }
@@ -6210,11 +6241,43 @@
         }
       }
     },
+    "Duplicate" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duplicate"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duplicar"
+          }
+        }
+      }
+    },
     "Duration" : {
 
     },
     "Duration (optional)" : {
 
+    },
+    "e.g. 401k contribution" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "e.g. 401k contribution"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ex.: contribuição para a reforma"
+          }
+        }
+      }
     },
     "Each trade is priced when Norviq sees the disclosure, not at the pilot's original price." : {
 
@@ -6324,6 +6387,22 @@
     "Earnings visualizer" : {
       "comment" : "A title for the earnings flow visualizer.",
       "isCommentAutoGenerated" : true
+    },
+    "Earnings: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Earnings: %@"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resultados: %@"
+          }
+        }
+      }
     },
     "earnings.error.title" : {
       "comment" : "Title of the error message displayed when an earnings request fails.",
@@ -6442,6 +6521,22 @@
         }
       }
     },
+    "Edit autobuy" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit autobuy"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editar compra automática"
+          }
+        }
+      }
+    },
     "Edit DCF Parameters" : {
       "comment" : "A title for a sheet that allows the user to edit the discount rate and other assumptions used in the discounted cash flow analysis.",
       "isCommentAutoGenerated" : true,
@@ -6496,6 +6591,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Editar orçamento mensal"
+          }
+        }
+      }
+    },
+    "Edit position" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit position"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editar posição"
           }
         }
       }
@@ -6628,6 +6739,7 @@
     },
     "Email Support" : {
       "comment" : "A label for sending support inquiries.",
+      "extractionState" : "stale",
       "isCommentAutoGenerated" : true,
       "localizations" : {
         "en" : {
@@ -6778,8 +6890,56 @@
         }
       }
     },
+    "Enter a number." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a number."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduz um número."
+          }
+        }
+      }
+    },
+    "Enter a percent between 0 and 100." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a percent between 0 and 100."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduz uma percentagem entre 0 e 100."
+          }
+        }
+      }
+    },
     "Enter a starting amount." : {
 
+    },
+    "Enter a ticker first." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a ticker first."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduz primeiro um ticker."
+          }
+        }
+      }
     },
     "Enter a valid amount, like 2500 or 2500.50." : {
       "comment" : "A validation message displayed when the user enters an invalid salary.",
@@ -6828,6 +6988,22 @@
       "comment" : "A description of the German capital income section.",
       "isCommentAutoGenerated" : true
     },
+    "Enter share count, market cap and value wanted to see the result." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter share count, market cap and value wanted to see the result."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduz o número de ações, a capitalização bolsista e o valor pretendido para veres o resultado."
+          }
+        }
+      }
+    },
     "Enter the 6-digit code sent to %@." : {
       "comment" : "A label asking the user to enter a 6-digit code.",
       "isCommentAutoGenerated" : true,
@@ -6860,6 +7036,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Introduza o endereço de e-mail associado à sua conta e enviar-lhe-emos um código para redefinir a sua palavra-passe."
+          }
+        }
+      }
+    },
+    "Enter your current password to change your email." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter your current password to change your email."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduza a sua palavra-passe atual para alterar o email."
+          }
+        }
+      }
+    },
+    "Enter your current password to change your email. Other devices will be signed out." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter your current password to change your email. Other devices will be signed out."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduza a sua palavra-passe atual para alterar o email. A sessão será terminada nos outros dispositivos."
+          }
+        }
+      }
+    },
+    "Enter your current password to change your password." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter your current password to change your password."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduza a sua palavra-passe atual para alterar a palavra-passe."
           }
         }
       }
@@ -7015,6 +7239,38 @@
     "Every connection is read-only. The gate holds." : {
       "comment" : "A description of the security of Norviq integrations.",
       "isCommentAutoGenerated" : true
+    },
+    "Every two months" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every two months"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De dois em dois meses"
+          }
+        }
+      }
+    },
+    "Every two weeks" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every two weeks"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De duas em duas semanas"
+          }
+        }
+      }
     },
     "Everyday Prices" : {
       "comment" : "A heading for the prices of everyday items.",
@@ -7272,6 +7528,22 @@
     "Filing status" : {
       "comment" : "A label for the user to select their filing status.",
       "isCommentAutoGenerated" : true
+    },
+    "Fill with AI" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fill with AI"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preencher com IA"
+          }
+        }
+      }
     },
     "Filter" : {
       "comment" : "A menu that filters the list of expenses.",
@@ -7588,6 +7860,7 @@
     },
     "Frequently Asked Questions" : {
       "comment" : "A link to the FAQs.",
+      "extractionState" : "stale",
       "isCommentAutoGenerated" : true,
       "localizations" : {
         "en" : {
@@ -7670,6 +7943,38 @@
       "comment" : "A button that displays a sheet for classifying funds.",
       "isCommentAutoGenerated" : true
     },
+    "Future market cap" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Future market cap"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capitalização bolsista futura"
+          }
+        }
+      }
+    },
+    "Future share count" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Future share count"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Número de ações futuro"
+          }
+        }
+      }
+    },
     "Gainers" : {
       "comment" : "A label displayed in a picker view.",
       "isCommentAutoGenerated" : true,
@@ -7690,6 +7995,22 @@
     },
     "Gap" : {
 
+    },
+    "Gap at terminal price" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gap at terminal price"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diferença ao preço terminal"
+          }
+        }
+      }
     },
     "Gauges" : {
       "comment" : "A heading for the gauges.",
@@ -7746,6 +8067,22 @@
         }
       }
     },
+    "Get started" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get started"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Começar"
+          }
+        }
+      }
+    },
     "Get started with Norviq" : {
 
     },
@@ -7754,6 +8091,7 @@
     },
     "Getting Started" : {
       "comment" : "A section title for the help guide.",
+      "extractionState" : "stale",
       "isCommentAutoGenerated" : true,
       "localizations" : {
         "en" : {
@@ -7924,10 +8262,6 @@
       "comment" : "A label that indicates that growth data is unavailable.",
       "isCommentAutoGenerated" : true
     },
-    "Guides, contact, and community resources" : {
-      "comment" : "Title of the Help & Support screen.",
-      "isCommentAutoGenerated" : true
-    },
     "Gwei" : {
       "comment" : "A label displayed underneath the gas price.",
       "extractionState" : "stale",
@@ -7974,6 +8308,7 @@
       "isCommentAutoGenerated" : true
     },
     "Help & Support" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8065,6 +8400,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Preço alto"
+          }
+        }
+      }
+    },
+    "Highlight: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Highlight: %@"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Destaque: %@"
           }
         }
       }
@@ -8163,6 +8514,22 @@
     "Horizon: %lld months" : {
 
     },
+    "Horizon: %lld years" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Horizon: %lld years"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Horizonte: %lld anos"
+          }
+        }
+      }
+    },
     "Household Budget Tracking" : {
       "comment" : "A title for a card that shows budget tracking for a household.",
       "isCommentAutoGenerated" : true,
@@ -8247,6 +8614,22 @@
     "Housing ends at some point" : {
 
     },
+    "How AI uses your data" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How AI uses your data"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Como a IA usa os seus dados"
+          }
+        }
+      }
+    },
     "How would you like to start building your workspace?" : {
       "comment" : "A description of the onboarding main menu.",
       "isCommentAutoGenerated" : true,
@@ -8270,6 +8653,22 @@
     },
     "I agree" : {
 
+    },
+    "I understand" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I understand"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compreendo"
+          }
+        }
+      }
     },
     "IBKR Broker" : {
       "comment" : "A section for interacting with the IBKR broker.",
@@ -8776,6 +9175,22 @@
       "comment" : "A description of the tax strategy feature.",
       "isCommentAutoGenerated" : true
     },
+    "K, M, B and T are thousands, millions, billions and trillions." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "K, M, B and T are thousands, millions, billions and trillions."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "K, M, B e T são milhares, milhões, mil milhões e biliões."
+          }
+        }
+      }
+    },
     "Keep" : {
       "comment" : "A button that keeps an item in the watchlist.",
       "extractionState" : "stale",
@@ -8851,6 +9266,22 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Lasts to %1$lld in %2$@ of simulated markets"
+          }
+        }
+      }
+    },
+    "Latest" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latest"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mais recente"
           }
         }
       }
@@ -9013,6 +9444,22 @@
     "Limited coverage" : {
 
     },
+    "Limited sources" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limited sources"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fontes limitadas"
+          }
+        }
+      }
+    },
     "Line %lld" : {
       "comment" : "A label displaying the line number of a portfolio CSV item. The argument is the line number of the item in the CSV file.",
       "isCommentAutoGenerated" : true,
@@ -9057,6 +9504,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ligação"
+          }
+        }
+      }
+    },
+    "Link copied" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link copied"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ligação copiada"
           }
         }
       }
@@ -9578,6 +10041,54 @@
     "Market admission is user-attested only; Norviq does not auto-classify ISINs." : {
 
     },
+    "Market brief alerts" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Market brief alerts"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alertas do briefing de mercado"
+          }
+        }
+      }
+    },
+    "Market cap must be above zero." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Market cap must be above zero."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A capitalização bolsista tem de ser superior a zero."
+          }
+        }
+      }
+    },
+    "Market close recap" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Market close recap"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resumo do fecho"
+          }
+        }
+      }
+    },
     "Market data coverage" : {
       "comment" : "A heading for the market data coverage of Norviq.",
       "isCommentAutoGenerated" : true,
@@ -9869,6 +10380,22 @@
         }
       }
     },
+    "Monthly base" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monthly base"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Base mensal"
+          }
+        }
+      }
+    },
     "Monthly budget" : {
       "comment" : "A label for the monthly budget field.",
       "isCommentAutoGenerated" : true,
@@ -9964,6 +10491,22 @@
         }
       }
     },
+    "Monthly equivalent: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monthly equivalent: %@"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Equivalente mensal: %@"
+          }
+        }
+      }
+    },
     "Monthly expenses · AI categorized" : {
       "comment" : "A heading for the monthly expenses section of the spending command deck.",
       "isCommentAutoGenerated" : true
@@ -10029,6 +10572,22 @@
         }
       }
     },
+    "Monthly total" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monthly total"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total mensal"
+          }
+        }
+      }
+    },
     "More" : {
 
     },
@@ -10061,6 +10620,22 @@
     "more years of saving, and fewer to fund" : {
 
     },
+    "Morning brief" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Morning brief"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Briefing da manhã"
+          }
+        }
+      }
+    },
     "Most bearish: %@" : {
       "comment" : "A label that indicates that a stock is the most bearish in the portfolio.",
       "isCommentAutoGenerated" : true
@@ -10087,6 +10662,22 @@
     },
     "Moves next month's spending targets into the Investments budget; no money is transferred" : {
 
+    },
+    "Must be above zero." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Must be above zero."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tem de ser superior a zero."
+          }
+        }
+      }
     },
     "Mute" : {
 
@@ -10236,6 +10827,22 @@
         }
       }
     },
+    "New autobuy" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New autobuy"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nova compra automática"
+          }
+        }
+      }
+    },
     "New board" : {
 
     },
@@ -10308,6 +10915,22 @@
     "New portfolio" : {
       "comment" : "A button that creates a new portfolio.",
       "isCommentAutoGenerated" : true
+    },
+    "New position" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New position"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nova posição"
+          }
+        }
+      }
     },
     "New Recurring" : {
       "comment" : "The title of a recurring expense creation sheet.",
@@ -10907,6 +11530,22 @@
         }
       }
     },
+    "No positions yet. Tap + to add your first scenario." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No positions yet. Tap + to add your first scenario."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ainda não tens posições. Toca em + para adicionares o teu primeiro cenário."
+          }
+        }
+      }
+    },
     "No preview yet" : {
       "localizations" : {
         "en" : {
@@ -11346,6 +11985,22 @@
     "norviq.org/boards/%@ — lowercase letters, numbers and dashes. Up to 3 boards a day." : {
 
     },
+    "Norviq's AI features send some of your data to Anthropic and OpenRouter, the AI providers that generate the answers." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Norviq's AI features send some of your data to Anthropic and OpenRouter, the AI providers that generate the answers."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As funcionalidades de IA do Norviq enviam alguns dos seus dados à Anthropic e à OpenRouter, os fornecedores de IA que geram as respostas."
+          }
+        }
+      }
+    },
     "Not available for TTM" : {
       "comment" : "A message that indicates a metric is not available for the trailing twelve months.",
       "isCommentAutoGenerated" : true
@@ -11402,6 +12057,22 @@
     },
     "Not started" : {
 
+    },
+    "Not used to train AI models" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not used to train AI models"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não são usados para treinar modelos de IA"
+          }
+        }
+      }
     },
     "Note (optional)" : {
       "comment" : "A label for a text field where the user can add a note about the asset they are watching.",
@@ -11561,6 +12232,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Desligado"
+          }
+        }
+      }
+    },
+    "Off: Q, AI summaries, insights, receipt-photo and screenshot reading stay disabled." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off: Q, AI summaries, insights, receipt-photo and screenshot reading stay disabled."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desativado: o Q, os resumos de IA, as percepções e a leitura de fotos de recibos e capturas de ecrã ficam desativados."
           }
         }
       }
@@ -11747,12 +12434,45 @@
       "comment" : "Button label to open Telegram.",
       "isCommentAutoGenerated" : true
     },
+    "Open terminal positions" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open terminal positions"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir posições terminais"
+          }
+        }
+      }
+    },
     "Open wealth automation" : {
       "comment" : "A label for opening the wealth automation menu.",
       "isCommentAutoGenerated" : true
     },
     "Opened %@" : {
 
+    },
+    "Opening Discord. Please paste your text there." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opening Discord. Please paste your text there."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A abrir o Discord. Cole lá o seu texto."
+          }
+        }
+      }
     },
     "Opening memo…" : {
       "localizations" : {
@@ -12072,6 +12792,22 @@
         }
       }
     },
+    "Percent of a monthly base" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Percent of a monthly base"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Percentagem de uma base mensal"
+          }
+        }
+      }
+    },
     "Performance comparison" : {
       "comment" : "A title for a chart that compares the performance of two or more cryptocurrencies.",
       "isCommentAutoGenerated" : true,
@@ -12250,6 +12986,22 @@
     "Plan a purchase" : {
       "comment" : "A button that opens a screen for planning a purchase.",
       "isCommentAutoGenerated" : true
+    },
+    "Plan a terminal position" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan a terminal position"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planeia uma posição terminal"
+          }
+        }
+      }
     },
     "Plan generation is limited until valuation data is complete." : {
 
@@ -12526,6 +13278,22 @@
     "Portfolio simulator" : {
 
     },
+    "Portfolio totals and holdings" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Portfolio totals and holdings"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Totais e posições do portefólio"
+          }
+        }
+      }
+    },
     "Portfolio value" : {
 
     },
@@ -12603,6 +13371,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Memorando de posição · %@"
+          }
+        }
+      }
+    },
+    "Positions" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Positions"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Posições"
           }
         }
       }
@@ -12710,6 +13494,22 @@
     "Preview your report history for free. Pro unlocks generation and PDF or CSV downloads." : {
       "comment" : "A description of the benefits of using the Pro version of the app.",
       "isCommentAutoGenerated" : true
+    },
+    "Previous" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Previous"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anterior"
+          }
+        }
+      }
     },
     "Previous month" : {
       "comment" : "A label for a button that selects the previous month.",
@@ -13193,6 +13993,38 @@
       "comment" : "The title of the assistant view.",
       "isCommentAutoGenerated" : true
     },
+    "Q sends your messages and the financial context it needs (portfolio, spending, budgets) to Anthropic and OpenRouter to write replies. Not used to train models; your name and email are not sent. Conversations are encrypted and retained for 30 days. Financial changes always require confirmation." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Q sends your messages and the financial context it needs (portfolio, spending, budgets) to Anthropic and OpenRouter to write replies. Not used to train models; your name and email are not sent. Conversations are encrypted and retained for 30 days. Financial changes always require confirmation."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Q envia as suas mensagens e o contexto financeiro de que precisa (portefólio, despesas, orçamentos) à Anthropic e à OpenRouter para escrever as respostas. Não são usados para treinar modelos; o seu nome e email não são enviados. As conversas são encriptadas e guardadas durante 30 dias. Alterações financeiras exigem sempre confirmação."
+          }
+        }
+      }
+    },
+    "Q, your assistant" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Q, your assistant"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Q, o seu assistente"
+          }
+        }
+      }
+    },
     "QR code for your invite link" : {
 
     },
@@ -13391,6 +14223,22 @@
       "comment" : "A button that reads all notifications.",
       "isCommentAutoGenerated" : true
     },
+    "Read and acknowledge the Telegram privacy notice first." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read and acknowledge the Telegram privacy notice first."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leia e confirme primeiro o aviso de privacidade do Telegram."
+          }
+        }
+      }
+    },
     "Read as" : {
 
     },
@@ -13485,6 +14333,22 @@
     },
     "Recalculate" : {
 
+    },
+    "Receipt and screenshot images you import" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Receipt and screenshot images you import"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imagens de recibos e capturas de ecrã que importa"
+          }
+        }
+      }
     },
     "Receipt scanning" : {
       "localizations" : {
@@ -14185,6 +15049,7 @@
     },
     "Resources" : {
       "comment" : "A section in the Help & Support view that links to resources.",
+      "extractionState" : "stale",
       "isCommentAutoGenerated" : true,
       "localizations" : {
         "en" : {
@@ -14203,6 +15068,7 @@
     },
     "Response Time" : {
       "comment" : "A label that describes the response time for customer support.",
+      "extractionState" : "stale",
       "isCommentAutoGenerated" : true,
       "localizations" : {
         "en" : {
@@ -14396,6 +15262,22 @@
         }
       }
     },
+    "Review and allow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Review and allow"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rever e permitir"
+          }
+        }
+      }
+    },
     "Review and use current rules" : {
       "comment" : "A button that refreshes the retirement planning rules.",
       "isCommentAutoGenerated" : true
@@ -14480,6 +15362,22 @@
     "Role" : {
 
     },
+    "Round down to whole shares" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Round down to whole shares"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arredondar para ações inteiras"
+          }
+        }
+      }
+    },
     "Rows" : {
       "comment" : "A label for the number of rows in a spreadsheet",
       "isCommentAutoGenerated" : true
@@ -14531,6 +15429,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "salário + rendimento adicional"
+          }
+        }
+      }
+    },
+    "Sample" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sample"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exemplo"
           }
         }
       }
@@ -14806,6 +15720,22 @@
     "Scoped shocks" : {
       "comment" : "A section of the scenario planning screen that allows for scoped shocks.",
       "isCommentAutoGenerated" : true
+    },
+    "Screenshot import" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshot import"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importação de capturas de ecrã"
+          }
+        }
+      }
     },
     "Screenshots" : {
 
@@ -15240,6 +16170,16 @@
         }
       }
     },
+    "Send on Messenger" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar pelo Messenger"
+          }
+        }
+      }
+    },
     "Send Reset Link" : {
       "comment" : "A button that sends a reset password link to the user's email.",
       "isCommentAutoGenerated" : true,
@@ -15377,6 +16317,22 @@
     "Set a default split" : {
       "comment" : "A toggle that lets the user set a default split for shared expenses.",
       "isCommentAutoGenerated" : true
+    },
+    "Set a future market cap and see how many shares your target takes." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set a future market cap and see how many shares your target takes."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Define uma capitalização bolsista futura e vê quantas ações o teu objetivo exige."
+          }
+        }
+      }
     },
     "Set a goal" : {
 
@@ -15523,6 +16479,22 @@
     "Share as pie chart" : {
 
     },
+    "Share brief" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share brief"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partilhar briefing"
+          }
+        }
+      }
+    },
     "Share chart" : {
       "comment" : "A button that shares a chart.",
       "isCommentAutoGenerated" : true
@@ -15545,6 +16517,54 @@
         }
       }
     },
+    "Share count must be above zero." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share count must be above zero."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O número de ações tem de ser superior a zero."
+          }
+        }
+      }
+    },
+    "Share data with AI providers" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share data with AI providers"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partilhar dados com fornecedores de IA"
+          }
+        }
+      }
+    },
+    "Share data with AI?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share data with AI?"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partilhar dados com a IA?"
+          }
+        }
+      }
+    },
     "Share Feedback" : {
       "localizations" : {
         "en" : {
@@ -15561,11 +16581,53 @@
         }
       }
     },
+    "Share image…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share image…"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partilhar imagem…"
+          }
+        }
+      }
+    },
     "Share invite link" : {
 
     },
     "Share link" : {
 
+    },
+    "Share link…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share link…"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partilhar ligação…"
+          }
+        }
+      }
+    },
+    "Share on Facebook" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partilhar no Facebook"
+          }
+        }
+      }
     },
     "Share or save report" : {
       "comment" : "A button that shares or saves a tax report.",
@@ -15573,6 +16635,22 @@
     },
     "Share portfolio" : {
 
+    },
+    "Share price" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share price"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preço da ação"
+          }
+        }
+      }
     },
     "Share price chart" : {
       "comment" : "A label displayed above the share price chart.",
@@ -15631,12 +16709,25 @@
         }
       }
     },
+    "Share target unavailable. Opened iOS share sheet." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share target unavailable. Opened iOS share sheet."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Destino de partilha indisponível. Abrimos a folha de partilha do iOS."
+          }
+        }
+      }
+    },
     "Share this plan" : {
       "comment" : "A label for a button that shares the user's investment plan.",
       "isCommentAutoGenerated" : true
-    },
-    "Share your invite link on Instagram, Facebook, X or WhatsApp." : {
-
     },
     "Shared" : {
       "comment" : "A label for a picker item that lets the user choose to split an expense between multiple people.",
@@ -15693,6 +16784,70 @@
     },
     "Shared views show percentages only." : {
 
+    },
+    "Shares needed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shares needed"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ações necessárias"
+          }
+        }
+      }
+    },
+    "Shares outstanding" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shares outstanding"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ações em circulação"
+          }
+        }
+      }
+    },
+    "Shares outstanding today (optional)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shares outstanding today (optional)"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ações em circulação hoje (opcional)"
+          }
+        }
+      }
+    },
+    "Shares owned" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shares owned"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ações que tens"
+          }
+        }
+      }
     },
     "Shares: %@" : {
 
@@ -16113,6 +17268,22 @@
       "comment" : "A section that lists the source years of the user's tax loss carryforward balances.",
       "isCommentAutoGenerated" : true
     },
+    "Source: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Source: %@"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fonte: %@"
+          }
+        }
+      }
+    },
     "Source: %@ • as of %@" : {
       "comment" : "A footer displaying the source of the Fed Watch data and the date it was last updated.",
       "isCommentAutoGenerated" : true,
@@ -16121,6 +17292,22 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Source: %1$@ • as of %2$@"
+          }
+        }
+      }
+    },
+    "Sources" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sources"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fontes"
           }
         }
       }
@@ -16169,6 +17356,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gastos"
+          }
+        }
+      }
+    },
+    "Spending and budgets" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spending and budgets"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Despesas e orçamentos"
           }
         }
       }
@@ -16409,6 +17612,54 @@
       "comment" : "A description of the setup process for connecting an MCP client.",
       "isCommentAutoGenerated" : true
     },
+    "Still needed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Still needed"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ainda em falta"
+          }
+        }
+      }
+    },
+    "Still needed at terminal prices" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Still needed at terminal prices"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ainda em falta a preços terminais"
+          }
+        }
+      }
+    },
+    "Still needed: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Still needed: %@"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ainda em falta: %@"
+          }
+        }
+      }
+    },
     "Stock detail sections" : {
       "comment" : "A label for the accessibility element that contains the stock detail tabs.",
       "isCommentAutoGenerated" : true,
@@ -16450,6 +17701,22 @@
     },
     "Stories are clustered, ranked by your exposure, and checked against the risks and catalysts in your research notes." : {
 
+    },
+    "Story %lld: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Story %lld: %@"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notícia %1$lld: %2$@"
+          }
+        }
+      }
     },
     "Streak" : {
 
@@ -16520,6 +17787,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Subscrição"
+          }
+        }
+      }
+    },
+    "Suggest scenario" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggest scenario"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sugerir cenário"
+          }
+        }
+      }
+    },
+    "Suggestions come with sources and are never saved until you tap Save." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggestions come with sources and are never saved until you tap Save."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As sugestões incluem fontes e nunca são guardadas até tocares em Guardar."
           }
         }
       }
@@ -17019,6 +18318,22 @@
       "comment" : "Title of the screen that lets you connect, inspect, and disconnect Telegram.",
       "isCommentAutoGenerated" : true
     },
+    "Telegram chats are not end-to-end encrypted. Replies from Norviq can include your portfolio values, budgets and expenses, and are stored on Telegram's servers. Only link a private chat you control." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telegram chats are not end-to-end encrypted. Replies from Norviq can include your portfolio values, budgets and expenses, and are stored on Telegram's servers. Only link a private chat you control."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As conversas do Telegram não são encriptadas ponto a ponto. As respostas do Norviq podem incluir os valores do seu portefólio, orçamentos e despesas, e ficam guardadas nos servidores do Telegram. Ligue apenas uma conversa privada que controle."
+          }
+        }
+      }
+    },
     "Telegram isn't available on this build yet." : {
       "comment" : "A message that is displayed when Telegram isn't available on the current build.",
       "isCommentAutoGenerated" : true
@@ -17087,6 +18402,102 @@
         }
       }
     },
+    "Terminal position sizing" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terminal position sizing"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dimensionamento de posições terminais"
+          }
+        }
+      }
+    },
+    "Terminal positions" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terminal positions"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Posições terminais"
+          }
+        }
+      }
+    },
+    "Terminal positions are unavailable right now." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terminal positions are unavailable right now."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As posições terminais não estão disponíveis de momento."
+          }
+        }
+      }
+    },
+    "Terminal prices are your assumptions, not forecasts. Not financial advice." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terminal prices are your assumptions, not forecasts. Not financial advice."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os preços terminais são pressupostos teus, não previsões. Não é aconselhamento financeiro."
+          }
+        }
+      }
+    },
+    "Terminal scenario" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terminal scenario"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cenário terminal"
+          }
+        }
+      }
+    },
+    "Terminal share price" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terminal share price"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preço terminal por ação"
+          }
+        }
+      }
+    },
     "Terminal Value Assumptions" : {
       "comment" : "A section of the edit DCF sheet that allows the user to adjust the assumptions used to calculate the terminal value.",
       "isCommentAutoGenerated" : true,
@@ -17132,8 +18543,117 @@
     "Text (optional)" : {
 
     },
+    "Text a friend" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar SMS a um amigo"
+          }
+        }
+      }
+    },
+    "Text your invite link or share it on Messenger, Instagram, X or WhatsApp." : {
+
+    },
     "Thanks. We review every report within 24 hours." : {
 
+    },
+    "That email is already used by another account." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That email is already used by another account."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esse email já está a ser usado por outra conta."
+          }
+        }
+      }
+    },
+    "That row no longer exists. Pull to refresh." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That row no longer exists. Pull to refresh."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essa linha já não existe. Puxa para atualizar."
+          }
+        }
+      }
+    },
+    "The AI couldn't find usable numbers for this ticker." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The AI couldn't find usable numbers for this ticker."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A IA não encontrou números utilizáveis para este ticker."
+          }
+        }
+      }
+    },
+    "The AI lookup failed. Try again." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The AI lookup failed. Try again."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A pesquisa com IA falhou. Tenta novamente."
+          }
+        }
+      }
+    },
+    "The autobuy could not be deleted." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The autobuy could not be deleted."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível eliminar a compra automática."
+          }
+        }
+      }
+    },
+    "The autobuy could not be saved." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The autobuy could not be saved."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível guardar a compra automática."
+          }
+        }
+      }
     },
     "The band shows the low and high valuation outputs for each year in the selected scenario." : {
       "comment" : "A description of the chart.",
@@ -17191,8 +18711,88 @@
     "The most you can start with is $10,000,000." : {
 
     },
+    "The new order could not be saved." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The new order could not be saved."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível guardar a nova ordem."
+          }
+        }
+      }
+    },
     "The pack needs your jurisdiction and reporting currency." : {
 
+    },
+    "The position could not be saved." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The position could not be saved."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível guardar a posição."
+          }
+        }
+      }
+    },
+    "The row could not be deleted." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The row could not be deleted."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível eliminar a linha."
+          }
+        }
+      }
+    },
+    "The row could not be duplicated." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The row could not be duplicated."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível duplicar a linha."
+          }
+        }
+      }
+    },
+    "The sample could not be added." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The sample could not be added."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível adicionar o exemplo."
+          }
+        }
+      }
     },
     "The selected metrics have no values for this period." : {
       "comment" : "A description of the chart.",
@@ -17212,6 +18812,22 @@
     "These changes update budget targets and forecasts only. Norviq never transfers money or places trades." : {
       "comment" : "A description of the implications of a budget reallocation.",
       "isCommentAutoGenerated" : true
+    },
+    "These numbers can't be used. Check for negatives." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "These numbers can't be used. Check for negatives."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estes números não podem ser usados. Verifica se há valores negativos."
+          }
+        }
+      }
     },
     "These rows are in another currency. Set a rate to include them." : {
       "comment" : "A warning displayed when a currency is detected in a row that needs a rate to be included.",
@@ -17244,6 +18860,22 @@
     },
     "Thinking" : {
 
+    },
+    "This autobuy was deleted on another device." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This autobuy was deleted on another device."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta compra automática foi eliminada noutro dispositivo."
+          }
+        }
+      }
     },
     "This device can't scan receipts. Enter the expense manually." : {
       "comment" : "A description of the unavailable scanner.",
@@ -17305,6 +18937,22 @@
     "This pilot isn't available right now." : {
 
     },
+    "This price is in %@; your plan uses %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This price is in %1$@; your plan uses %2$@."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este preço está em %1$@; o teu plano usa %2$@."
+          }
+        }
+      }
+    },
     "This removes the holding from your portfolio. You can add it again later." : {
       "comment" : "A message displayed when the user deletes a stock.",
       "isCommentAutoGenerated" : true,
@@ -17341,6 +18989,38 @@
         }
       }
     },
+    "This row was deleted on another device." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This row was deleted on another device."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta linha foi eliminada noutro dispositivo."
+          }
+        }
+      }
+    },
+    "This scenario needs a positive share count and market cap." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This scenario needs a positive share count and market cap."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este cenário precisa de um número de ações e de uma capitalização bolsista positivos."
+          }
+        }
+      }
+    },
     "This week" : {
 
     },
@@ -17370,6 +19050,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ticker"
+          }
+        }
+      }
+    },
+    "Ticker (optional)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ticker (optional)"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ticker (opcional)"
+          }
+        }
+      }
+    },
+    "Tickers: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tickers: %@"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tickers: %@"
           }
         }
       }
@@ -17408,6 +19120,22 @@
     "Today's cost of life is carried forward to retirement at %@ inflation a year." : {
 
     },
+    "Today's share price (optional)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's share price (optional)"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preço da ação hoje (opcional)"
+          }
+        }
+      }
+    },
     "Toggles this metric" : {
       "comment" : "A hint for a button that toggles a metric.",
       "isCommentAutoGenerated" : true
@@ -17418,6 +19146,22 @@
     "Tokens are Pro-only, scoped (expenses, reports, market, insights, tax), and revocable. Try it: ask your assistant to “list my recent expenses”." : {
       "comment" : "A description of the benefits of using Norviq's tokens.",
       "isCommentAutoGenerated" : true
+    },
+    "Too many AI lookups. Try again in a minute." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Too many AI lookups. Try again in a minute."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demasiadas pesquisas com IA. Tenta novamente daqui a um minuto."
+          }
+        }
+      }
     },
     "Top" : {
 
@@ -17602,6 +19346,22 @@
         }
       }
     },
+    "Total value wanted" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total value wanted"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valor total pretendido"
+          }
+        }
+      }
+    },
     "TOTAL VS ME VS %@" : {
       "comment" : "A chart comparing your share of household expenses to the average share and your partner's share.",
       "isCommentAutoGenerated" : true,
@@ -17632,6 +19392,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Riqueza Total"
+          }
+        }
+      }
+    },
+    "Totals" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Totals"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Totais"
           }
         }
       }
@@ -17827,6 +19603,22 @@
       "comment" : "A label for the trailing twelve months.",
       "isCommentAutoGenerated" : true
     },
+    "Turn it off anytime in Assistant settings" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn it off anytime in Assistant settings"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pode desativar a qualquer momento nas definições do assistente"
+          }
+        }
+      }
+    },
     "Turn Off" : {
       "comment" : "A button that turns off a price alert.",
       "isCommentAutoGenerated" : true,
@@ -17971,6 +19763,22 @@
     "Uncheck anything you don't want. Correct any figure that was misread." : {
 
     },
+    "Unit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unit"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unidade"
+          }
+        }
+      }
+    },
     "Unknown" : {
       "comment" : "A label for the \"Unknown\" option in the market admission picker.",
       "isCommentAutoGenerated" : true
@@ -18011,6 +19819,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Desbloquear"
+          }
+        }
+      }
+    },
+    "Unlock AI fill with Pro" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlock AI fill with Pro"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desbloqueia o preenchimento com IA no Pro"
           }
         }
       }
@@ -18286,6 +20110,54 @@
     "US" : {
 
     },
+    "Use 1–12 letters, digits, dots or dashes." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use 1–12 letters, digits, dots or dashes."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa 1–12 letras, dígitos, pontos ou hífenes."
+          }
+        }
+      }
+    },
+    "Use 1,000 characters or fewer." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use 1,000 characters or fewer."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa 1000 caracteres ou menos."
+          }
+        }
+      }
+    },
+    "Use 80 characters or fewer." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use 80 characters or fewer."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa 80 caracteres ou menos."
+          }
+        }
+      }
+    },
     "Use a 6-digit code to unlock Norviq when Face ID or device passcode is unavailable." : {
       "comment" : "A description of the security code.",
       "isCommentAutoGenerated" : true,
@@ -18307,6 +20179,22 @@
     "Use a reasonable full-year estimate. You can revise it whenever your circumstances change." : {
       "comment" : "A description of the text field for the user's estimated taxable income.",
       "isCommentAutoGenerated" : true
+    },
+    "Use AMZN sample" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use AMZN sample"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usar exemplo AMZN"
+          }
+        }
+      }
     },
     "Use complete values from the fund or broker statement. Imported lots are submitted as separate acquisition tranches." : {
       "comment" : "A description of the annual fund values form.",
@@ -18408,6 +20296,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Valor"
+          }
+        }
+      }
+    },
+    "Value wanted" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Value wanted"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valor pretendido"
+          }
+        }
+      }
+    },
+    "Value wanted: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Value wanted: %@"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valor pretendido: %@"
           }
         }
       }
@@ -18692,6 +20612,7 @@
     },
     "We typically respond within one business day." : {
       "comment" : "A description of the response time for customer support.",
+      "extractionState" : "stale",
       "isCommentAutoGenerated" : true,
       "localizations" : {
         "en" : {
@@ -18838,6 +20759,22 @@
     "What is left, against what it has to fund" : {
 
     },
+    "What is sent" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What is sent"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O que é enviado"
+          }
+        }
+      }
+    },
     "What it's for" : {
 
     },
@@ -18898,6 +20835,22 @@
     "Where does your money tend to leak?" : {
       "comment" : "A question that asks the user where their money is most likely to be spent.",
       "isCommentAutoGenerated" : true
+    },
+    "Where you are now" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where you are now"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Onde estás agora"
+          }
+        }
+      }
     },
     "Where your expenses go" : {
       "comment" : "A label displayed above the expenses breakdown.",
@@ -19016,6 +20969,22 @@
       "comment" : "A label displayed below the Why Moved card.",
       "isCommentAutoGenerated" : true
     },
+    "Why this scenario?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Why this scenario?"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Porquê este cenário?"
+          }
+        }
+      }
+    },
     "Winners" : {
       "comment" : "A label describing the value of the user's winning investments.",
       "isCommentAutoGenerated" : true,
@@ -19084,6 +21053,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Escreva a sua tese, os principais riscos e os sinais que o fariam adicionar, cortar ou sair."
+          }
+        }
+      }
+    },
+    "Written without live web sources." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Written without live web sources."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escrito sem fontes da web em tempo real."
           }
         }
       }
@@ -19216,6 +21201,16 @@
     "You can't edit holdings by hand while you follow." : {
 
     },
+    "You follow ^[%lld pilot](inflect: true), the most your plan allows. Stop one to follow another." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Segue ^[%lld piloto](inflect: true), o máximo que o seu plano permite. Deixe de seguir um para seguir outro."
+          }
+        }
+      }
+    },
     "You follow this pilot" : {
 
     },
@@ -19311,6 +21306,22 @@
     "Your access to Norviq Boards has been removed. The rest of Norviq works as usual." : {
 
     },
+    "Your account uses Apple/Google sign-in. Contact fernando@facorreia.com to change your email." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your account uses Apple/Google sign-in. Contact fernando@facorreia.com to change your email."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A sua conta usa o início de sessão Apple/Google. Contacte fernando@facorreia.com para alterar o email."
+          }
+        }
+      }
+    },
     "Your Assets" : {
       "comment" : "A heading for the user's assets.",
       "isCommentAutoGenerated" : true,
@@ -19353,6 +21364,22 @@
     "Your crypto watchlist is empty" : {
       "comment" : "A description of the empty state of the crypto watchlist.",
       "isCommentAutoGenerated" : true
+    },
+    "Your current password is incorrect." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your current password is incorrect."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A sua palavra-passe atual está incorreta."
+          }
+        }
+      }
     },
     "Your data has been imported. You can now explore your workspace insights." : {
       "comment" : "A description of the success screen.",
@@ -19497,6 +21524,22 @@
         }
       }
     },
+    "Your messages to the assistant" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your messages to the assistant"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As suas mensagens para o assistente"
+          }
+        }
+      }
+    },
     "Your monthly budget is currently 0. Add salary and side income so spending insights can calculate correctly." : {
       "comment" : "A description of the user's budget.",
       "isCommentAutoGenerated" : true,
@@ -19515,6 +21558,22 @@
         }
       }
     },
+    "Your name and email are not sent" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your name and email are not sent"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O seu nome e email não são enviados"
+          }
+        }
+      }
+    },
     "Your personal portfolio remains available. Upgrade for joint, retirement, and what-if portfolios." : {
       "comment" : "A description of the benefits of upgrading to a Pro account.",
       "isCommentAutoGenerated" : true
@@ -19527,6 +21586,22 @@
     },
     "Your plan covers this" : {
 
+    },
+    "Your scenario" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your scenario"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O teu cenário"
+          }
+        }
+      }
     },
     "Your Share" : {
       "comment" : "A label displayed above a slider that lets the user set their share of a shared expense.",
@@ -19599,2078 +21674,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "A sua riqueza, sabiamente administrada"
-          }
-        }
-      }
-    },
-    "Terminal position sizing" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terminal position sizing"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dimensionamento de posições terminais"
-          }
-        }
-      }
-    },
-    "Decide the future market cap and share count. Norviq tells you how many shares that target is." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Decide the future market cap and share count. Norviq tells you how many shares that target is."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Define a capitalização bolsista e o número de ações futuros. O Norviq diz-te quantas ações esse objetivo representa."
-          }
-        }
-      }
-    },
-    "Terminal prices are your assumptions, not forecasts. Not financial advice." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terminal prices are your assumptions, not forecasts. Not financial advice."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Os preços terminais são pressupostos teus, não previsões. Não é aconselhamento financeiro."
-          }
-        }
-      }
-    },
-    "Terminal positions" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terminal positions"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Posições terminais"
-          }
-        }
-      }
-    },
-    "Round down to whole shares" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Round down to whole shares"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Arredondar para ações inteiras"
-          }
-        }
-      }
-    },
-    "No positions yet. Tap + to add your first scenario." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No positions yet. Tap + to add your first scenario."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ainda não tens posições. Toca em + para adicionares o teu primeiro cenário."
-          }
-        }
-      }
-    },
-    "Positions" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Positions"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Posições"
-          }
-        }
-      }
-    },
-    "Duplicate" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Duplicate"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Duplicar"
-          }
-        }
-      }
-    },
-    "Totals" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Totals"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Totais"
-          }
-        }
-      }
-    },
-    "Total value wanted" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Total value wanted"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Valor total pretendido"
-          }
-        }
-      }
-    },
-    "Still needed at terminal prices" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Still needed at terminal prices"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ainda em falta a preços terminais"
-          }
-        }
-      }
-    },
-    "Capital at today's prices" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capital at today's prices"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capital aos preços de hoje"
-          }
-        }
-      }
-    },
-    "Get started" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Get started"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Começar"
-          }
-        }
-      }
-    },
-    "Sample" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sample"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exemplo"
-          }
-        }
-      }
-    },
-    "Use AMZN sample" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use AMZN sample"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usar exemplo AMZN"
-          }
-        }
-      }
-    },
-    "Shares needed" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shares needed"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ações necessárias"
-          }
-        }
-      }
-    },
-    "Still needed: %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Still needed: %@"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ainda em falta: %@"
-          }
-        }
-      }
-    },
-    "Terminal positions are unavailable right now." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terminal positions are unavailable right now."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "As posições terminais não estão disponíveis de momento."
-          }
-        }
-      }
-    },
-    "Autobuys are unavailable right now." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Autobuys are unavailable right now."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "As compras automáticas não estão disponíveis de momento."
-          }
-        }
-      }
-    },
-    "The sample could not be added." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The sample could not be added."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível adicionar o exemplo."
-          }
-        }
-      }
-    },
-    "The row could not be deleted." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The row could not be deleted."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível eliminar a linha."
-          }
-        }
-      }
-    },
-    "The row could not be duplicated." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The row could not be duplicated."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível duplicar a linha."
-          }
-        }
-      }
-    },
-    "That row no longer exists. Pull to refresh." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "That row no longer exists. Pull to refresh."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Essa linha já não existe. Puxa para atualizar."
-          }
-        }
-      }
-    },
-    "The new order could not be saved." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The new order could not be saved."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível guardar a nova ordem."
-          }
-        }
-      }
-    },
-    "The autobuy could not be deleted." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The autobuy could not be deleted."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível eliminar a compra automática."
-          }
-        }
-      }
-    },
-    "Edit position" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edit position"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Editar posição"
-          }
-        }
-      }
-    },
-    "New position" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New position"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nova posição"
-          }
-        }
-      }
-    },
-    "Company" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Company"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Empresa"
-          }
-        }
-      }
-    },
-    "Use 1–12 letters, digits, dots or dashes." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use 1–12 letters, digits, dots or dashes."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usa 1–12 letras, dígitos, pontos ou hífenes."
-          }
-        }
-      }
-    },
-    "Your scenario" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your scenario"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O teu cenário"
-          }
-        }
-      }
-    },
-    "Future share count" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Future share count"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Número de ações futuro"
-          }
-        }
-      }
-    },
-    "Future market cap" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Future market cap"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capitalização bolsista futura"
-          }
-        }
-      }
-    },
-    "Value wanted" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Value wanted"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Valor pretendido"
-          }
-        }
-      }
-    },
-    "K, M, B and T are thousands, millions, billions and trillions." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "K, M, B and T are thousands, millions, billions and trillions."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "K, M, B e T são milhares, milhões, mil milhões e biliões."
-          }
-        }
-      }
-    },
-    "Unit" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unit"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unidade"
-          }
-        }
-      }
-    },
-    "Where you are now" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Where you are now"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Onde estás agora"
-          }
-        }
-      }
-    },
-    "Shares owned" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shares owned"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ações que tens"
-          }
-        }
-      }
-    },
-    "Today's share price (optional)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Today's share price (optional)"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preço da ação hoje (opcional)"
-          }
-        }
-      }
-    },
-    "Shares outstanding today (optional)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shares outstanding today (optional)"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ações em circulação hoje (opcional)"
-          }
-        }
-      }
-    },
-    "Terminal share price" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terminal share price"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preço terminal por ação"
-          }
-        }
-      }
-    },
-    "Still needed" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Still needed"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ainda em falta"
-          }
-        }
-      }
-    },
-    "Gap at terminal price" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gap at terminal price"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diferença ao preço terminal"
-          }
-        }
-      }
-    },
-    "Cost at today's price" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cost at today's price"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Custo ao preço de hoje"
-          }
-        }
-      }
-    },
-    "Enter share count, market cap and value wanted to see the result." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter share count, market cap and value wanted to see the result."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Introduz o número de ações, a capitalização bolsista e o valor pretendido para veres o resultado."
-          }
-        }
-      }
-    },
-    "Share count must be above zero." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Share count must be above zero."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O número de ações tem de ser superior a zero."
-          }
-        }
-      }
-    },
-    "Market cap must be above zero." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Market cap must be above zero."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A capitalização bolsista tem de ser superior a zero."
-          }
-        }
-      }
-    },
-    "These numbers can't be used. Check for negatives." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "These numbers can't be used. Check for negatives."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Estes números não podem ser usados. Verifica se há valores negativos."
-          }
-        }
-      }
-    },
-    "This scenario needs a positive share count and market cap." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This scenario needs a positive share count and market cap."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Este cenário precisa de um número de ações e de uma capitalização bolsista positivos."
-          }
-        }
-      }
-    },
-    "Enter a number." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter a number."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Introduz um número."
-          }
-        }
-      }
-    },
-    "Can't be negative." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Can't be negative."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não pode ser negativo."
-          }
-        }
-      }
-    },
-    "The position could not be saved." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The position could not be saved."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível guardar a posição."
-          }
-        }
-      }
-    },
-    "This row was deleted on another device." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This row was deleted on another device."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esta linha foi eliminada noutro dispositivo."
-          }
-        }
-      }
-    },
-    "Why this scenario?" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Why this scenario?"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Porquê este cenário?"
-          }
-        }
-      }
-    },
-    "AI assist" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI assist"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Assistência IA"
-          }
-        }
-      }
-    },
-    "Unlock AI fill with Pro" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unlock AI fill with Pro"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Desbloqueia o preenchimento com IA no Pro"
-          }
-        }
-      }
-    },
-    "Fill with AI" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fill with AI"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preencher com IA"
-          }
-        }
-      }
-    },
-    "Suggest scenario" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Suggest scenario"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sugerir cenário"
-          }
-        }
-      }
-    },
-    "Suggestions come with sources and are never saved until you tap Save." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Suggestions come with sources and are never saved until you tap Save."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "As sugestões incluem fontes e nunca são guardadas até tocares em Guardar."
-          }
-        }
-      }
-    },
-    "AI suggestion" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI suggestion"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sugestão da IA"
-          }
-        }
-      }
-    },
-    "AI scenario" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI scenario"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cenário da IA"
-          }
-        }
-      }
-    },
-    "Shares outstanding" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shares outstanding"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ações em circulação"
-          }
-        }
-      }
-    },
-    "Share price" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Share price"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preço da ação"
-          }
-        }
-      }
-    },
-    "Sources" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sources"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fontes"
-          }
-        }
-      }
-    },
-    "Horizon: %lld years" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Horizon: %lld years"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Horizonte: %lld anos"
-          }
-        }
-      }
-    },
-    "Enter a ticker first." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter a ticker first."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Introduz primeiro um ticker."
-          }
-        }
-      }
-    },
-    "This price is in %@; your plan uses %@." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This price is in %1$@; your plan uses %2$@."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Este preço está em %1$@; o teu plano usa %2$@."
-          }
-        }
-      }
-    },
-    "AI lookup is unavailable right now. You can still enter the numbers yourself." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI lookup is unavailable right now. You can still enter the numbers yourself."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A pesquisa com IA não está disponível de momento. Podes introduzir os números manualmente."
-          }
-        }
-      }
-    },
-    "The AI couldn't find usable numbers for this ticker." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The AI couldn't find usable numbers for this ticker."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A IA não encontrou números utilizáveis para este ticker."
-          }
-        }
-      }
-    },
-    "Too many AI lookups. Try again in a minute." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Too many AI lookups. Try again in a minute."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Demasiadas pesquisas com IA. Tenta novamente daqui a um minuto."
-          }
-        }
-      }
-    },
-    "The AI lookup failed. Try again." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The AI lookup failed. Try again."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A pesquisa com IA falhou. Tenta novamente."
-          }
-        }
-      }
-    },
-    "Autobuys" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Autobuys"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compras automáticas"
-          }
-        }
-      }
-    },
-    "Add autobuy" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add autobuy"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adicionar compra automática"
-          }
-        }
-      }
-    },
-    "Monthly total" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Monthly total"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Total mensal"
-          }
-        }
-      }
-    },
-    "%@ a month" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ a month"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ por mês"
-          }
-        }
-      }
-    },
-    "Add a monthly base" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add a monthly base"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adiciona uma base mensal"
-          }
-        }
-      }
-    },
-    "Edit autobuy" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edit autobuy"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Editar compra automática"
-          }
-        }
-      }
-    },
-    "New autobuy" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New autobuy"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nova compra automática"
-          }
-        }
-      }
-    },
-    "e.g. 401k contribution" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "e.g. 401k contribution"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ex.: contribuição para a reforma"
-          }
-        }
-      }
-    },
-    "Ticker (optional)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ticker (optional)"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ticker (opcional)"
-          }
-        }
-      }
-    },
-    "Monthly base" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Monthly base"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Base mensal"
-          }
-        }
-      }
-    },
-    "Monthly equivalent: %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Monthly equivalent: %@"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Equivalente mensal: %@"
-          }
-        }
-      }
-    },
-    "Every two weeks" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Every two weeks"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De duas em duas semanas"
-          }
-        }
-      }
-    },
-    "Every two months" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Every two months"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De dois em dois meses"
-          }
-        }
-      }
-    },
-    "Percent of a monthly base" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Percent of a monthly base"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Percentagem de uma base mensal"
-          }
-        }
-      }
-    },
-    "Enter a percent between 0 and 100." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter a percent between 0 and 100."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Introduz uma percentagem entre 0 e 100."
-          }
-        }
-      }
-    },
-    "Must be above zero." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Must be above zero."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tem de ser superior a zero."
-          }
-        }
-      }
-    },
-    "Use 80 characters or fewer." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use 80 characters or fewer."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usa 80 caracteres ou menos."
-          }
-        }
-      }
-    },
-    "Use 1,000 characters or fewer." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use 1,000 characters or fewer."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usa 1000 caracteres ou menos."
-          }
-        }
-      }
-    },
-    "The autobuy could not be saved." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The autobuy could not be saved."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível guardar a compra automática."
-          }
-        }
-      }
-    },
-    "This autobuy was deleted on another device." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This autobuy was deleted on another device."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esta compra automática foi eliminada noutro dispositivo."
-          }
-        }
-      }
-    },
-    "Plan a terminal position" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plan a terminal position"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Planeia uma posição terminal"
-          }
-        }
-      }
-    },
-    "Set a future market cap and see how many shares your target takes." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set a future market cap and see how many shares your target takes."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Define uma capitalização bolsista futura e vê quantas ações o teu objetivo exige."
-          }
-        }
-      }
-    },
-    "Value wanted: %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Value wanted: %@"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Valor pretendido: %@"
-          }
-        }
-      }
-    },
-    "Autobuys: %@ a month" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Autobuys: %@ a month"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compras automáticas: %@ por mês"
-          }
-        }
-      }
-    },
-    "Open terminal positions" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open terminal positions"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abrir posições terminais"
-          }
-        }
-      }
-    },
-    "Terminal scenario" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terminal scenario"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cenário terminal"
-          }
-        }
-      }
-    },
-    "Add terminal scenario" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add terminal scenario"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adicionar cenário terminal"
-          }
-        }
-      }
-    },
-    "Checking your terminal scenario…" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Checking your terminal scenario…"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A verificar o teu cenário terminal…"
-          }
-        }
-      }
-    },
-    "%@ upvoted %@" : {
-      "comment" : "Boards activity row. First placeholder: who upvoted. Second: the post title.",
-      "localizations" : {
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ deu um voto positivo em %@"
-          }
-        }
-      }
-    },
-    "%@ replied on %@" : {
-      "comment" : "Boards activity row. First placeholder: who replied. Second: the post title.",
-      "localizations" : {
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ respondeu em %@"
-          }
-        }
-      }
-    },
-    "Share on Facebook" : {
-      "localizations" : {
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Partilhar no Facebook"
-          }
-        }
-      }
-    },
-    "Send on Messenger" : {
-      "localizations" : {
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enviar pelo Messenger"
-          }
-        }
-      }
-    },
-    "Text a friend" : {
-      "localizations" : {
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enviar SMS a um amigo"
-          }
-        }
-      }
-    },
-    "Disconnect Facebook?" : {
-      "localizations" : {
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Desligar o Facebook?"
-          }
-        }
-      }
-    },
-    "You follow ^[%lld pilot](inflect: true), the most your plan allows. Stop one to follow another." : {
-      "localizations" : {
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Segue ^[%lld piloto](inflect: true), o máximo que o seu plano permite. Deixe de seguir um para seguir outro."
-          }
-        }
-      }
-    },
-    "Morning brief" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Morning brief"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Briefing da manhã"
-          }
-        }
-      }
-    },
-    "Market close recap" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Market close recap"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Resumo do fecho"
-          }
-        }
-      }
-    },
-    "Limited sources" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Limited sources"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fontes limitadas"
-          }
-        }
-      }
-    },
-    "Written without live web sources." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Written without live web sources."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Escrito sem fontes da web em tempo real."
-          }
-        }
-      }
-    },
-    "Brief" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Brief"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Briefing"
-          }
-        }
-      }
-    },
-    "Latest" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Latest"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mais recente"
-          }
-        }
-      }
-    },
-    "Previous" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Previous"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anterior"
-          }
-        }
-      }
-    },
-    "%@, %@, up %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@, %@, up %@"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@, %2$@, a subir %3$@"
-          }
-        }
-      }
-    },
-    "%@, %@, down %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@, %@, down %@"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@, %2$@, a descer %3$@"
-          }
-        }
-      }
-    },
-    "%@, %@, unchanged" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@, %@, unchanged"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@, %2$@, sem alteração"
-          }
-        }
-      }
-    },
-    "Source: %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Source: %@"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fonte: %@"
-          }
-        }
-      }
-    },
-    "Highlight: %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Highlight: %@"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Destaque: %@"
-          }
-        }
-      }
-    },
-    "Earnings: %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Earnings: %@"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Resultados: %@"
-          }
-        }
-      }
-    },
-    "Story %lld: %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Story %lld: %@"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notícia %1$lld: %2$@"
-          }
-        }
-      }
-    },
-    "Tickers: %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tickers: %@"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tickers: %@"
-          }
-        }
-      }
-    },
-    "Market brief alerts" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Market brief alerts"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alertas do briefing de mercado"
-          }
-        }
-      }
-    },
-    "Couldn't load market brief alerts." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't load market brief alerts."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível carregar os alertas do briefing de mercado."
-          }
-        }
-      }
-    },
-    "Couldn't update market brief alerts." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't update market brief alerts."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível atualizar os alertas do briefing de mercado."
-          }
-        }
-      }
-    },
-    "Share brief" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Share brief"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Partilhar briefing"
-          }
-        }
-      }
-    },
-    "Share link…" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Share link…"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Partilhar ligação…"
-          }
-        }
-      }
-    },
-    "Share image…" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Share image…"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Partilhar imagem…"
-          }
-        }
-      }
-    },
-    "Link copied" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Link copied"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ligação copiada"
-          }
-        }
-      }
-    },
-    "Could not create the image." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Could not create the image."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível criar a imagem."
-          }
-        }
-      }
-    },
-    "Could not build share link. Opened iOS share sheet instead." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Could not build share link. Opened iOS share sheet instead."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível criar a ligação de partilha. Abrimos a folha de partilha do iOS."
-          }
-        }
-      }
-    },
-    "Share target unavailable. Opened iOS share sheet." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Share target unavailable. Opened iOS share sheet."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Destino de partilha indisponível. Abrimos a folha de partilha do iOS."
-          }
-        }
-      }
-    },
-    "Choose Discord, then pick the channel. The text is also copied." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose Discord, then pick the channel. The text is also copied."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Escolha o Discord e depois o canal. O texto também foi copiado."
-          }
-        }
-      }
-    },
-    "Opening Discord. Please paste your text there." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opening Discord. Please paste your text there."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A abrir o Discord. Cole lá o seu texto."
           }
         }
       }

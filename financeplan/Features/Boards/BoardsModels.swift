@@ -65,6 +65,7 @@ final class BoardsViewerStore {
 @Observable
 final class BoardsDirectoryModel {
   private(set) var boards: [BoardSummary] = []
+  private(set) var dailyPost: BoardPostSummary?
   private(set) var nextCursor: String?
   private(set) var isLoading = false
   var errorMessage: String?
@@ -81,6 +82,7 @@ final class BoardsDirectoryModel {
     do {
       let page = try await service.boards(cursor: nil)
       boards = page.items
+      dailyPost = page.dailyPost
       nextCursor = page.nextCursor
       errorMessage = nil
     } catch {
@@ -108,6 +110,16 @@ final class BoardsDirectoryModel {
     } catch {
       errorMessage = error.localizedDescription
       return nil
+    }
+  }
+
+  func voteDaily() async {
+    guard let post = dailyPost else { return }
+    do {
+      let result = try await service.vote(postId: post.id)
+      dailyPost = post.applying(result)
+    } catch {
+      errorMessage = error.localizedDescription
     }
   }
 }
@@ -296,7 +308,7 @@ extension BoardPostSummary {
       id: id, boardSlug: boardSlug, kind: kind, title: title, url: url, domain: domain, tags: tags,
       authorUsername: authorUsername, createdAt: createdAt, score: vote.score, commentCount: commentCount,
       participantCount: participantCount, viewCount: viewCount, viewerHasVoted: vote.voted,
-      newCommentCount: newCommentCount
+      newCommentCount: newCommentCount, aiGenerated: aiGenerated, aiTopic: aiTopic
     )
   }
 

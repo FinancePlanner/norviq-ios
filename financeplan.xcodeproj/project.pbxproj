@@ -6,6 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXAggregateTarget section */
+		2B69E2DCB15CCA71059954D5 /* Periphery */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 69E2DCB15CCA71059954D523 /* Build configuration list for PBXAggregateTarget "Periphery" */;
+			buildPhases = (
+				E2DCB15CCA71059954D5238A /* Periphery */,
+			);
+			dependencies = (
+			);
+			name = Periphery;
+			productName = Periphery;
+		};
+/* End PBXAggregateTarget section */
+
 /* Begin PBXBuildFile section */
 		6040CE3A2FA64C4B0087919E /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = 6040CE392FA64C4B0087919E /* TelemetryDeck */; };
 		60543D5B2F48C8B400B67ADA /* AnyAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 60543D5A2F48C8B400B67ADA /* AnyAPI */; };
@@ -243,40 +257,6 @@
 		};
 /* End PBXNativeTarget section */
 
-/* Begin PBXAggregateTarget section */
-		2B69E2DCB15CCA71059954D5 /* Periphery */ = {
-			isa = PBXAggregateTarget;
-			buildConfigurationList = 69E2DCB15CCA71059954D523 /* Build configuration list for PBXAggregateTarget "Periphery" */;
-			buildPhases = (
-				E2DCB15CCA71059954D5238A /* Periphery */,
-			);
-			dependencies = (
-			);
-			name = Periphery;
-			productName = Periphery;
-		};
-/* End PBXAggregateTarget section */
-
-
-
-/* Begin PBXShellScriptBuildPhase section */
-		E2DCB15CCA71059954D5238A /* Periphery */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = Periphery;
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin\"\nROOT=\"${PROJECT_DIR}\"\nif [ ! -f \"${ROOT}/.periphery.yml\" ] && [ -f \"${ROOT}/../.periphery.yml\" ]; then\n  ROOT=\"${ROOT}/..\"\nfi\ncd \"${ROOT}\"\nperiphery scan --format xcode\n";
-		};
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXProject section */
 		60AFA7F02F3E406900FA3135 /* Project object */ = {
 			isa = PBXProject;
@@ -365,6 +345,24 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		E2DCB15CCA71059954D5238A /* Periphery */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = Periphery;
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin\"\nROOT=\"${PROJECT_DIR}\"\nif [ ! -f \"${ROOT}/.periphery.yml\" ] && [ -f \"${ROOT}/../.periphery.yml\" ]; then\n  ROOT=\"${ROOT}/..\"\nfi\ncd \"${ROOT}\"\nperiphery scan --format xcode\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		60AFA7F42F3E406900FA3135 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -403,6 +401,20 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		059954D5238ACC7257112696 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		0DE0AED03082BF4D007E34F5 /* Beta */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = Periphery;
+			};
+			name = Beta;
+		};
 		60AFA8172F3E406A00FA3135 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -583,7 +595,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = financeplan/Norviqa.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 25;
+				CURRENT_PROJECT_VERSION = 78;
 				DEVELOPMENT_TEAM = 84X9WYBF36;
 				ENABLE_PREVIEWS = YES;
 				FACEBOOK_APP_ID = "";
@@ -792,7 +804,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = financeplan/Norviqa.Beta.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 25;
+				CURRENT_PROJECT_VERSION = 78;
 				DEVELOPMENT_TEAM = 84X9WYBF36;
 				ENABLE_PREVIEWS = YES;
 				FACEBOOK_APP_ID = "";
@@ -833,13 +845,6 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
-		};
-		059954D5238ACC7257112696 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
@@ -889,6 +894,7 @@
 			buildConfigurations = (
 				CA71059954D5238ACC725711 /* Debug */,
 				059954D5238ACC7257112696 /* Release */,
+				0DE0AED03082BF4D007E34F5 /* Beta */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -1005,7 +1011,7 @@
 			repositoryURL = "https://github.com/FinancePlanner/norviq-shared.git";
 			requirement = {
 				kind = exactVersion;
-				version = 5.22.0;
+				version = 5.24.0;
 			};
 		};
 		70B002A53C5E11AA00F02001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {

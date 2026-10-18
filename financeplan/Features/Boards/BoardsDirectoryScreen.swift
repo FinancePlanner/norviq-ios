@@ -42,6 +42,18 @@ struct BoardsDirectoryScreen: View {
   var body: some View {
     List {
       BoardsViewerBanner()
+      if let daily = model.dailyPost {
+        Section {
+          NavigationLink {
+            BoardPostDetailScreen(postId: daily.id, title: daily.title)
+          } label: {
+            BoardPostRow(post: daily, canVote: viewer.canWrite) {
+              Task { await model.voteDaily() }
+            }
+          }
+          .accessibilityIdentifier("boards.daily")
+        }
+      }
       if model.boards.isEmpty, !model.isLoading {
         ContentUnavailableView("No boards yet", systemImage: "bubble.left.and.text.bubble.right", description: Text("Start the first one."))
       }

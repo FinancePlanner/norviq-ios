@@ -126,13 +126,13 @@ struct BoardScreen: View {
   @ViewBuilder
   private func menu(for post: BoardPostSummary) -> some View {
     Button("Report", systemImage: "flag") { reportTarget = .post(post.id, title: post.title) }
-    if let author = post.authorUsername, author != currentUsername {
+    if let author = post.authorUsername, author != currentUsername, !post.aiGenerated {
       Button("Block \(author)", systemImage: "nosign") { blockUsername = author }
     }
-    if viewer.isAdmin || (post.authorUsername != nil && post.authorUsername == currentUsername) {
+    if viewer.isAdmin || (!post.aiGenerated && post.authorUsername != nil && post.authorUsername == currentUsername) {
       Button("Delete post", systemImage: "trash", role: .destructive) { Task { await model.delete(post) } }
     }
-    if viewer.isAdmin, let author = post.authorUsername, author != currentUsername {
+    if viewer.isAdmin, let author = post.authorUsername, author != currentUsername, !post.aiGenerated {
       Button("Mute or ban \(author)", systemImage: "speaker.slash") { moderationUsername = author }
     }
   }
@@ -175,6 +175,15 @@ struct BoardPostRow: View {
               .font(.caption2)
               .buttonStyle(.bordered)
               .controlSize(.mini)
+          }
+          if post.aiGenerated {
+            Text("AI")
+              .font(.caption2.weight(.semibold))
+              .padding(.horizontal, 6)
+              .padding(.vertical, 1)
+              .background(AppTheme.Colors.tint.opacity(0.15), in: Capsule())
+              .foregroundStyle(AppTheme.Colors.tint)
+              .accessibilityLabel("AI generated")
           }
           if let author = post.authorUsername {
             Text(author).foregroundStyle(AppTheme.Colors.tint)
