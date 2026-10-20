@@ -1,3 +1,4 @@
+import Algorithms
 import SwiftUI
 import Charts
 
@@ -18,23 +19,26 @@ struct InteractiveLineChart: View {
 
     private var minDate: Date { data.first?.date ?? .now }
     private var maxDate: Date { data.last?.date ?? .now }
-    private var minValue: Double { data.map { $0.value }.min() ?? 0 }
-    private var maxValue: Double { data.map { $0.value }.max() ?? 1 }
+    /// Lowest and highest value in one pass; `(0, 1)` when there is no data.
+    private var valueBounds: (min: Double, max: Double) {
+        data.lazy.map(\.value).minAndMax() ?? (min: 0, max: 1)
+    }
 
     var body: some View {
+        let bounds = valueBounds
         VStack(alignment: .leading, spacing: 12) {
             // Axis labels for Y axis
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .trailing, spacing: 0) {
-                    Text(maxValue.formatted(.currency(code: "USD")))
+                    Text(bounds.max.formatted(.currency(code: "USD")))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text((minValue + (maxValue - minValue) / 2).formatted(.currency(code: "USD")))
+                    Text((bounds.min + (bounds.max - bounds.min) / 2).formatted(.currency(code: "USD")))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text(minValue.formatted(.currency(code: "USD")))
+                    Text(bounds.min.formatted(.currency(code: "USD")))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -180,11 +184,12 @@ struct InteractiveLineChart: View {
     }
 
     private func yPosition(for value: Double, in height: CGFloat) -> CGFloat {
-        let range = maxValue - minValue
+        let bounds = valueBounds
+        let range = bounds.max - bounds.min
         guard range > 0 else {
             return height * 0.5
         }
-        let normalizedY = (value - minValue) / range
+        let normalizedY = (value - bounds.min) / range
         return height * (1.0 - CGFloat(normalizedY))
     }
 }

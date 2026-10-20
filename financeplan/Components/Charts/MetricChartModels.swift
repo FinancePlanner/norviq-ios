@@ -1,3 +1,4 @@
+import Algorithms
 import SwiftUI
 
 /// A single plottable point shared by the reusable metric charts.
@@ -51,23 +52,11 @@ enum MetricValueFormat: Equatable {
 extension Array where Element == MetricSeriesPoint {
     /// Unique series names in first-seen order.
     var orderedSeries: [String] {
-        var seen = Set<String>()
-        var result: [String] = []
-        for point in self where !seen.contains(point.series) {
-            seen.insert(point.series)
-            result.append(point.series)
-        }
-        return result
+        [String](map(\.series).uniqued())
     }
 
     /// Unique x-axis labels in first-seen order.
     var orderedLabels: [String] {
-        var seen = Set<String>()
-        var result: [String] = []
-        for point in self where !seen.contains(point.label) {
-            seen.insert(point.label)
-            result.append(point.label)
-        }
-        return result
+        [String](map(\.label).uniqued())
     }
 }

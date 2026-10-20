@@ -122,11 +122,10 @@ final class RetailSentimentDisplayTests: XCTestCase {
   func testSymbolChunkingRespectsServerCap() async {
     await Task.yield()
     let symbols = (0..<250).map { "SYM\($0)" }
-    let chunks = symbols.chunked(into: InsightsHTTPClient.maxBatchSymbols)
+    let batches = InsightsHTTPClient.symbolBatches(symbols)
 
-    XCTAssertEqual(chunks.count, 3)
-    XCTAssertEqual(chunks[0].count, 100)
-    XCTAssertEqual(chunks[2].count, 50)
+    XCTAssertEqual(batches.map(\.count), [100, 100, 50])
+    XCTAssertTrue(InsightsHTTPClient.symbolBatches([" ", ""]).isEmpty)
   }
 
   func testNormalizeUppercasesTrimsAndDeduplicates() async {

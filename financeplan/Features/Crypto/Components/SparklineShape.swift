@@ -1,3 +1,4 @@
+import Algorithms
 import SwiftUI
 
 struct SparklineShape: Shape {
@@ -5,24 +6,20 @@ struct SparklineShape: Shape {
 
     func path(in rect: CGRect) -> Path {
         guard values.count >= 2 else { return Path() }
-        var path = Path()
         let stepX = rect.width / CGFloat(values.count - 1)
+        let points = values.enumerated().map { i, value in
+            CGPoint(x: CGFloat(i) * stepX, y: rect.height * (1 - value))
+        }
 
-        for (i, value) in values.enumerated() {
-            let x = CGFloat(i) * stepX
-            let y = rect.height * (1 - value)
-            if i == 0 {
-                path.move(to: CGPoint(x: x, y: y))
-            } else {
-                let prevX = CGFloat(i - 1) * stepX
-                let prevY = rect.height * (1 - values[i - 1])
-                let midX = (prevX + x) / 2
-                path.addCurve(
-                    to: CGPoint(x: x, y: y),
-                    control1: CGPoint(x: midX, y: prevY),
-                    control2: CGPoint(x: midX, y: y)
-                )
-            }
+        var path = Path()
+        path.move(to: points[0])
+        for (previous, point) in points.adjacentPairs() {
+            let midX = (previous.x + point.x) / 2
+            path.addCurve(
+                to: point,
+                control1: CGPoint(x: midX, y: previous.y),
+                control2: CGPoint(x: midX, y: point.y)
+            )
         }
         return path
     }

@@ -21,6 +21,7 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		C4CD8CA178BB99F5DA6135BF /* Algorithms in Frameworks */ = {isa = PBXBuildFile; productRef = B0A1B3796AB2A191FB4D38D4 /* Algorithms */; };
 		6040CE3A2FA64C4B0087919E /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = 6040CE392FA64C4B0087919E /* TelemetryDeck */; };
 		60543D5B2F48C8B400B67ADA /* AnyAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 60543D5A2F48C8B400B67ADA /* AnyAPI */; };
 		60543D5D2F48C8B400B67ADA /* Factory in Frameworks */ = {isa = PBXBuildFile; productRef = 60543D5C2F48C8B400B67ADA /* Factory */; };
@@ -108,6 +109,7 @@
 				A0B003A13C5E11AA00F03001 /* PostHog in Frameworks */,
 				FB0A00053C5E11AA00F04001 /* FacebookCore in Frameworks */,
 				FB0A00043C5E11AA00F04001 /* FacebookLogin in Frameworks */,
+				C4CD8CA178BB99F5DA6135BF /* Algorithms in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -204,6 +206,7 @@
 				6040CE392FA64C4B0087919E /* TelemetryDeck */,
 				FB0A00033C5E11AA00F04001 /* FacebookCore */,
 				FB0A00023C5E11AA00F04001 /* FacebookLogin */,
+				B0A1B3796AB2A191FB4D38D4 /* Algorithms */,
 			);
 			productName = financeplan;
 			productReference = 60AFA7F82F3E406900FA3135 /* financeplan.app */;
@@ -307,6 +310,7 @@
 				A0B003A33C5E11AA00F03001 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 				6040CE382FA64C4B0087919E /* XCRemoteSwiftPackageReference "SwiftSDK" */,
 				FB0A00013C5E11AA00F04001 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */,
+				53C63E56421B55F2E961C9DC /* XCRemoteSwiftPackageReference "swift-algorithms" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 60AFA7F92F3E406900FA3135 /* Products */;
@@ -902,6 +906,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		53C63E56421B55F2E961C9DC /* XCRemoteSwiftPackageReference "swift-algorithms" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-algorithms";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.0;
+			};
+		};
 		602AAA712F8810D2004485ED /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/SimplyDanny/SwiftLintPlugins";
@@ -1049,6 +1061,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		B0A1B3796AB2A191FB4D38D4 /* Algorithms */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 53C63E56421B55F2E961C9DC /* XCRemoteSwiftPackageReference "swift-algorithms" */;
+			productName = Algorithms;
+		};
 		6040CE392FA64C4B0087919E /* TelemetryDeck */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 6040CE382FA64C4B0087919E /* XCRemoteSwiftPackageReference "SwiftSDK" */;

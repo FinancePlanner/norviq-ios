@@ -1,3 +1,4 @@
+import Algorithms
 import CoreGraphics
 import Foundation
 
@@ -22,13 +23,13 @@ nonisolated enum SquarifiedTreemap {
     var index = 0
 
     func worstAspect(_ row: [Double], side: Double) -> Double {
-      guard side > 0, let minArea = row.min(), let maxArea = row.max(), minArea > 0 else {
+      guard side > 0, let bounds = row.minAndMax(), bounds.min > 0 else {
         return .infinity
       }
       let sum = row.reduce(0, +)
       let sideSquared = side * side
       let sumSquared = sum * sum
-      return max(sideSquared * maxArea / sumSquared, sumSquared / (sideSquared * minArea))
+      return max(sideSquared * bounds.max / sumSquared, sumSquared / (sideSquared * bounds.min))
     }
 
     func layoutRow(_ row: [Double]) {

@@ -1,3 +1,4 @@
+import Algorithms
 import Foundation
 import StockPlanShared
 
@@ -65,15 +66,12 @@ nonisolated struct MarketBriefSharePayload: Equatable, Sendable {
   /// `$NVDA $ASML`: the brief's tickers in order of appearance, without
   /// duplicates, keeping only symbols X turns into cashtags (1–6 letters).
   var cashtags: [String] {
-    var seen = Set<String>()
-    var tags: [String] = []
-    for ticker in brief.items.flatMap(\.tickers) {
-      let symbol = ticker.uppercased()
-      guard Self.isCashtagSymbol(symbol), seen.insert(symbol).inserted else { continue }
-      tags.append("$\(symbol)")
-      if tags.count == Self.maxCashtags { break }
-    }
-    return tags
+    brief.items.flatMap(\.tickers)
+      .map { $0.uppercased() }
+      .filter(Self.isCashtagSymbol)
+      .uniqued()
+      .prefix(Self.maxCashtags)
+      .map { "$\($0)" }
   }
 
   var disclaimer: String {

@@ -1,3 +1,4 @@
+import Algorithms
 import Factory
 import Foundation
 import PhotosUI
@@ -176,11 +177,10 @@ final class ScreenshotImportViewModel {
   /// own — typed in by hand, or imported from another broker. Committing over
   /// them replaces them, so the sheet names them and asks first.
   var conflictingSymbols: [String] {
-    var seen = Set<String>()
-    return rows
+    let symbols = rows
       .filter { $0.isIncluded && !$0.willReplace && $0.existingKind != .none }
       .map { $0.symbol.trimmingCharacters(in: .whitespaces).uppercased() }
-      .filter { seen.insert($0).inserted }
+    return Array(symbols.uniqued())
   }
 
   var needsMergeConfirmation: Bool { !conflictingSymbols.isEmpty }
