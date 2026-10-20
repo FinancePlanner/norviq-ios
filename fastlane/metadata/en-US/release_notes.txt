@@ -3,7 +3,11 @@ New: the market brief
 • Morning brief before the open and a market close recap every weekday, in English and Portuguese
 • Optional alerts when each brief is ready
 • Share a brief as a link or an image to X, Reddit, WhatsApp, Discord and more
-• A daily AI-written market post pinned to the top of Boards
+
+New on Boards:
+
+• A daily AI-written market post, every day: a Mag 7 stock, a hot stock, inflation, an ETF or the week in markets, with real figures and a question to discuss
+• Cleaner post rows: tags, author and stats are easier to read
 
 Privacy and security update:
 
