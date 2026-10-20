@@ -165,48 +165,75 @@ struct BoardPostRow: View {
   var onTag: (String) -> Void = { _ in }
 
   var body: some View {
-    HStack(alignment: .top, spacing: 10) {
+    HStack(alignment: .top, spacing: 12) {
       BoardVoteButton(score: post.score, voted: post.viewerHasVoted, enabled: canVote, action: onVote)
       VStack(alignment: .leading, spacing: 4) {
         Text(titleText).font(.body.weight(.semibold))
-        HStack(spacing: 6) {
-          ForEach(post.tags, id: \.self) { tag in
-            Button(tag) { onTag(tag) }
-              .font(.caption2)
-              .buttonStyle(.bordered)
-              .controlSize(.mini)
-          }
-          if post.aiGenerated {
-            Text("AI")
-              .font(.caption2.weight(.semibold))
-              .padding(.horizontal, 6)
-              .padding(.vertical, 1)
-              .background(AppTheme.Colors.tint.opacity(0.15), in: Capsule())
-              .foregroundStyle(AppTheme.Colors.tint)
-              .accessibilityLabel("AI generated")
-          }
-          if let author = post.authorUsername {
-            Text(author).foregroundStyle(AppTheme.Colors.tint)
-          }
-          Text(BoardAge.short(post.createdAt))
-          Label("\(post.commentCount)", systemImage: "bubble.left")
-          if let new = post.newCommentCount, new > 0 {
-            Text("\(new) new").foregroundStyle(AppTheme.Colors.tint)
-          }
+        byline
+        if !visibleTags.isEmpty {
+          tagLine
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        HStack(spacing: 10) {
-          Label("\(post.participantCount)", systemImage: "person")
-          Label("\(post.viewCount)", systemImage: "eye")
-        }
-        .font(.caption2)
-        .foregroundStyle(.secondary)
-        .accessibilityElement(children: .combine)
+        stats
       }
     }
-    .padding(.vertical, 2)
+    .padding(.vertical, 4)
     .accessibilityIdentifier("boards.post.\(post.id.uuidString)")
+  }
+
+  /// AI badge, author and age on one line.
+  private var byline: some View {
+    HStack(spacing: 4) {
+      if post.aiGenerated {
+        Text("AI")
+          .font(.caption2.weight(.semibold))
+          .padding(.horizontal, 4)
+          .background(AppTheme.Colors.tint.opacity(0.15), in: Capsule())
+          .foregroundStyle(AppTheme.Colors.tint)
+          .accessibilityLabel("AI generated")
+      }
+      if let author = post.authorUsername {
+        Text(author).foregroundStyle(AppTheme.Colors.tint)
+        Text(verbatim: "·")
+      }
+      Text(BoardAge.short(post.createdAt))
+    }
+    .font(.caption)
+    .foregroundStyle(.secondary)
+    .lineLimit(1)
+  }
+
+  /// Tags as plain #words that never wrap mid-word. The "ai" tag repeats the
+  /// badge, so it is left out.
+  private var tagLine: some View {
+    HStack(spacing: 8) {
+      ForEach(visibleTags, id: \.self) { tag in
+        Button("#\(tag)") { onTag(tag) }
+          .buttonStyle(.borderless)
+          .foregroundStyle(AppTheme.Colors.tint)
+          .fixedSize()
+      }
+    }
+    .font(.caption)
+    .lineLimit(1)
+  }
+
+  private var stats: some View {
+    HStack(spacing: 12) {
+      Label("\(post.commentCount)", systemImage: "bubble.left")
+      if let new = post.newCommentCount, new > 0 {
+        Text("\(new) new").foregroundStyle(AppTheme.Colors.tint)
+      }
+      Label("\(post.participantCount)", systemImage: "person")
+      Label("\(post.viewCount)", systemImage: "eye")
+    }
+    .font(.caption2)
+    .foregroundStyle(.secondary)
+    .labelStyle(.titleAndIcon)
+    .accessibilityElement(children: .combine)
+  }
+
+  private var visibleTags: [String] {
+    post.aiGenerated ? post.tags.filter { $0.lowercased() != "ai" } : post.tags
   }
 
   private var titleText: AttributedString {

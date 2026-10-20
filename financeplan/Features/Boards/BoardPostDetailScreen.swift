@@ -34,7 +34,13 @@ struct BoardPostDetailScreen: View {
             }
           }
           if let body = detail.body, !body.isEmpty {
-            Text(body).font(.body).textSelection(.enabled)
+            let parts = BoardAIDisclosure.split(body, aiGenerated: detail.post.aiGenerated)
+            Text(parts.text).font(.body).textSelection(.enabled)
+            if let disclosure = parts.disclosure {
+              Label(disclosure, systemImage: "info.circle")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            }
           }
         }
         Section(model.thread.isEmpty ? "No comments yet" : "Comments") {
@@ -152,5 +158,17 @@ struct BoardPostDetailScreen: View {
       replyTo = nil
       composerFocused = false
     }
+  }
+}
+
+/// The backend appends a "Written by Norviq AI…" line to every AI post. The
+/// detail screen shows it as a footnote rather than as part of the text.
+enum BoardAIDisclosure {
+  static func split(_ body: String, aiGenerated: Bool) -> (text: String, disclosure: String?) {
+    guard aiGenerated, let range = body.range(of: "\n\nWritten by Norviq AI", options: .backwards) else {
+      return (body, nil)
+    }
+    let disclosure = body[range.lowerBound...].trimmingCharacters(in: .whitespacesAndNewlines)
+    return (String(body[..<range.lowerBound]), disclosure)
   }
 }
