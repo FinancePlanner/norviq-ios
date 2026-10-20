@@ -1,7 +1,9 @@
 # iOS release pipeline.
 #   "iOS CI" green on main -> TestFlight build (beta lane)
-#   manual dispatch        -> App Store release (release/hotfix lane), gated by
-#                             the GitHub environment "app-store" (required reviewer).
+#   manual dispatch        -> App Store release (release/hotfix lane), or an
+#                             App Store build uploaded without submitting (upload
+#                             lane), gated by the GitHub environment "app-store"
+#                             (required reviewer).
 #
 # The beta lane used to trigger on `push: main` directly, which made it a
 # SIBLING of the iOS CI workflow, not a consumer: both started on the same
@@ -35,7 +37,7 @@ on:
         description: Release lane
         required: true
         type: choice
-        options: [release, hotfix]
+        options: [release, hotfix, upload]
         default: release
       version:
         description: Marketing version (e.g. 1.1) — empty keeps current
