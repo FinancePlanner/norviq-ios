@@ -40,7 +40,7 @@ nonisolated struct ListBankInstitutionsEndpoint: Endpoint {
   let country: String
 
   var method: HTTPMethod { .get }
-  var path: String { "/v1/banks/institutions?provider=gocardless&country=\(country)" }
+  var path: String { "/v1/banks/institutions?country=\(country)" }
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters { [:] }
@@ -53,7 +53,7 @@ nonisolated struct CreateBankHostedLinkEndpoint: Endpoint {
   let redirectURI: String
 
   var method: HTTPMethod { .post }
-  var path: String { "/v1/banks/link-session?provider=gocardless" }
+  var path: String { "/v1/banks/link-session" }
   var decoder: JSONDecoder { .stockPlanShared }
 
   func asParameters() throws -> Parameters {

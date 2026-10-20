@@ -82,7 +82,7 @@ struct IntegrationsHubView: View {
           VStack(alignment: .leading, spacing: 6) {
             Label("Brokerage & bank sync", systemImage: "building.columns")
               .font(.body.weight(.semibold))
-            Text("Connect Interactive Brokers today. Bank sync via Plaid — read-only, always.")
+            Text("Connect Interactive Brokers today. Bank sync is read-only, always.")
               .font(.subheadline)
               .foregroundStyle(.secondary)
           }
