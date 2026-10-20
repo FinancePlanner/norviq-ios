@@ -4,27 +4,23 @@ import SwiftUI
 
 // MARK: - Report
 
+/// Something reportable in the community: a board post or comment, or a
+/// message in a group. All go to the same moderation queue.
 enum BoardReportTarget: Identifiable {
   case post(UUID, title: String)
   case comment(UUID, excerpt: String)
+  case groupMessage(UUID, excerpt: String)
 
   var id: UUID {
     switch self {
-    case let .post(id, _), let .comment(id, _): return id
-    }
-  }
-
-  var request: (postId: UUID?, commentId: UUID?) {
-    switch self {
-    case let .post(id, _): return (id, nil)
-    case let .comment(id, _): return (nil, id)
+    case let .post(id, _), let .comment(id, _), let .groupMessage(id, _): return id
     }
   }
 
   var summary: String {
     switch self {
     case let .post(_, title): return title
-    case let .comment(_, excerpt): return excerpt
+    case let .comment(_, excerpt), let .groupMessage(_, excerpt): return excerpt
     }
   }
 }
@@ -107,15 +103,22 @@ struct BoardReportSheet: View {
     isSubmitting = true
     defer { isSubmitting = false }
     let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+    let note = trimmed.isEmpty ? nil : trimmed
     do {
-      try await Container.shared.boardsService().report(
-        BoardReportRequest(
-          postId: target.request.postId,
-          commentId: target.request.commentId,
-          reason: reason,
-          note: trimmed.isEmpty ? nil : trimmed
+      switch target {
+      case let .post(id, _):
+        try await Container.shared.boardsService().report(
+          BoardReportRequest(postId: id, commentId: nil, reason: reason, note: note)
         )
-      )
+      case let .comment(id, _):
+        try await Container.shared.boardsService().report(
+          BoardReportRequest(postId: nil, commentId: id, reason: reason, note: note)
+        )
+      case let .groupMessage(id, _):
+        try await Container.shared.groupsService().reportMessage(
+          id: id, GroupMessageReportRequest(reason: reason, note: note)
+        )
+      }
       didSubmit = true
     } catch {
       errorMessage = error.localizedDescription

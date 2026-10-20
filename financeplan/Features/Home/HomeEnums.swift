@@ -12,15 +12,22 @@ enum HomeTab: Hashable, CaseIterable {
   case insights
   case social
   case boards
+  case groups
 
   /// Always-visible iPhone tabs, registered first so the system bar shows
   /// these before overflow. iPad sidebar still lists every destination.
-  static let primaryTabs: [HomeTab] = [.dashboard, .portfolio, .social, .expenses]
+  /// With groups on, Groups takes Friends' slot and Friends moves to More:
+  /// friend requests still badge the Groups tab and open Friends from there.
+  static func primaryTabs(groupsEnabled: Bool) -> [HomeTab] {
+    [.dashboard, .portfolio, groupsEnabled ? .groups : .social, .expenses]
+  }
 
   /// Destinations that sit after the primary four. On iPhone they land in
   /// More; on iPad they appear in the sidebar. A tab in neither list is
   /// unreachable — which is how Markets shipped invisible once already.
-  static let moreMenuTabs: [HomeTab] = [.markets, .boards, .crypto, .economy, .reports, .tax, .insights]
+  static func moreMenuTabs(groupsEnabled: Bool) -> [HomeTab] {
+    (groupsEnabled ? [.social] : []) + [.markets, .boards, .crypto, .economy, .reports, .tax, .insights]
+  }
 
   var title: String {
     switch self {
@@ -46,6 +53,8 @@ enum HomeTab: Hashable, CaseIterable {
       return String(localized: "Friends")
     case .boards:
       return String(localized: "Boards")
+    case .groups:
+      return String(localized: "Groups")
     }
   }
 
@@ -73,6 +82,8 @@ enum HomeTab: Hashable, CaseIterable {
       return "person.2.fill"
     case .boards:
       return "bubble.left.and.text.bubble.right.fill"
+    case .groups:
+      return "bubble.left.and.bubble.right.fill"
     }
   }
 }

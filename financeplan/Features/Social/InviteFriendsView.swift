@@ -10,7 +10,6 @@ struct InviteFriendsView: View {
   @Environment(\.openURL) private var openURL
   @State private var invite: InviteLink?
   @State private var errorMessage: String?
-  @State private var didCopy = false
   @State private var isTextPresented = false
   @State private var isMessengerInstalled = false
   private let service: any SocialServicing = Container.shared.socialService()
@@ -20,58 +19,41 @@ struct InviteFriendsView: View {
       ScrollView {
         VStack(spacing: 24) {
           if let invite, let url = URL(string: invite.url) {
-            qrCode(for: url)
-            Text(invite.url)
-              .typography(.caption)
-              .foregroundStyle(.secondary)
-              .textSelection(.enabled)
-            ShareLink(
-              item: url,
+            InviteLinkShareSection(
+              url: url,
               subject: Text("Join me on Norviq"),
-              message: Text(InviteMessage.text(for: url))
+              message: InviteMessage.text(for: url),
+              qrLabel: Text("QR code for your invite link")
             ) {
-              Label("Share invite link", systemImage: "square.and.arrow.up")
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            if MessageComposeView.canSendText {
+              if MessageComposeView.canSendText {
+                Button {
+                  isTextPresented = true
+                } label: {
+                  Label("Text a friend", systemImage: "message")
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .sheet(isPresented: $isTextPresented) {
+                  MessageComposeView(body: InviteMessage.text(for: url)) { isTextPresented = false }
+                    .ignoresSafeArea()
+                }
+              }
               Button {
-                isTextPresented = true
+                sendOnMessenger(url)
               } label: {
-                Label("Text a friend", systemImage: "message")
-                  .frame(maxWidth: .infinity)
+                Group {
+                  if isMessengerInstalled {
+                    Label("Send on Messenger", systemImage: "bubble.left.and.bubble.right")
+                  } else {
+                    Label("Share on Facebook", systemImage: "globe")
+                  }
+                }
+                .frame(maxWidth: .infinity)
               }
               .buttonStyle(.bordered)
               .controlSize(.large)
-              .sheet(isPresented: $isTextPresented) {
-                MessageComposeView(body: InviteMessage.text(for: url)) { isTextPresented = false }
-                  .ignoresSafeArea()
-              }
             }
-            Button {
-              sendOnMessenger(url)
-            } label: {
-              Group {
-                if isMessengerInstalled {
-                  Label("Send on Messenger", systemImage: "bubble.left.and.bubble.right")
-                } else {
-                  Label("Share on Facebook", systemImage: "globe")
-                }
-              }
-              .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-            Button {
-              UIPasteboard.general.url = url
-              didCopy = true
-            } label: {
-              Label(didCopy ? "Copied" : "Copy link", systemImage: didCopy ? "checkmark" : "doc.on.doc")
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
           } else if let errorMessage {
             ErrorRetryView(message: errorMessage) { Task { await load() } }
           } else {
@@ -94,20 +76,6 @@ struct InviteFriendsView: View {
     }
   }
 
-  @ViewBuilder
-  private func qrCode(for url: URL) -> some View {
-    if let image = QRCodeGenerator.image(for: url.absoluteString) {
-      Image(uiImage: image)
-        .interpolation(.none)
-        .resizable()
-        .scaledToFit()
-        .frame(width: 220, height: 220)
-        .padding(16)
-        .background(.white, in: RoundedRectangle(cornerRadius: 20))
-        .accessibilityLabel("QR code for your invite link")
-    }
-  }
-
   private func sendOnMessenger(_ url: URL) {
     if isMessengerInstalled, let appURL = MessengerShare.appURL(for: url) {
       openURL(appURL)
@@ -123,6 +91,59 @@ struct InviteFriendsView: View {
     } catch {
       errorMessage = error.localizedDescription
     }
+  }
+}
+
+/// An invite link as a QR code, the link itself, a share sheet and a copy
+/// button. `extra` sits between share and copy for channel-specific sends.
+/// Used by the friend invite and the group invite.
+struct InviteLinkShareSection<Extra: View>: View {
+  let url: URL
+  let subject: Text
+  let message: String
+  let qrLabel: Text
+  @ViewBuilder var extra: () -> Extra
+  @State private var didCopy = false
+
+  var body: some View {
+    VStack(spacing: 24) {
+      if let image = QRCodeGenerator.image(for: url.absoluteString) {
+        Image(uiImage: image)
+          .interpolation(.none)
+          .resizable()
+          .scaledToFit()
+          .frame(width: 220, height: 220)
+          .padding(16)
+          .background(.white, in: RoundedRectangle(cornerRadius: 20))
+          .accessibilityLabel(qrLabel)
+      }
+      Text(url.absoluteString)
+        .typography(.caption)
+        .foregroundStyle(.secondary)
+        .textSelection(.enabled)
+      ShareLink(item: url, subject: subject, message: Text(message)) {
+        Label("Share invite link", systemImage: "square.and.arrow.up")
+          .frame(maxWidth: .infinity)
+      }
+      .buttonStyle(.borderedProminent)
+      .controlSize(.large)
+      extra()
+      Button {
+        UIPasteboard.general.url = url
+        didCopy = true
+      } label: {
+        Label(didCopy ? "Copied" : "Copy link", systemImage: didCopy ? "checkmark" : "doc.on.doc")
+          .frame(maxWidth: .infinity)
+      }
+      .buttonStyle(.bordered)
+      .controlSize(.large)
+    }
+  }
+}
+
+extension InviteLinkShareSection where Extra == EmptyView {
+  init(url: URL, subject: Text, message: String, qrLabel: Text) {
+    self.init(url: url, subject: subject, message: message, qrLabel: qrLabel, extra: { EmptyView() })
   }
 }
 

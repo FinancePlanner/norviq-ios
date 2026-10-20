@@ -14,6 +14,7 @@ struct HomeScreen: View {
   @InjectedObservable(\Container.billingManager) private var billingManager
   @InjectedObservable(\Container.socialStore) private var socialStore
   @InjectedObservable(\Container.boardsViewerStore) private var boardsViewer
+  @InjectedObservable(\Container.groupsStore) private var groupsStore
   @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
   let onLogout: () async -> Void
   @State private var selectedTab: HomeTab = .dashboard
@@ -86,6 +87,38 @@ struct HomeScreen: View {
     .onReceive(NotificationCenter.default.publisher(for: .openMarketBriefFromPushNotification)) { notification in
       openMarketBrief(notification)
     }
+    .onReceive(NotificationCenter.default.publisher(for: .openGroupsFromPushNotification)) { notification in
+      openGroups(notification)
+    }
+    // A cold start from a group link or push can beat the config fetch.
+    .onChange(of: groupsEnabled) { _, enabled in
+      if enabled, groupsStore.pendingLink != nil { selectedTab = .groups }
+    }
+    // Live while the app is in front; pushes cover the background.
+    .task(id: groupsEnabled && scenePhase == .active) {
+      guard groupsEnabled, scenePhase == .active else {
+        groupsStore.stopRealtime()
+        return
+      }
+      groupsStore.startRealtime()
+    }
+  }
+
+  private var groupsEnabled: Bool { socialStore.config.groupsEnabled }
+
+  /// A group push or link: the Groups tab, which opens what it names.
+  private func openGroups(_ notification: Notification) {
+    groupsStore.pendingLink = notification.userInfo?["link"] as? GroupDeepLink
+    if groupsEnabled { selectedTab = .groups }
+  }
+
+  private func badge(for tab: HomeTab) -> Int {
+    switch tab {
+    case .social: socialStore.badgeCount
+    // Friends sits in More while groups are on, so its requests count here.
+    case .groups: groupsStore.badgeCount + socialStore.badgeCount
+    default: 0
+    }
   }
 
   /// A brief push or link: the dashboard tab, with the card on that brief.
@@ -117,16 +150,17 @@ struct HomeScreen: View {
 
   private var tabView: some View {
     TabView(selection: $selectedTab) {
-      ForEach(HomeTab.primaryTabs.filter(isAvailable), id: \.self) { tab in
+      ForEach(HomeTab.primaryTabs(groupsEnabled: groupsEnabled).filter(isAvailable), id: \.self) { tab in
         Tab(tab.title, systemImage: tab.systemImage, value: tab) {
           root(for: tab)
         }
-        .badge(tab == .social ? socialStore.badgeCount : 0)
+        .badge(badge(for: tab))
       }
-      ForEach(HomeTab.moreMenuTabs, id: \.self) { tab in
+      ForEach(HomeTab.moreMenuTabs(groupsEnabled: groupsEnabled).filter(isAvailable), id: \.self) { tab in
         Tab(tab.title, systemImage: tab.systemImage, value: tab) {
           root(for: tab)
         }
+        .badge(badge(for: tab))
       }
     }
     .id(appLanguage.rawValue)
@@ -204,16 +238,21 @@ struct HomeScreen: View {
     .task { await loadSocial() }
   }
 
-  /// Friends stays hidden until the server switches social on: a tab with
-  /// nothing behind it is the "incomplete feature" App Review rejects.
+  /// Friends and Groups stay hidden until the server switches them on: a tab
+  /// with nothing behind it is the "incomplete feature" App Review rejects.
   private func isAvailable(_ tab: HomeTab) -> Bool {
-    tab != .social || socialStore.config.enabled
+    switch tab {
+    case .social: socialStore.config.enabled
+    case .groups: groupsEnabled
+    default: true
+    }
   }
 
   private func loadSocial() async {
     await socialStore.loadConfig()
     guard socialStore.config.enabled else { return }
     await socialStore.load()
+    if groupsEnabled { await groupsStore.load() }
   }
 
   private func openAssistant(conversationID: String?) {
@@ -289,6 +328,9 @@ struct HomeScreen: View {
         BoardsRoot()
       }
       .accessibilityIdentifier("tab.boards")
+    case .groups:
+      GroupsRoot()
+        .accessibilityIdentifier("tab.groups")
     }
   }
 
