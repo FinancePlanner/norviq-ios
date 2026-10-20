@@ -1022,8 +1022,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/FinancePlanner/norviq-shared.git";
 			requirement = {
-				kind = exactVersion;
-				version = 5.25.0;
+				kind = revision;
+				revision = f71bf4574a95bc8aa0b8c5b00d9f28b351d5f5a3;
 			};
 		};
 		70B002A53C5E11AA00F02001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
