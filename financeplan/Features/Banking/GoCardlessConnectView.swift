@@ -1,25 +1,30 @@
 import StockPlanShared
 import SwiftUI
 
-/// EU bank connection via GoCardless: pick a country, choose a bank, then
-/// complete consent in a hosted web flow. The backend creates the connection on
-/// its callback, so success just dismisses back to the bank list.
+/// EU bank connection via the backend's hosted aggregator (Enable Banking or
+/// GoCardless): pick a country, choose a bank, then complete consent in a
+/// hosted web flow. The backend creates the connection on its callback, so
+/// success just dismisses back to the bank list.
 @MainActor
 struct GoCardlessConnectView: View {
   let viewModel: BankViewModel
 
   @Environment(\.dismiss) private var dismiss
-  @State private var country = "GB"
+  @State private var country = "PT"
 
   private static let countries: [(code: String, name: String)] = [
-    ("GB", "United Kingdom"),
-    ("IE", "Ireland"),
     ("PT", "Portugal"),
     ("ES", "Spain"),
+    ("IE", "Ireland"),
     ("FR", "France"),
     ("DE", "Germany"),
     ("NL", "Netherlands"),
     ("IT", "Italy"),
+    ("BE", "Belgium"),
+    ("FI", "Finland"),
+    ("SE", "Sweden"),
+    ("NO", "Norway"),
+    ("DK", "Denmark"),
   ]
 
   var body: some View {
