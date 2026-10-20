@@ -14,22 +14,39 @@ final class HomeDashboardTests: XCTestCase {
   /// the App Store build.
   /// HomeTab is main-actor isolated (the app target defaults to MainActor
   /// isolation), so its statics and Hashable conformance are only usable here.
+  /// With groups on every tab has a way in; with them off, only Groups
+  /// (which the server hasn't switched on) is missing.
   @MainActor
   func testEveryHomeTabIsReachable() async {
     await Task.yield()
-    let reachable = Set(HomeTab.primaryTabs).union(HomeTab.moreMenuTabs)
-    let unreachable = Set(HomeTab.allCases).subtracting(reachable)
-    XCTAssertTrue(
-      unreachable.isEmpty,
-      "These HomeTab cases have no way in — add them to primaryTabs or moreMenuTabs: \(unreachable)"
-    )
+    for groupsEnabled in [true, false] {
+      let reachable = Set(HomeTab.primaryTabs(groupsEnabled: groupsEnabled))
+        .union(HomeTab.moreMenuTabs(groupsEnabled: groupsEnabled))
+      let unreachable = Set(HomeTab.allCases).subtracting(reachable)
+      XCTAssertEqual(
+        unreachable,
+        groupsEnabled ? [] : [.groups],
+        "These HomeTab cases have no way in — add them to primaryTabs or moreMenuTabs: \(unreachable)"
+      )
+    }
+  }
+
+  @MainActor
+  func testGroupsTakeFriendsPrimarySlotAndFriendsMovesToMore() async {
+    await Task.yield()
+    XCTAssertEqual(HomeTab.primaryTabs(groupsEnabled: true), [.dashboard, .portfolio, .groups, .expenses])
+    XCTAssertEqual(HomeTab.primaryTabs(groupsEnabled: false), [.dashboard, .portfolio, .social, .expenses])
+    XCTAssertTrue(HomeTab.moreMenuTabs(groupsEnabled: true).contains(.social))
+    XCTAssertFalse(HomeTab.moreMenuTabs(groupsEnabled: false).contains(.social))
+    XCTAssertFalse(HomeTab.moreMenuTabs(groupsEnabled: true).contains(.groups))
   }
 
   @MainActor
   func testMoreMenuIncludesMarketsTab() async {
     await Task.yield()
     XCTAssertTrue(
-      HomeTab.moreMenuTabs.contains(.markets),
+      HomeTab.moreMenuTabs(groupsEnabled: false).contains(.markets)
+        && HomeTab.moreMenuTabs(groupsEnabled: true).contains(.markets),
       "Markets must remain reachable from More / the iPad sidebar."
     )
   }
@@ -57,15 +74,15 @@ final class HomeDashboardTests: XCTestCase {
   @MainActor
   func testTabListsDoNotOverlapOrDuplicate() async {
     await Task.yield()
-    XCTAssertEqual(
-      Set(HomeTab.moreMenuTabs).count,
-      HomeTab.moreMenuTabs.count,
-      "Duplicated More menu tabs would render duplicate navigation rows."
-    )
-    XCTAssertTrue(
-      Set(HomeTab.primaryTabs).isDisjoint(with: HomeTab.moreMenuTabs),
-      "A tab in both the bottom bar and the More sheet gets two entry points and a confused active indicator."
-    )
+    for groupsEnabled in [true, false] {
+      let primary = HomeTab.primaryTabs(groupsEnabled: groupsEnabled)
+      let more = HomeTab.moreMenuTabs(groupsEnabled: groupsEnabled)
+      XCTAssertEqual(Set(more).count, more.count, "Duplicated More menu tabs would render duplicate navigation rows.")
+      XCTAssertTrue(
+        Set(primary).isDisjoint(with: more),
+        "A tab in both the bottom bar and the More sheet gets two entry points and a confused active indicator."
+      )
+    }
   }
 
   /// iPhone More already pushes Markets/Economy onto a UINavigationController.
