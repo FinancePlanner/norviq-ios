@@ -1,3 +1,4 @@
+import Algorithms
 import AnyAPI
 import Foundation
 import OSLog
@@ -70,13 +71,10 @@ nonisolated final class InsightsHTTPClient: Sendable {
     static let maxBatchSymbols = 100
 
     func getSymbolSentiment(symbols: [String]) async throws -> [String: SymbolSentiment] {
-        let normalized = Self.normalize(symbols)
-        guard !normalized.isEmpty else { return [:] }
-
         var merged: [String: SymbolSentiment] = [:]
-        for chunk in normalized.chunked(into: Self.maxBatchSymbols) {
+        for batch in Self.symbolBatches(symbols) {
             let response = try await client.call(
-                GetSymbolSentimentBatchEndpoint(symbols: chunk),
+                GetSymbolSentimentBatchEndpoint(symbols: batch),
                 errorType: Error.self
             )
             for (symbol, sentiment) in response.symbols {
@@ -111,23 +109,15 @@ nonisolated final class InsightsHTTPClient: Sendable {
         )
     }
 
-    static func normalize(_ symbols: [String]) -> [String] {
-        var seen = Set<String>()
-        var ordered: [String] = []
-        for symbol in symbols {
-            let cleaned = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-            guard !cleaned.isEmpty, seen.insert(cleaned).inserted else { continue }
-            ordered.append(cleaned)
-        }
-        return ordered
+    /// Normalized symbols in request-sized batches; empty when nothing is left.
+    static func symbolBatches(_ symbols: [String]) -> [[String]] {
+        normalize(symbols).chunks(ofCount: maxBatchSymbols).map(Array.init)
     }
-}
 
-nonisolated extension Array {
-    func chunked(into size: Int) -> [[Element]] {
-        guard size > 0 else { return [self] }
-        return stride(from: 0, to: count, by: size).map {
-            Array(self[$0 ..< Swift.min($0 + size, count)])
-        }
+    static func normalize(_ symbols: [String]) -> [String] {
+        let cleaned = symbols
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
+            .filter { !$0.isEmpty }
+        return Array(cleaned.uniqued())
     }
 }

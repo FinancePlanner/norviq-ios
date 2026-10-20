@@ -1,3 +1,4 @@
+import Algorithms
 import CryptoKit
 import Foundation
 
@@ -25,9 +26,10 @@ nonisolated enum ContactHashing {
 
   /// Unique hashes for a set of addresses, in batches the server accepts.
   static func batches(emails: [String], pepper: String, batchSize: Int = 1_000) -> [[ContactHashItem]] {
+    guard batchSize > 0 else { return [] }
     let hashes = Set(emails.compactMap { hash(email: $0, pepper: pepper) }).sorted()
-    return stride(from: 0, to: hashes.count, by: batchSize).map { start in
-      hashes[start..<min(start + batchSize, hashes.count)].map { ContactHashItem(hash: $0, kind: .email) }
+    return hashes.chunks(ofCount: batchSize).map { batch in
+      batch.map { ContactHashItem(hash: $0, kind: .email) }
     }
   }
 }

@@ -5,6 +5,7 @@
 //  Created by Fernando Correia on 11.03.26.
 //
 
+import Algorithms
 import Factory
 import Foundation
 import Observation
@@ -565,10 +566,7 @@ final class StockDetailsViewModel {
             peers[slot] = normalized
         }
 
-        var seen = Set<String>()
-        selectedPeerSymbols = peers.filter { symbol in
-            !symbol.isEmpty && seen.insert(symbol).inserted
-        }
+        selectedPeerSymbols = Array(peers.filter { !$0.isEmpty }.uniqued())
 
         fillMissingPeers()
     }
