@@ -281,4 +281,16 @@ final class BoardsNotificationsTests: XCTestCase {
     store.open(postID: id)
     XCTAssertEqual(store.pendingPost?.id, id)
   }
+
+  func testAIDisclosureIsSplitOffAIPostsOnly() {
+    let body = "Tesla fell 3.2%.\n\nIs that cheap?\n\nWritten by Norviq AI from the latest market data. Not financial advice."
+    let split = BoardAIDisclosure.split(body, aiGenerated: true)
+    XCTAssertEqual(split.text, "Tesla fell 3.2%.\n\nIs that cheap?")
+    XCTAssertEqual(split.disclosure, "Written by Norviq AI from the latest market data. Not financial advice.")
+
+    let human = BoardAIDisclosure.split(body, aiGenerated: false)
+    XCTAssertEqual(human.text, body)
+    XCTAssertNil(human.disclosure)
+    XCTAssertNil(BoardAIDisclosure.split("No disclosure here.", aiGenerated: true).disclosure)
+  }
 }

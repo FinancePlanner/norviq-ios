@@ -43,7 +43,7 @@ struct BoardsDirectoryScreen: View {
     List {
       BoardsViewerBanner()
       if let daily = model.dailyPost {
-        Section {
+        Section("Today on Daily") {
           NavigationLink {
             BoardPostDetailScreen(postId: daily.id, title: daily.title)
           } label: {
@@ -71,7 +71,7 @@ struct BoardsDirectoryScreen: View {
             if !board.description.isEmpty {
               Text(board.description).font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
             }
-            Text("\(board.postCount) posts").font(.caption2).foregroundStyle(.secondary)
+            Text("^[\(board.postCount) post](inflect: true)").font(.caption2).foregroundStyle(.secondary)
           }
           .padding(.vertical, 2)
         }
