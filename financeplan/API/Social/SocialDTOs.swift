@@ -204,6 +204,11 @@ nonisolated struct SocialConfig: Codable, Sendable, Hashable {
   var facebookImport = false
   let leaderboards: Bool
   let messaging: Bool
+  /// Discord-style groups. Arrived after the other switches; a server that
+  /// doesn't send them has groups off.
+  var groups = false
+  /// Public groups and the directory. Only meaningful with `groups` on.
+  var groupsPublic = false
   /// Sent only while contact matching is on. The pepper keys the on-device
   /// hash; it is not a secret, it just rules out precomputed tables.
   var contactHashVersion: Int?
@@ -215,6 +220,9 @@ nonisolated struct SocialConfig: Codable, Sendable, Hashable {
 }
 
 nonisolated extension SocialConfig {
+  /// Groups need the social graph: friends are who you invite.
+  var groupsEnabled: Bool { enabled && groups }
+
   /// `facebookImport` arrived after the other switches; a server that
   /// doesn't send it has the feature off.
   init(from decoder: any Decoder) throws {
@@ -225,6 +233,8 @@ nonisolated extension SocialConfig {
     facebookImport = try container.decodeIfPresent(Bool.self, forKey: .facebookImport) ?? false
     leaderboards = try container.decode(Bool.self, forKey: .leaderboards)
     messaging = try container.decode(Bool.self, forKey: .messaging)
+    groups = try container.decodeIfPresent(Bool.self, forKey: .groups) ?? false
+    groupsPublic = try container.decodeIfPresent(Bool.self, forKey: .groupsPublic) ?? false
     contactHashVersion = try container.decodeIfPresent(Int.self, forKey: .contactHashVersion)
     contactPepper = try container.decodeIfPresent(String.self, forKey: .contactPepper)
   }
