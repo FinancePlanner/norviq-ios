@@ -24,8 +24,13 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     case boardUpvote = "board_upvote"
     /// A morning or evening market brief went out.
     case marketBrief = "market_brief"
+    /// A message in a group channel, or an invitation to a group. Also
+    /// what group links (`/g/<code>`, `financeplan://groups/…`) route as.
+    case groupMessage = "group_message"
+    case groupInvite = "group_invite"
 
     var isBoard: Bool { self == .boardReply || self == .boardUpvote }
+    var isGroup: Bool { self == .groupMessage || self == .groupInvite }
   }
 
   let kind: Kind
@@ -50,6 +55,8 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
   let boardPostID: String?
   /// Market brief pushes only: the brief to show, or nil for the latest.
   let marketBriefRef: MarketBriefRef?
+  /// Group pushes and links only: what to open.
+  let groupLink: GroupDeepLink?
 
   nonisolated init(
     kind: Kind,
@@ -69,7 +76,8 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     messageID: String? = nil,
     inviteCode: String? = nil,
     boardPostID: String? = nil,
-    marketBriefRef: MarketBriefRef? = nil
+    marketBriefRef: MarketBriefRef? = nil,
+    groupLink: GroupDeepLink? = nil
   ) {
     self.kind = kind
     self.symbol = symbol
@@ -89,6 +97,7 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     self.inviteCode = inviteCode
     self.boardPostID = boardPostID
     self.marketBriefRef = marketBriefRef
+    self.groupLink = groupLink
   }
 
   /// Opens the assistant; `conversationID` nil means its default conversation.
@@ -150,6 +159,21 @@ enum PushNotificationPayloadParser {
       return nil
     }
 
+    if kind.isGroup {
+      let deepLink = normalize(stringValue(for: ["deepLink", "deep_link"], in: dictionaries))
+      return PushNotificationRoute(
+        kind: kind,
+        symbol: nil,
+        deepLink: deepLink,
+        groupLink: groupLink(
+          kind: kind,
+          deepLink: deepLink,
+          groupID: normalize(stringValue(for: ["groupId", "group_id"], in: dictionaries)),
+          channelID: normalize(stringValue(for: ["channelId", "channel_id"], in: dictionaries))
+        )
+      )
+    }
+
     if kind.isBoard {
       let postID = normalize(stringValue(for: ["postId", "post_id"], in: dictionaries))
       guard let postID, UUID(uuidString: postID) != nil else { return nil }
@@ -188,6 +212,23 @@ enum PushNotificationPayloadParser {
       snapshotID: snapshotID,
       budgetScope: budgetScope
     )
+  }
+
+  /// The push's own link when it parses, else one built from its ids. An
+  /// invite push without either still opens the invitations list.
+  private nonisolated static func groupLink(
+    kind: PushNotificationRoute.Kind,
+    deepLink: String?,
+    groupID: String?,
+    channelID: String?
+  ) -> GroupDeepLink? {
+    if let deepLink, let url = URL(string: deepLink), let link = GroupDeepLink.parse(url) {
+      return link
+    }
+    if kind == .groupInvite { return .invitations }
+    guard let groupID = groupID.flatMap(UUID.init(uuidString:)) else { return nil }
+    guard let channelID = channelID.flatMap(UUID.init(uuidString:)) else { return .group(groupID) }
+    return .channel(groupID: groupID, channelID: channelID)
   }
 
   private nonisolated static func parseAssistant(
@@ -463,7 +504,7 @@ final class PushNotificationsCoordinator: ObservableObject {
     userAction: PushNotificationUserAction = .openStock
   ) {
     let route: PushNotificationRoute = switch userAction {
-    case _ where [PushNotificationRoute.Kind.assistantMessage, .friendRequest, .friendAccepted, .socialInvite, .boardReply, .boardUpvote, .marketBrief]
+    case _ where [PushNotificationRoute.Kind.assistantMessage, .friendRequest, .friendAccepted, .socialInvite, .boardReply, .boardUpvote, .marketBrief, .groupMessage, .groupInvite]
       .contains(parsedRoute.kind):
       parsedRoute
     case .openStock:
@@ -496,6 +537,12 @@ final class PushNotificationsCoordinator: ObservableObject {
     if let link = MarketBriefDeepLink.parse(url) {
       Self.logger.info("push.route deep_link destination=market_brief has_brief=\(link.ref != nil, privacy: .public)")
       handleIncomingRoute(.marketBrief(link.ref, deepLink: url.absoluteString))
+      return true
+    }
+    if let link = GroupDeepLink.parse(url) {
+      Self.logger.info("push.route deep_link destination=groups")
+      let kind: PushNotificationRoute.Kind = if case .channel = link { .groupMessage } else { .groupInvite }
+      handleIncomingRoute(PushNotificationRoute(kind: kind, symbol: nil, deepLink: url.absoluteString, groupLink: link))
       return true
     }
     if let postID = BoardDeepLink.postID(from: url) {
