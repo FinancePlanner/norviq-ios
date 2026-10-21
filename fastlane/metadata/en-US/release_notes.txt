@@ -1,3 +1,11 @@
+New: Groups
+
+• Create a group around a stock or a topic and chat live with friends
+• Channels, starting with #general
+• Invite friends in the app, or with a link or QR code
+• Type $AAPL in a message to link straight to the stock
+• Groups has its own tab; Friends moved to More
+
 New: the market brief
 
 • Morning brief before the open and a market close recap every weekday, in English and Portuguese
