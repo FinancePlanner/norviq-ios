@@ -4,7 +4,7 @@ This is the contract for Norviq's social layer: friends, discovery, XP and leade
 
 **Status:**
 - Phases 1–3 are built in the app and in `norviq-backend`, behind `GET /v1/social/config`: friends, invites, privacy, block/report, contact matching, X import, XP, streaks and friends leaderboards.
-- Phase 4 is specified here and not built yet.
+- Phase 4 DMs are specified here and not built yet. Their realtime transport is the Groups SSE stream, which is built.
 
 **Conventions:**
 - Every path is under `/v1` and requires `Authorization: Bearer <access token>`.
@@ -162,7 +162,7 @@ The backend lives in `norviq-backend` under `Sources/StockPlanBackend/Gamificati
 - XP for other facts (a goal reached, a portfolio import) needs a server-side hook each; add them to `XPRules` when those flows have an obvious single write point.
 - Expenses created by CSV import or bank sync don't award `expense_logged`; only `POST /expenses` does.
 
-## Phase 4: DMs and realtime (specified, not built)
+## Phase 4: DMs and realtime (DMs specified, not built; realtime built for Groups)
 
 **REST endpoints:**
 
@@ -184,10 +184,13 @@ The backend lives in `norviq-backend` under `Sources/StockPlanBackend/Gamificati
 - **Reports:** messages can be reported through `/social/reports` with `targetType: "message"`.
 
 **Realtime:**
-- **Connection:** `wss://api.norviq.org/ws`, bearer auth on upgrade, `?resume=<lastSeq>`.
-- **Server → client:** events `{ type, seq, ts, payload }`. `type` is one of `message.new`, `message.deleted`, `message.read`, `typing`, `friend.request`, `friend.accepted`, `block.applied`, `resync_required`.
-- **Heartbeat:** the server pings every 25 s.
-- **Replay:** it replays up to 500 missed events. Beyond that it sends `resync_required`, and the client refetches over REST.
+
+Superseded: there is no WebSocket. DMs will reuse the live stream that Groups already uses:
+- **Endpoint:** `GET /v1/realtime/stream`, server-sent events, bearer auth, one stream per client. It is built in the backend's `Realtime/` and consumed by `financeplan/API/Groups/GroupsRealtimeClient.swift`.
+- **Framing:** every connection opens with `retry: 2000` and `event: ready`. The server sends a `: ping` comment every 20 s and closes after 10 minutes with `event: reconnect`. Each frame's `data:` is one `GroupRealtimeEvent` (StockPlanShared), whose `type` is the event name. Unknown types decode to `.other`.
+- **No replay:** on `ready` the client catches up over REST, using `messages?after=<seq>` on the open conversation and the list endpoint for unread counts. Per-conversation `seq` has no gaps, which makes this exact. The same path covers reconnects, deploys and a backgrounded app.
+- **Sending stays on REST**, deduplicated by `clientMessageId`. The stream only announces committed changes.
+- **DMs:** add `dm.*` event types to the same stream rather than opening a second connection.
 
 **Push:**
 - Payload is `{ "type": "chat_message", "conversationId" }` with `thread-id` = conversationId.

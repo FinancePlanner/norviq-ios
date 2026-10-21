@@ -19,6 +19,8 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, UNUse
     static let earningsReminder = "EARNINGS_REMINDER"
     static let assistantMessage = AssistantDeepLink.category
     static let marketBrief = MarketBriefDeepLink.category
+    static let groupMessage = GroupDeepLink.messageCategory
+    static let groupInvite = GroupDeepLink.inviteCategory
   }
 
   func application(
@@ -91,6 +93,18 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, UNUse
         Container.shared.marketBriefRouter().notePublished()
       }
       return [.banner, .list, .sound]
+    }
+    // Group pushes never navigate on arrival either. A message for the
+    // channel on screen shows nothing: it is already there, live.
+    if let route, route.kind.isGroup {
+      return await MainActor.run {
+        let store = Container.shared.groupsStore()
+        if case let .channel(_, channelID) = route.groupLink, store.isViewing(channelID: channelID) {
+          return []
+        }
+        store.refreshSoon()
+        return [.banner, .list, .sound]
+      }
     }
     if let route {
       await MainActor.run {
@@ -179,8 +193,22 @@ final class PushNotificationsAppDelegate: NSObject, UIApplicationDelegate, UNUse
       intentIdentifiers: [],
       options: []
     )
+    // A tap opens the channel, or the invitations. Message pushes thread
+    // by the backend's `group-channel-<id>`, so a busy channel stacks.
+    let groupMessageCategory = UNNotificationCategory(
+      identifier: CategoryID.groupMessage,
+      actions: [],
+      intentIdentifiers: [],
+      options: []
+    )
+    let groupInviteCategory = UNNotificationCategory(
+      identifier: CategoryID.groupInvite,
+      actions: [],
+      intentIdentifiers: [],
+      options: []
+    )
     UNUserNotificationCenter.current().setNotificationCategories([
-      targetCategory, earningsCategory, assistantCategory, marketBriefCategory
+      targetCategory, earningsCategory, assistantCategory, marketBriefCategory, groupMessageCategory, groupInviteCategory
     ])
   }
 }

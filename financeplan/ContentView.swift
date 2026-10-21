@@ -367,6 +367,7 @@ public struct ContentView: View {
     pushNotificationsCoordinator.handleSessionDidInvalidate()
     Container.shared.onboardingStateStore().reset()
     Container.shared.socialStore().reset()
+    Container.shared.groupsStore().reset()
     Container.shared.gamificationStore().reset()
     Container.shared.aiConsentStore().reset()
     Container.shared.marketBriefAlertsStore().reset()
@@ -465,6 +466,13 @@ public struct ContentView: View {
         name: .openBoardPostFromPushNotification,
         object: nil,
         userInfo: route.boardPostID.map { ["postId": $0] }
+      )
+    case .groupMessage, .groupInvite:
+      Self.pushLogger.info("push.analytics routed_success destination=groups kind=\(route.kind.rawValue, privacy: .public)")
+      NotificationCenter.default.post(
+        name: .openGroupsFromPushNotification,
+        object: nil,
+        userInfo: route.groupLink.map { ["link": $0] }
       )
     case .socialInvite:
       Self.pushLogger.info("push.analytics routed_success destination=social_invite")
