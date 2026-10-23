@@ -31,6 +31,9 @@ enum Constants {
     /// subscriptions — Apple accepts a custom terms URL in place of its standard EULA.
     static let termsOfUseUrl = URL(string: "https://www.norviq.org/terms")!
 
+    /// Invite to Norviq's channel on the community Discord server.
+    static let discordURL = URL(string: "https://discord.gg/UmFCd87x8")!
+
     /// Single public contact address for support, privacy and legal requests.
     static let supportEmail = "fernando@facorreia.com"
 
