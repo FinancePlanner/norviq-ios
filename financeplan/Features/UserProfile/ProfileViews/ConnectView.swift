@@ -5,12 +5,14 @@
 //  Created by Fernando Correia on 05.03.26.
 //
 
+import Factory
 import StockPlanShared
 import SwiftUI
 
 struct ConnectView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.openURL) private var openURL
+    @Injected(\.analytics) private var analytics
 
     var body: some View {
         List {
@@ -33,9 +35,12 @@ struct ConnectView: View {
                 socialButton(
                     LocalizedStringKey("Follow on TikTok"), systemImage: "music.note",
                     url: "https://tiktok.com/@norviqplan")
-                socialButton(
-                    LocalizedStringKey("Join Discord"), systemImage: "bubble.left.and.bubble.right",
-                    url: "https://discord.gg/3QVkas3rH")
+                Button {
+                    analytics.track("discord_link_clicked", properties: ["surface": "settings"])
+                    openURL(Constants.Norviq.discordURL)
+                } label: {
+                    Label(LocalizedStringKey("Join us on Discord"), systemImage: "bubble.left.and.bubble.right")
+                }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
         }

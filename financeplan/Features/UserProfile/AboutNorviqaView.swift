@@ -5,11 +5,13 @@
 //  Created by Fernando Correia on 11.04.26.
 //
 
+import Factory
 import SwiftUI
 
 struct AboutNorviqView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.openURL) private var openURL
+    @Injected(\.analytics) private var analytics
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "–"
@@ -110,12 +112,13 @@ struct AboutNorviqView: View {
                     .foregroundStyle(.primary)
                 }
 
-                if let discordURL = URL(string: "https://discord.gg/3QVkas3rH") {
-                    Link(destination: discordURL) {
-                        Label("Join Discord", systemImage: "bubble.left.and.bubble.right")
-                    }
-                    .foregroundStyle(.primary)
+                Button {
+                    analytics.track("discord_link_clicked", properties: ["surface": "settings"])
+                    openURL(Constants.Norviq.discordURL)
+                } label: {
+                    Label("Join us on Discord", systemImage: "bubble.left.and.bubble.right")
                 }
+                .foregroundStyle(.primary)
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
         }

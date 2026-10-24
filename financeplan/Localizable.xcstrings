@@ -9148,24 +9148,24 @@
         }
       }
     },
-    "Join Discord" : {
+    "Join me on Norviq" : {
+
+    },
+    "Join us on Discord" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Join Discord"
+            "value" : "Join us on Discord"
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Entrar no Discord"
+            "value" : "Junta-te a nós no Discord"
           }
         }
       }
-    },
-    "Join me on Norviq" : {
-
     },
     "Jurisdiction" : {
       "comment" : "A label for the jurisdiction field in the tax profile setup sheet.",
