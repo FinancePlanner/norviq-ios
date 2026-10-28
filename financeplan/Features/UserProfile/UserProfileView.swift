@@ -14,6 +14,7 @@ import SwiftUI
 private enum UserProfileDestination: Hashable {
     case securityCode
     case badges
+    case achievements
     case shareFeedback
     case about
     case language
@@ -417,8 +418,14 @@ public struct UserProfileView: View {
 
             // Achievements
             Section(LocalizedStringKey("Achievements")) {
-                NavigationLink(value: UserProfileDestination.badges) {
-                    Label(LocalizedStringKey("Badges"), systemImage: "trophy.fill")
+                if socialStore.config.achievements {
+                    NavigationLink(value: UserProfileDestination.achievements) {
+                        Label(LocalizedStringKey("Achievements"), systemImage: "trophy.fill")
+                    }
+                } else {
+                    NavigationLink(value: UserProfileDestination.badges) {
+                        Label(LocalizedStringKey("Badges"), systemImage: "trophy.fill")
+                    }
                 }
             }
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
@@ -663,6 +670,8 @@ public struct UserProfileView: View {
             )
         case .badges:
             BadgesView()
+        case .achievements:
+            AchievementsView()
         case .shareFeedback:
             ShareFeedbackView()
         case .about:
