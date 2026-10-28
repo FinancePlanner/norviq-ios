@@ -63,6 +63,8 @@ nonisolated struct SocialProfile: Codable, Sendable, Hashable {
   let xpLevel: Int?
   let badgeCount: Int?
   let joinedAt: Date?
+  /// Up to three pinned (or best) achievements, when the owner shares them.
+  var showcase: [AchievementShowcaseEntry]?
 }
 
 nonisolated struct FriendRequest: Codable, Sendable, Hashable, Identifiable {
@@ -127,6 +129,8 @@ nonisolated struct SocialPrivacySettings: Codable, Sendable, Hashable {
   var showStreaks: Bool
   var showXP: Bool
   var leaderboardOptIn: Bool
+  /// Friends see your achievements (profile showcase, list, activity feed).
+  var showAchievements = true
 
   static let `default` = SocialPrivacySettings(
     searchVisibility: .everyone,
@@ -136,7 +140,8 @@ nonisolated struct SocialPrivacySettings: Codable, Sendable, Hashable {
     showReturnPercent: false,
     showStreaks: true,
     showXP: true,
-    leaderboardOptIn: true
+    leaderboardOptIn: true,
+    showAchievements: true
   )
 }
 
@@ -153,6 +158,7 @@ nonisolated extension SocialPrivacySettings {
     showStreaks = try container.decode(Bool.self, forKey: .showStreaks)
     showXP = try container.decode(Bool.self, forKey: .showXP)
     leaderboardOptIn = try container.decode(Bool.self, forKey: .leaderboardOptIn)
+    showAchievements = try container.decodeIfPresent(Bool.self, forKey: .showAchievements) ?? true
   }
 }
 
@@ -209,6 +215,11 @@ nonisolated struct SocialConfig: Codable, Sendable, Hashable {
   var groups = false
   /// Public groups and the directory. Only meaningful with `groups` on.
   var groupsPublic = false
+  /// Achievements (screen, unlock celebration, profile showcase). Arrived
+  /// after the other switches; a server that doesn't send it has them off.
+  var achievements = false
+  /// Friends' activity feed, congrats and friend achievement lists.
+  var activityFeed = false
   /// Sent only while contact matching is on. The pepper keys the on-device
   /// hash; it is not a secret, it just rules out precomputed tables.
   var contactHashVersion: Int?
@@ -235,6 +246,8 @@ nonisolated extension SocialConfig {
     messaging = try container.decode(Bool.self, forKey: .messaging)
     groups = try container.decodeIfPresent(Bool.self, forKey: .groups) ?? false
     groupsPublic = try container.decodeIfPresent(Bool.self, forKey: .groupsPublic) ?? false
+    achievements = try container.decodeIfPresent(Bool.self, forKey: .achievements) ?? false
+    activityFeed = try container.decodeIfPresent(Bool.self, forKey: .activityFeed) ?? false
     contactHashVersion = try container.decodeIfPresent(Int.self, forKey: .contactHashVersion)
     contactPepper = try container.decodeIfPresent(String.self, forKey: .contactPepper)
   }
@@ -294,4 +307,27 @@ nonisolated struct FacebookImportMatchesResponse: Codable, Sendable, Hashable {
   /// How many friends Facebook shared: only those who also connected
   /// Facebook to Norviq.
   let friendsGranted: Int
+}
+
+// MARK: - Activity feed
+
+nonisolated struct SocialFeedAchievement: Codable, Sendable, Hashable {
+  let key: String
+  let tier: String
+  let title: String
+  let iconKey: String
+}
+
+nonisolated struct SocialFeedItem: Codable, Sendable, Hashable, Identifiable {
+  let id: String
+  let actor: SocialUserSummary
+  let achievement: SocialFeedAchievement
+  let createdAt: Date
+  var congratsCount: Int
+  var viewerCongratulated: Bool
+}
+
+nonisolated struct SocialFeedResponse: Codable, Sendable, Hashable {
+  let items: [SocialFeedItem]
+  let nextCursor: String?
 }

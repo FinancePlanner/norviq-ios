@@ -211,3 +211,35 @@ nonisolated struct DisconnectFacebookEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
   func asParameters() throws -> Parameters { [:] }
 }
+
+nonisolated struct GetSocialFeedEndpoint: Endpoint {
+  typealias Response = SocialFeedResponse
+  let cursor: String?
+  let limit: Int
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/social/feed" }
+  var decoder: JSONDecoder { .stockPlanShared }
+  func asParameters() throws -> Parameters {
+    var parameters: Parameters = ["limit": limit]
+    if let cursor, !cursor.isEmpty { parameters["cursor"] = cursor }
+    return parameters
+  }
+}
+
+nonisolated struct CongratulateActivityEndpoint: Endpoint {
+  typealias Response = EmptyAPIResponse
+  let activityId: String
+  var method: HTTPMethod { .post }
+  var path: String { "/v1/social/feed/\(activityId)/congrats" }
+  var decoder: JSONDecoder { .stockPlanShared }
+  func asParameters() throws -> Parameters { [:] }
+}
+
+nonisolated struct GetFriendAchievementsEndpoint: Endpoint {
+  typealias Response = [AchievementUnlock]
+  let userId: String
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/social/users/\(userId)/achievements" }
+  var decoder: JSONDecoder { .stockPlanShared }
+  func asParameters() throws -> Parameters { [:] }
+}

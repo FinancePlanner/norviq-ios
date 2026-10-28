@@ -45,12 +45,14 @@ nonisolated struct SocialHTTPClient: Sendable {
   init(
     baseURL: URL,
     session: any HTTPClientSession = URLSession.shared,
-    authTokenProvider: @escaping @Sendable () async -> String? = { nil }
+    authTokenProvider: @escaping @Sendable () async -> String? = { nil },
+    languageProvider: @escaping @Sendable () -> AppLanguage = { AppLanguage.stored }
   ) {
     self.client = BaseHTTPClient(
       baseURL: baseURL,
       session: session,
       authTokenProvider: authTokenProvider,
+      extraHeadersProvider: AcceptLanguageHeader.provider(languageProvider),
       logger: Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "SocialHTTPClient"),
       decoder: .stockPlanShared
     )
@@ -148,5 +150,17 @@ nonisolated struct SocialHTTPClient: Sendable {
 
   func disconnectFacebook() async throws {
     try await client.callWithoutResponse(DisconnectFacebookEndpoint(), errorType: Error.self)
+  }
+
+  func feed(cursor: String?, limit: Int) async throws -> SocialFeedResponse {
+    try await client.call(GetSocialFeedEndpoint(cursor: cursor, limit: limit), errorType: Error.self)
+  }
+
+  func congratulate(activityId: String) async throws {
+    try await client.callWithoutResponse(CongratulateActivityEndpoint(activityId: activityId), errorType: Error.self)
+  }
+
+  func friendAchievements(userId: String) async throws -> [AchievementUnlock] {
+    try await client.call(GetFriendAchievementsEndpoint(userId: userId), errorType: Error.self)
   }
 }
