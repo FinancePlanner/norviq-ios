@@ -461,6 +461,16 @@ public struct ContentView: View {
     case .friendRequest, .friendAccepted:
       Self.pushLogger.info("push.analytics routed_success destination=social kind=\(route.kind.rawValue, privacy: .public)")
       NotificationCenter.default.post(name: .openSocialFromPushNotification, object: nil)
+    case .achievementUnlocked:
+      Self.pushLogger.info("push.analytics routed_success destination=achievements")
+      NotificationCenter.default.post(name: .openAchievementsFromPushNotification, object: nil)
+    case .achievementCongrats:
+      Self.pushLogger.info("push.analytics routed_success destination=social_feed")
+      NotificationCenter.default.post(
+        name: .openSocialFromPushNotification,
+        object: nil,
+        userInfo: [AchievementPushDestination.socialSectionKey: AchievementPushDestination.feedSection]
+      )
     case .boardReply, .boardUpvote:
       Self.pushLogger.info("push.analytics routed_success destination=board_post kind=\(route.kind.rawValue, privacy: .public)")
       NotificationCenter.default.post(

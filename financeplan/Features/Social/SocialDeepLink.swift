@@ -43,6 +43,28 @@ nonisolated enum SocialDeepLink: Equatable, Sendable {
 
 extension Notification.Name {
   /// Posted by `ContentView` to open the Friends tab. `userInfo["inviteCode"]`
-  /// is set when an invite link opened it.
+  /// is set when an invite link opened it; `userInfo["section"]` names a
+  /// section to show (`feed` for a congrats push).
   static let openSocialFromPushNotification = Notification.Name("openSocialFromPushNotification")
+  /// Posted by `ContentView` when an achievement push is tapped.
+  static let openAchievementsFromPushNotification = Notification.Name("openAchievementsFromPushNotification")
+}
+
+/// Where an achievement push leads.
+enum AchievementPushDestination: Equatable {
+  /// Your own Achievements screen.
+  case achievements
+  /// The friends activity feed.
+  case feed
+
+  static let socialSectionKey = "section"
+  static let feedSection = "feed"
+
+  static func destination(for kind: PushNotificationRoute.Kind) -> AchievementPushDestination? {
+    switch kind {
+    case .achievementUnlocked: .achievements
+    case .achievementCongrats: .feed
+    default: nil
+    }
+  }
 }

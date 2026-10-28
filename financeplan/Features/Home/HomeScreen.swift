@@ -37,7 +37,8 @@ struct HomeScreen: View {
   /// New unlocks waiting to be celebrated, and the screen they lead to.
   @State private var unlockCoordinator = Container.shared.achievementUnlockCoordinator()
   @State private var isAchievementsPresented = false
-  @State private var openAchievementsAfterCelebration = false
+  /// A Friends section a push asked for (`feed`), consumed by the Social tab.
+  @State private var pendingSocialSection: String?
 
   init(onLogout: @escaping () async -> Void) {
     self.onLogout = onLogout
@@ -185,26 +186,14 @@ struct HomeScreen: View {
     .sheet(item: $assistantLaunch) { launch in
       PersistentAssistantView(conversationID: launch.conversationID)
     }
-    .sheet(isPresented: unlockSheetBinding, onDismiss: openAchievementsIfRequested) {
-      AchievementUnlockSheet(
-        unlocks: unlockCoordinator.pending,
-        onViewAll: {
-          openAchievementsAfterCelebration = true
-          unlockCoordinator.dismiss()
-        },
-        onDone: { unlockCoordinator.dismiss() }
+    .modifier(
+      AchievementsPresentation(
+        coordinator: unlockCoordinator,
+        isAchievementsPresented: $isAchievementsPresented,
+        isCovered: isSettingsPresented || isPaywallPresented || isCapturePresented || assistantLaunch != nil,
+        isEnabled: socialStore.config.achievements
       )
-    }
-    .sheet(isPresented: $isAchievementsPresented) {
-      NavigationStack {
-        AchievementsView()
-          .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-              Button("Done") { isAchievementsPresented = false }
-            }
-          }
-      }
-    }
+    )
     .sheet(isPresented: $isCapturePresented, onDismiss: presentPendingAssistant) {
       HomeQuickExpenseSheet(defaultSharePercent: budgetPlannerViewModel.seededUserSharePercent) { draft in
         await handleCaptureSave(draft)
@@ -220,14 +209,7 @@ struct HomeScreen: View {
       _, isCovered in
       Container.shared.reviewPromptCoordinator().setContextEligible(!isCovered)
     }
-    // The celebration waits for any other sheet, including the Achievements one.
-    .onChange(
-      of: isSettingsPresented || isPaywallPresented || isCapturePresented || assistantLaunch != nil
-        || isAchievementsPresented,
-      initial: true
-    ) { _, isCovered in
-      unlockCoordinator.setContextEligible(!isCovered)
-    }
+
     .onReceive(NotificationCenter.default.publisher(for: .openStockFromPushNotification)) { notification in
       handleOpenStockNotification(notification)
     }
@@ -255,6 +237,7 @@ struct HomeScreen: View {
     }
     .onReceive(NotificationCenter.default.publisher(for: .openSocialFromPushNotification)) { notification in
       pendingInviteCode = notification.userInfo?["inviteCode"] as? String
+      pendingSocialSection = notification.userInfo?[AchievementPushDestination.socialSectionKey] as? String
       if socialStore.config.enabled { selectedTab = .social }
     }
     .onReceive(NotificationCenter.default.publisher(for: .openBoardPostFromPushNotification)) { notification in
@@ -286,19 +269,6 @@ struct HomeScreen: View {
     guard socialStore.config.enabled else { return }
     await socialStore.load()
     if groupsEnabled { await groupsStore.load() }
-  }
-
-  private var unlockSheetBinding: Binding<Bool> {
-    Binding(
-      get: { unlockCoordinator.isPresented },
-      set: { isPresented in if !isPresented { unlockCoordinator.dismiss() } }
-    )
-  }
-
-  private func openAchievementsIfRequested() {
-    guard openAchievementsAfterCelebration else { return }
-    openAchievementsAfterCelebration = false
-    isAchievementsPresented = true
   }
 
   private func openAssistant(conversationID: String?) {
