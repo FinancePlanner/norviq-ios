@@ -34,6 +34,10 @@ struct HomeScreen: View {
   @State private var guided: GuidedStartCoordinator?
   /// An invite link that opened the app, shown once the Friends tab is up.
   @State private var pendingInviteCode: String?
+  /// New unlocks waiting to be celebrated, and the screen they lead to.
+  @State private var unlockCoordinator = Container.shared.achievementUnlockCoordinator()
+  @State private var isAchievementsPresented = false
+  @State private var openAchievementsAfterCelebration = false
 
   init(onLogout: @escaping () async -> Void) {
     self.onLogout = onLogout
@@ -181,6 +185,26 @@ struct HomeScreen: View {
     .sheet(item: $assistantLaunch) { launch in
       PersistentAssistantView(conversationID: launch.conversationID)
     }
+    .sheet(isPresented: unlockSheetBinding, onDismiss: openAchievementsIfRequested) {
+      AchievementUnlockSheet(
+        unlocks: unlockCoordinator.pending,
+        onViewAll: {
+          openAchievementsAfterCelebration = true
+          unlockCoordinator.dismiss()
+        },
+        onDone: { unlockCoordinator.dismiss() }
+      )
+    }
+    .sheet(isPresented: $isAchievementsPresented) {
+      NavigationStack {
+        AchievementsView()
+          .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+              Button("Done") { isAchievementsPresented = false }
+            }
+          }
+      }
+    }
     .sheet(isPresented: $isCapturePresented, onDismiss: presentPendingAssistant) {
       HomeQuickExpenseSheet(defaultSharePercent: budgetPlannerViewModel.seededUserSharePercent) { draft in
         await handleCaptureSave(draft)
@@ -195,6 +219,14 @@ struct HomeScreen: View {
     .onChange(of: isSettingsPresented || isPaywallPresented || isCapturePresented || assistantLaunch != nil, initial: true) {
       _, isCovered in
       Container.shared.reviewPromptCoordinator().setContextEligible(!isCovered)
+    }
+    // The celebration waits for any other sheet, including the Achievements one.
+    .onChange(
+      of: isSettingsPresented || isPaywallPresented || isCapturePresented || assistantLaunch != nil
+        || isAchievementsPresented,
+      initial: true
+    ) { _, isCovered in
+      unlockCoordinator.setContextEligible(!isCovered)
     }
     .onReceive(NotificationCenter.default.publisher(for: .openStockFromPushNotification)) { notification in
       handleOpenStockNotification(notification)
@@ -250,9 +282,23 @@ struct HomeScreen: View {
 
   private func loadSocial() async {
     await socialStore.loadConfig()
+    await unlockCoordinator.checkForUnlocks()
     guard socialStore.config.enabled else { return }
     await socialStore.load()
     if groupsEnabled { await groupsStore.load() }
+  }
+
+  private var unlockSheetBinding: Binding<Bool> {
+    Binding(
+      get: { unlockCoordinator.isPresented },
+      set: { isPresented in if !isPresented { unlockCoordinator.dismiss() } }
+    )
+  }
+
+  private func openAchievementsIfRequested() {
+    guard openAchievementsAfterCelebration else { return }
+    openAchievementsAfterCelebration = false
+    isAchievementsPresented = true
   }
 
   private func openAssistant(conversationID: String?) {

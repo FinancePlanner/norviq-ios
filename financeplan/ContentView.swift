@@ -187,6 +187,7 @@ public struct ContentView: View {
           if isAuthenticated {
             // Consent may have changed on another device (web settings).
             Task { await Container.shared.aiConsentStore().refreshIfStale() }
+            Task { await Container.shared.achievementUnlockCoordinator().checkForUnlocks() }
             billingManager.configureForCurrentUser()
             await billingManager.reconcilePendingBackendSyncIfNeeded()
 
