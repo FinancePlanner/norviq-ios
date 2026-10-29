@@ -5,6 +5,8 @@ import SwiftUI
 /// invites, pending requests and the friend list. Messages join in Phase 4.
 struct SocialRoot: View {
   @Binding var pendingInviteCode: String?
+  /// A section a push asked for (`feed`); consumed once.
+  @Binding var pendingSection: String?
   @InjectedObservable(\Container.socialStore) private var store
   @State private var isSearchPresented = false
   @State private var isInvitePresented = false
@@ -39,6 +41,13 @@ struct SocialRoot: View {
         .sheet(isPresented: $isXImportPresented) { XImportView() }
         .sheet(isPresented: $isFacebookImportPresented) { FacebookImportView() }
         .sheet(item: $redeemingInvite) { item in InviteRedeemSheet(code: item.code) }
+        .onChange(of: pendingSection, initial: true) { _, requested in
+          guard let requested else { return }
+          pendingSection = nil
+          if requested == AchievementPushDestination.feedSection, store.config.activityFeed {
+            section = .feed
+          }
+        }
         .onChange(of: pendingInviteCode, initial: true) { _, code in
           guard let code else { return }
           pendingInviteCode = nil
@@ -55,12 +64,23 @@ struct SocialRoot: View {
     }
   }
 
+  /// Leaderboard and Feed each need their server switch; Friends is always there.
+  private var sections: [SocialSection] {
+    SocialSection.allCases.filter { section in
+      switch section {
+      case .leaderboard: store.config.leaderboards
+      case .feed: store.config.activityFeed
+      case .friends: true
+      }
+    }
+  }
+
   @ViewBuilder
   private var content: some View {
-    if store.config.leaderboards {
+    if sections.count > 1 {
       VStack(spacing: 0) {
         Picker("Section", selection: $section) {
-          ForEach(SocialSection.allCases) { item in
+          ForEach(sections) { item in
             Text(item.title).tag(item)
           }
         }
@@ -73,6 +93,8 @@ struct SocialRoot: View {
           LeaderboardView(onInvite: { isInvitePresented = true })
         case .friends:
           friendsContent
+        case .feed:
+          SocialFeedView()
         }
       }
     } else {
@@ -171,6 +193,7 @@ struct SocialRoot: View {
 enum SocialSection: String, CaseIterable, Identifiable {
   case leaderboard
   case friends
+  case feed
 
   var id: String { rawValue }
 
@@ -178,6 +201,7 @@ enum SocialSection: String, CaseIterable, Identifiable {
     switch self {
     case .leaderboard: "Leaderboard"
     case .friends: "Friends"
+    case .feed: "Feed"
     }
   }
 }

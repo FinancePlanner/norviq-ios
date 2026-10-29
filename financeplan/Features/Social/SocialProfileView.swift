@@ -37,7 +37,29 @@ struct SocialProfileView: View {
             LabeledContent("Level", value: "\(level)")
           }
           if let badges = profile.badgeCount {
-            LabeledContent("Badges", value: "\(badges)")
+            LabeledContent(store.config.achievements ? "Achievements" : "Badges", value: "\(badges)")
+          }
+        }
+      }
+
+      if store.config.achievements, let showcase = profile?.showcase, !showcase.isEmpty {
+        Section("Showcase") {
+          ForEach(showcase.prefix(3), id: \.key) { entry in
+            Label {
+              HStack {
+                Text(entry.title)
+                if let tier = AchievementTierStyle.label(entry.tier) {
+                  Spacer()
+                  Text(tier).font(.caption).foregroundStyle(AchievementTierStyle.color(entry.tier))
+                }
+              }
+            } icon: {
+              Image(systemName: AchievementSymbol.name(for: entry.iconKey))
+                .foregroundStyle(AchievementTierStyle.color(entry.tier))
+            }
+          }
+          if store.config.activityFeed {
+            NavigationLink("All achievements") { FriendAchievementsView(user: user) }
           }
         }
       }

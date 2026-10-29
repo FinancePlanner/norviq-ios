@@ -337,7 +337,7 @@ struct HomeScreen: View {
       InsightsScreen()
         .accessibilityIdentifier("tab.insights")
     case .social:
-      SocialRoot(pendingInviteCode: $pendingInviteCode)
+      SocialRoot(pendingInviteCode: $pendingInviteCode, pendingSection: $pendingSocialSection)
         .accessibilityIdentifier("tab.social")
     case .boards:
       overflowTabHost {

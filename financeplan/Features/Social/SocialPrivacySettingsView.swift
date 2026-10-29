@@ -59,6 +59,9 @@ struct SocialPrivacySettingsView: View {
           Toggle("Show my streaks", isOn: binding.showStreaks)
           Toggle("Show my XP and level", isOn: binding.showXP)
           Toggle("Appear on friends' leaderboards", isOn: binding.leaderboardOptIn)
+          if store.config.achievements {
+            Toggle("Show achievements to friends", isOn: binding.showAchievements)
+          }
         } header: {
           Text("What friends see")
         } footer: {
