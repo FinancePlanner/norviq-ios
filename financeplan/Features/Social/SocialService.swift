@@ -25,6 +25,9 @@ protocol SocialServicing: Sendable {
   func finishXImport(_ request: OAuthExchangeRequestPayload) async throws -> XImportMatchesResponse
   func importFacebookFriends(_ request: FacebookLimitedLoginRequest) async throws -> FacebookImportMatchesResponse
   func disconnectFacebook() async throws
+  func feed(cursor: String?, limit: Int) async throws -> SocialFeedResponse
+  func congratulate(activityId: String) async throws
+  func friendAchievements(userId: String) async throws -> [AchievementUnlock]
 }
 
 struct DefaultSocialService: SocialServicing {
@@ -70,4 +73,11 @@ struct DefaultSocialService: SocialServicing {
     try await client.importFacebookFriends(request)
   }
   func disconnectFacebook() async throws { try await client.disconnectFacebook() }
+  func feed(cursor: String?, limit: Int) async throws -> SocialFeedResponse {
+    try await client.feed(cursor: cursor, limit: limit)
+  }
+  func congratulate(activityId: String) async throws { try await client.congratulate(activityId: activityId) }
+  func friendAchievements(userId: String) async throws -> [AchievementUnlock] {
+    try await client.friendAchievements(userId: userId)
+  }
 }

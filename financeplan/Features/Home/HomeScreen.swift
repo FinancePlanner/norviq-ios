@@ -34,6 +34,11 @@ struct HomeScreen: View {
   @State private var guided: GuidedStartCoordinator?
   /// An invite link that opened the app, shown once the Friends tab is up.
   @State private var pendingInviteCode: String?
+  /// New unlocks waiting to be celebrated, and the screen they lead to.
+  @State private var unlockCoordinator = Container.shared.achievementUnlockCoordinator()
+  @State private var isAchievementsPresented = false
+  /// A Friends section a push asked for (`feed`), consumed by the Social tab.
+  @State private var pendingSocialSection: String?
 
   init(onLogout: @escaping () async -> Void) {
     self.onLogout = onLogout
@@ -181,6 +186,14 @@ struct HomeScreen: View {
     .sheet(item: $assistantLaunch) { launch in
       PersistentAssistantView(conversationID: launch.conversationID)
     }
+    .modifier(
+      AchievementsPresentation(
+        coordinator: unlockCoordinator,
+        isAchievementsPresented: $isAchievementsPresented,
+        isCovered: isSettingsPresented || isPaywallPresented || isCapturePresented || assistantLaunch != nil,
+        isEnabled: socialStore.config.achievements
+      )
+    )
     .sheet(isPresented: $isCapturePresented, onDismiss: presentPendingAssistant) {
       HomeQuickExpenseSheet(defaultSharePercent: budgetPlannerViewModel.seededUserSharePercent) { draft in
         await handleCaptureSave(draft)
@@ -196,6 +209,7 @@ struct HomeScreen: View {
       _, isCovered in
       Container.shared.reviewPromptCoordinator().setContextEligible(!isCovered)
     }
+
     .onReceive(NotificationCenter.default.publisher(for: .openStockFromPushNotification)) { notification in
       handleOpenStockNotification(notification)
     }
@@ -223,6 +237,7 @@ struct HomeScreen: View {
     }
     .onReceive(NotificationCenter.default.publisher(for: .openSocialFromPushNotification)) { notification in
       pendingInviteCode = notification.userInfo?["inviteCode"] as? String
+      pendingSocialSection = notification.userInfo?[AchievementPushDestination.socialSectionKey] as? String
       if socialStore.config.enabled { selectedTab = .social }
     }
     .onReceive(NotificationCenter.default.publisher(for: .openBoardPostFromPushNotification)) { notification in
@@ -250,6 +265,7 @@ struct HomeScreen: View {
 
   private func loadSocial() async {
     await socialStore.loadConfig()
+    await unlockCoordinator.checkForUnlocks()
     guard socialStore.config.enabled else { return }
     await socialStore.load()
     if groupsEnabled { await groupsStore.load() }
@@ -321,7 +337,7 @@ struct HomeScreen: View {
       InsightsScreen()
         .accessibilityIdentifier("tab.insights")
     case .social:
-      SocialRoot(pendingInviteCode: $pendingInviteCode)
+      SocialRoot(pendingInviteCode: $pendingInviteCode, pendingSection: $pendingSocialSection)
         .accessibilityIdentifier("tab.social")
     case .boards:
       overflowTabHost {

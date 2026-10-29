@@ -14,6 +14,10 @@ protocol PushNotificationsServicing: Sendable {
 }
 
 struct PushNotificationsService: PushNotificationsServicing, @unchecked Sendable {
+  /// Push kinds this build can open. The server sends a kind only to devices
+  /// that list it, so older builds never get a push they would mis-route.
+  static let deviceCapabilities = ["rebalance_drift_v1", "achievements_v1"]
+
   private let environmentManager: AppEnvironmentManager
   private let authSessionManager: AuthSessionManaging
   private let session: PushNotificationsURLSessionProtocol
@@ -40,7 +44,7 @@ struct PushNotificationsService: PushNotificationsServicing, @unchecked Sendable
       platform: .ios,
       apnsEnvironment: apnsEnvironment,
       authorizationStatus: authorizationStatus,
-      capabilities: ["rebalance_drift_v1"]
+      capabilities: Self.deviceCapabilities
     )
 
     return try await performAuthenticated { client in

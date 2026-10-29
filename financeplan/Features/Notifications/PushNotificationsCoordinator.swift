@@ -28,6 +28,10 @@ nonisolated struct PushNotificationRoute: Equatable, Sendable {
     /// what group links (`/g/<code>`, `financeplan://groups/…`) route as.
     case groupMessage = "group_message"
     case groupInvite = "group_invite"
+    /// You unlocked an achievement while the app was in the background.
+    case achievementUnlocked = "achievement_unlocked"
+    /// A friend cheered one of your achievements.
+    case achievementCongrats = "achievement_congrats"
 
     var isBoard: Bool { self == .boardReply || self == .boardUpvote }
     var isGroup: Bool { self == .groupMessage || self == .groupInvite }

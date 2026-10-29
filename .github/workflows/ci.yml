@@ -120,6 +120,12 @@ jobs:
             -only-testing:financeplanTests/ContactHashingTests \
             -only-testing:financeplanTests/LeaderboardViewModelTests \
             -only-testing:financeplanTests/GamificationStoreTests \
+            -only-testing:financeplanTests/AchievementsAPITests \
+            -only-testing:financeplanTests/AchievementsStoreTests \
+            -only-testing:financeplanTests/AchievementUnlockCoordinatorTests \
+            -only-testing:financeplanTests/AchievementsPushTests \
+            -only-testing:financeplanTests/SocialFeedStoreTests \
+            -only-testing:financeplanTests/AchievementsLocalizationTests \
             -parallel-testing-enabled NO \
             -quiet
 

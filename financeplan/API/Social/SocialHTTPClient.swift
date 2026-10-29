@@ -9,6 +9,8 @@ nonisolated struct SocialHTTPClient: Sendable {
     case invalidStatus(Int)
     case unauthorized(String?)
     case api(String)
+    /// 404: the user, activity or invite is gone or hidden from the viewer.
+    case notFound(String?)
 
     nonisolated var errorDescription: String? {
       switch self {
@@ -16,7 +18,13 @@ nonisolated struct SocialHTTPClient: Sendable {
       case let .invalidStatus(code): return "Request failed (\(code))."
       case let .unauthorized(message): return message ?? "Your session expired. Please sign in again."
       case let .api(message): return message
+      case let .notFound(message): return message ?? "Not found."
       }
+    }
+
+    nonisolated var isNotFound: Bool {
+      if case .notFound = self { return true }
+      return false
     }
 
     nonisolated var statusCode: Int? {
@@ -30,6 +38,7 @@ nonisolated struct SocialHTTPClient: Sendable {
       case let (.invalidStatus(l), .invalidStatus(r)): return l == r
       case let (.unauthorized(l), .unauthorized(r)): return l == r
       case let (.api(l), .api(r)): return l == r
+      case let (.notFound(l), .notFound(r)): return l == r
       default: return false
       }
     }
@@ -38,6 +47,11 @@ nonisolated struct SocialHTTPClient: Sendable {
     static func makeInvalidStatus(_ code: Int) -> Error { .invalidStatus(code) }
     static func makeUnauthorized(_ message: String?) -> Error { .unauthorized(message) }
     static func makeAPI(_ message: String) -> Error { .api(message) }
+    static func makeStatus(_ code: Int, message: String?) -> Error {
+      if code == 404 { return .notFound(message) }
+      if let message, !message.isEmpty { return .api(message) }
+      return .invalidStatus(code)
+    }
   }
 
   private let client: BaseHTTPClient
@@ -45,12 +59,14 @@ nonisolated struct SocialHTTPClient: Sendable {
   init(
     baseURL: URL,
     session: any HTTPClientSession = URLSession.shared,
-    authTokenProvider: @escaping @Sendable () async -> String? = { nil }
+    authTokenProvider: @escaping @Sendable () async -> String? = { nil },
+    languageProvider: @escaping @Sendable () -> AppLanguage = { AppLanguage.stored }
   ) {
     self.client = BaseHTTPClient(
       baseURL: baseURL,
       session: session,
       authTokenProvider: authTokenProvider,
+      extraHeadersProvider: AcceptLanguageHeader.provider(languageProvider),
       logger: Logger(subsystem: Bundle.main.bundleIdentifier ?? "financeplan", category: "SocialHTTPClient"),
       decoder: .stockPlanShared
     )
@@ -148,5 +164,17 @@ nonisolated struct SocialHTTPClient: Sendable {
 
   func disconnectFacebook() async throws {
     try await client.callWithoutResponse(DisconnectFacebookEndpoint(), errorType: Error.self)
+  }
+
+  func feed(cursor: String?, limit: Int) async throws -> SocialFeedResponse {
+    try await client.call(GetSocialFeedEndpoint(cursor: cursor, limit: limit), errorType: Error.self)
+  }
+
+  func congratulate(activityId: String) async throws {
+    try await client.callWithoutResponse(CongratulateActivityEndpoint(activityId: activityId), errorType: Error.self)
+  }
+
+  func friendAchievements(userId: String) async throws -> [AchievementUnlock] {
+    try await client.call(GetFriendAchievementsEndpoint(userId: userId), errorType: Error.self)
   }
 }

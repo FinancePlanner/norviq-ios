@@ -46,6 +46,9 @@ private final class MockSocialService: SocialServicing, @unchecked Sendable {
     if let disconnectError { throw disconnectError }
     disconnectCount += 1
   }
+  func feed(cursor: String?, limit: Int) async throws -> SocialFeedResponse { throw Failure() }
+  func congratulate(activityId: String) async throws { throw Failure() }
+  func friendAchievements(userId: String) async throws -> [AchievementUnlock] { throw Failure() }
 }
 
 private extension SocialUserSummary {
