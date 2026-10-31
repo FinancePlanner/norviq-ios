@@ -31,6 +31,23 @@ jobs:
       - name: Run SwiftLint
         run: ./scripts/format.sh --skip-install --lint-only --reporter github-actions-logging
 
+  # StockPlanShared (the DTOs shared with the API) lives in Packages/ since it
+  # was vendored from norviq-shared. Its own swift-testing suite runs here on
+  # the macOS host — it is not in the app's test plan.
+  shared-package:
+    name: StockPlanShared tests
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+
+      - name: Run package tests
+        run: swift test --package-path Packages/StockPlanShared
+
   test:
     name: Build and Test
     runs-on: macos-15

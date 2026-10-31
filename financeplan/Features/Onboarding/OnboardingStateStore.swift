@@ -5,7 +5,7 @@ import StockPlanShared
 
 /// The signed-in user's server-side onboarding row: funnel position for
 /// ContentView, guided-start progress for Home. Contract:
-/// norviq-shared/docs/guided-start.md.
+/// Packages/StockPlanShared/docs/guided-start.md.
 @Observable @MainActor
 final class OnboardingStateStore {
   private(set) var state: OnboardingStateDTO?

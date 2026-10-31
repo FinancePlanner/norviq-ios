@@ -185,15 +185,22 @@ Run the backend locally (see `StockPlanBackend/README.md` and `docker-compose.ym
 
 ## Shared models dependency (StockPlanShared)
 
-DTOs and shared types come from **StockPlanShared** (norviq-shared package), e.g. `StockResponse`, `StockRequest`, watchlist types, bulk import, valuation requests.
+DTOs and shared types come from **StockPlanShared**, e.g. `StockResponse`, `StockRequest`, watchlist types, bulk import, valuation requests.
 
-Configure the Swift package in Xcode (`financeplan.xcodeproj`). Version policy (example): `0.1.0` up to next major.
+It is a **local Swift package in this repo**, at `Packages/StockPlanShared/`, referenced from `financeplan.xcodeproj` as an `XCLocalSwiftPackageReference` and linked by the `financeplan` app target. It was vendored from the separate `norviq-shared` repo at 5.26.0 (a1ebfaf); that repo is archived and no longer released, so there are no version pins or tags to bump.
+
+To change a DTO, edit `Packages/StockPlanShared/` in the same PR as the app code that uses it. The backend (Go, `norviq-backend-v2`) doesn't consume this package, so keep the Swift types aligned with its JSON by hand.
+
+- `make shared-test` runs the package's own tests (`swift test`). CI runs them in the **StockPlanShared tests** job.
+- `make shared-format` / `make shared-format-lint` format it with its own `.swiftformat` (4-space indent). The root `.swiftformat` excludes `Packages/`, because SwiftFormat would otherwise merge the app's rules into the package's.
+- SwiftLint (`scripts/format.sh`, CI) lints the package together with the app. `Packages/StockPlanShared/.swiftlint.yml` applies as a nested config.
+
+The guided-start onboarding contract shared with web lives at `Packages/StockPlanShared/docs/guided-start.md`.
 
 If packages fail to resolve:
 
-1. Ensure the remote repo has a matching semver tag.
-2. **File → Packages → Reset Package Caches**
-3. **File → Packages → Resolve Package Versions**
+1. **File → Packages → Reset Package Caches**
+2. **File → Packages → Resolve Package Versions**
 
 ---
 

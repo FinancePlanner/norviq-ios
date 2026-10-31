@@ -4,7 +4,7 @@ import StockPlanShared
 
 /// Drives the "Get started with Norviq" card and its steps. Completion is the
 /// server's word: a step finishes when its latch flips on a poll, never when
-/// the client thinks it saved. Contract: norviq-shared/docs/guided-start.md.
+/// the client thinks it saved. Contract: Packages/StockPlanShared/docs/guided-start.md.
 @MainActor
 @Observable
 final class GuidedStartCoordinator {
