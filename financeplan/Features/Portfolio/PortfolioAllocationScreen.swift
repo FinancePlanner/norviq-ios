@@ -434,7 +434,7 @@ struct PortfolioAllocationScreen: View {
         }
 
         private var deltaColor: Color {
-            overweight >= 0 ? .orange : .green
+            overweight >= 0 ? .orange : AppTheme.Colors.gain
         }
 
         var body: some View {

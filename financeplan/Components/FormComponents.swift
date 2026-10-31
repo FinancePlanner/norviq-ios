@@ -398,7 +398,7 @@ struct SplitModeIndicator: View {
 
   var body: some View {
     VStack(spacing: 12) {
-      FormRow(icon: "person.2", iconColor: .green, label: "Mode") {
+      FormRow(icon: "person.2", iconColor: AppTheme.Colors.success, label: "Mode") {
         HStack(spacing: 6) {
           Image(systemName: splitMode == .personal ? "person.fill" : "person.2.fill")
             .font(.caption.weight(.semibold))
@@ -422,7 +422,7 @@ struct SplitModeIndicator: View {
               .foregroundStyle(.secondary)
           }
           Slider(value: $userSharePercent, in: 0...100, step: 1)
-            .tint(.green)
+            .tint(AppTheme.Colors.success)
           HStack(spacing: 8) {
             Text("You pay")
             Spacer()

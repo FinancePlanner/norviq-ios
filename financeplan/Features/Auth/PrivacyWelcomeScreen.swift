@@ -9,7 +9,7 @@ struct PrivacyWelcomeScreen: View {
     ZStack {
       VStack(spacing: 24) {
         VigilPageHeader(
-          watch: .auth("The gate holds"),
+          watch: .auth("Private by design"),
           title: "Your data is yours",
           subtitle: "We built Norviq around one principle: your financial data belongs to you."
         )

@@ -131,7 +131,7 @@ struct IntegrationsView: View {
     if let error = viewModel.errorMessage, !error.isEmpty {
       Text(error)
         .font(.caption)
-        .foregroundStyle(.red)
+        .foregroundStyle(AppTheme.Colors.danger)
     }
 
     if viewModel.isIBKRConnected {
@@ -168,8 +168,8 @@ struct IntegrationsView: View {
       .font(.caption2.weight(.semibold))
       .padding(.horizontal, 8)
       .padding(.vertical, 3)
-      .background(connected ? Color.green.opacity(0.15) : Color.secondary.opacity(0.15))
-      .foregroundStyle(connected ? Color.green : Color.secondary)
+      .background(connected ? AppTheme.Colors.gain.opacity(0.15) : Color.secondary.opacity(0.15))
+      .foregroundStyle(connected ? AppTheme.Colors.gain : Color.secondary)
       .clipShape(Capsule())
   }
 

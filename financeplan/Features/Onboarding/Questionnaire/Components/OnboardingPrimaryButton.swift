@@ -15,7 +15,7 @@ struct OnboardingPrimaryButton: View {
     Button(action: action) {
       HStack(spacing: 8) {
         if isLoading {
-          ProgressView().tint(.white)
+          ProgressView().tint(AppTheme.Colors.onTint)
         }
 
         Text(title)
@@ -32,10 +32,6 @@ struct OnboardingPrimaryButton: View {
       .background(
         Capsule()
           .fill(AppTheme.Colors.tint(for: colorScheme))
-      )
-      .shadow(
-        color: AppTheme.Colors.tint(for: colorScheme).opacity(0.25),
-        radius: 8, x: 0, y: 4
       )
     }
     .buttonStyle(PressableStyle())

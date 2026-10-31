@@ -102,7 +102,7 @@ struct CryptoBubblesView: View {
         )
         let isUp = shade >= 0
         let magnitude = abs(shade)
-        let base: Color = isUp ? .green : .red
+        let base: Color = isUp ? AppTheme.Colors.gain : AppTheme.Colors.loss
         let fill = base.opacity(0.25 + 0.45 * magnitude)
         let stroke = base.opacity(0.9)
 

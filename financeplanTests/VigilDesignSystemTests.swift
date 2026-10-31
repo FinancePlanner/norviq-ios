@@ -65,49 +65,45 @@ final class VigilDesignSystemTests: XCTestCase {
 
   // MARK: - Asset catalog
 
-  func testAccentColorUsesVigilAnchorsNotDeprecatedGold() async throws {
+  func testAccentColorUsesPrecisionGoldNotVigilCyan() async throws {
     await Task.yield()
     let json = try source("financeplan/Assets.xcassets/AccentColor.colorset/Contents.json")
+      .replacingOccurrences(of: " ", with: "")
 
-    // Asset catalogs are static and cannot brand-switch, so this is a one-value
-    // decision. It is set to the Vigil contrast anchors because Vigil is the
-    // default brand: #0891B2 light, #00F2FF dark (docs/vigil-identity.md).
+    // Asset catalogs cannot brand-switch, so this is a one-value decision: the
+    // Precision gold, deep #80612A light and Champagne #D8B477 dark
+    // (docs/precision-identity.md).
     //
     // It matters despite no Swift code reading it: UIKit and the system use the
     // catalog accent where SwiftUI's .tint cannot reach — LaunchScreen,
     // share sheets, SFSafariViewController — via
     // ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME.
-    XCTAssertFalse(
-      json.contains("\"red\" : \"0x8F\""),
-      "AccentColor light must not be the deprecated gold #8F5E1C."
-    )
-    XCTAssertFalse(
-      json.contains("\"red\" : \"0xE8\""),
-      "AccentColor dark must not be the deprecated gold #E8A33D."
-    )
-    XCTAssertTrue(json.contains("\"blue\" : \"0xB2\""), "expected Vigil light anchor #0891B2")
-    XCTAssertTrue(json.contains("\"green\" : \"0xF2\""), "expected Vigil dark anchor #00F2FF")
+    XCTAssertFalse(json.contains("\"green\":\"0xF2\""), "AccentColor dark must not be the retired Vigil cyan #00F2FF.")
+    XCTAssertTrue(json.contains("\"red\":\"0x80\""), "expected Precision light gold #80612A")
+    XCTAssertTrue(json.contains("\"red\":\"0xD8\""), "expected Precision dark gold #D8B477")
   }
 
-  /// Every colour the app actually renders now comes from `Assets.xcassets/Theme`,
-  /// not from `AccentColor` — so until this existed, `docs/vigil-identity.md`'s
-  /// "web and iOS both derive from this file, do not fork values" was unenforced
-  /// on the values that ship.
+  /// Every colour the app actually renders comes from `Assets.xcassets/Theme`,
+  /// not from `AccentColor`, so this is what keeps
+  /// `docs/precision-identity.md`'s "do not fork values" true on the values
+  /// that ship.
   ///
-  /// Hex is taken verbatim from that file's palette table.
+  /// Hex is taken verbatim from that file's palette tables.
   func testThemeColorsetsMatchTheSharedBrandSpec() async throws {
     await Task.yield()
     let expected: [String: (light: String, dark: String)] = [
-      "VigilTint": (light: "0x08,0x91,0xB2", dark: "0x00,0xF2,0xFF"),
-      "VigilSecondaryTint": (light: "0x0D,0x94,0x88", dark: "0x00,0xFF,0x94"),
-      "VigilPageBackground": (light: "0xEE,0xF6,0xF8", dark: "0x05,0x05,0x05"),
-      "VigilCardBackground": (light: "0xF7,0xFC,0xFD", dark: "0x0A,0x11,0x16"),
-      "VigilElevatedCard": (light: "0xE2,0xEE,0xF2", dark: "0x0F,0x1A,0x21"),
-      "VigilForeground": (light: "0x0B,0x1C,0x22", dark: "0xD7,0xF6,0xFA"),
-      // The `border` token. This is deliberately NOT the accent tint: it used to
-      // be #00F2FF at 18% opacity, which put neon cyan on the outline of every
-      // surface in the app.
-      "VigilSeparator": (light: "0xC5,0xDB,0xE2", dark: "0x14,0x30,0x3A"),
+      "VigilTint": (light: "0x80,0x61,0x2A", dark: "0xD8,0xB4,0x77"),
+      // Gold, not green: green means a gain and nothing else.
+      "VigilSecondaryTint": (light: "0xA0,0x7C,0x3E", dark: "0xF0,0xCA,0x8A"),
+      "VigilPageBackground": (light: "0xF7,0xF4,0xEE", dark: "0x0A,0x10,0x1A"),
+      "VigilCardBackground": (light: "0xFF,0xFF,0xFF", dark: "0x11,0x1B,0x2B"),
+      "VigilElevatedCard": (light: "0xEF,0xEB,0xE3", dark: "0x1B,0x29,0x40"),
+      "VigilForeground": (light: "0x11,0x1B,0x2B", dark: "0xE9,0xE9,0xE5"),
+      // The `border` token: a hairline, deliberately not the accent tint.
+      "VigilSeparator": (light: "0xE2,0xDC,0xD0", dark: "0x34,0x42,0x58"),
+      // Financial direction, separate from brand.
+      "VigilGain": (light: "0x1B,0x6E,0x51", dark: "0x42,0xB8,0x94"),
+      "VigilLoss": (light: "0xAB,0x36,0x40", dark: "0xE1,0x6D,0x75"),
     ]
 
     for (name, hex) in expected {
@@ -118,16 +114,16 @@ final class VigilDesignSystemTests: XCTestCase {
         for (channel, component) in zip(["red", "green", "blue"], parts) {
           XCTAssertTrue(
             json.contains("\"\(channel)\":\"\(component)\""),
-            "\(name) \(label) must keep its docs/vigil-identity.md value; expected \(channel) \(component)."
+            "\(name) \(label) must keep its docs/precision-identity.md value; expected \(channel) \(component)."
           )
         }
       }
     }
   }
 
-  /// The tint is bright enough that white on it fails contrast badly — 1.39:1 in
-  /// dark. `OnTint` is what stops that, so it must stay dark-on-light-tint and
-  /// light-on-dark-tint, i.e. inverted relative to every other colorset here.
+  /// White on the dark-mode Champagne gold is 1.96:1. `OnTint` is what stops
+  /// that: white on the deep light-mode gold (5.7:1), Obsidian on the bright
+  /// dark-mode gold (9.7:1).
   func testOnTintInvertsSoLabelsStayReadableOnTheAccent() async throws {
     await Task.yield()
     let json = try source("financeplan/Assets.xcassets/Theme/OnTint.colorset/Contents.json")
@@ -139,34 +135,38 @@ final class VigilDesignSystemTests: XCTestCase {
     let light = String(json[..<darkRange.lowerBound])
     let dark = String(json[darkRange.lowerBound...])
 
-    XCTAssertTrue(light.contains("\"red\":\"0xFB\""), "OnTint light must be near-white for the darker light tint.")
-    XCTAssertTrue(dark.contains("\"red\":\"0x05\""), "OnTint dark must be near-black — white on #00F2FF is 1.39:1.")
+    XCTAssertTrue(light.contains("\"red\":\"0xFF\""), "OnTint light must be white on the deep light-mode gold.")
+    XCTAssertTrue(dark.contains("\"red\":\"0x0A\""), "OnTint dark must be Obsidian — white on #D8B477 is 1.96:1.")
   }
 
-  func testSplashUsesNorviqWordmarkNotTheMascot() async throws {
+  func testSplashUsesNorviqLockupAndTaglineNotTheMascot() async throws {
     await Task.yield()
     let splash = try source("financeplan/Features/Launch/SplashScreen.swift")
     let logo = try source("financeplan/Features/Auth/NorviqaLogo.swift")
 
     XCTAssertTrue(
       splash.contains("NorviqFullLogo"),
-      "The load screen must show the Norviq wordmark from Assets."
+      "The load screen must show the Norviq lockup from Assets."
     )
     XCTAssertTrue(
-      splash.contains("Your wealth, wisely managed"),
-      "The load screen tagline is the original Norviq line, not Vigil copy."
+      splash.contains("Discipline creates freedom."),
+      "The load screen tagline is the Precision line, set as live text."
     )
     XCTAssertFalse(
       splash.contains("Vig"),
-      "Vig is content art. The load screen carries the Norviq wordmark alone."
+      "Vig is content art. The load screen carries the Norviq lockup alone."
     )
     XCTAssertFalse(
       splash.contains("The vigil begins."),
-      "Vigil tagline must not replace the Norviq load-screen line."
+      "Vigil copy is retired."
+    )
+    XCTAssertFalse(
+      splash.contains("RadialGradient") || splash.contains(".shadow("),
+      "The Precision splash has no glow."
     )
     XCTAssertTrue(
       logo.contains("Image(\"NorviqIcon\")"),
-      "NorviqLogo is the N mark, not the mascot."
+      "NorviqLogo is the ring-and-star mark, not the mascot."
     )
     XCTAssertFalse(
       logo.contains("Vig"),

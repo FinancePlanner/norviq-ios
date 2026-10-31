@@ -94,7 +94,7 @@ struct PolicyWatchScreen: View {
         "Distance to target: \(response.distanceToTarget > 0 ? "+" : "")\(String(format: "%.2f", response.distanceToTarget))pp"
       )
       .font(.caption)
-      .foregroundStyle(response.distanceToTarget > 0 ? .red : .green)
+      .foregroundStyle(response.distanceToTarget > 0 ? AppTheme.Colors.loss : AppTheme.Colors.gain)
 
       if let notes = response.notes {
         Text(notes)
@@ -133,7 +133,7 @@ struct PolicyWatchScreen: View {
             Spacer()
             Text("\(spread > 0 ? "+" : "")\(String(format: "%.2f", spread))pp")
               .font(.callout.weight(.semibold).monospacedDigit())
-              .foregroundStyle(spread < 0 ? .red : .primary)
+              .foregroundStyle(spread < 0 ? AppTheme.Colors.loss : .primary)
           }
         }
       }
@@ -179,8 +179,8 @@ struct PolicyWatchScreen: View {
   private func stanceBadge(_ stance: String) -> some View {
     let color: Color = {
       switch stance.lowercased() {
-      case "restrictive": return .red
-      case "accommodative": return .green
+      case "restrictive": return AppTheme.Colors.danger
+      case "accommodative": return AppTheme.Colors.success
       default: return .orange
       }
     }()

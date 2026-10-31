@@ -107,8 +107,6 @@ require_grep() {
 
 require_dims "$SRC/icon.png" 1254 1254
 require_dims "$SRC/icon_dark.png" 1254 1254
-require_dims "$SRC/full_logo.png" 2172 724
-require_dims "$SRC/full_logo_dark.png" 2172 724
 
 require_dims "$ASSETS/AppIcon.appiconset/nordiq-light-mode.png" 1024 1024
 require_dims "$ASSETS/AppIcon.appiconset/nordiq-dark-mode.png" 1024 1024
@@ -118,8 +116,9 @@ require_grep "$ASSETS/AppIcon.appiconset/Contents.json" '"value" : "tinted"'
 require_max_bytes "$ASSETS/AppIcon.appiconset/nordiq-light-mode.png" 100000
 require_max_bytes "$ASSETS/AppIcon.appiconset/nordiq-dark-mode.png" 100000
 
-require_dims "$ASSETS/NorviqIcon.imageset/norviq-icon-light.png" 512 512
-require_dims "$ASSETS/NorviqIcon.imageset/norviq-icon-dark.png" 512 512
+# Precision raster crops at native size (docs/precision-identity.md).
+require_dims "$ASSETS/NorviqIcon.imageset/norviq-icon-light.png" 313 367
+require_dims "$ASSETS/NorviqIcon.imageset/norviq-icon-dark.png" 313 367
 require_grep "$ASSETS/NorviqIcon.imageset/Contents.json" '"value" : "dark"'
 require_alpha "$ASSETS/NorviqIcon.imageset/norviq-icon-light.png"
 require_alpha "$ASSETS/NorviqIcon.imageset/norviq-icon-dark.png"
@@ -128,14 +127,16 @@ require_transparent_corners "$ASSETS/NorviqIcon.imageset/norviq-icon-dark.png"
 require_max_bytes "$ASSETS/NorviqIcon.imageset/norviq-icon-light.png" 180000
 require_max_bytes "$ASSETS/NorviqIcon.imageset/norviq-icon-dark.png" 180000
 
-require_dims "$ASSETS/NorviqFullLogo.imageset/norviq-full-logo-light.png" 1086 362
-require_dims "$ASSETS/NorviqFullLogo.imageset/norviq-full-logo-dark.png" 1086 362
+require_dims "$ASSETS/NorviqFullLogo.imageset/norviq-full-logo-light.png" 805 367
+require_dims "$ASSETS/NorviqFullLogo.imageset/norviq-full-logo-dark.png" 805 367
 require_grep "$ASSETS/NorviqFullLogo.imageset/Contents.json" '"value" : "dark"'
 require_alpha "$ASSETS/NorviqFullLogo.imageset/norviq-full-logo-light.png"
 require_alpha "$ASSETS/NorviqFullLogo.imageset/norviq-full-logo-dark.png"
 require_transparent_corners "$ASSETS/NorviqFullLogo.imageset/norviq-full-logo-light.png"
 require_transparent_corners "$ASSETS/NorviqFullLogo.imageset/norviq-full-logo-dark.png"
-require_max_bytes "$ASSETS/NorviqFullLogo.imageset/norviq-full-logo-light.png" 220000
-require_max_bytes "$ASSETS/NorviqFullLogo.imageset/norviq-full-logo-dark.png" 220000
+# 240 KB, not 220: the Precision lockup carries a baked-in glow that palette
+# quantisation bands visibly, so it ships as lossless full-colour PNG.
+require_max_bytes "$ASSETS/NorviqFullLogo.imageset/norviq-full-logo-light.png" 240000
+require_max_bytes "$ASSETS/NorviqFullLogo.imageset/norviq-full-logo-dark.png" 240000
 
 echo "iOS brand assets verified."

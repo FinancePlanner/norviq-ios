@@ -47,7 +47,7 @@ struct EconomyIndicatorRow: View {
         if let change = indicator.changeFromPrevious {
           Text(Self.formatChange(change, unit: indicator.unit))
             .font(.caption2)
-            .foregroundStyle(change >= 0 ? Color.red : Color.green)
+            .foregroundStyle(change >= 0 ? AppTheme.Colors.loss : AppTheme.Colors.gain)
         }
       }
     }

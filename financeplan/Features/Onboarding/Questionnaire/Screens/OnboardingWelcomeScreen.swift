@@ -23,12 +23,12 @@ struct OnboardingWelcomeScreen: View {
           .accessibilityHidden(true)
 
         VStack(spacing: 12) {
-          Text("Nothing slips past.")
+          Text("Clarity in Every Position.")
             .typography(.hero, weight: .bold)
             .multilineTextAlignment(.center)
             .padding(.horizontal, 24)
 
-          Text("Norviq keeps the vigil — wealth, spending, and the signals between.")
+          Text("Professional stock planning and portfolio intelligence for disciplined investors.")
             .typography(.label)
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)

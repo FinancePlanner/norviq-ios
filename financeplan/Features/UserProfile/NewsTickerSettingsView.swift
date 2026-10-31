@@ -61,7 +61,7 @@ struct NewsTickerSettingsView: View {
         Text(LocalizedStringKey("Your feeds"))
       } footer: {
         if let feedError {
-          Text(feedError).foregroundStyle(.red)
+          Text(feedError).foregroundStyle(AppTheme.Colors.danger)
         } else {
           Text("\(feeds.count) of \(maxFeeds) used. Norviq finds the feed behind a site address.")
         }
@@ -69,7 +69,7 @@ struct NewsTickerSettingsView: View {
 
       if let error = viewModel.errorMessage {
         Section {
-          Text(error).foregroundStyle(.red)
+          Text(error).foregroundStyle(AppTheme.Colors.danger)
         }
       }
     }

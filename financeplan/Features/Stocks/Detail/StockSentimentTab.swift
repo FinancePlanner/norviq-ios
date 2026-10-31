@@ -195,8 +195,8 @@ private struct SentimentBadge: View {
 
     private var color: Color {
         switch label.lowercased() {
-        case "bullish", "positive": return .green
-        case "bearish", "negative": return .red
+        case "bullish", "positive": return AppTheme.Colors.success
+        case "bearish", "negative": return AppTheme.Colors.danger
         default: return .secondary
         }
     }

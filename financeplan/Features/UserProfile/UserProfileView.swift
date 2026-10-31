@@ -313,7 +313,7 @@ public struct UserProfileView: View {
                 if let message = accountLinkingViewModel.successMessage, !message.isEmpty {
                     Label(message, systemImage: "checkmark.circle.fill")
                         .typography(.caption)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(AppTheme.Colors.success)
                 }
 
                 if let message = accountLinkingViewModel.errorMessage, !message.isEmpty {
@@ -451,7 +451,7 @@ public struct UserProfileView: View {
                         if billingManager.isPro {
                             Text("Pro")
                                 .typography(.caption)
-                                .foregroundStyle(.green)
+                                .foregroundStyle(AppTheme.Colors.success)
                         } else {
                             Text("Free")
                                 .typography(.caption)
@@ -781,7 +781,7 @@ public struct UserProfileView: View {
 
             if account.connected {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(AppTheme.Colors.success)
                     .accessibilityLabel(LocalizedStringKey("Connected"))
             } else {
                 Button {

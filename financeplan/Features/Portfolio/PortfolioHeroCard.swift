@@ -40,7 +40,7 @@ struct PortfolioHeroCard: View {
         }
         .padding(.horizontal, 4)
 
-        InteractiveLineChart(data: chartData, color: .green)
+        InteractiveLineChart(data: chartData, color: AppTheme.Colors.success)
           .frame(minHeight: 160, maxHeight: .infinity)
           .padding(.horizontal, -12)
 

@@ -43,7 +43,7 @@ struct CryptoHoldingRow: View {
                         Text("\(profit >= 0 ? "+" : "")\(profitPercent.formatted(.percent.precision(.fractionLength(2))))")
                     }
                     .font(.caption2.bold())
-                    .foregroundStyle(profit >= 0 ? .green : .red)
+                    .foregroundStyle(profit >= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss)
                 }
             }
         }

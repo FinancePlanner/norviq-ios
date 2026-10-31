@@ -119,10 +119,6 @@ struct OnboardingStepScaffold<TopAccessory: View, Content: View, Footer: View>: 
             Capsule()
               .fill(AppTheme.Colors.tint(for: colorScheme))
           )
-          .shadow(
-            color: AppTheme.Colors.tint(for: colorScheme).opacity(0.25),
-            radius: 8, x: 0, y: 4
-          )
         }
         .accessibilityIdentifier(
           config.primaryActionAccessibilityIdentifier ?? "onboardingPrimaryActionButton")

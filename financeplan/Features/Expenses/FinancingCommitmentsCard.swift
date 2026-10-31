@@ -54,7 +54,7 @@ struct FinancingCommitmentsCard: View {
           ForEach(upcoming) { projection in
             HStack {
               Image(systemName: projection.status == .matched ? "checkmark.circle.fill" : "calendar")
-                .foregroundStyle(projection.status == .matched ? .green : .blue)
+                .foregroundStyle(projection.status == .matched ? AppTheme.Colors.gain : .blue)
               VStack(alignment: .leading) {
                 Text("Payment \(projection.installmentNumber)").font(.subheadline.weight(.semibold))
                 Text(projection.dueDate).font(.caption).foregroundStyle(.secondary)

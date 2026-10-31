@@ -36,7 +36,7 @@ struct CryptoListRow: View {
                     .font(.subheadline.bold())
                 Text("\(asset.changePercentage >= 0 ? "+" : "")\(asset.changePercentage.formatted(.percent.precision(.fractionLength(2))))")
                     .font(.caption)
-                    .foregroundStyle(asset.changePercentage >= 0 ? .green : .red)
+                    .foregroundStyle(asset.changePercentage >= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss)
             }
         }
         .padding(.vertical, 12)

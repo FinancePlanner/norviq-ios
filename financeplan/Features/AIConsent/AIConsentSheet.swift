@@ -39,7 +39,7 @@ struct AIConsentSheet: View {
           if let errorMessage = store.errorMessage {
             Text(errorMessage)
               .font(.footnote)
-              .foregroundStyle(.red)
+              .foregroundStyle(AppTheme.Colors.danger)
           }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

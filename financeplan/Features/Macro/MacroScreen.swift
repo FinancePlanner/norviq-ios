@@ -109,7 +109,7 @@ private struct MacroHeroCard: View {
           if let gap = snapshot.headline.gap {
             Text("vs official \(snapshot.headline.officialValue ?? 0, specifier: "%.1f")%  •  \(gap > 0 ? "+" : "")\(gap, specifier: "%.2f")pp")
               .font(.caption)
-              .foregroundStyle(gap < 0 ? .green : .red)
+              .foregroundStyle(gap < 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss)
           }
         }
       }
@@ -164,8 +164,8 @@ private struct FedWatchCard: View {
 
   private var stanceColor: Color {
     switch fedWatch.stance {
-    case "restrictive": return .red
-    case "accommodative": return .green
+    case "restrictive": return AppTheme.Colors.danger
+    case "accommodative": return AppTheme.Colors.success
     default: return .orange
     }
   }
@@ -190,7 +190,7 @@ private struct FedWatchCard: View {
         title: "Core PCE (target \(String(format: "%.0f", fedWatch.fedTarget))%)",
         value: fedWatch.corePCE.value,
         detail: "\(fedWatch.distanceToTarget > 0 ? "+" : "")\(String(format: "%.2f", fedWatch.distanceToTarget))pp vs target",
-        detailColor: fedWatch.distanceToTarget > 0 ? .red : .green
+        detailColor: fedWatch.distanceToTarget > 0 ? AppTheme.Colors.loss : AppTheme.Colors.gain
       )
       if let trimmed = fedWatch.trimmedMeanCPI {
         indicatorRow(title: trimmed.name, value: trimmed.value)
@@ -260,12 +260,12 @@ private struct MacroTopMoversCard: View {
           if let direction = mover.direction {
             Image(systemName: direction == "down" ? "arrow.down.right" : (direction == "flat" ? "minus" : "arrow.up.right"))
               .font(.caption)
-              .foregroundStyle(direction == "down" ? .green : .red)
+              .foregroundStyle(direction == "down" ? AppTheme.Colors.gain : AppTheme.Colors.loss)
           }
           Text(mover.category)
           Spacer()
           Text("\(mover.changeYoY, specifier: "%+.2f")% YoY")
-            .foregroundStyle(mover.changeYoY >= 0 ? .red : .green)
+            .foregroundStyle(mover.changeYoY >= 0 ? AppTheme.Colors.loss : AppTheme.Colors.gain)
             .fontWeight(.medium)
         }
         .font(.callout)
@@ -306,12 +306,12 @@ private struct MacroItemsCard: View {
             } else if let yoy = item.changeYoY {
               Text("\(yoy, specifier: "%+.1f")% YoY")
                 .font(.callout.weight(.semibold))
-                .foregroundStyle(yoy >= 0 ? .red : .green)
+                .foregroundStyle(yoy >= 0 ? AppTheme.Colors.loss : AppTheme.Colors.gain)
             }
             if item.latestPrice != nil, let yoy = item.changeYoY {
               Text("\(yoy, specifier: "%+.1f")% YoY")
                 .font(.caption2)
-                .foregroundStyle(yoy >= 0 ? .red : .green)
+                .foregroundStyle(yoy >= 0 ? AppTheme.Colors.loss : AppTheme.Colors.gain)
             }
           }
           .frame(maxWidth: .infinity, alignment: .leading)
@@ -369,7 +369,7 @@ private struct MacroComponentsCard: View {
               .foregroundStyle(.tertiary)
           }
           Text("\(component.ourYoY, specifier: "%+.1f")%")
-            .foregroundStyle(component.ourYoY >= 0 ? Color.primary : Color.green)
+            .foregroundStyle(component.ourYoY >= 0 ? Color.primary : AppTheme.Colors.gain)
             .frame(minWidth: 56, alignment: .trailing)
         }
         .font(.callout)

@@ -145,7 +145,7 @@ private struct BudgetCategoryCard: View {
           MetricItem(
             title: "Left",
             value: leftAmount.currency,
-            color: leftAmount >= 0 ? .green : .red
+            color: leftAmount >= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss
           )
         }
       }
@@ -212,7 +212,7 @@ private struct RecordedSpendCard: View {
 
       if activities.isEmpty {
         ContentUnavailableView {
-          Label("The ledger is quiet", systemImage: "wallet.pass")
+          Label("No expenses logged yet", systemImage: "wallet.pass")
         } description: {
           Text("Log your first expense to see where your money goes.")
         } actions: {

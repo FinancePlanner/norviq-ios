@@ -11,10 +11,10 @@ struct MarketSentimentCard: View {
     @State private var counterTask: Task<Void, Never>?
 
     var sentimentColor: Color {
-        if value < 25 { return .red }
+        if value < 25 { return AppTheme.Colors.loss }
         if value < 45 { return .orange }
         if value < 55 { return .yellow }
-        if value < 75 { return .green }
+        if value < 75 { return AppTheme.Colors.gain }
         return .cyan
     }
 
@@ -45,7 +45,7 @@ struct MarketSentimentCard: View {
                     Capsule()
                         .fill(
                             LinearGradient(
-                                colors: [.red, .orange, .yellow, .green, .cyan],
+                                colors: [AppTheme.Colors.danger, .orange, .yellow, AppTheme.Colors.success, .cyan],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )

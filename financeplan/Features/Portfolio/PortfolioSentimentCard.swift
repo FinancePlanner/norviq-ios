@@ -69,12 +69,12 @@ struct PortfolioSentimentCard: View {
                     if let bullish = response.mostBullish {
                         Label("Most bullish: \(bullish.symbol)", systemImage: "arrow.up.right")
                             .font(.caption2)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(AppTheme.Colors.success)
                     }
                     if let bearish = response.mostBearish {
                         Label("Most bearish: \(bearish.symbol)", systemImage: "arrow.down.right")
                             .font(.caption2)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(AppTheme.Colors.danger)
                     }
                 }
             }

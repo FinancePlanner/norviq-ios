@@ -1,18 +1,21 @@
-Norviq explains why your money moved and not just that it moved.
+Clarity in every position.
 
-Track stocks, ETFs, and crypto next to your real spending. AI joins your holdings, market context, and X-informed sentiment into one sentence you can actually use.
+Norviq is stock planning and portfolio intelligence for disciplined investors. See why your holdings moved, plan each position against your own targets, and keep real spending beside your portfolio.
 
 WHY IT MOVED
 • Today's contributors, with price action and market context
 • X-informed sentiment on the names you actually hold
 • Trading pressure: relative volume and insider flow — intensity, not a buy signal
-• A written thesis on each position, so you remember your why when the chart screams
+• A written thesis on each position, so you remember your reasons
+
+PLAN EACH POSITION
+• Terminal position sizing: the shares a target value takes, and how far along you are
+• Targets, scenarios, rebalancing plans, and 10-year projections — you stay in control
+• Allocation, chart builder, DCF, financials, earnings, and research
 
 WEALTH
 • Stocks, ETFs, crypto, watchlists, and net worth in one workspace
-• Allocation, chart builder, DCF, financials, earnings, and research
 • Read-only IBKR connect, plus CSV and spreadsheet import
-• Targets, scenarios, rebalancing plans, and 10-year projections — you stay in control
 
 SPENDING
 • Expenses, budgets, receipt scanning, and read-only bank sync
@@ -26,11 +29,11 @@ INTELLIGENCE
 • Markets heatmap, movers, news, and a country-aware economy hub
 • Telegram connect and cloud sync across devices
 
-BUILT FOR HANDS-ON INVESTORS
+PRIVATE BY DESIGN
 • Privacy controls, export, MFA, and on-device app lock
-• Not a broker. Not financial advice. Intelligence and organization tools only.
+• Not a broker. Not financial advice. Planning and organization tools only.
 
-Stop juggling a broker app, a budget spreadsheet, and market Twitter. Track, understand, and decide with context.
+Discipline creates freedom. Track, understand, and decide with context.
 
 Privacy Policy: https://www.norviq.org/privacy
 Terms of Use: https://www.norviq.org/terms

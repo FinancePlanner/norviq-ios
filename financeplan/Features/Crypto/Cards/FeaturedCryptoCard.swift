@@ -27,7 +27,7 @@ struct FeaturedCryptoCard: View {
     }
 
     private var isPositive: Bool { asset.change >= 0 }
-    private var accentColor: Color { isPositive ? .green : .red }
+    private var accentColor: Color { isPositive ? AppTheme.Colors.gain : AppTheme.Colors.loss }
 
     var body: some View {
         GlassCard(cornerRadius: 20) {

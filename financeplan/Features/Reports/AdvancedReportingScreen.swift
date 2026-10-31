@@ -92,7 +92,7 @@ struct AdvancedReportingScreen: View {
               }
             }
             if let failure = run.failureReason {
-              Text(failure).font(.footnote).foregroundStyle(.red)
+              Text(failure).font(.footnote).foregroundStyle(AppTheme.Colors.danger)
             }
           }
           .padding(.vertical, 4)

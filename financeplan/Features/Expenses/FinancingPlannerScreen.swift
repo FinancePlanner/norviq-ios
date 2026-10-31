@@ -177,10 +177,10 @@ struct FinancingPlannerScreen: View {
         }
 
         if let error = model.errorMessage {
-          Section { Text(error).foregroundStyle(.red) }
+          Section { Text(error).foregroundStyle(AppTheme.Colors.danger) }
         }
         if model.didSave {
-          Section { Label("Plan saved. Its installments will appear in future Expenses months.", systemImage: "checkmark.circle.fill").foregroundStyle(.green) }
+          Section { Label("Plan saved. Its installments will appear in future Expenses months.", systemImage: "checkmark.circle.fill").foregroundStyle(AppTheme.Colors.success) }
         }
         }
       }

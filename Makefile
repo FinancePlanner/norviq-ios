@@ -5,7 +5,7 @@ IOS_BUILD_DESTINATION ?= generic/platform=iOS Simulator
 # does not break on every Xcode update or on a machine with a different one.
 IOS_TEST_DESTINATION ?= platform=iOS Simulator,name=iPhone 17
 
-.PHONY: help sync-brand-assets verify-brand-assets ios-build ios-test ios-ui-test
+.PHONY: help sync-brand-assets verify-brand-assets check-pnl-colors ios-build ios-test ios-ui-test
 
 help:
 	@printf "Targets:\n"
@@ -14,6 +14,7 @@ help:
 	@printf "  make ios-ui-test Run UI tests through the shared scheme\n"
 	@printf "  make sync-brand-assets   Regenerate iOS brand assets from StockPlanAssets\n"
 	@printf "  make verify-brand-assets Verify generated iOS brand asset dimensions\n"
+	@printf "  make check-pnl-colors    Fail on raw .green/.red (use AppTheme gain/loss)\n"
 
 sync-brand-assets:
 	bash scripts/sync-brand-assets.sh
@@ -21,10 +22,13 @@ sync-brand-assets:
 verify-brand-assets:
 	bash scripts/verify-brand-assets.sh
 
-ios-build:
+check-pnl-colors:
+	bash scripts/check-raw-pnl-colors.sh
+
+ios-build: check-pnl-colors
 	xcodebuild -project "$(IOS_PROJECT)" -scheme "$(IOS_SCHEME)" -destination "$(IOS_BUILD_DESTINATION)" build
 
-ios-test:
+ios-test: check-pnl-colors
 	xcodebuild -project "$(IOS_PROJECT)" -scheme "$(IOS_SCHEME)" -destination "$(IOS_TEST_DESTINATION)" -only-testing:financeplanTests test
 
 ios-ui-test:

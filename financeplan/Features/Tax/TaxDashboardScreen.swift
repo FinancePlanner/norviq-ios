@@ -202,7 +202,7 @@ struct TaxDashboardScreen: View {
           systemName: model.profileContext?.profile?.isComplete == true ? "checkmark.seal.fill" : "person.text.rectangle"
         )
         .font(.title2)
-        .foregroundStyle(model.profileContext?.profile?.isComplete == true ? .green : .orange)
+        .foregroundStyle(model.profileContext?.profile?.isComplete == true ? AppTheme.Colors.gain : .orange)
         VStack(alignment: .leading, spacing: 3) {
           Text(model.profileContext?.profile?.isComplete == true ? "Tax profile complete" : "Complete your tax profile")
             .font(.headline)
@@ -350,7 +350,7 @@ struct TaxDashboardScreen: View {
           Button { selectedOpportunity = item } label: {
             HStack(spacing: 14) {
               Image(systemName: item.status == .actionable ? "leaf.fill" : "exclamationmark.shield")
-                .foregroundStyle(item.status == .actionable ? .green : .orange)
+                .foregroundStyle(item.status == .actionable ? AppTheme.Colors.gain : .orange)
               VStack(alignment: .leading, spacing: 4) {
                 Text(item.symbol).font(.headline).foregroundStyle(.primary)
                 Text("Loss \(money(item.unrealizedLoss)) · Benefit \(money(item.estimatedTaxBenefit))")

@@ -381,7 +381,7 @@ struct SpreadsheetImportSummaryView: View {
       Spacer()
       Image(systemName: "checkmark.circle.fill")
         .font(.system(size: 48))
-        .foregroundStyle(.green)
+        .foregroundStyle(AppTheme.Colors.success)
       if let result = viewModel.commitResult {
         Text("\(result.imported) expenses imported")
           .font(.title3.weight(.semibold))

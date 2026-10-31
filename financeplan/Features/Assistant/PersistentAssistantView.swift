@@ -163,7 +163,7 @@ struct PersistentAssistantView: View {
 
     private var idleState: some View {
         VStack(spacing: 12) {
-            Text("Ask Q. Nothing slips past.")
+            Text("Ask Q about your positions.")
                 .font(.headline)
                 .multilineTextAlignment(.center)
             Text("Add an expense, review your spending, or look up a stock.")
@@ -284,7 +284,7 @@ struct PersistentAssistantView: View {
                 Text("AI data sharing")
             } footer: {
                 if let error = aiConsent.errorMessage {
-                    Text(error).foregroundStyle(.red)
+                    Text(error).foregroundStyle(AppTheme.Colors.danger)
                 } else if !aiConsent.isConsented {
                     Text("Off: Q, AI summaries, insights, receipt-photo and screenshot reading stay disabled.")
                 }

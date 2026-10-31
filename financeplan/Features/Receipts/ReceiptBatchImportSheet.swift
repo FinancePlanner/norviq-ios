@@ -31,7 +31,7 @@ struct ReceiptBatchImportSheet: View {
           }
         }
         if let message = viewModel.errorMessage {
-          Section { Text(message).foregroundStyle(.red) }
+          Section { Text(message).foregroundStyle(AppTheme.Colors.danger) }
         }
         if !viewModel.warnings.isEmpty {
           Section("Notes") {
@@ -161,7 +161,7 @@ struct ReceiptBatchImportSheet: View {
   private var committedSection: some View {
     Section {
       Label(viewModel.commitSummary, systemImage: "checkmark.circle")
-        .foregroundStyle(.green)
+        .foregroundStyle(AppTheme.Colors.success)
       Button("Done") { dismiss() }
     }
   }

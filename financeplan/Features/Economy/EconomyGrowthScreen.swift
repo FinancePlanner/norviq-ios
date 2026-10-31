@@ -92,13 +92,13 @@ struct EconomyGrowthScreen: View {
           systemImage: official ? "exclamationmark.triangle.fill" : "checkmark.seal"
         )
         .font(.caption.weight(.semibold))
-        .foregroundStyle(official ? .red : .green)
+        .foregroundStyle(official ? AppTheme.Colors.loss : AppTheme.Colors.gain)
       }
 
       if let spread = response.yieldCurveSpread {
         Text("Yield curve (10Y–2Y): \(spread > 0 ? "+" : "")\(String(format: "%.2f", spread))pp")
           .font(.callout)
-          .foregroundStyle(spread < 0 ? .red : .secondary)
+          .foregroundStyle(spread < 0 ? AppTheme.Colors.loss : .secondary)
       }
 
       if let notes = response.notes {
@@ -143,9 +143,9 @@ struct EconomyGrowthScreen: View {
   private func riskBadge(_ label: String) -> some View {
     let color: Color = {
       switch label.lowercased() {
-      case "elevated": return .red
+      case "elevated": return AppTheme.Colors.danger
       case "watch": return .orange
-      case "low": return .green
+      case "low": return AppTheme.Colors.success
       default: return .secondary
       }
     }()

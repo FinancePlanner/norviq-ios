@@ -46,7 +46,7 @@ struct SubscriptionSettingsView: View {
                     systemImage: billingManager.isCancelledButActive ? "calendar.badge.clock" : "checkmark.seal.fill"
                 )
                 .font(.title2).fontWeight(.bold)
-                .foregroundStyle(billingManager.isCancelledButActive ? AppTheme.Colors.tint(for: scheme) : .green)
+                .foregroundStyle(billingManager.isCancelledButActive ? AppTheme.Colors.tint(for: scheme) : AppTheme.Colors.gain)
                 .multilineTextAlignment(.center)
                 .accessibilityIdentifier("subscription.status.pro")
 

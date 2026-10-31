@@ -113,11 +113,11 @@ struct SmartSuggestionsCard: View {
   private func severityColor(_ severity: ReportSuggestionSeverity) -> Color {
     switch severity {
     case .high:
-      return .red
+      return AppTheme.Colors.danger
     case .medium:
       return .orange
     case .low:
-      return .green
+      return AppTheme.Colors.success
     }
   }
 }
@@ -184,7 +184,7 @@ struct ExpensesByCategoryCard: View {
 
         if activities.isEmpty {
           ContentUnavailableView {
-            Label("The ledger is quiet", systemImage: "cart")
+            Label("No expenses logged yet", systemImage: "cart")
           } description: {
             Text("Log your first expense. Your spending summary appears here.")
           }

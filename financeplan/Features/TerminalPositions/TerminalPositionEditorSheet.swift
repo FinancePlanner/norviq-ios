@@ -60,7 +60,7 @@ struct TerminalNumberInputField: View {
       if let problem {
         Text(problem)
           .font(.caption)
-          .foregroundStyle(.red)
+          .foregroundStyle(AppTheme.Colors.danger)
       }
     }
   }
@@ -120,7 +120,7 @@ struct TerminalPositionEditorSheet: View {
           TextField("Why this scenario?", text: $model.inputs.notes, axis: .vertical)
             .lineLimit(2...6)
           if let problem = model.notesProblem {
-            Text(problem).font(.caption).foregroundStyle(.red)
+            Text(problem).font(.caption).foregroundStyle(AppTheme.Colors.danger)
           }
         }
       }
@@ -369,7 +369,7 @@ struct TerminalPositionEditorSheet: View {
   private func problemText(_ text: String) -> some View {
     Text(text)
       .font(.caption)
-      .foregroundStyle(.red)
+      .foregroundStyle(AppTheme.Colors.danger)
   }
 
   private func save() async {

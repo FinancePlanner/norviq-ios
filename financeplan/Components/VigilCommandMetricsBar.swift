@@ -72,7 +72,6 @@ struct VigilCommandMetricsBar: View {
       Circle()
         .fill(AppTheme.Colors.secondaryTint(for: colorScheme))
         .frame(width: 6, height: 6)
-        .shadow(color: AppTheme.Colors.secondaryTint(for: colorScheme).opacity(0.8), radius: 4)
       Text(agenticLabel)
         .font(.caption2.weight(.bold).monospaced())
         .tracking(0.8)

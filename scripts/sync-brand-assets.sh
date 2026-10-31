@@ -7,20 +7,27 @@ ASSETS="$ROOT/financeplan/Assets.xcassets"
 APPICON="$ASSETS/AppIcon.appiconset"
 ICON_SET="$ASSETS/NorviqIcon.imageset"
 FULL_LOGO_SET="$ASSETS/NorviqFullLogo.imageset"
-DERIVE="$ROOT/scripts/derive-transparent-brand-asset.py"
+PRECISION="$SRC/precision/derived"
 OPTIMIZE_OPAQUE="$ROOT/scripts/optimize-opaque-png.py"
 
-for file in icon.png icon_dark.png full_logo.png full_logo_dark.png; do
+# The AppIcon stays on the old N until the Precision vector master exists
+# (docs/precision-identity.md, outstanding assets), so it still reads icon*.png.
+for file in icon.png icon_dark.png; do
   if [[ ! -f "$SRC/$file" ]]; then
     echo "missing canonical asset: $SRC/$file" >&2
     exit 1
   fi
 done
 
-if [[ ! -f "$DERIVE" ]]; then
-  echo "missing transparent asset helper: $DERIVE" >&2
-  exit 1
-fi
+# The in-app symbol and lockup are the Precision raster crops, produced by
+# norviq-web-v2/scripts/brand/derive-precision-assets.py. They are copied at
+# native size: resizing would upscale a raster that has no vector master.
+for file in logo-symbol-light.png logo-symbol-dark.png logo-lockup-horizontal-light.png logo-lockup-horizontal-dark.png; do
+  if [[ ! -f "$PRECISION/$file" ]]; then
+    echo "missing Precision asset: $PRECISION/$file (run derive-precision-assets.py)" >&2
+    exit 1
+  fi
+done
 
 if [[ ! -f "$OPTIMIZE_OPAQUE" ]]; then
   echo "missing opaque PNG optimizer: $OPTIMIZE_OPAQUE" >&2
@@ -46,40 +53,14 @@ resize_platform_png() {
   python3 "$OPTIMIZE_OPAQUE" "$output"
 }
 
-optional_source() {
-  local preferred="$1"
-  local fallback="$2"
-  if [[ -f "$SRC/$preferred" ]]; then
-    printf '%s/%s\n' "$SRC" "$preferred"
-  else
-    printf '%s/%s\n' "$SRC" "$fallback"
-  fi
-}
-
-derive_asset() {
-  local mode="$1"
-  local theme="$2"
-  local source="$3"
-  local width="$4"
-  local height="$5"
-  local output="$6"
-  python3 "$DERIVE" \
-    --mode "$mode" \
-    --theme "$theme" \
-    --source "$source" \
-    --width "$width" \
-    --height "$height" \
-    --output "$output"
-}
-
 resize_platform_png "$SRC/icon.png" 1024 1024 "$APPICON/nordiq-light-mode.png"
 resize_platform_png "$SRC/icon_dark.png" 1024 1024 "$APPICON/nordiq-dark-mode.png"
 
-derive_asset icon light "$(optional_source icon_transparent.png full_logo.png)" 512 512 "$ICON_SET/norviq-icon-light.png"
-derive_asset icon dark "$(optional_source icon_dark_transparent.png full_logo_dark.png)" 512 512 "$ICON_SET/norviq-icon-dark.png"
+cp "$PRECISION/logo-symbol-light.png" "$ICON_SET/norviq-icon-light.png"
+cp "$PRECISION/logo-symbol-dark.png" "$ICON_SET/norviq-icon-dark.png"
 
-derive_asset logo light "$(optional_source full_logo_transparent.png full_logo.png)" 1086 362 "$FULL_LOGO_SET/norviq-full-logo-light.png"
-derive_asset logo dark "$(optional_source full_logo_dark_transparent.png full_logo_dark.png)" 1086 362 "$FULL_LOGO_SET/norviq-full-logo-dark.png"
+cp "$PRECISION/logo-lockup-horizontal-light.png" "$FULL_LOGO_SET/norviq-full-logo-light.png"
+cp "$PRECISION/logo-lockup-horizontal-dark.png" "$FULL_LOGO_SET/norviq-full-logo-dark.png"
 
 cat >"$APPICON/Contents.json" <<'JSON'
 {

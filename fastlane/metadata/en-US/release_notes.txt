@@ -1,27 +1,16 @@
-New: Groups
+A new look: Precision
 
-• Create a group around a stock or a topic and chat live with friends
-• Channels, starting with #general
-• Invite friends in the app, or with a link or QR code
-• Type $AAPL in a message to link straight to the stock
-• Groups has its own tab; Friends moved to More
+• A calmer navy-and-gold design, with the new Norviq logo and launch screen
+• Clearer gain and loss colors, kept apart from the brand gold
+• Higher-contrast text in light mode
 
-New: the market brief
+New: Achievements
 
-• Morning brief before the open and a market close recap every weekday, in English and Portuguese
-• Optional alerts when each brief is ready
-• Share a brief as a link or an image to X, Reddit, WhatsApp, Discord and more
+• Earn achievements as you use Norviq, with a celebration when one unlocks
+• See friends' achievements in an activity feed and send congrats
+• Showcase your favorites on your profile, or keep them private with one toggle
 
-New on Boards:
+• Join the Norviq community on Discord from the app
+• Bug fixes
 
-• A daily AI-written market post, every day: a Mag 7 stock, a hot stock, inflation, an ETF or the week in markets, with real figures and a question to discuss
-• Cleaner post rows: tags, author and stats are easier to read
-
-Privacy and security update:
-
-• Clearer privacy policy and terms of use
-• Norviq now asks for your explicit consent before AI features use your data
-• A privacy notice before you link Telegram
-• Bug fixes and security fixes
-
-Norviq is an intelligence and organization tool. Not financial advice.
+Norviq is a planning and organization tool. Not financial advice.
