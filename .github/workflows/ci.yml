@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main ]
 
+# A newer push to the same PR makes the older run moot; main keeps every run.
+concurrency:
+  group: ios-ci-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lint:
     name: SwiftLint
@@ -51,7 +56,15 @@ jobs:
   test:
     name: Build and Test
     runs-on: macos-15
-    
+    env:
+      # One fixed DerivedData and SwiftPM checkout location for every step, so
+      # the app is compiled exactly once (build-for-testing) and each test step
+      # reuses it (test-without-building). Before, the plain build targeted the
+      # generic simulator and every `xcodebuild test` recompiled for the
+      # concrete device: ~18 min build + ~14 min rebuild inside the first test.
+      DERIVED_DATA: ${{ github.workspace }}/build/DerivedData
+      SPM_DIR: ${{ github.workspace }}/build/SourcePackages
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -59,43 +72,27 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
 
-      - name: Cache derived data
+      # Only the SwiftPM checkouts are cached. A cached DerivedData did not
+      # help: checkout gives every source a fresh mtime, so Xcode recompiles
+      # all of it anyway, and restoring 3.5 GB cost more than it saved.
+      - name: Cache SwiftPM checkouts
         uses: actions/cache@v4
         with:
-          path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-xcode-26.3-derived-data-${{ hashFiles('financeplan.xcodeproj/project.xcworkspace/contents.xcworkspacedata') }}
+          path: build/SourcePackages
+          key: ${{ runner.os }}-xcode-26.3-spm-${{ hashFiles('financeplan.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: |
-            ${{ runner.os }}-xcode-26.3-derived-data-
-
-      - name: Cache SwiftPM repositories
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/Library/Caches/org.swift.swiftpm
-            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
-          key: ${{ runner.os }}-xcode-26.3-swiftpm-${{ hashFiles('**/Package.resolved') }}
-          restore-keys: |
-            ${{ runner.os }}-xcode-26.3-swiftpm-
+            ${{ runner.os }}-xcode-26.3-spm-
 
       - name: Resolve Package Dependencies (retry)
         run: |
           set -euo pipefail
           for i in 1 2 3; do
-            xcodebuild -project financeplan.xcodeproj -scheme financeplan -resolvePackageDependencies && break
+            xcodebuild -project financeplan.xcodeproj -scheme financeplan \
+              -clonedSourcePackagesDirPath "$SPM_DIR" \
+              -resolvePackageDependencies && break
             echo "Resolve attempt $i failed; retrying in 20s..."
             sleep 20
           done
-
-      # A generic destination compiles for the simulator SDK without needing a
-      # concrete device, so a build break stays distinguishable from the runner
-      # image having no simulators — which is exactly how they got confused.
-      - name: Build (no tests) to surface all Swift errors
-        run: |
-          xcodebuild build \
-            -project financeplan.xcodeproj \
-            -scheme financeplan \
-            -destination 'generic/platform=iOS Simulator' \
-            -quiet
 
       # Hardcoding 'name=iPhone 16' made this job depend on the exact device
       # list in the macos-15 image. That list changed underneath us: runs went
@@ -121,14 +118,29 @@ jobs:
           echo "Using simulator: $name ($udid)"
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
 
+      # Compiles the app and every test target once, for the simulator the tests
+      # run on. A compile error fails here, before any test step.
+      - name: Build for testing
+        run: |
+          xcodebuild build-for-testing \
+            -project financeplan.xcodeproj \
+            -scheme financeplan \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -clonedSourcePackagesDirPath "$SPM_DIR" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            -quiet
+
       # Gating subset. Deliberately narrow, because the full bundle cannot
       # currently complete on this runner — see the informational step below.
       - name: Run Unit Tests (gating subset)
         run: |
-          xcodebuild test \
+          xcodebuild test-without-building \
             -project financeplan.xcodeproj \
             -scheme financeplan \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -clonedSourcePackagesDirPath "$SPM_DIR" \
             -only-testing:financeplanTests/StockComparisonFormattingTests \
             -only-testing:financeplanTests/StockComparisonSortingTests \
             -only-testing:financeplanTests/TelegramLinkViewModelTests \
@@ -179,23 +191,31 @@ jobs:
       # still crashing, read the crash report inside Logs/Test/*.xcresult — the
       # failure list is a symptom, the abrt is the thing. Once it runs clean,
       # make this step gating and delete the subset above.
+      #
+      # It runs on pushes to main only: it cannot fail a PR, so on PRs it only
+      # added ~9 minutes of wall time.
       - name: Run Unit Tests (full bundle, informational)
+        if: github.event_name == 'push'
         continue-on-error: true
         run: |
-          xcodebuild test \
+          xcodebuild test-without-building \
             -project financeplan.xcodeproj \
             -scheme financeplan \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -clonedSourcePackagesDirPath "$SPM_DIR" \
             -only-testing:financeplanTests \
             -parallel-testing-enabled NO \
             -quiet
 
       - name: Run UI Smoke Tests
         run: |
-          xcodebuild test \
+          xcodebuild test-without-building \
             -project financeplan.xcodeproj \
             -scheme financeplan \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -clonedSourcePackagesDirPath "$SPM_DIR" \
             -only-testing:financeplanUITests/StockDetailTabTests \
             -quiet
 
@@ -204,5 +224,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: |
-            ~/Library/Developer/Xcode/DerivedData/**/Logs/Test/*.xcresult
+          path: build/DerivedData/Logs/Test/*.xcresult
