@@ -574,7 +574,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4.1;
+				MARKETING_VERSION = 1.4.2;
 				NORVIQ_API_ENVIRONMENT = production;
 				OAUTH_CALLBACK_SCHEME = norviqa;
 				PRODUCT_BUNDLE_IDENTIFIER = facorreia.financeplan;
@@ -618,7 +618,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4.1;
+				MARKETING_VERSION = 1.4.2;
 				NORVIQ_API_ENVIRONMENT = production;
 				OAUTH_CALLBACK_SCHEME = norviqa;
 				PRODUCT_BUNDLE_IDENTIFIER = facorreia.financeplan;
@@ -827,7 +827,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4.1;
+				MARKETING_VERSION = 1.4.2;
 				NORVIQ_API_ENVIRONMENT = production;
 				OAUTH_CALLBACK_SCHEME = "norviqa-beta";
 				PRODUCT_BUNDLE_IDENTIFIER = facorreia.financeplan.beta;
