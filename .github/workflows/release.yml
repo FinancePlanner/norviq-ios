@@ -79,6 +79,11 @@ jobs:
       - name: Fastlane beta
         run: bundle exec fastlane beta
         env:
+          # build_app calls `xcodebuild -showBuildSettings` first; on a cold runner
+          # package resolution blows fastlane's 3s base timeout (upload run
+          # 41193245780 failed on it, the re-run passed on the third retry).
+          FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "120"
+          FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "5"
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
@@ -114,6 +119,11 @@ jobs:
       - name: Fastlane ${{ inputs.lane }}
         run: bundle exec fastlane ${{ inputs.lane }} ${{ inputs.version != '' && format('version:{0}', inputs.version) || '' }}
         env:
+          # build_app calls `xcodebuild -showBuildSettings` first; on a cold runner
+          # package resolution blows fastlane's 3s base timeout (upload run
+          # 41193245780 failed on it, the re-run passed on the third retry).
+          FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "120"
+          FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "5"
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
