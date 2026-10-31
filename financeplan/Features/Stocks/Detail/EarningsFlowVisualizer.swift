@@ -259,11 +259,11 @@ private struct EarningsFlowModel {
         self.filingLabel = Self.filingLabel(statement)
         self.eps = statement.eps
         self.revenue = EarningsFlowMetric(title: "Revenue", rawValue: revenueValue, subtitle: nil, tint: .blue, currency: currency)
-        self.grossProfit = EarningsFlowMetric(title: "Gross profit", rawValue: grossProfit, subtitle: margin(grossProfit, revenueValue), tint: .green, currency: currency)
-        self.costOfRevenue = EarningsFlowMetric(title: "Cost of revenue", rawValue: costOfRevenue, subtitle: margin(costOfRevenue, revenueValue), tint: .red, currency: currency)
-        self.operatingIncome = EarningsFlowMetric(title: "Operating income", rawValue: operatingIncome, subtitle: margin(operatingIncome, revenueValue), tint: .green, currency: currency)
-        self.operatingExpenses = EarningsFlowMetric(title: "Operating expenses", rawValue: operatingExpenses, subtitle: margin(operatingExpenses, revenueValue), tint: .red, currency: currency)
-        self.netIncome = EarningsFlowMetric(title: "Net income", rawValue: netIncome, subtitle: margin(netIncome, revenueValue), tint: .green, currency: currency)
+        self.grossProfit = EarningsFlowMetric(title: "Gross profit", rawValue: grossProfit, subtitle: margin(grossProfit, revenueValue), tint: AppTheme.Colors.success, currency: currency)
+        self.costOfRevenue = EarningsFlowMetric(title: "Cost of revenue", rawValue: costOfRevenue, subtitle: margin(costOfRevenue, revenueValue), tint: AppTheme.Colors.danger, currency: currency)
+        self.operatingIncome = EarningsFlowMetric(title: "Operating income", rawValue: operatingIncome, subtitle: margin(operatingIncome, revenueValue), tint: AppTheme.Colors.success, currency: currency)
+        self.operatingExpenses = EarningsFlowMetric(title: "Operating expenses", rawValue: operatingExpenses, subtitle: margin(operatingExpenses, revenueValue), tint: AppTheme.Colors.danger, currency: currency)
+        self.netIncome = EarningsFlowMetric(title: "Net income", rawValue: netIncome, subtitle: margin(netIncome, revenueValue), tint: AppTheme.Colors.success, currency: currency)
         tax = statement.incomeTaxExpense.map {
             EarningsFlowMetric(title: "Tax", rawValue: $0, subtitle: margin($0, revenueValue), tint: .orange, currency: currency)
         }

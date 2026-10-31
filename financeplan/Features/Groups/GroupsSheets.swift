@@ -95,7 +95,7 @@ struct CreateGroupSheet: View {
             : "Anyone on Norviq can find this group and join. Up to 3 new groups a day.")
         }
         if let errorMessage {
-          Section { Text(errorMessage).foregroundStyle(.red) }
+          Section { Text(errorMessage).foregroundStyle(AppTheme.Colors.danger) }
         }
       }
       .navigationTitle("New group")
@@ -234,7 +234,7 @@ struct GroupJoinSheet: View {
           }
         }
         if let errorMessage {
-          Section { Text(errorMessage).foregroundStyle(.red) }
+          Section { Text(errorMessage).foregroundStyle(AppTheme.Colors.danger) }
         }
       }
       .navigationTitle("Join a group")
@@ -356,7 +356,7 @@ struct GroupInviteSheet: View {
           }
         }
         if let errorMessage {
-          Section { Text(errorMessage).foregroundStyle(.red) }
+          Section { Text(errorMessage).foregroundStyle(AppTheme.Colors.danger) }
         }
       }
       .navigationTitle("Invite to \(group.name)")

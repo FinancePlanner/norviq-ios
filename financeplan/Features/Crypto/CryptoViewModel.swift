@@ -151,7 +151,7 @@ final class CryptoViewModel: ObservableObject {
 
     // MARK: - Derived market summary
 
-    private static let dominancePalette: [Color] = [.orange, .blue, .purple, .green, .pink]
+    private static let dominancePalette: [Color] = [.orange, .blue, .purple, .cyan, .pink]
 
     /// Relative market-cap dominance among the fetched major coins (top 5 + "Others").
     static func makeDominance(from quotes: [CryptoQuoteResponse]) -> [DominanceData] {

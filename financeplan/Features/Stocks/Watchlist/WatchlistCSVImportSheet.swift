@@ -98,7 +98,7 @@ struct WatchlistCSVImportSheet: View {
         if let errorMessage = viewModel.errorMessage {
           Section {
             Text(errorMessage)
-              .foregroundStyle(.red)
+              .foregroundStyle(AppTheme.Colors.danger)
           }
         }
       }

@@ -132,14 +132,14 @@ struct SectorGainsScreen: View {
   }
 
   private func pnlColor(_ value: Double) -> Color {
-    if value > 0 { return .green }
-    if value < 0 { return .red }
+    if value > 0 { return AppTheme.Colors.gain }
+    if value < 0 { return AppTheme.Colors.loss }
     return .secondary
   }
 
   private func pnlTint(_ value: Double) -> Color {
-    if value > 0 { return .green.opacity(0.12) }
-    if value < 0 { return .red.opacity(0.12) }
+    if value > 0 { return AppTheme.Colors.gain.opacity(0.12) }
+    if value < 0 { return AppTheme.Colors.loss.opacity(0.12) }
     return .gray.opacity(0.12)
   }
 }

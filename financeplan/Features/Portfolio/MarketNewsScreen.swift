@@ -249,12 +249,12 @@ private struct ThesisWatchStoryCard: View {
 
   private var severityBadge: some View {
     Text(story.severity.rawValue.uppercased())
-      .foregroundStyle(story.severity == .high ? Color.red : Color.secondary)
+      .foregroundStyle(story.severity == .high ? AppTheme.Colors.loss : Color.secondary)
   }
 
   private var impactColor: Color {
     switch story.thesisImpact {
-    case .supports: .green
+    case .supports: AppTheme.Colors.success
     case .challenges: .orange
     default: .accentColor
     }

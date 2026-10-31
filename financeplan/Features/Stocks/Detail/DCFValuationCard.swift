@@ -59,7 +59,7 @@ struct DCFValuationCard: View {
 
     private func dcfBlock(title: String, value: Double) -> some View {
         let isUpside = value > currentPrice
-        let color: Color = isUpside ? .green : .red
+        let color: Color = isUpside ? AppTheme.Colors.gain : AppTheme.Colors.loss
 
         return VStack(alignment: .leading, spacing: 6) {
             Text(title)

@@ -246,7 +246,7 @@ private struct ReportContentView<CardContent: View>: View {
       } else if shouldShowEmptyState {
         EmptyStateView(
           icon: "chart.pie",
-          title: "The ledger is quiet",
+          title: "No expenses logged yet",
           message: "Log your first expense. Reports appear once spending is recorded.",
           usesBrandIcon: true
         )
@@ -342,7 +342,7 @@ private struct CustomizeDashboardSheet: View {
               preferences.resetToDefault()
             }
           }
-          .foregroundStyle(.red)
+          .foregroundStyle(AppTheme.Colors.danger)
         }
       }
       .navigationTitle("Customize Dashboard")
@@ -395,7 +395,7 @@ private struct NetWorthHeroCard: View {
               .foregroundStyle(.secondary)
             Text((stats?.totalUnrealizedPnl ?? 0).formatted(.currency(code: "USD")))
               .font(.headline)
-              .foregroundStyle((stats?.totalUnrealizedPnl ?? 0) >= 0 ? .green : .red)
+              .foregroundStyle((stats?.totalUnrealizedPnl ?? 0) >= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss)
           }
 
           VStack(alignment: .leading, spacing: 4) {
@@ -633,7 +633,7 @@ private struct HouseholdSplitComparisonCard: View {
                   x: .value("Month", summary.shortLabel),
                   y: .value("Partner", summary.partnerActual)
                 )
-                .foregroundStyle(.green.opacity(0.85))
+                .foregroundStyle(AppTheme.Colors.success.opacity(0.85))
                 .position(by: .value("Series", partnerName))
               }
             }
@@ -642,7 +642,7 @@ private struct HouseholdSplitComparisonCard: View {
             HStack(spacing: 20) {
               legend(title: "Total", color: AppTheme.Colors.secondaryTint(for: colorScheme))
               legend(title: "Me", color: AppTheme.Colors.tint(for: colorScheme))
-              legend(title: partnerName, color: .green)
+              legend(title: partnerName, color: AppTheme.Colors.success)
             }
             .font(.caption2.bold())
           }
@@ -759,7 +759,7 @@ private struct AllocationInsightsSection: View {
   private func color(for sector: String, colorScheme: ColorScheme) -> Color {
       switch sector.lowercased() {
       case "technology": return .blue
-      case "finance", "financial Services": return .green
+      case "finance", "financial Services": return AppTheme.Colors.success
       case "energy": return .orange
       case "healthcare": return .purple
       case "consumer cyclical": return .pink
@@ -817,7 +817,7 @@ private struct PerformanceBreakdownCard: View {
                 outerRadius: .ratio(1.0),
                 angularInset: 2
               )
-              .foregroundStyle(.green.gradient)
+              .foregroundStyle(AppTheme.Colors.success.gradient)
 
               SectorMark(
                 angle: .value("Amount", losersValue),
@@ -825,7 +825,7 @@ private struct PerformanceBreakdownCard: View {
                 outerRadius: .ratio(1.0),
                 angularInset: 2
               )
-              .foregroundStyle(.red.gradient)
+              .foregroundStyle(AppTheme.Colors.danger.gradient)
             }
             .frame(minHeight: 180)
             .overlay {
@@ -835,7 +835,7 @@ private struct PerformanceBreakdownCard: View {
                   .foregroundStyle(.secondary)
                 Text((stats?.totalUnrealizedPnl ?? 0).formatted(.currency(code: "USD")))
                   .font(.title3.bold())
-                  .foregroundStyle((stats?.totalUnrealizedPnl ?? 0) >= 0 ? .green : .red)
+                  .foregroundStyle((stats?.totalUnrealizedPnl ?? 0) >= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss)
               }
             }
 
@@ -843,7 +843,7 @@ private struct PerformanceBreakdownCard: View {
               VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
                   Circle()
-                    .fill(.green)
+                    .fill(AppTheme.Colors.success)
                     .frame(width: 8, height: 8)
                   Text("Winners")
                     .font(.subheadline)
@@ -851,7 +851,7 @@ private struct PerformanceBreakdownCard: View {
                 }
                 Text(winnersValue.formatted(.currency(code: "USD")))
                   .font(.headline.bold())
-                  .foregroundStyle(.green)
+                  .foregroundStyle(AppTheme.Colors.success)
                 Text("\(winnersCount) positions")
                   .font(.caption2)
                   .foregroundStyle(.secondary)
@@ -860,7 +860,7 @@ private struct PerformanceBreakdownCard: View {
               VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
                   Circle()
-                    .fill(.red)
+                    .fill(AppTheme.Colors.danger)
                     .frame(width: 8, height: 8)
                   Text("Losers")
                     .font(.subheadline)
@@ -868,7 +868,7 @@ private struct PerformanceBreakdownCard: View {
                 }
                 Text(losersValue.formatted(.currency(code: "USD")))
                   .font(.headline.bold())
-                  .foregroundStyle(.red)
+                  .foregroundStyle(AppTheme.Colors.danger)
                 Text("\(losersCount) positions")
                   .font(.caption2)
                   .foregroundStyle(.secondary)
@@ -922,7 +922,7 @@ private struct BudgetTrackingCard: View {
                 outerRadius: .ratio(1.0),
                 angularInset: 2
               )
-              .foregroundStyle(latest.actual > latest.planned ? Color.red.gradient : AppTheme.Colors.tint(for: colorScheme).gradient)
+              .foregroundStyle(latest.actual > latest.planned ? AppTheme.Colors.loss.gradient : AppTheme.Colors.tint(for: colorScheme).gradient)
 
               if latest.planned > latest.actual {
                 SectorMark(
@@ -945,7 +945,7 @@ private struct BudgetTrackingCard: View {
                 let percentage = latest.planned > 0 ? (latest.actual / latest.planned) * 100 : 0
                 Text("\(Int(percentage))% of budget")
                   .font(.caption2)
-                  .foregroundStyle(latest.actual > latest.planned ? .red : .secondary)
+                  .foregroundStyle(latest.actual > latest.planned ? AppTheme.Colors.loss : .secondary)
               }
             }
 
@@ -964,7 +964,7 @@ private struct BudgetTrackingCard: View {
                   .foregroundStyle(.secondary)
                 Text(latest.actual.formatted(.currency(code: "USD")))
                   .font(.headline.bold())
-                  .foregroundStyle(latest.actual > latest.planned ? .red : .primary)
+                  .foregroundStyle(latest.actual > latest.planned ? AppTheme.Colors.loss : .primary)
               }
 
               VStack(alignment: .leading, spacing: 4) {
@@ -974,7 +974,7 @@ private struct BudgetTrackingCard: View {
                 let remaining = latest.planned - latest.actual
                 Text(remaining.formatted(.currency(code: "USD")))
                   .font(.headline.bold())
-                  .foregroundStyle(remaining >= 0 ? .green : .red)
+                  .foregroundStyle(remaining >= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss)
               }
             }
 
@@ -1044,7 +1044,7 @@ private struct SavingsRateCard: View {
                 outerRadius: .ratio(1.0),
                 angularInset: 2
               )
-              .foregroundStyle(.green.gradient)
+              .foregroundStyle(AppTheme.Colors.success.gradient)
 
               SectorMark(
                 angle: .value("Amount", latest.actual),
@@ -1062,7 +1062,7 @@ private struct SavingsRateCard: View {
                   .foregroundStyle(.secondary)
                 Text("\(Int(savingsRate))%")
                   .font(.largeTitle.bold()).fontDesign(.rounded)
-                  .foregroundStyle(.green)
+                  .foregroundStyle(AppTheme.Colors.success)
               }
             }
 
@@ -1070,7 +1070,7 @@ private struct SavingsRateCard: View {
               HStack {
                 HStack(spacing: 8) {
                   Circle()
-                    .fill(.green)
+                    .fill(AppTheme.Colors.success)
                     .frame(width: 8, height: 8)
                   Text("Saved")
                     .font(.subheadline)
@@ -1080,7 +1080,7 @@ private struct SavingsRateCard: View {
                 VStack(alignment: .trailing, spacing: 2) {
                   Text(savingsAmount.formatted(.currency(code: "USD")))
                     .font(.headline.bold())
-                    .foregroundStyle(.green)
+                    .foregroundStyle(AppTheme.Colors.success)
                   Text("\(Int(savingsRate))% of income")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -1149,22 +1149,22 @@ private struct CashFlowAnalysisCard: View {
                   x: .value("Month", monthLabel(for: point.monthStart)),
                   y: .value("Amount", point.income)
                 )
-                .foregroundStyle(.green.opacity(0.8))
+                .foregroundStyle(AppTheme.Colors.success.opacity(0.8))
                 .position(by: .value("Type", "Income"))
 
                 BarMark(
                   x: .value("Month", monthLabel(for: point.monthStart)),
                   y: .value("Amount", point.expenses)
                 )
-                .foregroundStyle(.red.opacity(0.8))
+                .foregroundStyle(AppTheme.Colors.danger.opacity(0.8))
                 .position(by: .value("Type", "Expenses"))
               }
             }
             .frame(minHeight: 200)
 
             HStack(spacing: 20) {
-              Label("Income", systemImage: "square.fill").foregroundStyle(.green)
-              Label("Expenses", systemImage: "square.fill").foregroundStyle(.red)
+              Label("Income", systemImage: "square.fill").foregroundStyle(AppTheme.Colors.success)
+              Label("Expenses", systemImage: "square.fill").foregroundStyle(AppTheme.Colors.danger)
             }
             .font(.caption2.bold())
           }
@@ -1259,13 +1259,13 @@ private struct PillarDetailSheet: View {
                   Spacer()
                   Text("\(Int(percentage))%")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(percentage > 100 ? .red : .primary)
+                    .foregroundStyle(percentage > 100 ? AppTheme.Colors.loss : .primary)
                 }
                 
                 ProgressBar(
                   value: summary.actualAmount,
                   total: summary.plannedAmount,
-                  color: percentage > 100 ? .red : pillar.color(for: colorScheme),
+                  color: percentage > 100 ? AppTheme.Colors.loss : pillar.color(for: colorScheme),
                   height: 8
                 )
               }
@@ -1324,7 +1324,7 @@ private struct PillarDetailSheet: View {
             GlassCard(cornerRadius: 20) {
               HStack(spacing: 12) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                  .foregroundStyle(.red)
+                  .foregroundStyle(AppTheme.Colors.danger)
                   .font(.title3)
                 
                 VStack(alignment: .leading, spacing: 4) {
@@ -1385,7 +1385,7 @@ private struct QuickStatsCard: View {
               icon: "chart.line.uptrend.xyaxis",
               title: "Savings Rate",
               value: "\(Int(savingsRate))%",
-              color: savingsRate >= 20 ? .green : .orange
+              color: savingsRate >= 20 ? AppTheme.Colors.gain : .orange
             )
             
             Divider()
@@ -1394,7 +1394,7 @@ private struct QuickStatsCard: View {
               icon: "creditcard",
               title: "Budget Used",
               value: "\(Int(budgetUsage))%",
-              color: budgetUsage > 100 ? .red : .blue
+              color: budgetUsage > 100 ? AppTheme.Colors.loss : .blue
             )
           }
           
@@ -1405,7 +1405,7 @@ private struct QuickStatsCard: View {
               icon: "briefcase",
               title: "Portfolio",
               value: (stats?.totalMarketValue ?? 0).compactCurrency(),
-              color: .green
+              color: AppTheme.Colors.success
             )
             
             Divider()
@@ -1465,7 +1465,7 @@ private struct SmartInsightsCard: View {
         result.append(Insight(
           icon: "star.fill",
           text: "Excellent! You're saving \(Int(savingsRate))% of your income",
-          color: .green
+          color: AppTheme.Colors.success
         ))
       } else if savingsRate < 10 && summary.salary > 0 {
         result.append(Insight(
@@ -1480,7 +1480,7 @@ private struct SmartInsightsCard: View {
         result.append(Insight(
           icon: "exclamationmark.circle.fill",
           text: "Over budget by \(overspend.currency)",
-          color: .red
+          color: AppTheme.Colors.danger
         ))
       }
       
@@ -1501,7 +1501,7 @@ private struct SmartInsightsCard: View {
         result.append(Insight(
           icon: "chart.line.uptrend.xyaxis",
           text: "Portfolio up \(Int(pnlPercent))%! Consider rebalancing",
-          color: .green
+          color: AppTheme.Colors.success
         ))
       }
     }

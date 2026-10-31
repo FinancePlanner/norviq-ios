@@ -72,7 +72,7 @@ struct TaxFilingPackSheet: View {
                   .foregroundStyle(.secondary)
               }
               if let message = billingManager.errorMessage, !message.isEmpty {
-                Text(message).font(.footnote).foregroundStyle(.red)
+                Text(message).font(.footnote).foregroundStyle(AppTheme.Colors.danger)
               }
             }
             .padding(.vertical, 6)

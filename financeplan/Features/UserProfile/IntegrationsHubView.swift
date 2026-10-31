@@ -102,7 +102,7 @@ struct IntegrationsHubView: View {
           .vigilOverline()
           .foregroundStyle(AppTheme.Colors.bronze(for: scheme))
       } footer: {
-        Text("Every connection is read-only. The gate holds.")
+        Text("Every connection is read-only.")
       }
       .listRowBackground(rowBackground)
     }

@@ -60,7 +60,7 @@ struct TaxMarketAdmissionSheet: View {
             .padding(.vertical, 4)
           }
         }
-        if let errorMessage { Section { Text(errorMessage).foregroundStyle(.red) } }
+        if let errorMessage { Section { Text(errorMessage).foregroundStyle(AppTheme.Colors.danger) } }
       }
       .navigationTitle("Market admission")
       .navigationBarTitleDisplayMode(.inline)

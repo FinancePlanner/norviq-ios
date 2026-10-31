@@ -26,7 +26,7 @@ struct SentimentHistoryChart: View {
 
     private var lineColor: Color {
         guard let last = points.last else { return .secondary }
-        return last.score >= 0 ? .green : .red
+        return last.score >= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss
     }
 
     var body: some View {

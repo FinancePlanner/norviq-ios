@@ -102,7 +102,7 @@ struct TaxReportsSheet: View {
             .disabled(downloadingReportID != nil || (billingManager.isPro && report.status != "ready"))
           }
         }
-        if let errorMessage { Section { Text(errorMessage).foregroundStyle(.red) } }
+        if let errorMessage { Section { Text(errorMessage).foregroundStyle(AppTheme.Colors.danger) } }
       }
       .navigationTitle("Tax reports")
       .navigationBarTitleDisplayMode(.inline)
@@ -114,7 +114,7 @@ struct TaxReportsSheet: View {
       .sheet(item: $shareItem) { item in
         NavigationStack {
           VStack(spacing: 20) {
-            Image(systemName: "doc.badge.checkmark").font(.system(size: 48)).foregroundStyle(.green)
+            Image(systemName: "doc.badge.checkmark").font(.system(size: 48)).foregroundStyle(AppTheme.Colors.success)
             Text("Report ready").font(.title2.bold())
             Text("Save it to Files, send it to your advisor, or open it in another app.")
               .multilineTextAlignment(.center).foregroundStyle(.secondary)

@@ -183,7 +183,7 @@ struct EarningsTableRow: View {
 
     private var statusColor: Color {
         guard let surprisePercent = resolvedSurprisePercent else { return .secondary }
-        return surprisePercent >= 0 ? .green : .red
+        return surprisePercent >= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss
     }
 
     private var surpriseText: String {

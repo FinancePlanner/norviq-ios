@@ -424,7 +424,7 @@ private struct RebalancingSimulator: View {
               VStack(alignment: .leading, spacing: 7) {
                 HStack {
                   Text(trade.side.rawValue.uppercased()).font(.caption.weight(.bold))
-                    .foregroundStyle(trade.side == .buy ? Color.green : Color.orange)
+                    .foregroundStyle(trade.side == .buy ? AppTheme.Colors.gain : Color.orange)
                   Text(trade.symbol).font(.headline)
                   Spacer()
                   Text(trade.notional, format: .currency(code: trade.currency))
@@ -544,9 +544,9 @@ private func severityIcon(_ severity: RebalancingDriftSeverity) -> String {
 
 private func severityColor(_ severity: RebalancingDriftSeverity) -> Color {
   switch severity {
-  case .balanced: .green
+  case .balanced: AppTheme.Colors.success
   case .warning: .orange
-  case .breached: .red
+  case .breached: AppTheme.Colors.danger
   case .unavailable: .secondary
   }
 }

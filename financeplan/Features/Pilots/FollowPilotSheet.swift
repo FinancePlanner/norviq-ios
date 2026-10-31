@@ -81,7 +81,7 @@ private struct FollowPortfolioTargetSection: View {
         .keyboardType(.decimalPad)
         .accessibilityIdentifier("pilots.follow.capital")
       if let problem = model.formProblem, !model.capitalText.isEmpty {
-        Text(problem).font(.footnote).foregroundStyle(.red)
+        Text(problem).font(.footnote).foregroundStyle(AppTheme.Colors.danger)
       }
     } header: {
       Text("Starting amount")

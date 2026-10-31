@@ -53,13 +53,13 @@ struct MoverCard: View {
                     Spacer()
                     Image(systemName: isPositive ? "chart.line.uptrend.xyaxis" : "chart.line.downtrend.xyaxis")
                         .font(.caption2)
-                        .foregroundStyle(isPositive ? .green : .red)
+                        .foregroundStyle(isPositive ? AppTheme.Colors.gain : AppTheme.Colors.loss)
                 }
 
                 // changePct is in percent points (2.5 = 2.5%), not a fraction.
                 Text(formatCryptoPercent(change, digits: 1))
                     .font(.system(.headline, design: .rounded, weight: .bold))
-                    .foregroundStyle(isPositive ? .green : .red)
+                    .foregroundStyle(isPositive ? AppTheme.Colors.gain : AppTheme.Colors.loss)
 
                 Text(coin.price.formatted(.currency(code: "USD").precision(.significantDigits(2...6))))
                     .font(.caption2)

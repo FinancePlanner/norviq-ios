@@ -279,16 +279,12 @@ struct CSVImportScreen: View {
                   .font(.subheadline.weight(.bold))
               }
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(AppTheme.Colors.onTint)
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
             .background(
               Capsule()
                 .fill(AppTheme.Colors.tint(for: colorScheme))
-            )
-            .shadow(
-              color: AppTheme.Colors.tint(for: colorScheme).opacity(0.25),
-              radius: 8, x: 0, y: 4
             )
           }
           .disabled(!viewModel.canImport)

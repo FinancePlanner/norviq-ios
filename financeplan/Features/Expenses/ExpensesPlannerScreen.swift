@@ -375,7 +375,7 @@ struct ExpensesPlannerScreen: View {
       .font(.caption)
       .foregroundStyle(.white)
       .padding()
-      .background(Color.red)
+      .background(AppTheme.Colors.danger)
       .clipShape(.rect(cornerRadius: 8))
       .padding()
   }
@@ -661,11 +661,11 @@ private struct PillarSummaryCard: View {
 
   private var progressColor: Color {
     if spendingPercentage > 100 {
-      return .red
+      return AppTheme.Colors.danger
     } else if spendingPercentage > 80 {
       return .yellow
     } else {
-      return .green
+      return AppTheme.Colors.success
     }
   }
 
@@ -716,7 +716,7 @@ private struct PillarSummaryCard: View {
           PillarMetricItem(
             title: "Left",
             value: leftAmount.currency,
-            color: leftAmount >= 0 ? .green : .red
+            color: leftAmount >= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss
           )
         }
 
@@ -1177,7 +1177,7 @@ private struct NetSalaryEditorSheet: View {
           if let validationMessage {
             Text(validationMessage)
               .font(.footnote)
-              .foregroundStyle(.red)
+              .foregroundStyle(AppTheme.Colors.danger)
               .accessibilityIdentifier("expenses.salaryValidationMessage")
           }
 

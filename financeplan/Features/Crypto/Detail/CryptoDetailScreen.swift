@@ -87,7 +87,7 @@ struct CryptoDetailScreen: View {
                         .monospacedDigit()
                     Text("\(quote.changePercentage >= 0 ? "+" : "")\(quote.changePercentage.formatted(.number.precision(.fractionLength(2))))%")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(quote.changePercentage >= 0 ? .green : .red)
+                        .foregroundStyle(quote.changePercentage >= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss)
                 }
             } else if viewModel.isLoadingQuote {
                 ProgressView()

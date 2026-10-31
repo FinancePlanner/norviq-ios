@@ -143,8 +143,8 @@ struct GroupChatView: View {
         .padding(.vertical, 12)
     case .newMessages:
       HStack(spacing: 8) {
-        Rectangle().fill(Color.red).frame(height: 1)
-        Text("New messages").font(.caption2.weight(.bold)).foregroundStyle(.red)
+        Rectangle().fill(AppTheme.Colors.danger).frame(height: 1)
+        Text("New messages").font(.caption2.weight(.bold)).foregroundStyle(AppTheme.Colors.danger)
       }
       .padding(.vertical, 6)
       .accessibilityElement(children: .combine)
@@ -303,7 +303,7 @@ struct GroupMessageRow: View {
       if case .failed = message.state {
         Label("Not sent. Tap to try again.", systemImage: "exclamationmark.circle")
           .font(.caption)
-          .foregroundStyle(.red)
+          .foregroundStyle(AppTheme.Colors.danger)
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)

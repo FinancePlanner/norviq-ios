@@ -131,7 +131,7 @@ struct GroupPreviewSheet: View {
           Text("Messages in public groups can be read by anyone who joins. Notifications start off; turn them on in the group's info.")
         }
         if let errorMessage {
-          Section { Text(errorMessage).foregroundStyle(.red) }
+          Section { Text(errorMessage).foregroundStyle(AppTheme.Colors.danger) }
         }
       }
       .navigationTitle("Group")

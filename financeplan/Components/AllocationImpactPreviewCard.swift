@@ -8,7 +8,7 @@ struct AllocationImpactPreviewCard: View {
       HStack(spacing: 12) {
         Image(systemName: impact.afterPercentage >= impact.beforePercentage ? "arrow.up.forward" : "arrow.down.forward")
           .font(.headline.weight(.semibold))
-          .foregroundStyle(impact.afterPercentage >= impact.beforePercentage ? .green : .orange)
+          .foregroundStyle(impact.afterPercentage >= impact.beforePercentage ? AppTheme.Colors.gain : .orange)
           .frame(width: 28)
 
         VStack(alignment: .leading, spacing: 4) {

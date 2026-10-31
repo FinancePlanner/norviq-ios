@@ -81,7 +81,7 @@ struct OnboardingDemoBuildScreen: View {
     }()
     return Text(label)
       .typography(.caption, weight: .bold)
-      .foregroundStyle(.white)
+      .foregroundStyle(AppTheme.Colors.onTint)
       .padding(.horizontal, 14)
       .padding(.vertical, 6)
       .background(Capsule().fill(AppTheme.Colors.tint(for: colorScheme)))
@@ -155,7 +155,6 @@ struct OnboardingDemoBuildScreen: View {
         .foregroundStyle(.white)
         .frame(width: 64, height: 64)
         .background(Circle().fill(tint))
-        .shadow(color: tint.opacity(0.35), radius: 10, y: 4)
     }
     .buttonStyle(PressableStyle())
     .disabled(topIndex >= deck.count)

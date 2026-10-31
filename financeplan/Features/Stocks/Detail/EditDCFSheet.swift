@@ -71,7 +71,7 @@ struct EditDCFSheet: View {
                         userFCFMarginAssumption = 1.10
                     }) {
                         Text("Reset to Defaults")
-                            .foregroundStyle(.red)
+                            .foregroundStyle(AppTheme.Colors.danger)
                     }
                 }
             }

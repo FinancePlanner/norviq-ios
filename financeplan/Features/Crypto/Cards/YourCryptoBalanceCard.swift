@@ -36,7 +36,7 @@ struct YourCryptoBalanceCard: View {
                     VStack(alignment: .trailing, spacing: 4) {
                         Text("\(totalProfit >= 0 ? "+" : "")\(totalProfit.formatted(.currency(code: "USD")))")
                             .font(.subheadline.bold())
-                            .foregroundStyle(totalProfit >= 0 ? .green : .red)
+                            .foregroundStyle(totalProfit >= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss)
                         Text("Profit")
                             .font(.caption2)
                             .foregroundStyle(.secondary)

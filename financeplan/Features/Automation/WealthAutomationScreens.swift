@@ -193,7 +193,7 @@ struct NetWorthForecastScreen: View {
         ForecastResultSection(run: run)
       }
       if let error = model.errorMessage {
-        Section { Text(error).foregroundStyle(.red).accessibilityLabel(
+        Section { Text(error).foregroundStyle(AppTheme.Colors.danger).accessibilityLabel(
           "Error: \(error)"
         ) } }
     }
@@ -254,7 +254,7 @@ private struct ForecastResultSection: View {
           ).lineStyle(.init(lineWidth: 3)) }
         if let value = point.value(at: 90) {
           LineMark(x: .value("Month", point.month), y: .value("P90", value)).foregroundStyle(
-            .green
+            AppTheme.Colors.success
           ) }
       }
       .frame(minHeight: 240)
@@ -490,7 +490,7 @@ struct SmartScreeningScreen: View {
         Section("\(result.matches.count) of \(result.symbolCount) match") { ForEach(result.matches) { match in HStack { Text(
           match.symbol
         ).font(.headline); Spacer(); if match.isNew {
-          Text("New").font(.caption).foregroundStyle(.green)
+          Text("New").font(.caption).foregroundStyle(AppTheme.Colors.success)
         } } } }
       }
       if !model.history.isEmpty {
@@ -500,7 +500,7 @@ struct SmartScreeningScreen: View {
           .caption
         ).foregroundStyle(.secondary); Text(result.matches.map(\.symbol).joined(separator: ", ")).font(.caption) } } } }
       if let error = model.errorMessage {
-        Section { Text(error).foregroundStyle(.red) }
+        Section { Text(error).foregroundStyle(AppTheme.Colors.danger) }
       }
     }
     .vigilListChrome()
@@ -690,7 +690,7 @@ struct RebalancingRulesScreen: View {
             confirm: false
           ) } }.buttonStyle(.bordered) } } } } } }
       if let error = model.errorMessage {
-        Section { Text(error).foregroundStyle(.red) }
+        Section { Text(error).foregroundStyle(AppTheme.Colors.danger) }
       }
     }
     .vigilListChrome()
@@ -763,7 +763,7 @@ struct NotificationInboxScreen: View {
       }
 
       if let error = model.errorMessage {
-        Text(error).foregroundStyle(.red)
+        Text(error).foregroundStyle(AppTheme.Colors.danger)
       }
       if model.page.items.isEmpty {
         ContentUnavailableView(

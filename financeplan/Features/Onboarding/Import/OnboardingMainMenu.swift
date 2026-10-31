@@ -75,7 +75,7 @@ struct OnboardingMainMenu: View {
       HStack(spacing: 24) {
         Button("Sign Out", action: onSignOut)
           .typography(.caption, weight: .medium)
-          .foregroundStyle(.red)
+          .foregroundStyle(AppTheme.Colors.danger)
 
         Button("Skip for Now", action: onSkip)
           .typography(.caption, weight: .medium)

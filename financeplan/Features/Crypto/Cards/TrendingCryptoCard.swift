@@ -15,7 +15,7 @@ struct TrendingCryptoCard: View {
                     Spacer()
                     Text("\(asset.changePercentage >= 0 ? "+" : "")\(asset.changePercentage.formatted(.percent.precision(.fractionLength(1))))")
                         .font(.caption2.bold())
-                        .foregroundStyle(asset.changePercentage >= 0 ? .green : .red)
+                        .foregroundStyle(asset.changePercentage >= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {

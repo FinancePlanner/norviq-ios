@@ -1,9 +1,12 @@
 import SwiftUI
 
+// Precision raster crops (docs/precision-identity.md). No glow: the artwork
+// carries its own, and the brand rules out decorative shadows. The asset
+// catalog images are 313x367 (symbol) and 805x367 (lockup); callers stay well
+// under a third of that at 3x, so nothing upscales.
+
 struct NorviqLogo: View {
   var size: CGFloat = 64
-
-  @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
     Image("NorviqIcon")
@@ -11,22 +14,15 @@ struct NorviqLogo: View {
       .scaledToFit()
       .frame(width: size, height: size)
       .accessibilityLabel("Norviq")
-      .shadow(
-        color: AppTheme.Colors.tint(for: colorScheme).opacity(0.18),
-        radius: 12,
-        x: 0,
-        y: 7
-      )
   }
 }
 
 struct NorviqFullLogo: View {
   var width: CGFloat = 220
 
-  @Environment(\.colorScheme) private var colorScheme
-
+  /// The lockup's own aspect ratio (805x367), so the frame fits the art.
   private var height: CGFloat {
-    width / 3
+    width * 367 / 805
   }
 
   var body: some View {
@@ -35,11 +31,5 @@ struct NorviqFullLogo: View {
       .scaledToFit()
       .frame(width: width, height: height)
       .accessibilityLabel("Norviq")
-      .shadow(
-        color: AppTheme.Colors.tint(for: colorScheme).opacity(0.14),
-        radius: 12,
-        x: 0,
-        y: 7
-      )
   }
 }

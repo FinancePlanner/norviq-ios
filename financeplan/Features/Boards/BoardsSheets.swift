@@ -78,7 +78,7 @@ struct BoardReportSheet: View {
             TextField("What happened?", text: $note, axis: .vertical).lineLimit(3...6)
           }
           if let errorMessage {
-            Section { Text(errorMessage).foregroundStyle(.red) }
+            Section { Text(errorMessage).foregroundStyle(AppTheme.Colors.danger) }
           }
         }
       }
@@ -168,7 +168,7 @@ struct BoardModerationSheet: View {
           TextField("Spam in /dividends", text: $reason)
         }
         if let errorMessage {
-          Section { Text(errorMessage).foregroundStyle(.red) }
+          Section { Text(errorMessage).foregroundStyle(AppTheme.Colors.danger) }
         }
       }
       .navigationTitle(username)
@@ -242,7 +242,7 @@ struct ComposeBoardPostSheet: View {
           Text("Up to 5, comma separated.")
         }
         if let errorMessage {
-          Section { Text(errorMessage).foregroundStyle(.red) }
+          Section { Text(errorMessage).foregroundStyle(AppTheme.Colors.danger) }
         }
       }
       .navigationTitle("Post to \(board.name)")
@@ -308,7 +308,7 @@ struct CreateBoardSheet: View {
           TextField("Optional", text: $description, axis: .vertical).lineLimit(2...5)
         }
         if let message = model.errorMessage {
-          Section { Text(message).foregroundStyle(.red) }
+          Section { Text(message).foregroundStyle(AppTheme.Colors.danger) }
         }
       }
       .navigationTitle("New board")

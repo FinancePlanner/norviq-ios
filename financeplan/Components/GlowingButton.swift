@@ -6,7 +6,8 @@ public struct GlowingButtonStyle: ButtonStyle {
 
   public func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .foregroundStyle(.white)
+      // Obsidian ink: white on the gold tint measures 1.96:1.
+      .foregroundStyle(AppTheme.Colors.onTint)
       .frame(maxWidth: .infinity)
       .padding(.vertical, 15)
       .background(AppTheme.Colors.tint(for: colorScheme))

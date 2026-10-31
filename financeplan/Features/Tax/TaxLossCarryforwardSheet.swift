@@ -51,7 +51,7 @@ struct TaxLossCarryforwardSheet: View {
                       .padding(.horizontal, 7).padding(.vertical, 3)
                       .background(.secondary.opacity(0.12), in: Capsule())
                     if balance.expiresAfterTaxYear < taxYear {
-                      Text("Expired").font(.caption2.bold()).foregroundStyle(.red)
+                      Text("Expired").font(.caption2.bold()).foregroundStyle(AppTheme.Colors.danger)
                     }
                   }
                   Text("\(money(balance.remainingAmount)) remaining · \(expiryText(balance))")
@@ -61,7 +61,7 @@ struct TaxLossCarryforwardSheet: View {
             }
           }
         }
-        if let errorMessage { Section { Text(errorMessage).foregroundStyle(.red) } }
+        if let errorMessage { Section { Text(errorMessage).foregroundStyle(AppTheme.Colors.danger) } }
       }
       .navigationTitle("Carried tax losses")
       .navigationBarTitleDisplayMode(.inline)

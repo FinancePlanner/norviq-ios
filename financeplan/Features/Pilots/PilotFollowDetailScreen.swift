@@ -138,7 +138,7 @@ private struct PilotFollowSummary: View {
       if let performance {
         Text("\(PilotFormatting.signedPercent(performance)) since you started")
           .font(.subheadline)
-          .foregroundStyle(performance < 0 ? Color.red : Color.green)
+          .foregroundStyle(performance < 0 ? AppTheme.Colors.loss : AppTheme.Colors.gain)
       }
       if follow.status == .paused {
         Label("Paused. Norviq isn't copying new disclosures.", systemImage: "pause.circle")

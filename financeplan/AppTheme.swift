@@ -78,11 +78,14 @@ enum AppTheme {
     /// the asset catalog generate `Color.tint`, `Color.separator` and friends,
     /// which collide with SwiftUI's own `ShapeStyle` members and make every
     /// `foregroundStyle(.tint)` in the app ambiguous.
-    private static func themeColor(_ role: String) -> Color {
+    nonisolated private static func themeColor(_ role: String) -> Color {
       Color("Vigil\(role)", bundle: .main)
     }
 
-    // MARK: - Accent (classic blue / Vigil neon cyan)
+    // MARK: - Accent (Precision gold — docs/precision-identity.md)
+    //
+    // Gold is brand, never money: it marks the primary action, selection and
+    // focus. Gains and losses use `gain` / `loss` below and nothing else.
 
     static var tint: Color { themeColor("Tint") }
     static var tintSoft: Color { themeColor("TintSoft") }
@@ -98,27 +101,23 @@ enum AppTheme {
 
     /// Foreground for content sitting ON the accent tint.
     ///
-    /// White fails badly here. The Vigil dark tint is `#00F2FF`, a near-maximally
-    /// bright cyan, so white-on-tint measures **1.39:1** — below even the 3:1
-    /// large-text floor. Dark ink on the same fill measures ~12.9:1.
+    /// White fails on the dark tint: champagne gold `#D8B477` carries white at
+    /// only **1.96:1**, while obsidian ink on it measures 9.7:1.
     ///
-    /// Light and dark therefore invert: the light tint is dark enough to carry
-    /// white, the dark tint is far too bright to. This mirrors the web's
-    /// `--primary-foreground`, which already encodes exactly this inversion
-    /// (`theme.css:136/227/318/404`).
-    ///
-    /// Not a brand change — docs/vigil-identity.md pins the tint itself, not what
-    /// sits on top of it.
+    /// Light and dark therefore invert: the light tint (deep gold `#80612A`) is
+    /// dark enough to carry white (5.7:1), the dark tint is far too bright to.
+    /// This mirrors the web's `--primary-foreground`, which encodes the same
+    /// inversion in `theme.css`.
     static let onTint = Color("OnTint", bundle: .main)
 
-    // MARK: - Surfaces (classic cool / Vigil near-black command center)
+    // MARK: - Surfaces (obsidian / midnight navy / armor blue; warm paper in light)
 
     static var pageBackground: Color { themeColor("PageBackground") }
     static var cardBackground: Color { themeColor("CardBackground") }
     static var elevatedCardBackground: Color { themeColor("ElevatedCard") }
     static var topBarBackground: Color { themeColor("TopBarBackground") }
 
-    // MARK: - Text (classic cool slate / Vigil cool cyan-slate)
+    // MARK: - Text (platinum / muted silver; deep navy in light)
 
     static var foreground: Color { themeColor("Foreground") }
     static var secondaryText: Color { themeColor("SecondaryText") }
@@ -128,12 +127,11 @@ enum AppTheme {
 
     static let tertiaryFill = Color("TertiaryFill", bundle: .main)
 
-    /// The `border` token from `docs/vigil-identity.md`.
+    /// The hairline token from `docs/precision-identity.md` (Steel Slate in dark).
     ///
-    /// This used to be neon cyan at 18% opacity, which was drift from the spec
-    /// and the single largest source of ambient blue: it is the hairline on every
+    /// Decorative only — well under 3:1 by design. It is the hairline on every
     /// card, and `GlassEffect+Compat` reuses it as the pre-iOS-26 glass stroke, so
-    /// most surfaces picked up the tint twice.
+    /// keep it neutral: a tinted separator shows up twice on most surfaces.
     static var separator: Color { themeColor("Separator") }
 
     // MARK: - Nav bar
@@ -144,30 +142,34 @@ enum AppTheme {
 
     static var tabBarBackground: Color { topBarBackground }
 
+    // MARK: - Financial semantics
+    //
+    // Direction of money only — never decoration, never brand. Each is >= 4.5:1
+    // as text on its own appearance's page and card (measured in the brand doc).
+    // Always pair with a sign, arrow or accessibility label: never colour alone.
+
+    // nonisolated: plain asset lookups, so model and formatter code outside the
+    // main actor can pick a direction colour too.
+    nonisolated static var gain: Color { themeColor("Gain") }
+    nonisolated static var loss: Color { themeColor("Loss") }
+    nonisolated static var flat: Color { themeColor("Flat") }
+    nonisolated static var info: Color { themeColor("Info") }
+
     // MARK: - Status
 
-    static let success = Color.green
-    static let danger = Color.red
-    static let warning = Color.orange
+    nonisolated static var success: Color { gain }
+    nonisolated static var danger: Color { loss }
+    nonisolated static var warning: Color { themeColor("Warning") }
     static let disabled = Color.gray.opacity(0.65)
 
-    static func dangerText(for scheme: ColorScheme) -> Color {
-      scheme == .dark
-        ? Color(red: 1.0, green: 0.302, blue: 0.427) // #FF4D6D
-        : Color(red: 0.86, green: 0.15, blue: 0.28)
-    }
+    /// Text-safe variants. The colour sets already adapt to light/dark, so these
+    /// return the same dynamic colour for either scheme; the parameter stays so
+    /// the existing call sites compile unchanged.
+    static func dangerText(for _: ColorScheme) -> Color { loss }
 
-    static func successText(for scheme: ColorScheme) -> Color {
-      scheme == .dark
-        ? Color(red: 0.000, green: 1.000, blue: 0.580) // #00FF94
-        : Color(red: 0.020, green: 0.588, blue: 0.412)
-    }
+    static func successText(for _: ColorScheme) -> Color { gain }
 
-    static func warningText(for scheme: ColorScheme) -> Color {
-      scheme == .dark
-        ? Color(red: 1.0, green: 0.80, blue: 0.42)
-        : Color.orange
-    }
+    static func warningText(for _: ColorScheme) -> Color { warning }
 
     // MARK: - UIKit bridge
     //
@@ -269,15 +271,6 @@ enum AppTheme {
     [
       Colors.tint(for: scheme).opacity(scheme == .dark ? 0.9 : 0.8),
       Colors.secondaryTint(for: scheme).opacity(scheme == .dark ? 0.85 : 0.75)
-    ]
-  }
-
-  /// Flat 2-stop wash from page background to card background — same shape
-  /// for both brands, only the underlying colors (and therefore hue) differ.
-  static func splashGradient(for scheme: ColorScheme) -> [Color] {
-    [
-      Colors.pageBackground(for: scheme),
-      Colors.cardBackground(for: scheme)
     ]
   }
 }

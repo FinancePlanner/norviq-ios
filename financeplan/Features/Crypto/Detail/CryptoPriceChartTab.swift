@@ -17,7 +17,7 @@ struct CryptoPriceChartTab: View {
 
     private var isPositive: Bool { (change ?? 0) >= 0 }
 
-    private var lineColor: Color { isPositive ? .green : .red }
+    private var lineColor: Color { isPositive ? AppTheme.Colors.gain : AppTheme.Colors.loss }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -30,7 +30,7 @@ struct CryptoPriceChartTab: View {
             } else if let errorMessage, points.isEmpty {
                 Text(errorMessage)
                     .font(.subheadline)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(AppTheme.Colors.danger)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 48)
             } else if points.isEmpty {

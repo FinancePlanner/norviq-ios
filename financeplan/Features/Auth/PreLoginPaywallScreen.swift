@@ -14,7 +14,7 @@ struct PreLoginPaywallScreen: View {
       ScrollView {
         VStack(spacing: 24) {
           VigilPageHeader(
-            watch: .auth("Pro vigil"),
+            watch: .auth("Norviq Pro"),
             title: "Norviq Pro",
             subtitle: "Unlock research, bank sync, the assistant, tax, and advanced reports."
           )

@@ -535,9 +535,9 @@ private struct DashboardHeroCard: View {
   private var deltaColor: Color {
     guard let currentDeltaPercent else { return .secondary }
     if showingPortfolio {
-      return currentDeltaPercent >= 0 ? .green : .red
+      return currentDeltaPercent >= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss
     }
-    return currentDeltaPercent <= 0 ? .green : .red
+    return currentDeltaPercent <= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss
   }
 
   private var deltaText: String {

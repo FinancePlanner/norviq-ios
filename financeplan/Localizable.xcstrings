@@ -1,6 +1,142 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Encrypted. Your data stays yours." : {
+      "comment" : "Precision rebrand copy (docs/precision-identity.md).",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encrypted. Your data stays yours."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Encriptado. Os seus dados continuam seus."
+          }
+        }
+      }
+    },
+    "Professional stock planning and portfolio intelligence for disciplined investors." : {
+      "comment" : "Precision rebrand copy (docs/precision-identity.md).",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Professional stock planning and portfolio intelligence for disciplined investors."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Planeamento profissional de ações e inteligência de portefólio para investidores disciplinados."
+          }
+        }
+      }
+    },
+    "Clarity in Every Position." : {
+      "comment" : "Precision rebrand copy (docs/precision-identity.md).",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clarity in Every Position."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Clareza em cada posição."
+          }
+        }
+      }
+    },
+    "Every connection is read-only." : {
+      "comment" : "Precision rebrand copy (docs/precision-identity.md).",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every connection is read-only."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todas as ligações são só de leitura."
+          }
+        }
+      }
+    },
+    "No positions yet" : {
+      "comment" : "Precision rebrand copy (docs/precision-identity.md).",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No positions yet"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ainda sem posições"
+          }
+        }
+      }
+    },
+    "No expenses logged yet" : {
+      "comment" : "Precision rebrand copy (docs/precision-identity.md).",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No expenses logged yet"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ainda sem despesas registadas"
+          }
+        }
+      }
+    },
+    "Private by design" : {
+      "comment" : "Precision rebrand copy (docs/precision-identity.md).",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Private by design"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privado por conceção"
+          }
+        }
+      }
+    },
+    "Ask Q about your positions." : {
+      "comment" : "Precision rebrand copy (docs/precision-identity.md).",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask Q about your positions."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pergunte ao Q sobre as suas posições."
+          }
+        }
+      }
+    },
     "" : {
 
     },
@@ -285,6 +421,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Não foi possível atualizar os teus destaques. Tenta novamente."
+          }
+        }
+      }
+    },
+    "Discipline creates freedom." : {
+      "comment" : "The Precision brand tagline, set under the logo lockup.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Discipline creates freedom."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A disciplina cria liberdade."
           }
         }
       }

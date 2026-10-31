@@ -139,7 +139,7 @@ private struct PersonalInflationCoverage: View {
           .font(.headline.monospacedDigit())
       }
       ProgressView(value: response.coveragePercent, total: 100)
-        .tint(response.coveragePercent >= 70 ? .green : .orange)
+        .tint(response.coveragePercent >= 70 ? AppTheme.Colors.gain : .orange)
       Text("\(response.expenseCount) expenses · \(response.mappedSpend.formatted(.currency(code: response.currency).precision(.fractionLength(0)))) of \(response.totalSpend.formatted(.currency(code: response.currency).precision(.fractionLength(0)))) mapped")
         .font(.caption)
         .foregroundStyle(.secondary)

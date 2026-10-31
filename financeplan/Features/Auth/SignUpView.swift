@@ -47,7 +47,7 @@ struct SignUpView: View {
   @ViewBuilder
   private var heroHeader: some View {
     VigilPageHeader(
-      watch: .auth("New vigil"),
+      watch: .auth("New account"),
       title: "Create your account",
       subtitle: "Bring your portfolio and budgets together in one secure place."
     )

@@ -325,7 +325,7 @@ struct EarningsDetailView: View {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                         DetailMetricCard(title: "EPS Actual", value: event.epsActual?.formatted() ?? "—", tint: .blue)
                         DetailMetricCard(title: "EPS Estimated", value: event.epsEstimated?.formatted() ?? "—", tint: .gray)
-                        DetailMetricCard(title: "Revenue Actual", value: event.revenueActual?.formatted(.number.notation(.compactName)) ?? "—", tint: .green)
+                        DetailMetricCard(title: "Revenue Actual", value: event.revenueActual?.formatted(.number.notation(.compactName)) ?? "—", tint: AppTheme.Colors.gain)
                         DetailMetricCard(title: "Revenue Estimated", value: event.revenueEstimated?.formatted(.number.notation(.compactName)) ?? "—", tint: .gray)
                     }
                     .padding(.horizontal)
@@ -489,7 +489,7 @@ struct EarningsRow: View {
         EarningsMetricPill(
           title: "Revenue Actual",
           value: event.revenueActual?.formatted(.number.notation(.compactName)) ?? "--",
-          tint: .green
+          tint: AppTheme.Colors.success
         )
         EarningsMetricPill(
           title: "Revenue Estimated",

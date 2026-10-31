@@ -206,10 +206,10 @@ struct BankingView: View {
 
   private func statusBadge(_ status: BankConnectionStatus) -> some View {
     let (label, color): (String, Color) = switch status {
-    case .active: ("Connected", .green)
+    case .active: ("Connected", AppTheme.Colors.success)
     case .reauthRequired: ("Reconnect needed", .orange)
     case .disconnected: ("Disconnected", .secondary)
-    case .error: ("Error", .red)
+    case .error: ("Error", AppTheme.Colors.danger)
     }
     return Text(label)
       .font(.caption2.weight(.semibold))

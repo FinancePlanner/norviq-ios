@@ -26,7 +26,7 @@ struct TaxSettingsSheet: View {
         } footer: {
           Text("Norviq also requires a benefit above 0.5% of your taxable portfolio or 250 in your reporting currency, whichever is greater.")
         }
-        if let errorMessage { Section { Text(errorMessage).foregroundStyle(.red) } }
+        if let errorMessage { Section { Text(errorMessage).foregroundStyle(AppTheme.Colors.danger) } }
       }
       .navigationTitle("Tax settings")
       .navigationBarTitleDisplayMode(.inline)

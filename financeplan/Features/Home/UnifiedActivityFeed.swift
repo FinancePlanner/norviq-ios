@@ -92,11 +92,11 @@ struct UnifiedActivityFeed: View {
   private var healthTint: Color {
     switch financialHealthCardState.tone {
     case .success:
-      .green
+      AppTheme.Colors.success
     case .warning:
       .orange
     case .critical:
-      .red
+      AppTheme.Colors.danger
     case .neutral:
       .secondary
     }
@@ -122,11 +122,11 @@ struct UnifiedActivityFeed: View {
           ForEach(viewModel.activities) { activity in
             HStack(spacing: 16) {
               Circle()
-                .fill(activity.isGrowth ? Color.green.opacity(0.2) : Color.red.opacity(0.2))
+                .fill(activity.isGrowth ? AppTheme.Colors.gain.opacity(0.2) : AppTheme.Colors.loss.opacity(0.2))
                 .frame(width: 44, height: 44)
                 .overlay(
                   Image(systemName: activity.symbol)
-                    .foregroundStyle(activity.isGrowth ? .green : .red)
+                    .foregroundStyle(activity.isGrowth ? AppTheme.Colors.gain : AppTheme.Colors.loss)
                     .font(.title3)
                     .accessibilityHidden(true)
                 )
@@ -145,7 +145,7 @@ struct UnifiedActivityFeed: View {
                 if let amount = activity.amount {
                   Text(amount > 0 ? "+\(amount.currency)" : "-\(abs(amount).currency)")
                     .font(.headline)
-                    .foregroundStyle(activity.isGrowth ? .green : .red)
+                    .foregroundStyle(activity.isGrowth ? AppTheme.Colors.gain : AppTheme.Colors.loss)
                 }
                 Text(activity.createdAt.formatted(date: .abbreviated, time: .shortened))
                   .font(.caption)

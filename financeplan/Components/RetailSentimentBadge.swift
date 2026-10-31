@@ -69,8 +69,8 @@ struct RetailSentimentDisplay: Equatable {
 
     static func color(for label: String) -> Color {
         switch label.lowercased() {
-        case "bullish", "positive": return .green
-        case "bearish", "negative": return .red
+        case "bullish", "positive": return AppTheme.Colors.success
+        case "bearish", "negative": return AppTheme.Colors.danger
         default: return .secondary
         }
     }
@@ -101,7 +101,7 @@ struct RetailSentimentBadge: View {
                 if let deltaText = display.deltaText {
                     Text(deltaText)
                         .font(.system(size: 9).monospacedDigit())
-                        .foregroundStyle(display.deltaUp ? Color.green : Color.red)
+                        .foregroundStyle(display.deltaUp ? AppTheme.Colors.gain : AppTheme.Colors.loss)
                 }
             }
             .padding(.horizontal, 8)

@@ -278,7 +278,7 @@ struct BudgetDriftDashboardCard: View {
   private func metric(title: String, value: String) -> some View {
     VStack(alignment: .leading, spacing: 2) { Text(value).font(.subheadline.bold()); Text(title).font(.caption).foregroundStyle(.secondary) }
   }
-  private func color(_ level: BudgetDriftLevelWire) -> Color { switch level { case .green: .green; case .yellow: .orange; case .red: .red } }
+  private func color(_ level: BudgetDriftLevelWire) -> Color { switch level { case .green: AppTheme.Colors.success; case .yellow: AppTheme.Colors.warning; case .red: AppTheme.Colors.danger } }
   private func icon(_ level: BudgetDriftLevelWire) -> String { switch level { case .green: "checkmark.circle.fill"; case .yellow: "exclamationmark.circle.fill"; case .red: "exclamationmark.octagon.fill" } }
 }
 
