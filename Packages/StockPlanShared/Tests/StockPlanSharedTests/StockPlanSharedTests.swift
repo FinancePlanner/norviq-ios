@@ -117,7 +117,7 @@ import Testing
 }
 
 @Test func stockPlanSharedDecoderDecodesSnakeCaseDBStyleDateString() throws {
-    let payload = """
+    let payload = try #require("""
     {
       "token": "jwt-token",
       "user_id": "00000000-0000-0000-0000-000000000001",
@@ -128,36 +128,36 @@ import Testing
       "email": "user@example.com",
       "date_of_birth": "2000-01-01"
     }
-    """.data(using: .utf8)!
+    """.data(using: .utf8))
 
     let decoded = try JSONDecoder.stockPlanShared.decode(AuthResponse.self, from: payload)
 
-    #expect(decoded.userId == UUID(uuidString: "00000000-0000-0000-0000-000000000001")!)
+    #expect(try decoded.userId == #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001")))
     #expect(decoded.dateOfBirth == DateFormatter.yyyyMMdd.date(from: "2000-01-01"))
 }
 
 @Test func stockPlanSharedDecoderDecodesSnakeCaseOAuthDTOs() throws {
-    let startPayload = """
+    let startPayload = try #require("""
     {
       "flow_id": "00000000-0000-0000-0000-000000000002",
       "authorization_url": "https://oauth.example.test/auth",
       "expires_in": 600
     }
-    """.data(using: .utf8)!
+    """.data(using: .utf8))
 
     let start = try JSONDecoder.stockPlanShared.decode(OAuthStartResponse.self, from: startPayload)
-    #expect(start.flowId == UUID(uuidString: "00000000-0000-0000-0000-000000000002")!)
+    #expect(try start.flowId == #require(UUID(uuidString: "00000000-0000-0000-0000-000000000002")))
     #expect(start.authorizationURL == "https://oauth.example.test/auth")
     #expect(start.expiresIn == 600)
 
-    let exchangePayload = """
+    let exchangePayload = try #require("""
     {
       "flow_id": "00000000-0000-0000-0000-000000000002",
       "code": "code-123",
       "state": "state-123",
       "redirect_uri": "norviqa://oauth/callback"
     }
-    """.data(using: .utf8)!
+    """.data(using: .utf8))
 
     let exchange = try JSONDecoder.stockPlanShared.decode(OAuthExchangeRequest.self, from: exchangePayload)
     #expect(exchange.redirectURI == "norviqa://oauth/callback")
@@ -423,7 +423,7 @@ import Testing
 }
 
 @Test func billingContextResponseDecodesBackendJSON() throws {
-    let payload = """
+    let payload = try #require("""
     {
       "plan": "free",
       "entitlementLevel": "free",
@@ -453,7 +453,7 @@ import Testing
       ],
       "generatedAt": "2026-04-21T12:00:00Z"
     }
-    """.data(using: .utf8)!
+    """.data(using: .utf8))
 
     let decoded = try JSONDecoder.stockPlanShared.decode(BillingContextResponse.self, from: payload)
 

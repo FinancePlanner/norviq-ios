@@ -39,13 +39,13 @@ struct GoalPlanningDTOTests {
 
     @Test
     func `legacy financial goal payload receives safe planning defaults`() throws {
-        let payload = """
+        let payload = try #require("""
         {
           "id":"goal-1","name":"House","portfolioListId":"portfolio-1",
           "targetAmount":150000,"targetDate":"2031-07-16","baseCurrency":"EUR",
           "monthlyContribution":1200,"annualContributionGrowth":0,"inflationAssumption":0.02
         }
-        """.data(using: .utf8)!
+        """.data(using: .utf8))
 
         let goal = try JSONDecoder().decode(FinancialGoal.self, from: payload)
 

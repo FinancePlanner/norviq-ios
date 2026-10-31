@@ -37,7 +37,7 @@ struct PortfolioDTOsTests {
 
     @Test
     func portfolioSummaryResponseLegacyDecode() throws {
-        let legacyJSON = """
+        let legacyJSON = try #require("""
         {
             "baseCurrency": "USD",
             "totalValue": 100000.0,
@@ -46,7 +46,7 @@ struct PortfolioDTOsTests {
             "realizedPnl": 5000.0,
             "allocation": []
         }
-        """.data(using: .utf8)!
+        """.data(using: .utf8))
 
         let decoded = try JSONDecoder().decode(PortfolioSummaryResponse.self, from: legacyJSON)
 
@@ -61,7 +61,7 @@ struct PortfolioDTOsTests {
 
     @Test
     func portfolioSummaryResponseLegacyDecodeWithCashBalance() throws {
-        let legacyJSON = """
+        let legacyJSON = try #require("""
         {
             "baseCurrency": "USD",
             "totalValue": 100000.0,
@@ -71,7 +71,7 @@ struct PortfolioDTOsTests {
             "cashBalance": 25000.0,
             "allocation": []
         }
-        """.data(using: .utf8)!
+        """.data(using: .utf8))
 
         let decoded = try JSONDecoder().decode(PortfolioSummaryResponse.self, from: legacyJSON)
 
@@ -114,14 +114,14 @@ struct PortfolioDTOsTests {
 
     @Test
     func pnlBySymbolLegacyDecode() throws {
-        let legacyJSON = """
+        let legacyJSON = try #require("""
         {
             "symbol": "AAPL",
             "currency": "USD",
             "realizedPnl": 500.0,
             "unrealizedPnl": 1000.0
         }
-        """.data(using: .utf8)!
+        """.data(using: .utf8))
 
         let decoded = try JSONDecoder().decode(PnlBySymbol.self, from: legacyJSON)
 
@@ -141,7 +141,7 @@ struct PortfolioDTOsTests {
 
     @Test
     func pnlBySymbolPartialDecode() throws {
-        let partialJSON = """
+        let partialJSON = try #require("""
         {
             "symbol": "GOOGL",
             "currency": "USD",
@@ -150,7 +150,7 @@ struct PortfolioDTOsTests {
             "shares": 5.0,
             "marketValue": 2500.0
         }
-        """.data(using: .utf8)!
+        """.data(using: .utf8))
 
         let decoded = try JSONDecoder().decode(PnlBySymbol.self, from: partialJSON)
 
@@ -187,7 +187,7 @@ struct PortfolioDTOsTests {
 
     @Test
     func portfolioPerformanceResponseLegacyDecode() throws {
-        let legacyJSON = """
+        let legacyJSON = try #require("""
         {
             "baseCurrency": "USD",
             "points": [
@@ -195,7 +195,7 @@ struct PortfolioDTOsTests {
                 {"date": "2024-01-02", "value": 10250.0}
             ]
         }
-        """.data(using: .utf8)!
+        """.data(using: .utf8))
 
         let decoded = try JSONDecoder().decode(PortfolioPerformanceResponse.self, from: legacyJSON)
 
@@ -206,13 +206,13 @@ struct PortfolioDTOsTests {
 
     @Test
     func portfolioPerformanceResponseWithRange() throws {
-        let legacyJSON = """
+        let legacyJSON = try #require("""
         {
             "baseCurrency": "USD",
             "points": [],
             "range": "1Y"
         }
-        """.data(using: .utf8)!
+        """.data(using: .utf8))
 
         let decoded = try JSONDecoder().decode(PortfolioPerformanceResponse.self, from: legacyJSON)
 
@@ -244,7 +244,7 @@ struct PortfolioDTOsTests {
     /// The server is free to add one without stranding pinned clients.
     @Test
     func portfolioChangeDecodesUnknownBasis() throws {
-        let json = """
+        let json = try #require("""
         {
             "percent": 0.01,
             "absolute": 10.0,
@@ -252,7 +252,7 @@ struct PortfolioDTOsTests {
             "toDate": "2024-01-02",
             "basis": "sinceSomeFutureThing"
         }
-        """.data(using: .utf8)!
+        """.data(using: .utf8))
 
         let decoded = try JSONDecoder().decode(PortfolioChange.self, from: json)
 
@@ -267,7 +267,7 @@ struct PortfolioDTOsTests {
     /// a lie of exactly the kind this field exists to prevent.
     @Test
     func portfolioChangesOmittedMembersDecodeAsNilNotZero() throws {
-        let json = """
+        let json = try #require("""
         {
             "day": {
                 "percent": -0.004,
@@ -277,7 +277,7 @@ struct PortfolioDTOsTests {
                 "basis": "previousTradingDay"
             }
         }
-        """.data(using: .utf8)!
+        """.data(using: .utf8))
 
         let decoded = try JSONDecoder().decode(PortfolioChanges.self, from: json)
 
@@ -336,9 +336,9 @@ struct PortfolioDTOsTests {
     /// Points from a backend older than this contract carry neither field.
     @Test
     func performancePointLegacyDecode() throws {
-        let legacyJSON = """
+        let legacyJSON = try #require("""
         {"date": "2024-01-01", "value": 10000.0}
-        """.data(using: .utf8)!
+        """.data(using: .utf8))
 
         let decoded = try JSONDecoder().decode(PerformancePoint.self, from: legacyJSON)
 
@@ -380,12 +380,12 @@ struct PortfolioDTOsTests {
     /// every change is absent. Clients must not read that as a flat portfolio.
     @Test
     func portfolioPerformanceResponseWithoutChangesDecodes() throws {
-        let json = """
+        let json = try #require("""
         {
             "baseCurrency": "USD",
             "points": [{"date": "2024-01-01", "value": 10000.0}]
         }
-        """.data(using: .utf8)!
+        """.data(using: .utf8))
 
         let decoded = try JSONDecoder().decode(PortfolioPerformanceResponse.self, from: json)
 

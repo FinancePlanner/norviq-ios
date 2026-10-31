@@ -142,11 +142,8 @@ public struct FinancialGoalInput: Codable, Equatable, Sendable {
         }
         guard baseCurrency.count == 3 else { throw ScenarioValidationError.invalidCurrency }
         guard targetAmount.isFinite, startingCapital.isFinite, monthlyContribution.isFinite,
-              targetAmount > 0, startingCapital >= 0, monthlyContribution >= 0
-        else {
-            throw ScenarioValidationError.invalidAmount
-        }
-        guard annualContributionGrowth.isFinite, inflationAssumption.isFinite,
+              targetAmount > 0, startingCapital >= 0, monthlyContribution >= 0,
+              annualContributionGrowth.isFinite, inflationAssumption.isFinite,
               (-1 ... 1).contains(annualContributionGrowth), (-1 ... 1).contains(inflationAssumption),
               expectedAnnualReturn.map({ $0.isFinite && (-0.5 ... 0.5).contains($0) }) ?? true
         else {

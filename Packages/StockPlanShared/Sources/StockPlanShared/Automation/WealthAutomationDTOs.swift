@@ -563,10 +563,8 @@ public struct RebalancingPolicy: Codable, Equatable, Identifiable, Sendable {
         guard cadence != .disabled || driftThreshold != nil else {
             throw WealthAutomationValidationError.missingTrigger
         }
-        guard driftThreshold.map({ $0 > 0 && $0 <= 1 }) ?? true else {
-            throw WealthAutomationValidationError.invalidAllocation
-        }
-        guard !targets.isEmpty, abs(targets.reduce(0) { $0 + $1.targetWeight } - 1) < 0.0001,
+        guard driftThreshold.map({ $0 > 0 && $0 <= 1 }) ?? true,
+              !targets.isEmpty, abs(targets.reduce(0) { $0 + $1.targetWeight } - 1) < 0.0001,
               targets.allSatisfy({ $0.targetWeight >= 0 && $0.targetWeight <= 1 })
         else {
             throw WealthAutomationValidationError.invalidAllocation

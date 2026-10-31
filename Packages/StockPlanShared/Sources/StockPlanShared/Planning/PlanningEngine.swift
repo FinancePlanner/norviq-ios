@@ -217,9 +217,8 @@ public struct RetirementNeedInput: Codable, Sendable, Equatable {
     }
 
     public func validate() throws {
-        guard currentAge >= 18, currentAge < 100 else { throw PlanningValidationError.invalidAges }
-        guard retirementAge > currentAge, retirementAge <= 100 else { throw PlanningValidationError.invalidAges }
-        guard longevityAge > retirementAge, longevityAge <= 120 else { throw PlanningValidationError.invalidAges }
+        guard currentAge >= 18, currentAge < 100, retirementAge > currentAge, retirementAge <= 100,
+              longevityAge > retirementAge, longevityAge <= 120 else { throw PlanningValidationError.invalidAges }
         guard withdrawalRate > 0, withdrawalRate <= 0.20 else { throw PlanningValidationError.invalidWithdrawalRate }
         guard annualInflationRate > -1 else { throw PlanningValidationError.invalidInflationRate }
         guard expectedAnnualReturn > -1 else { throw PlanningValidationError.invalidReturnRate }
