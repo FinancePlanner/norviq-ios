@@ -1,6 +1,12 @@
 # SwiftFormat Configuration - Elegant & SwiftLint Compatible
 --swiftversion 6.1
 
+# Local packages keep their own style (4-space indent etc.). SwiftFormat merges
+# parent configs into a subdirectory's .swiftformat, so without this exclude a
+# repo-wide run restyles them with the app's rules. Format a package with its
+# own config only: `make shared-format` (uses --config).
+--exclude Packages
+
 # === INDENTATION & SPACING ===
 --indent 2
 --tabwidth 2

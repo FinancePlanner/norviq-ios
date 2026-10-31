@@ -300,7 +300,7 @@
 				60543E262F48D90000B67ADA /* XCRemoteSwiftPackageReference "MarkdownUI" */,
 				60543E272F48D90000B67ADA /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				60543E282F48D90000B67ADA /* XCRemoteSwiftPackageReference "SwiftyCrop" */,
-				70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "norviq-shared" */,
+				70B001A33C5E11AA00F01001 /* XCLocalSwiftPackageReference "Packages/StockPlanShared" */,
 				70B002A53C5E11AA00F02001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 				B14D0000000000000000A003 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */,
 				60543D592F48C8B400B67ADA /* XCRemoteSwiftPackageReference "AnyAPI" */,
@@ -905,6 +905,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		70B001A33C5E11AA00F01001 /* XCLocalSwiftPackageReference "Packages/StockPlanShared" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/StockPlanShared;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		53C63E56421B55F2E961C9DC /* XCRemoteSwiftPackageReference "swift-algorithms" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -1018,14 +1025,6 @@
 				revision = 972510b97e37ff0a1bfb45325e3ccf2046c0742b;
 			};
 		};
-		70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "norviq-shared" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/FinancePlanner/norviq-shared.git";
-			requirement = {
-				kind = exactVersion;
-				version = 5.26.0;
-			};
-		};
 		70B002A53C5E11AA00F02001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
@@ -1128,7 +1127,7 @@
 		};
 		70B001A23C5E11AA00F01001 /* StockPlanShared */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 70B001A33C5E11AA00F01001 /* XCRemoteSwiftPackageReference "norviq-shared" */;
+			package = 70B001A33C5E11AA00F01001 /* XCLocalSwiftPackageReference "Packages/StockPlanShared" */;
 			productName = StockPlanShared;
 		};
 		70B002A23C5E11AA00F02001 /* RevenueCat */ = {

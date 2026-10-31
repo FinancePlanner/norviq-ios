@@ -180,15 +180,6 @@
       }
     },
     {
-      "identity" : "norviq-shared",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/FinancePlanner/norviq-shared.git",
-      "state" : {
-        "revision" : "a1ebfafad5500b61ab95dda4f534fd2fbb1fa742",
-        "version" : "5.26.0"
-      }
-    },
-    {
       "identity" : "plaid-link-ios-spm",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/plaid/plaid-link-ios-spm.git",

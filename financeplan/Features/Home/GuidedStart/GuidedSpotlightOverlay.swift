@@ -7,7 +7,7 @@ nonisolated enum GuidedSpotlightGeometry {
 
 /// Blocks nothing, the same as the web: the scrim ignores hits, so the page
 /// keeps scrolling and every control stays usable; only the bubble takes
-/// touches. Contract: norviq-shared/docs/guided-start.md, "Spotlight rules".
+/// touches. Contract: Packages/StockPlanShared/docs/guided-start.md, "Spotlight rules".
 struct GuidedSpotlightOverlay: View {
   let step: GuidedStartStep?
   let activeTab: GuidedTab?

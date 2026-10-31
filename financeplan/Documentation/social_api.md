@@ -14,7 +14,7 @@ This is the contract for Norviq's social layer: friends, discovery, XP and leade
 - **Blocking is invisible.** When either user has blocked the other, every endpoint that names the other user returns `404`, never `403`, so nobody can detect a block.
 - **Money never appears in social payloads.** Only percentages, counts and levels do. The server must reject any payload that carries amounts.
 
-The Swift types live in `financeplan/API/Social/SocialDTOs.swift` and `financeplan/API/Gamification/GamificationDTOs.swift`. They move to `norviq-shared` unchanged once the backend ships them.
+The Swift types live in `financeplan/API/Social/SocialDTOs.swift` and `financeplan/API/Gamification/GamificationDTOs.swift`. They move to `Packages/StockPlanShared` unchanged once the backend ships them.
 
 ## Rollout switch
 

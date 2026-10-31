@@ -68,3 +68,7 @@ excluded:
   - build
   - .git
   - .cache
+  # Local packages are linted (their own .swiftlint.yml applies as a nested
+  # config); only their SwiftPM build output is skipped.
+  - Packages/*/.build
+  - Packages/*/.swiftpm
