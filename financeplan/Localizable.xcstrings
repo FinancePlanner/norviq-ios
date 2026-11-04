@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "All tools" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todas as ferramentas"
+          }
+        }
+      }
+    },
+    "Calculators and planners for your money, in one place." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calculadoras e planeadores financeiros, num só lugar."
+          }
+        }
+      }
+    },
     "Encrypted. Your data stays yours." : {
       "comment" : "Precision rebrand copy (docs/precision-identity.md).",
       "localizations" : {
@@ -14,6 +34,50 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Encriptado. Os seus dados continuam seus."
+          }
+        }
+      }
+    },
+    "How far has my portfolio drifted?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quanto se desviou a minha carteira?"
+          }
+        }
+      }
+    },
+    "How many shares does my target position take?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quantas ações exige a minha posição-alvo?"
+          }
+        }
+      }
+    },
+    "How much do I need to retire?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De quanto preciso para me reformar?"
+          }
+        }
+      }
+    },
+    "How much will I have in X years?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quanto vou ter daqui a X anos?"
           }
         }
       }
@@ -618,6 +682,16 @@
         }
       }
     },
+    "Tools" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ferramentas"
+          }
+        }
+      }
+    },
     "unlocked" : {
       "localizations" : {
         "en" : {
@@ -678,6 +752,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ver todas as conquistas"
+          }
+        }
+      }
+    },
+    "What would a different portfolio look like?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Como seria uma carteira diferente?"
           }
         }
       }
