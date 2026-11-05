@@ -340,16 +340,15 @@ final class PersistentAssistantViewModel {
             // A turn that arrived before a later failure (e.g. refreshing
             // usage) still counts; only a turn that never landed is a snag.
             if agentState.phase == .working { apply(.failed) }
-            // An image turn whose reply arrived is stored, and its images are
-            // gone from the server: sending them again could only repeat it.
-            if !(receivedTurn && !outgoingImages.isEmpty) {
-                if let current = activeConversation {
-                    activeConversation = replacingMessages(in: current, with: current.messages.filter { $0.id != optimistic.id })
-                }
-                // In front of whatever was typed while the turn ran.
-                draft = [content, draft].filter { !$0.isEmpty }.joined(separator: "\n")
-                attachments = outgoingImages + attachments
+            // The reply is stored and on screen; only a refresh after it
+            // failed. Taking the message back would invite sending it twice.
+            guard !receivedTurn else { return }
+            if let current = activeConversation {
+                activeConversation = replacingMessages(in: current, with: current.messages.filter { $0.id != optimistic.id })
             }
+            // In front of whatever was typed while the turn ran.
+            draft = [content, draft].filter { !$0.isEmpty }.joined(separator: "\n")
+            attachments = outgoingImages + attachments
             switch AssistantTurnRecovery(error) {
             case .askForConsent:
                 AIConsentRequired.post()

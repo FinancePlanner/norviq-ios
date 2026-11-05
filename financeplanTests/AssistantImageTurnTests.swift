@@ -558,6 +558,23 @@ final class AssistantImageTurnTests: XCTestCase {
         XCTAssertEqual(viewModel.attachments, [])
         XCTAssertEqual(viewModel.draft, "")
         XCTAssertEqual(viewModel.activeConversation?.messages.map(\.content), ["Which fills? [image attached]", "It shows a fill."])
+        XCTAssertNil(viewModel.errorMessage, "the turn was answered")
+    }
+
+    /// The reply is stored and on screen, so a failed usage refresh after it
+    /// must not take the user's message away or offer to send it again.
+    func testTextTurnRefreshFailingAfterTheReplyKeepsTheMessage() async {
+        let service = ImageTurnService()
+        service.events = [.turn(turnAnswered), .done]
+        service.failUsageAfterTurn = true
+        let viewModel = await loadedViewModel(service)
+        viewModel.draft = "Hi"
+
+        await viewModel.send()
+
+        XCTAssertEqual(viewModel.activeConversation?.messages.map(\.content), ["Hi", "It shows a fill."])
+        XCTAssertEqual(viewModel.draft, "")
+        XCTAssertNil(viewModel.errorMessage, "the turn was answered")
     }
 
     func testTextTurnFailureStillRestoresDraft() async {
