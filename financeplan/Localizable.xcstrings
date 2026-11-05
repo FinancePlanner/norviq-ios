@@ -202,6 +202,16 @@
         }
       }
     },
+    "Load your portfolios" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carregar os seus portefólios"
+          }
+        }
+      }
+    },
     "Not applied" : {
       "localizations" : {
         "pt-PT" : {
@@ -948,6 +958,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "o portefólio proposto"
+          }
+        }
+      }
+    },
+    "This may have been saved. Check your portfolio before sending the screenshot again." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isto pode ter sido guardado. Verifique o seu portefólio antes de enviar a captura de ecrã novamente."
           }
         }
       }

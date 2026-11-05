@@ -349,7 +349,8 @@ final class PersistentAssistantViewModel {
             guard receivedTurn else {
                 throw AssistantTurnFailure(message: "The assistant returned no response.")
             }
-            await loadPortfolioListsIfNeeded()
+            // Off the turn's path, so the composer is free as soon as the reply lands.
+            Task { await loadPortfolioListsIfNeeded() }
             async let usageRequest = service.usage()
             async let conversationsRequest = service.conversations()
             usage = try await usageRequest
@@ -479,9 +480,15 @@ final class PersistentAssistantViewModel {
         tradesReviews = reviews
     }
 
-    /// One request, and only once a card needs the picker.
-    private func loadPortfolioListsIfNeeded() async {
-        guard !tradesReviews.isEmpty, portfolioLists == nil else { return }
+    private var isLoadingPortfolioLists = false
+
+    /// Loads the picker's lists once a card needs them. A failed load leaves
+    /// them nil and is tried again the next time a card appears or asks, so a
+    /// card blocked by sync is never left with no other portfolio to pick.
+    func loadPortfolioListsIfNeeded() async {
+        guard !tradesReviews.isEmpty, portfolioLists == nil, !isLoadingPortfolioLists else { return }
+        isLoadingPortfolioLists = true
+        defer { isLoadingPortfolioLists = false }
         portfolioLists = try? await service.portfolioLists()
     }
 
@@ -490,10 +497,19 @@ final class PersistentAssistantViewModel {
     /// the action, which settles it: a 422 then looks the same, so the action
     /// is fetched again, and a card no longer pending is closed. A 409 means
     /// it expired or was already answered.
+    ///
+    /// The backend finishes a claimed save even when the client has gone, so
+    /// a lost answer (a timeout, a dropped connection, a 5xx) may hide a save
+    /// (R30). The action is fetched again: gone means it may have been saved,
+    /// and the card says to check before sending the screenshot again. So does
+    /// a 409 once this card has tried to save.
     func confirmTrades(_ action: AIPendingActionResponse) async {
         guard activeActionID == nil, var review = tradesReviews[action.id], review.canSave else { return }
         activeActionID = action.id
         defer { activeActionID = nil }
+        let triedBefore = review.hasAttemptedSave
+        review.hasAttemptedSave = true
+        tradesReviews[action.id] = review
         let body = review.confirmBody
         do {
             let result = try await service.confirmTrades(id: action.id, portfolioListID: body.portfolioListId, trades: body.trades)
@@ -508,13 +524,28 @@ final class PersistentAssistantViewModel {
                 review.refuse(reason ?? AssistantTradesReview.retryCopy, rowErrors: rowErrors)
             }
         } catch PersistentAssistantHTTPClient.Error.conflict {
-            review.closedMessage = AssistantTradesReview.expiredCopy
+            review.closedMessage = triedBefore ? AssistantTradesReview.maybeSavedCopy : AssistantTradesReview.expiredCopy
         } catch PersistentAssistantHTTPClient.Error.upgradeRequired {
             review.refuse(AssistantTradesReview.upgradeCopy, rowErrors: [])
         } catch {
-            review.refuse(AssistantTradesReview.retryCopy, rowErrors: [])
+            if !Self.isClientRefusal(error), await isStillPending(action.id) == false {
+                review.closedMessage = AssistantTradesReview.maybeSavedCopy
+            } else {
+                review.refuse(AssistantTradesReview.retryCopy, rowErrors: [])
+            }
         }
         tradesReviews[action.id] = review
+    }
+
+    /// A 4xx the backend answered, which means it saved nothing. Anything else
+    /// (no answer, a 5xx, an unreadable one) may hide a finished save. A
+    /// transport failure arrives as `.api`, so `.api` is never counted as a refusal.
+    private static func isClientRefusal(_ error: any Error) -> Bool {
+        switch error as? PersistentAssistantHTTPClient.Error {
+        case .unauthorized?: true
+        case let .invalidStatus(code)?: (400..<500).contains(code)
+        default: false
+        }
     }
 
     /// Whether the action still waits for an answer; nil when that cannot be told.

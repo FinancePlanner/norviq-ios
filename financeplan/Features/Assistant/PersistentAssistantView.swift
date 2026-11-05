@@ -229,8 +229,11 @@ struct PersistentAssistantView: View {
                 lists: viewModel.portfolioLists,
                 isBusy: isBusy,
                 onSave: { Task { await viewModel.confirmTrades(action) } },
-                onCancel: { Task { await viewModel.cancel(action) } }
+                onCancel: { Task { await viewModel.cancel(action) } },
+                onReloadLists: { Task { await viewModel.loadPortfolioListsIfNeeded() } }
             )
+            // A failed lists load is tried again whenever a card shows.
+            .task(id: action.id) { await viewModel.loadPortfolioListsIfNeeded() }
         } else {
             AssistantPendingActionCard(
                 action: action,

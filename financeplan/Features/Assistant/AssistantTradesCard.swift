@@ -17,33 +17,33 @@ import SwiftUI
 /// because it is 1.234 in one country and 1234 in another (R16). A single dot
 /// group ("1.000") stays a decimal, because stored values use dots (R21). Only
 /// the ends are trimmed, so "100 150.25" pasted from two cells is refused (R20).
-nonisolated enum TradeNumber {
+///
+/// Main-actor bound, like every caller: `Regex` is not `Sendable`, so the
+/// compiled patterns can only be shared statics under one isolation.
+enum TradeNumber {
     struct Hint: Equatable {
         let text: String
         /// The dot-thousands warning rather than the plain "Saves as".
         let warns: Bool
     }
 
-    /// One comma and exactly three digits after a non-zero integer part.
-    private static let ambiguousComma = "^[+-]?0*[1-9][0-9]*,[0-9]{3}$"
-    private static let plain = "^([0-9]+|[0-9]*[.,][0-9]+|[0-9]+\\.)$"
-    /// Groups of three after 1-3 digits, one kind of separator throughout, and
-    /// a decimal part that uses the other mark. `[0-9]`, not `\d`, which in
-    /// Swift also matches other scripts' digits.
-    private static let grouped = [
-        "^([1-9][0-9]{0,2}(?:,[0-9]{3})+)(?:\\.([0-9]+))?$",
-        "^([1-9][0-9]{0,2}(?:\\.[0-9]{3})+)(?:,([0-9]+))?$",
-        "^([1-9][0-9]{0,2}(?: [0-9]{3})+)(?:,([0-9]+))?$",
-        "^([1-9][0-9]{0,2}(?:\u{00A0}[0-9]{3})+)(?:,([0-9]+))?$",
-        "^([1-9][0-9]{0,2}(?:'[0-9]{3})+)(?:[.,]([0-9]+))?$",
-    ]
-    private static let spaceGroupDot = "^[+-]?[1-9][0-9]{0,2}([ \u{00A0}][0-9]{3})+\\.[0-9]+$"
-    private static let thousandsLookalike = "^[1-9][0-9]{0,2}\\.[0-9]{3}$"
+    // Compiled once, and checked when the app is built. `[0-9]`, not `\d`,
+    // which in Swift also matches other scripts' digits.
 
-    private static func match(_ pattern: String, _ text: String) -> Regex<AnyRegexOutput>.Match? {
-        guard let regex = try? Regex(pattern) else { return nil }
-        return text.wholeMatch(of: regex)
-    }
+    /// One comma and exactly three digits after a non-zero integer part.
+    private static let ambiguousComma = /^[+-]?0*[1-9][0-9]*,[0-9]{3}$/
+    private static let plain = /^(?:[0-9]+|[0-9]*[.,][0-9]+|[0-9]+\.)$/
+    /// Groups of three after 1-3 digits, one kind of separator throughout, and
+    /// a decimal part that uses the other mark.
+    private static let grouped: [Regex<(Substring, Substring, Substring?)>] = [
+        /^([1-9][0-9]{0,2}(?:,[0-9]{3})+)(?:\.([0-9]+))?$/,
+        /^([1-9][0-9]{0,2}(?:\.[0-9]{3})+)(?:,([0-9]+))?$/,
+        /^([1-9][0-9]{0,2}(?: [0-9]{3})+)(?:,([0-9]+))?$/,
+        /^([1-9][0-9]{0,2}(?:\u{00A0}[0-9]{3})+)(?:,([0-9]+))?$/,
+        /^([1-9][0-9]{0,2}(?:'[0-9]{3})+)(?:[.,]([0-9]+))?$/,
+    ]
+    private static let spaceGroupDot = /^[+-]?[1-9][0-9]{0,2}(?:[ \u{00A0}][0-9]{3})+\.[0-9]+$/
+    private static let thousandsLookalike = /^[1-9][0-9]{0,2}\.[0-9]{3}$/
 
     private static func trimmed(_ raw: String) -> String {
         raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -54,13 +54,13 @@ nonisolated enum TradeNumber {
         let text = trimmed(raw)
         let sign = text.first.map { $0 == "+" || $0 == "-" } == true ? String(text.prefix(1)) : ""
         let body = String(text.dropFirst(sign.count))
-        if body.isEmpty || match(ambiguousComma, body) != nil { return nil }
+        if body.isEmpty || body.wholeMatch(of: ambiguousComma) != nil { return nil }
         let digits: String
-        if match(plain, body) != nil {
+        if body.wholeMatch(of: plain) != nil {
             digits = body.replacingOccurrences(of: ",", with: ".")
-        } else if let found = grouped.lazy.compactMap({ match($0, body) }).first {
-            let whole = (found.output[1].substring.map(String.init) ?? "").filter(\.isASCII).filter(\.isNumber)
-            let fraction = found.output[2].substring.map { "." + $0 } ?? ""
+        } else if let found = grouped.lazy.compactMap({ body.wholeMatch(of: $0) }).first {
+            let whole = String(found.output.1).filter { $0.isASCII && $0.isNumber }
+            let fraction = found.output.2.map { "." + $0 } ?? ""
             digits = whole + fraction
         } else {
             return nil
@@ -115,7 +115,7 @@ nonisolated enum TradeNumber {
     /// differs from what was typed.
     static func hint(for raw: String, stored: String?) -> Hint? {
         let typed = trimmed(raw)
-        if typed != trimmed(stored ?? ""), match(thousandsLookalike, typed) != nil, let value = parse(typed) {
+        if typed != trimmed(stored ?? ""), typed.wholeMatch(of: thousandsLookalike) != nil, let value = parse(typed) {
             let saved = format(value)
             let grouped = typed.replacingOccurrences(of: ".", with: "")
             return Hint(text: String(localized: "Saves as \(saved), not \(grouped)"), warns: true)
@@ -127,7 +127,7 @@ nonisolated enum TradeNumber {
     /// Why a typed number was refused as unclear, or "" when that is not the reason.
     static func unclearProblem(_ raw: String) -> String {
         let text = trimmed(raw)
-        if match(ambiguousComma, text) != nil {
+        if text.wholeMatch(of: ambiguousComma) != nil {
             let body = text.first.map { $0 == "+" || $0 == "-" } == true ? String(text.dropFirst()) : text
             let halves = body.split(separator: ",", maxSplits: 1).map(String.init)
             var whole = halves[0]
@@ -135,7 +135,7 @@ nonisolated enum TradeNumber {
             let tail = halves.count > 1 ? halves[1] : ""
             return String(localized: "Is that \(whole + tail) or \(whole + "." + tail)? Type it without the comma.")
         }
-        if match(spaceGroupDot, text) != nil {
+        if text.wholeMatch(of: spaceGroupDot) != nil {
             return String(localized: "Spaces and a decimal point do not go together here. Type it without the spaces.")
         }
         return ""
@@ -277,6 +277,8 @@ struct AssistantTradesReview: Equatable {
     static let closedCopy = String(localized: "Those trades were not saved and this review is closed. Send the screenshot again.")
     static let retryCopy = String(localized: "That did not go through. Try again.")
     static let upgradeCopy = String(localized: "Saving trades from a screenshot is part of Pro.")
+    /// The answer to a save was lost, and the action is gone (R30).
+    static let maybeSavedCopy = String(localized: "This may have been saved. Check your portfolio before sending the screenshot again.")
 
     struct ListOption: Equatable, Identifiable, Hashable {
         let id: String
@@ -299,6 +301,9 @@ struct AssistantTradesReview: Equatable {
     var rows: [AssistantTradeRow]
     var portfolioListID: String
     var refusal: Refusal?
+    /// A save was sent from this card, whatever came back. A later 409 then
+    /// may mean that save went through.
+    var hasAttemptedSave = false
     /// Set once the card can no longer be saved: it expired, was answered, or
     /// failed after the save began.
     var closedMessage: String?
@@ -413,11 +418,16 @@ struct AssistantTradesCard: View {
     let isBusy: Bool
     let onSave: () -> Void
     let onCancel: () -> Void
+    /// Tries the portfolio lists again, for a card blocked by sync with none to pick.
+    let onReloadLists: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let closed = review.closedMessage {
-                Label("Not applied", systemImage: "xmark.circle").font(.subheadline.weight(.semibold))
+                // "Not applied" would be false when the save may have gone through.
+                if closed != AssistantTradesReview.maybeSavedCopy {
+                    Label("Not applied", systemImage: "xmark.circle").font(.subheadline.weight(.semibold))
+                }
                 Text(verbatim: closed).font(.subheadline)
             } else {
                 header
@@ -426,6 +436,11 @@ struct AssistantTradesCard: View {
                     Text(AssistantTradesReview.syncedCopy)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(AppTheme.Colors.danger)
+                    if review.options(lists: lists).count <= 1 {
+                        Button("Load your portfolios", action: onReloadLists)
+                            .buttonStyle(.bordered)
+                            .disabled(isBusy)
+                    }
                 }
                 ForEach($review.rows) { $row in
                     AssistantTradeRowEditor(

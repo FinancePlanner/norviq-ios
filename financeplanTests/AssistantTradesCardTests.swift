@@ -465,6 +465,92 @@ final class AssistantTradesCardTests: XCTestCase {
         XCTAssertEqual(card.refusal?.message, "That did not go through. Try again.")
     }
 
+    // MARK: - Lost answers (R30)
+
+    private let maybeSaved = "This may have been saved. Check your portfolio before sending the screenshot again."
+    /// What the client throws for a request that never got an answer.
+    private let timedOut = PersistentAssistantHTTPClient.Error.makeTransport(URLError(.timedOut))
+
+    func testTimeoutWithTheActionGoneSaysItMayHaveBeenSaved() async throws {
+        let service = TradesService()
+        service.actionLists = [.success([tradesAction()]), .success([])]
+        service.confirmResult = .failure(timedOut)
+        let viewModel = await loadedViewModel(service)
+        await viewModel.confirmTrades(tradesAction())
+        XCTAssertEqual(service.pendingActionsCalls, 2, "a lost answer refetches the action")
+        XCTAssertEqual(viewModel.tradesReviews["a1"]?.closedMessage, maybeSaved)
+        XCTAssertEqual(AssistantTradesReview.maybeSavedCopy, maybeSaved)
+    }
+
+    func test5xxWithTheActionGoneSaysItMayHaveBeenSaved() async throws {
+        let service = TradesService()
+        service.actionLists = [.success([tradesAction()]), .success([])]
+        service.confirmResult = .failure(PersistentAssistantHTTPClient.Error.invalidStatus(502))
+        let viewModel = await loadedViewModel(service)
+        await viewModel.confirmTrades(tradesAction())
+        XCTAssertEqual(viewModel.tradesReviews["a1"]?.closedMessage, maybeSaved)
+    }
+
+    func testLostAnswerWithTheActionStillPendingSaysTryAgain() async throws {
+        for failure in [timedOut, PersistentAssistantHTTPClient.Error.invalidStatus(503), .api("Internal error")] {
+            let service = TradesService()
+            service.actionLists = [.success([tradesAction()])]
+            service.confirmResult = .failure(failure)
+            let viewModel = await loadedViewModel(service)
+            await viewModel.confirmTrades(tradesAction())
+            XCTAssertEqual(service.pendingActionsCalls, 2, "\(failure)")
+            let card = try XCTUnwrap(viewModel.tradesReviews["a1"])
+            XCTAssertNil(card.closedMessage, "\(failure)")
+            XCTAssertEqual(card.refusal?.message, "That did not go through. Try again.", "\(failure)")
+            XCTAssertTrue(card.canSave, "the card can be saved again")
+        }
+    }
+
+    func test409AfterAnAttemptSaysItMayHaveBeenSaved() async throws {
+        let service = TradesService()
+        service.actionLists = [.success([tradesAction()])]
+        service.confirmResult = .failure(PersistentAssistantHTTPClient.Error.invalidStatus(500))
+        let viewModel = await loadedViewModel(service)
+        await viewModel.confirmTrades(tradesAction())
+        XCTAssertEqual(viewModel.tradesReviews["a1"]?.refusal?.message, "That did not go through. Try again.")
+
+        // The first save finished on the server after all.
+        service.confirmResult = .failure(PersistentAssistantHTTPClient.Error.conflict("Action is no longer available for confirmation."))
+        await viewModel.confirmTrades(tradesAction())
+        XCTAssertEqual(service.confirmed.count, 2)
+        XCTAssertEqual(viewModel.tradesReviews["a1"]?.closedMessage, maybeSaved)
+    }
+
+    func testA4xxRefusalSavedNothingAndIsNotRefetched() async throws {
+        let service = TradesService()
+        service.actionLists = [.success([tradesAction()]), .success([])]
+        service.confirmResult = .failure(PersistentAssistantHTTPClient.Error.invalidStatus(400))
+        let viewModel = await loadedViewModel(service)
+        await viewModel.confirmTrades(tradesAction())
+        XCTAssertEqual(service.pendingActionsCalls, 1)
+        XCTAssertNil(viewModel.tradesReviews["a1"]?.closedMessage)
+        XCTAssertEqual(viewModel.tradesReviews["a1"]?.refusal?.message, "That did not go through. Try again.")
+    }
+
+    func testListsAreTriedAgainAfterAFailedLoad() async throws {
+        let service = TradesService()
+        service.actionLists = [.success([tradesAction(arguments: storedArguments(synced: true))])]
+        service.listsResult = .failure(TradesService.Offline())
+        let viewModel = await loadedViewModel(service)
+        XCTAssertNil(viewModel.portfolioLists)
+        let stuck = try XCTUnwrap(viewModel.tradesReviews["a1"])
+        XCTAssertEqual(stuck.options(lists: viewModel.portfolioLists).count, 1, "a synced card with no other list to pick")
+
+        service.listsResult = .success([
+            PortfolioListDTOResponse(id: otherListID, name: "Main", isDefault: true, createdAt: nil, updatedAt: nil),
+        ])
+        await viewModel.loadPortfolioListsIfNeeded()
+        XCTAssertEqual(service.listsCalls, 2)
+        XCTAssertEqual(stuck.options(lists: viewModel.portfolioLists).map(\.name), ["Growth", "Main"])
+        await viewModel.loadPortfolioListsIfNeeded()
+        XCTAssertEqual(service.listsCalls, 2, "loaded lists are not fetched again")
+    }
+
     func test403UpgradeSaysItIsPro() async throws {
         let session = StubSession(status: 403, body: #"{"success":false,"code":"upgrade_required","error":"Upgrade to Pro.","feature":"screenshot_import","plan":"free","requiredPlan":"pro"}"#)
         do {
@@ -542,6 +628,8 @@ final class AssistantTradesCardTests: XCTestCase {
             "Fees must be a number, or blank.", "1 row left out (options, shorts, dividends or fees).",
             "%lld rows left out (options, shorts, dividends or fees).", "Save 1 trade", "Save %lld trades",
             "the proposed portfolio",
+            "This may have been saved. Check your portfolio before sending the screenshot again.",
+            "Load your portfolios",
         ]
         let path = try XCTUnwrap(Bundle.main.path(forResource: "pt-PT", ofType: "lproj"))
         let portuguese = try XCTUnwrap(Bundle(path: path))
