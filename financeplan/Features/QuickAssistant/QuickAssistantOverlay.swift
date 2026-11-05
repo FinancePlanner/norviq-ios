@@ -2,7 +2,7 @@ import Combine
 import Factory
 import SwiftUI
 
-/// Hosts the Quick Q card over the current screen.
+/// Hosts the Quick Q card and its floating button over the current screen.
 ///
 /// An overlay rather than a sheet: it sits over the tab bar and under
 /// `AppLockOverlay`, and it never hits the "second sheet is ignored" trap when
@@ -10,6 +10,10 @@ import SwiftUI
 struct QuickAssistantOverlay: View {
     let onOpenInQ: (String) -> Void
     let onPaywall: () -> Void
+    /// A hint for the floating button's questions. Nil on tabs with no matching scope.
+    let currentScope: AIViewScope?
+    /// False during the guided start, whose scrim must stay on top of everything.
+    let allowsFloatingButton: Bool
 
     @InjectedObservable(\.quickAssistantCoordinator) private var coordinator
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -39,6 +43,10 @@ struct QuickAssistantOverlay: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
+            if allowsFloatingButton, coordinator.showsFloatingButton {
+                QuickAssistantFloatingButton { coordinator.present(scope: currentScope) }
+                    .transition(.opacity)
+            }
             if coordinator.isPresented {
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()

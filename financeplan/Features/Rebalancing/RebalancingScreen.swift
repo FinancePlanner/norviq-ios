@@ -64,6 +64,7 @@ struct RebalancingScreen: View {
           .disabled(!model.portfolio.capabilities.canEdit)
       }
     }
+    .hidesQuickAssistantButton()
     .safeAreaInset(edge: .bottom) {
       if model.overview?.model != nil {
         Button {
