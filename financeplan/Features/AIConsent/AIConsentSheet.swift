@@ -64,7 +64,7 @@ struct AIConsentSheet: View {
       Label("Research notes, price targets, recaps, achievements and group names", systemImage: "note.text")
       Label("Receipt and screenshot images you import", systemImage: "photo")
       Label("Your messages to the assistant", systemImage: "bubble.left")
-      Label("Images you attach to the assistant are sent too, for that message only.", systemImage: "paperclip")
+      Label("Images you attach to the assistant are sent too, for that message only. The images are not stored; what Q reads from them is kept like any other message.", systemImage: "paperclip")
     }
     .font(.subheadline)
   }

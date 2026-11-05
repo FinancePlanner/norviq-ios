@@ -212,6 +212,12 @@ final class PersistentAssistantViewModel {
 
     private func handlePicked() {
         guard !pickedItems.isEmpty else { return }
+        // The picker is disabled mid-turn; this is a pick that lost the race
+        // with Send, which a failed turn's restore would otherwise add to.
+        guard !isSending else {
+            pickedItems = []
+            return
+        }
         // Emptied so the picker never reopens on the last selection.
         let items = pickedItems
         pickedItems = []
@@ -223,6 +229,8 @@ final class PersistentAssistantViewModel {
     /// Downscales and attaches what fits. Off the main actor, because a full-size
     /// photo takes long enough to decode and encode that the composer would hitch.
     func addAttachments(_ sources: [@Sendable () async -> Data?]) async {
+        // A pick loaded after Send would go with the next message instead.
+        guard !isSending else { return }
         attachmentNotice = nil
         let room = attachmentRoom
         if sources.count > room {
@@ -358,7 +366,7 @@ final class PersistentAssistantViewModel {
             }
             // In front of whatever was typed while the turn ran.
             draft = [content, draft].filter { !$0.isEmpty }.joined(separator: "\n")
-            attachments = outgoingImages + attachments
+            attachments = Array((outgoingImages + attachments).prefix(Self.maxAttachments))
             switch AssistantTurnRecovery(error) {
             case .askForConsent:
                 AIConsentRequired.post()

@@ -59,6 +59,7 @@ struct AssistantStreamClient: Sendable {
         case imageTooLarge
         case imageTurnsRateLimited
         case imagesBusy(String)
+        case largeImagesBusy
 
         var errorDescription: String? {
             switch self {
@@ -71,6 +72,7 @@ struct AssistantStreamClient: Sendable {
             case .imageTooLarge: String(localized: "That image is too large.")
             case .imageTurnsRateLimited: String(localized: "Too many requests. Wait a minute and try again.")
             case let .imagesBusy(reason): reason
+            case .largeImagesBusy: String(localized: "Too many large images right now. Try again in a moment.")
             }
         }
     }
@@ -103,6 +105,8 @@ struct AssistantStreamClient: Sendable {
         AIConsentRequired.matches(statusCode: 403, body: try await smallBody(bytes))
     }
 
+    private static let largeImagesBusyReason = "Too many large images right now. Try again in a moment."
+
     /// Statuses an image turn meets before its stream opens: the body cap, the
     /// image rate limit (per minute, unlike the daily limit a text turn's 429
     /// reports) and the large-image slots. A 503 with no JSON `reason` came from
@@ -118,6 +122,9 @@ struct AssistantStreamClient: Sendable {
             guard let reason = field("reason", in: body)?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !reason.isEmpty
             else { return nil }
+            // The backend's only busy reason (largeTurnsBusy in images.go) is
+            // English; say it in the app's language.
+            if reason == largeImagesBusyReason { return .largeImagesBusy }
             return .imagesBusy(String(reason.prefix(300)))
         default:
             return nil

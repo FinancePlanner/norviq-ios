@@ -15094,12 +15094,22 @@
         }
       }
     },
-    "Images you attach to the assistant are sent too, for that message only." : {
+    "Images you attach to the assistant are sent too, for that message only. The images are not stored; what Q reads from them is kept like any other message." : {
       "localizations" : {
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "As imagens que anexar ao assistente também são enviadas, apenas para essa mensagem."
+            "value" : "As imagens que anexar ao assistente também são enviadas, apenas para essa mensagem. As imagens não são guardadas; o que o Q lê nelas é mantido como qualquer outra mensagem."
+          }
+        }
+      }
+    },
+    "Too many large images right now. Try again in a moment." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demasiadas imagens grandes neste momento. Tente novamente daqui a pouco."
           }
         }
       }

@@ -1,6 +1,8 @@
 import Foundation
+import ImageIO
 import StockPlanShared
 import UIKit
+import UniformTypeIdentifiers
 import XCTest
 @testable import financeplan
 
@@ -138,6 +140,33 @@ private func jpeg(width: CGFloat = 10, height: CGFloat = 10) -> Data {
             UIColor.systemTeal.setFill()
             context.fill(CGRect(x: 0, y: 0, width: width, height: height))
         }
+}
+
+/// A JPEG whose stored pixels are `width` x `height`, tagged with an EXIF
+/// orientation, as a phone photo is.
+private func orientedJPEG(width: CGFloat, height: CGFloat, orientation: CGImagePropertyOrientation) -> Data {
+    let format = UIGraphicsImageRendererFormat.default()
+    format.scale = 1
+    let pixels = UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: format).image { context in
+        UIColor.systemTeal.setFill()
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+    }.cgImage!
+    let data = NSMutableData()
+    let destination = CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil)!
+    CGImageDestinationAddImage(destination, pixels, [kCGImagePropertyOrientation: orientation.rawValue] as CFDictionary)
+    XCTAssertTrue(CGImageDestinationFinalize(destination))
+    return data as Data
+}
+
+/// The stored pixel size and EXIF orientation of encoded image bytes.
+private func stored(_ data: Data) throws -> (width: Int, height: Int, orientation: UInt32) {
+    let source = try XCTUnwrap(CGImageSourceCreateWithData(data as CFData, nil))
+    let properties = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any])
+    return (
+        try XCTUnwrap(properties[kCGImagePropertyPixelWidth] as? Int),
+        try XCTUnwrap(properties[kCGImagePropertyPixelHeight] as? Int),
+        properties[kCGImagePropertyOrientation] as? UInt32 ?? 1
+    )
 }
 
 private func sources(_ count: Int) -> [@Sendable () async -> Data?] {
@@ -287,8 +316,15 @@ final class AssistantImageTurnTests: XCTestCase {
     }
 
     func test503ShowsTheBackendsReason() async {
+        let failure = await failure(status: 503, body: #"{"error":true,"reason":"Down for maintenance."}"#)
+        XCTAssertEqual(failure?.errorDescription, "Down for maintenance.")
+    }
+
+    /// The backend's one busy reason is English, so the app says it in its own words.
+    func test503LargeImagesBusyIsTheAppsOwnString() async {
         let body = #"{"error":true,"reason":"Too many large images right now. Try again in a moment."}"#
         let failure = await failure(status: 503, body: body)
+        guard case .largeImagesBusy? = failure else { return XCTFail("expected largeImagesBusy, got \(String(describing: failure))") }
         XCTAssertEqual(failure?.errorDescription, "Too many large images right now. Try again in a moment.")
     }
 
@@ -532,6 +568,22 @@ final class AssistantImageTurnTests: XCTestCase {
         XCTAssertNotNil(viewModel.errorMessage)
     }
 
+    /// A pick that lands after Send must not ride along with the restore.
+    func testPicksDuringATurnAreIgnoredAndTheRestoreKeepsThree() async {
+        let service = ImageTurnService()
+        service.events = [.error("Nope", code: "image_rejected"), .done]
+        let viewModel = await loadedViewModel(service)
+        await viewModel.addAttachments(sources(3))
+        let attached = viewModel.attachments.map(\.id)
+        service.midTurn = { @MainActor in await viewModel.addAttachments(sources(3)) }
+
+        await viewModel.send()
+
+        XCTAssertEqual(service.sent.first?.images.count, 3)
+        XCTAssertEqual(viewModel.attachments.map(\.id), attached)
+        XCTAssertEqual(viewModel.preparingAttachmentCount, 0)
+    }
+
     func testTextTypedDuringTheTurnSurvivesARestore() async {
         let service = ImageTurnService()
         service.events = [.error("Nope", code: "image_rejected"), .done]
@@ -641,6 +693,42 @@ final class AssistantImageTurnTests: XCTestCase {
         XCTAssertEqual(PersistentAssistantViewModel.maxAttachmentBytes, 5 << 20)
     }
 
+    func testSmallPhotoHasItsOrientationBakedIn() throws {
+        let photo = orientedJPEG(width: 200, height: 100, orientation: .right)
+        XCTAssertEqual(try stored(photo).orientation, 6, "fixture")
+
+        let prepared = try XCTUnwrap(UploadImagePreparer.prepare(photo))
+
+        let result = try stored(prepared.data)
+        XCTAssertEqual(result.width, 100)
+        XCTAssertEqual(result.height, 200)
+        XCTAssertEqual(result.orientation, 1)
+    }
+
+    func testLargeRotatedPhotoIsShrunkUpright() throws {
+        let photo = orientedJPEG(width: 4000, height: 2000, orientation: .right)
+
+        let prepared = try XCTUnwrap(UploadImagePreparer.prepare(photo))
+
+        let result = try stored(prepared.data)
+        XCTAssertEqual(result.width, 784)
+        XCTAssertEqual(result.height, 1568)
+        XCTAssertEqual(result.orientation, 1)
+    }
+
+    /// The screenshot import shares the preparer: a screenshot within the
+    /// ceiling keeps its size.
+    func testSmallScreenshotKeepsItsSize() throws {
+        let screenshot = try XCTUnwrap(UIImage(data: jpeg(width: 1179, height: 1000))?.pngData())
+
+        let prepared = try XCTUnwrap(UploadImagePreparer.prepare(screenshot))
+
+        XCTAssertEqual(prepared.contentType, "image/jpeg")
+        let result = try stored(prepared.data)
+        XCTAssertEqual(result.width, 1179)
+        XCTAssertEqual(result.height, 1000)
+    }
+
     func testAttachedImageIsShrunkToTheLongEdge() async throws {
         let viewModel = await loadedViewModel(ImageTurnService())
         let large = jpeg(width: 3000, height: 1000)
@@ -667,8 +755,9 @@ final class AssistantImageTurnTests: XCTestCase {
             "Attach up to %lld images.", "This image could not be attached. Try another one.",
             "Attaching images is part of Pro. Upgrade to use it.",
             "That image is too large.", "Too many requests. Wait a minute and try again.",
+            "Too many large images right now. Try again in a moment.",
             Self.privacyNote,
-            "Images you attach to the assistant are sent too, for that message only.",
+            "Images you attach to the assistant are sent too, for that message only. The images are not stored; what Q reads from them is kept like any other message.",
             "Not used to train AI models by Norviq's providers",
             "Your name and email are not sent, unless they are visible in an image you attach or import"
         ]
@@ -700,7 +789,7 @@ final class AssistantImageTurnTests: XCTestCase {
             .deletingLastPathComponent()
             .appendingPathComponent("financeplan/Features/AIConsent/AIConsentSheet.swift")
         let source = try String(contentsOf: sheetURL, encoding: .utf8)
-        XCTAssertTrue(source.contains("Images you attach to the assistant are sent too, for that message only."))
+        XCTAssertTrue(source.contains("Images you attach to the assistant are sent too, for that message only. The images are not stored; what Q reads from them is kept like any other message."))
         XCTAssertTrue(source.contains("Not used to train AI models by Norviq's providers"))
         XCTAssertTrue(source.contains("Your name and email are not sent, unless they are visible in an image you attach or import"))
     }
