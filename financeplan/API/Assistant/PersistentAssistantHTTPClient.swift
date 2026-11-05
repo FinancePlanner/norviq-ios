@@ -61,8 +61,8 @@ nonisolated struct PersistentAssistantHTTPClient: Sendable {
         try await client.call(ListAssistantConversationsEndpoint(), errorType: Error.self)
     }
 
-    func createConversation(title: String?) async throws -> AIConversationResponse {
-        try await client.call(CreateAssistantConversationEndpoint(payload: .init(title: title)), errorType: Error.self)
+    func createConversation(title: String?, bindMessaging: Bool? = nil) async throws -> AIConversationResponse {
+        try await client.call(CreateAssistantConversationEndpoint(payload: .init(title: title, bindMessaging: bindMessaging)), errorType: Error.self)
     }
 
     func conversation(id: String) async throws -> AIConversationResponse {

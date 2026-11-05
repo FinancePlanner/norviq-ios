@@ -153,7 +153,7 @@ final class MuseStandingTaskFlowTests: XCTestCase {
             if failConversationFetch { throw Unused() }
             return AIConversationResponse(id: id, title: "Test", messages: messages, createdAt: "2026-09-24T00:00:00Z", updatedAt: "2026-09-24T00:00:00Z")
         }
-        func streamTurn(conversationID _: String, content _: String) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        func streamTurn(conversationID _: String, content _: String, context _: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
             let events = events
             return AsyncThrowingStream { continuation in
                 for event in events { continuation.yield(event) }
@@ -177,7 +177,7 @@ final class MuseStandingTaskFlowTests: XCTestCase {
         func usage() async throws -> AIAssistantUsageResponse {
             AIAssistantUsageResponse(month: "2026-09", used: 1, limit: nil, remaining: nil, isPro: true)
         }
-        func createConversation(title _: String?) async throws -> AIConversationResponse { throw Unused() }
+        func createConversation(title _: String?, bindMessaging _: Bool?) async throws -> AIConversationResponse { throw Unused() }
         func deleteConversation(id _: String) async throws { throw Unused() }
         func turn(conversationID _: String, content _: String) async throws -> AIAssistantTurnResponse { throw Unused() }
         func preferences() async throws -> AIAssistantPreferencesResponse {

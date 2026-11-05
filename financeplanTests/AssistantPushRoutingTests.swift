@@ -402,7 +402,7 @@ final class AssistantPushViewModelTests: XCTestCase {
       if missing.contains(id) { throw Unused() }
       return AIConversationResponse(id: id, title: "T", messages: messagesByConversation[id] ?? [], createdAt: "2026-09-24T00:00:00Z", updatedAt: "2026-09-24T00:00:00Z")
     }
-    func streamTurn(conversationID _: String, content _: String) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+    func streamTurn(conversationID _: String, content _: String, context _: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
       AsyncThrowingStream { $0.finish() }
     }
     func confirmAction(id _: String) async throws -> AIConfirmedActionResponse { throw Unused() }
@@ -416,7 +416,7 @@ final class AssistantPushViewModelTests: XCTestCase {
     func usage() async throws -> AIAssistantUsageResponse {
       AIAssistantUsageResponse(month: "2026-09", used: 1, limit: nil, remaining: nil, isPro: true)
     }
-    func createConversation(title _: String?) async throws -> AIConversationResponse { throw Unused() }
+    func createConversation(title _: String?, bindMessaging _: Bool?) async throws -> AIConversationResponse { throw Unused() }
     func deleteConversation(id _: String) async throws {}
     func turn(conversationID _: String, content _: String) async throws -> AIAssistantTurnResponse { throw Unused() }
     func preferences() async throws -> AIAssistantPreferencesResponse {

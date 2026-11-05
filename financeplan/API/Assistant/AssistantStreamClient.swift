@@ -32,6 +32,7 @@ struct AssistantChatRequestDTO: Codable, Sendable {
 
 private struct PersistentAssistantTurnRequestDTO: Codable, Sendable {
     let content: String
+    let context: AssistantTurnContext?
 }
 
 enum PersistentAssistantStreamEvent: Sendable {
@@ -40,7 +41,10 @@ enum PersistentAssistantStreamEvent: Sendable {
     /// (e.g. "Adding expense…"). Older backends never send it.
     case tool(String)
     case turn(AIAssistantTurnResponse)
-    case error(String)
+    /// `code` is absent on older backends and on failures with no special
+    /// handling. Known values: `ai_consent_required`, `quota_exhausted`,
+    /// `upgrade_required`, `conversation_not_found`, `user_credential_rejected`.
+    case error(String, code: String? = nil)
     case done
 }
 
@@ -145,7 +149,8 @@ struct AssistantStreamClient: Sendable {
     /// assistant messages before emitting the final turn event.
     func streamTurn(
         conversationID: String,
-        content: String
+        content: String,
+        context: AssistantTurnContext? = nil
     ) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
@@ -158,7 +163,7 @@ struct AssistantStreamClient: Sendable {
                     if let token = await authTokenProvider() {
                         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                     }
-                    request.httpBody = try JSONEncoder().encode(PersistentAssistantTurnRequestDTO(content: content))
+                    request.httpBody = try Self.turnBody(content: content, context: context)
 
                     let (bytes, response) = try await session.bytes(for: ClientCapabilities.applied(to: request))
                     guard let http = response as? HTTPURLResponse else {
@@ -201,6 +206,10 @@ struct AssistantStreamClient: Sendable {
         }
     }
 
+    static func turnBody(content: String, context: AssistantTurnContext?) throws -> Data {
+        try JSONEncoder().encode(PersistentAssistantTurnRequestDTO(content: content, context: context))
+    }
+
     /// Maps one SSE frame of the persisted-turn stream. Frames this client
     /// does not know, and `tool` frames without a label, return nil so a newer
     /// backend never breaks an older app (and vice versa).
@@ -215,7 +224,7 @@ struct AssistantStreamClient: Sendable {
             guard let data = json.data(using: .utf8) else { throw Failure.invalidResponse }
             return .turn(try JSONDecoder().decode(AIAssistantTurnResponse.self, from: data))
         case "error":
-            return .error(field("message", in: json) ?? "The assistant could not complete this turn.")
+            return .error(field("message", in: json) ?? "The assistant could not complete this turn.", code: field("code", in: json))
         case "done":
             return .done
         default:

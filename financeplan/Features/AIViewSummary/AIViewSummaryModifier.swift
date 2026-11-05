@@ -35,6 +35,7 @@ private struct AIViewSummaryModifier: ViewModifier {
     @State private var isAssistantPresented = false
     @State private var pendingSeed: String?
     @InjectedObservable(\.billingManager) private var billingManager
+    @InjectedObservable(\.quickAssistantCoordinator) private var quickAssistant
 
     /// Server-driven rather than a raw `isPro` read, so the feature can be
     /// turned off for a user without an App Store release. `isFeatureAvailable`
@@ -46,16 +47,15 @@ private struct AIViewSummaryModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .toolbar {
-                if isAvailable {
-                    ToolbarItem(placement: placement) {
-                        Button {
-                            isSummaryPresented = true
-                        } label: {
-                            Image(systemName: "sparkles")
-                        }
-                        .accessibilityLabel("AI summary")
-                        .accessibilityIdentifier("aiSummary.open.\(scope.rawValue)")
-                    }
+                // Shown to everyone: only the summary is gated, and Quick Q
+                // has its own monthly allowance for free accounts.
+                ToolbarItem(placement: placement) {
+                    QuickAssistantTrigger(
+                        isSummaryAvailable: isAvailable,
+                        identifier: "aiSummary.open.\(scope.rawValue)",
+                        onSummary: { isSummaryPresented = true },
+                        onAsk: { quickAssistant.present(scope: scope) }
+                    )
                 }
             }
             .sheet(isPresented: $isSummaryPresented) {
