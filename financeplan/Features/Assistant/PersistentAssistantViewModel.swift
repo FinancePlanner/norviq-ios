@@ -30,6 +30,12 @@ final class PersistentAssistantViewModel {
     private(set) var watchProposals: [String: AIWatchProposalResponse] = [:]
     /// Standing-task cards the user answered but that stay on screen.
     private(set) var standingTaskOutcomes: [String: MuseStandingTaskOutcome] = [:]
+    /// Trades cards (`record_trades`) by action id, built when the action
+    /// arrives. The user's edits live here, so they outlive scrolling and reloads.
+    private(set) var tradesReviews: [String: AssistantTradesReview] = [:]
+    /// The portfolios a trades card can pick from. Nil until a card needs them,
+    /// or when loading failed: the card then saves to the list it proposed.
+    private(set) var portfolioLists: [PortfolioListDTOResponse]?
     var draft = ""
 
     /// The backend's limits for one turn (`maxTurnImages`, `maxTurnImageBytes`).
@@ -110,6 +116,7 @@ final class PersistentAssistantViewModel {
             usage = loadedUsage
             preferences = loadedPreferences
             pendingActions = loadedActions
+            rebuildTradesReviews()
             if let preferredConversationID, (try? await selectConversation(id: preferredConversationID)) != nil {
                 // Opened from a push or link.
             } else if let first = conversations.first {
@@ -117,6 +124,7 @@ final class PersistentAssistantViewModel {
             } else {
                 try await createConversation()
             }
+            await loadPortfolioListsIfNeeded()
         } catch {
             errorMessage = readable(error, fallback: "The assistant could not be loaded.")
         }
@@ -322,6 +330,7 @@ final class PersistentAssistantViewModel {
                     if let action = turn.pendingAction {
                         pendingActions.insert(action, at: 0)
                         if let proposal = turn.watchProposal { watchProposals[action.id] = proposal }
+                        rebuildTradesReviews()
                     }
                 case let .error(message, code):
                     throw AssistantTurnFailure(message: message, code: code)
@@ -332,6 +341,7 @@ final class PersistentAssistantViewModel {
             guard receivedTurn else {
                 throw AssistantTurnFailure(message: "The assistant returned no response.")
             }
+            await loadPortfolioListsIfNeeded()
             async let usageRequest = service.usage()
             async let conversationsRequest = service.conversations()
             usage = try await usageRequest
@@ -440,6 +450,69 @@ final class PersistentAssistantViewModel {
         pendingActions.removeAll { $0.id == id }
         watchProposals[id] = nil
         standingTaskOutcomes[id] = nil
+        tradesReviews[id] = nil
+    }
+
+    // MARK: - Trades cards
+
+    /// Takes the card's edits. A card that is gone stays gone.
+    func updateTradesReview(_ review: AssistantTradesReview) {
+        guard tradesReviews[review.actionID] != nil else { return }
+        tradesReviews[review.actionID] = review
+    }
+
+    /// A card for each `record_trades` action whose arguments read; one
+    /// already on screen keeps its edits. Others get the plain card.
+    private func rebuildTradesReviews() {
+        var reviews: [String: AssistantTradesReview] = [:]
+        for action in pendingActions {
+            reviews[action.id] = tradesReviews[action.id] ?? AssistantTradesReview(action: action)
+        }
+        tradesReviews = reviews
+    }
+
+    /// One request, and only once a card needs the picker.
+    private func loadPortfolioListsIfNeeded() async {
+        guard !tradesReviews.isEmpty, portfolioLists == nil else { return }
+        portfolioLists = try? await service.portfolioLists()
+    }
+
+    /// Saves the card's kept rows as they stand. A 422 keeps the card with its
+    /// errors on the rows, unless the save failed after the backend claimed
+    /// the action, which settles it: a 422 then looks the same, so the action
+    /// is fetched again, and a card no longer pending is closed. A 409 means
+    /// it expired or was already answered.
+    func confirmTrades(_ action: AIPendingActionResponse) async {
+        guard activeActionID == nil, var review = tradesReviews[action.id], review.canSave else { return }
+        activeActionID = action.id
+        defer { activeActionID = nil }
+        let body = review.confirmBody
+        do {
+            let result = try await service.confirmTrades(id: action.id, portfolioListID: body.portfolioListId, trades: body.trades)
+            removePendingAction(id: action.id)
+            errorMessage = result.message
+            return
+        } catch let PersistentAssistantHTTPClient.Error.unprocessable(reason, rowErrors) {
+            let reason = reason.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+            if await isStillPending(action.id) == false {
+                review.closedMessage = reason.map { "\($0) \(AssistantTradesReview.closedCopy)" } ?? AssistantTradesReview.closedCopy
+            } else {
+                review.refuse(reason ?? AssistantTradesReview.retryCopy, rowErrors: rowErrors)
+            }
+        } catch PersistentAssistantHTTPClient.Error.conflict {
+            review.closedMessage = AssistantTradesReview.expiredCopy
+        } catch PersistentAssistantHTTPClient.Error.upgradeRequired {
+            review.refuse(AssistantTradesReview.upgradeCopy, rowErrors: [])
+        } catch {
+            review.refuse(AssistantTradesReview.retryCopy, rowErrors: [])
+        }
+        tradesReviews[action.id] = review
+    }
+
+    /// Whether the action still waits for an answer; nil when that cannot be told.
+    private func isStillPending(_ id: String) async -> Bool? {
+        guard let actions = try? await service.pendingActions() else { return nil }
+        return actions.contains { $0.id.caseInsensitiveCompare(id) == .orderedSame && $0.status == .pending }
     }
 
     func cancel(_ action: AIPendingActionResponse) async {

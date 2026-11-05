@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%lld rows left out (options, shorts, dividends or fees)." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld linhas deixadas de fora (opções, vendas a descoberto, dividendos ou comissões)."
+          }
+        }
+      }
+    },
+    "1 row left out (options, shorts, dividends or fees)." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 linha deixada de fora (opções, vendas a descoberto, dividendos ou comissões)."
+          }
+        }
+      }
+    },
     "All tools" : {
       "localizations" : {
         "pt-PT" : {
@@ -21,6 +41,16 @@
         }
       }
     },
+    "Check each row against your screenshot. Only ticked rows are saved." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compare cada linha com a sua captura de ecrã. Só as linhas assinaladas são guardadas."
+          }
+        }
+      }
+    },
     "Encrypted. Your data stays yours." : {
       "comment" : "Precision rebrand copy (docs/precision-identity.md).",
       "localizations" : {
@@ -34,6 +64,86 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Encriptado. Os seus dados continuam seus."
+          }
+        }
+      }
+    },
+    "Enter a symbol." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduza um símbolo."
+          }
+        }
+      }
+    },
+    "Enter the date." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduza a data."
+          }
+        }
+      }
+    },
+    "Enter the number of shares." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduza o número de ações."
+          }
+        }
+      }
+    },
+    "Enter the price." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduza o preço."
+          }
+        }
+      }
+    },
+    "Expires %@" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expira às %@"
+          }
+        }
+      }
+    },
+    "Fees" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comissões"
+          }
+        }
+      }
+    },
+    "Fees must be a number, or blank." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As comissões têm de ser um número ou ficar em branco."
+          }
+        }
+      }
+    },
+    "Hard to read — check" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Difícil de ler — verifique"
           }
         }
       }
@@ -78,6 +188,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quanto vou ter daqui a X anos?"
+          }
+        }
+      }
+    },
+    "Is that %@ or %@? Type it without the comma." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "É %1$@ ou %2$@? Escreva sem a vírgula."
+          }
+        }
+      }
+    },
+    "Not applied" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não aplicado"
           }
         }
       }
@@ -618,6 +748,106 @@
         }
       }
     },
+    "Review trades" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rever transações"
+          }
+        }
+      }
+    },
+    "Save %@" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar %@"
+          }
+        }
+      }
+    },
+    "Save %lld trades" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar %lld transações"
+          }
+        }
+      }
+    },
+    "Save 1 trade" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar 1 transação"
+          }
+        }
+      }
+    },
+    "Saves as %@" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guarda como %@"
+          }
+        }
+      }
+    },
+    "Saves as %@, not %@" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guarda como %1$@, não %2$@"
+          }
+        }
+      }
+    },
+    "Saving to %@" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A guardar em %@"
+          }
+        }
+      }
+    },
+    "Saving trades from a screenshot is part of Pro." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar transações a partir de uma captura de ecrã faz parte do Pro."
+          }
+        }
+      }
+    },
+    "Sells update realized P&L, not yet your annual tax figures." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As vendas atualizam o P&L realizado, mas ainda não os seus valores fiscais anuais."
+          }
+        }
+      }
+    },
+    "Shares" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ações"
+          }
+        }
+      }
+    },
     "Show achievements to friends" : {
       "localizations" : {
         "en" : {
@@ -650,6 +880,16 @@
         }
       }
     },
+    "Side" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Operação"
+          }
+        }
+      }
+    },
     "Silver" : {
       "localizations" : {
         "en" : {
@@ -666,6 +906,16 @@
         }
       }
     },
+    "Spaces and a decimal point do not go together here. Type it without the spaces." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aqui não pode usar espaços e um ponto decimal juntos. Escreva sem os espaços."
+          }
+        }
+      }
+    },
     "That achievement is no longer available." : {
       "localizations" : {
         "en" : {
@@ -678,6 +928,56 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Essa conquista já não está disponível."
+          }
+        }
+      }
+    },
+    "That did not go through. Try again." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível concluir. Tente novamente."
+          }
+        }
+      }
+    },
+    "the proposed portfolio" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "o portefólio proposto"
+          }
+        }
+      }
+    },
+    "This portfolio syncs from IBKR, so saved trades would be overwritten. Pick another portfolio." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este portefólio sincroniza com a IBKR, por isso as transações guardadas seriam substituídas. Escolha outro portefólio."
+          }
+        }
+      }
+    },
+    "This review expired. Send the screenshot again." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta revisão expirou. Envie a captura de ecrã novamente."
+          }
+        }
+      }
+    },
+    "Those trades were not saved and this review is closed. Send the screenshot again." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essas transações não foram guardadas e esta revisão está fechada. Envie a captura de ecrã novamente."
           }
         }
       }
@@ -4634,7 +4934,14 @@
       "isCommentAutoGenerated" : true
     },
     "Buy" : {
-
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comprar"
+          }
+        }
+      }
     },
     "Buy %@" : {
       "comment" : "A button that opens a buy sheet for a given stock symbol.",
@@ -6147,7 +6454,14 @@
       }
     },
     "Currency" : {
-
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moeda"
+          }
+        }
+      }
     },
     "Current" : {
       "comment" : "A label displayed in the middle of a `StockSessionRangeBar`.",

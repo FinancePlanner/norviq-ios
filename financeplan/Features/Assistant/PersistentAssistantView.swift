@@ -220,6 +220,17 @@ struct PersistentAssistantView: View {
                 onConfirm: { Task { await viewModel.confirm(action) } },
                 onNotNow: { Task { await viewModel.cancel(action) } }
             )
+        } else if let review = viewModel.tradesReviews[action.id] {
+            AssistantTradesCard(
+                review: Binding(
+                    get: { viewModel.tradesReviews[action.id] ?? review },
+                    set: { viewModel.updateTradesReview($0) }
+                ),
+                lists: viewModel.portfolioLists,
+                isBusy: isBusy,
+                onSave: { Task { await viewModel.confirmTrades(action) } },
+                onCancel: { Task { await viewModel.cancel(action) } }
+            )
         } else {
             AssistantPendingActionCard(
                 action: action,

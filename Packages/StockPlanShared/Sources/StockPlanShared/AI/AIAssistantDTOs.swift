@@ -215,3 +215,182 @@ public struct AIConfirmedActionResponse: Codable, Sendable, Equatable {
         self.message = message
     }
 }
+
+// MARK: - Trades read from a screenshot (record_trades)
+
+/// A row warning from the backend's preview. A blocking issue such as
+/// `already_recorded` means the row cannot be saved as it is.
+public struct AITradeIssue: Codable, Sendable, Equatable {
+    public let code: String
+    public let message: String
+    public let blocking: Bool
+
+    public init(code: String, message: String, blocking: Bool) {
+        self.code = code; self.message = message; self.blocking = blocking
+    }
+
+    private enum CodingKeys: String, CodingKey { case code, message, blocking }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        code = try container.decodeIfPresent(String.self, forKey: .code) ?? ""
+        message = try container.decodeIfPresent(String.self, forKey: .message) ?? ""
+        blocking = try container.decodeIfPresent(Bool.self, forKey: .blocking) ?? false
+    }
+}
+
+/// One trade as the model read it, with the preview's issues. `currency`,
+/// `fees` and `confidence` may be absent or null; a missing confidence is
+/// never high confidence.
+public struct AIProposedTrade: Codable, Sendable, Equatable {
+    public let symbol: String
+    /// `buy` or `sell`.
+    public let side: String
+    public let quantity: Double
+    public let price: Double
+    /// `YYYY-MM-DD`, as read. It may not be a real date; the card says so.
+    public let tradeDate: String
+    public let currency: String?
+    public let fees: Double?
+    public let confidence: Double?
+    public let issues: [AITradeIssue]
+
+    public init(
+        symbol: String,
+        side: String,
+        quantity: Double,
+        price: Double,
+        tradeDate: String,
+        currency: String? = nil,
+        fees: Double? = nil,
+        confidence: Double? = nil,
+        issues: [AITradeIssue] = []
+    ) {
+        self.symbol = symbol; self.side = side; self.quantity = quantity; self.price = price
+        self.tradeDate = tradeDate; self.currency = currency; self.fees = fees
+        self.confidence = confidence; self.issues = issues
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case symbol, side, quantity, price, currency, fees, confidence, issues
+        case tradeDate = "trade_date"
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        symbol = try container.decode(String.self, forKey: .symbol)
+        side = try container.decode(String.self, forKey: .side)
+        guard side == "buy" || side == "sell" else {
+            throw DecodingError.dataCorruptedError(forKey: .side, in: container, debugDescription: "side is \(side)")
+        }
+        quantity = try container.decode(Double.self, forKey: .quantity)
+        price = try container.decode(Double.self, forKey: .price)
+        tradeDate = try container.decode(String.self, forKey: .tradeDate)
+        currency = try container.decodeIfPresent(String.self, forKey: .currency)
+        fees = try container.decodeIfPresent(Double.self, forKey: .fees)
+        confidence = try container.decodeIfPresent(Double.self, forKey: .confidence)
+        issues = try container.decodeIfPresent([AITradeIssue].self, forKey: .issues) ?? []
+    }
+}
+
+/// The stored `arguments` of a `record_trades` pending action: the trades
+/// card. The keys are snake case on the wire (`proposedTrades` in the
+/// backend's `assistant/trades.go`); read it with `decode(arguments:)`.
+public struct TradesProposalDTO: Codable, Sendable, Equatable {
+    public let portfolioListId: String
+    /// Rows left out of the card: options, shorts, dividends or fees.
+    public let skippedRows: Int
+    public let baseCurrency: String
+    /// The proposed portfolio syncs from IBKR, which would overwrite saved trades.
+    public let synced: Bool
+    public let trades: [AIProposedTrade]
+
+    public init(portfolioListId: String, skippedRows: Int, baseCurrency: String, synced: Bool, trades: [AIProposedTrade]) {
+        self.portfolioListId = portfolioListId; self.skippedRows = skippedRows
+        self.baseCurrency = baseCurrency; self.synced = synced; self.trades = trades
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case synced, trades
+        case portfolioListId = "portfolio_list_id"
+        case skippedRows = "skipped_rows"
+        case baseCurrency = "base_currency"
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        portfolioListId = try container.decode(String.self, forKey: .portfolioListId)
+        let skipped = try container.decodeIfPresent(Double.self, forKey: .skippedRows) ?? 0
+        skippedRows = skipped > 0 && skipped.isFinite ? Int(skipped.rounded(.down)) : 0
+        baseCurrency = try container.decodeIfPresent(String.self, forKey: .baseCurrency) ?? ""
+        synced = try container.decodeIfPresent(Bool.self, forKey: .synced) ?? false
+        trades = try container.decode([AIProposedTrade].self, forKey: .trades)
+    }
+
+    /// The card in a pending action's `arguments`, or nil when they cannot be
+    /// read or hold no trades; the client then shows its plain card. Uses a
+    /// plain decoder: the shared one's snake-case conversion would miss these keys.
+    public static func decode(arguments: String) -> TradesProposalDTO? {
+        guard let proposal = try? JSONDecoder().decode(TradesProposalDTO.self, from: Data(arguments.utf8)),
+              !proposal.trades.isEmpty
+        else { return nil }
+        return proposal
+    }
+}
+
+/// One reviewed row of the confirm body. A nil currency or fees is left out.
+public struct AIReviewedTrade: Codable, Sendable, Equatable {
+    public let symbol: String
+    public let side: String
+    public let quantity: Double
+    public let price: Double
+    public let tradeDate: String
+    public let currency: String?
+    public let fees: Double?
+
+    public init(symbol: String, side: String, quantity: Double, price: Double, tradeDate: String, currency: String? = nil, fees: Double? = nil) {
+        self.symbol = symbol; self.side = side; self.quantity = quantity; self.price = price
+        self.tradeDate = tradeDate; self.currency = currency; self.fees = fees
+    }
+}
+
+/// `POST /v1/ai/assistant/actions/:id/confirm` for `record_trades`: only the
+/// rows the user kept, as they stand on the card. The keys are camel case;
+/// encode with a plain encoder, not the shared snake-case one.
+public struct AITradesConfirmRequest: Codable, Sendable, Equatable {
+    public let portfolioListId: String
+    public let trades: [AIReviewedTrade]
+
+    public init(portfolioListId: String, trades: [AIReviewedTrade]) {
+        self.portfolioListId = portfolioListId; self.trades = trades
+    }
+}
+
+/// One entry of a confirm 422's `rowErrors`. `index` is into the submitted trades.
+public struct AITradeRowError: Codable, Sendable, Equatable {
+    public let index: Int
+    public let code: String
+    public let message: String
+
+    public init(index: Int, code: String, message: String) {
+        self.index = index; self.code = code; self.message = message
+    }
+}
+
+/// The 422 body of a refused trades confirm: `{reason, rowErrors}`.
+public struct AITradesRefusalResponse: Codable, Sendable, Equatable {
+    public let reason: String?
+    public let rowErrors: [AITradeRowError]
+
+    public init(reason: String?, rowErrors: [AITradeRowError]) {
+        self.reason = reason; self.rowErrors = rowErrors
+    }
+
+    private enum CodingKeys: String, CodingKey { case reason, rowErrors }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        reason = try container.decodeIfPresent(String.self, forKey: .reason)
+        rowErrors = (try? container.decodeIfPresent([AITradeRowError].self, forKey: .rowErrors)) ?? []
+    }
+}

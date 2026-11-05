@@ -16,7 +16,11 @@ protocol PersistentAssistantServicing: Sendable {
     func usage() async throws -> AIAssistantUsageResponse
     func pendingActions() async throws -> [AIPendingActionResponse]
     func confirmAction(id: String) async throws -> AIConfirmedActionResponse
+    /// Confirms a `record_trades` card with only the rows the user kept.
+    func confirmTrades(id: String, portfolioListID: String, trades: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse
     func cancelAction(id: String) async throws
+    /// The user's portfolios, for the trades card's picker.
+    func portfolioLists() async throws -> [PortfolioListDTOResponse]
     func memos(bookmarked: Bool?, conversationID: String?) async throws -> [PositionMemoListItem]
     func memo(id: String) async throws -> PositionMemoDetail
     func bookmarkMemo(id: String, bookmarked: Bool) async throws -> PositionMemoCard
@@ -68,7 +72,11 @@ struct DefaultPersistentAssistantService: PersistentAssistantServicing, Sendable
     func usage() async throws -> AIAssistantUsageResponse { try await client.usage() }
     func pendingActions() async throws -> [AIPendingActionResponse] { try await client.pendingActions() }
     func confirmAction(id: String) async throws -> AIConfirmedActionResponse { try await client.confirmAction(id: id) }
+    func confirmTrades(id: String, portfolioListID: String, trades: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse {
+        try await client.confirmTrades(id: id, portfolioListID: portfolioListID, trades: trades)
+    }
     func cancelAction(id: String) async throws { try await client.cancelAction(id: id) }
+    func portfolioLists() async throws -> [PortfolioListDTOResponse] { try await client.portfolioLists() }
     func memos(bookmarked: Bool?, conversationID: String?) async throws -> [PositionMemoListItem] {
         try await client.memos(bookmarked: bookmarked, conversationID: conversationID)
     }

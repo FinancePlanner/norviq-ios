@@ -47,6 +47,8 @@ private final class ScriptedAssistantService: PersistentAssistantServicing, @unc
         return AIConfirmedActionResponse(actionId: id, status: .completed, resultId: nil, message: message)
     }
 
+    func portfolioLists() async throws -> [PortfolioListDTOResponse] { [] }
+    func confirmTrades(id _: String, portfolioListID _: String, trades _: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse { throw Unused() }
     func cancelAction(id: String) async throws { cancelled.append(id) }
 
     func conversation(id _: String) async throws -> AIConversationResponse { throw Unused() }
@@ -268,6 +270,17 @@ final class QuickAssistantViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.needsFullQ)
     }
 
+    /// A trades card saves only rows the user reviewed, and the backend refuses
+    /// a confirm with no rows (422), so Quick Q never offers one.
+    func testTradesCardIsLeftForFullQ() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn(action: AssistantTradesReview.toolName)), .done]])
+        let viewModel = makeViewModel(service)
+        await ask(viewModel)
+        XCTAssertNil(viewModel.pendingAction)
+        XCTAssertTrue(viewModel.needsFullQ)
+        XCTAssertEqual(viewModel.phase, .answered)
+    }
+
     func testResetClearsTheCardButKeepsTheConversation() async {
         let service = ScriptedAssistantService(scripts: [[.turn(turn()), .done]])
         let viewModel = makeViewModel(service)
@@ -430,6 +443,8 @@ private struct FullQService: PersistentAssistantServicing {
     func dismissTip(id: String) async throws { try await base.dismissTip(id: id) }
     func pendingActions() async throws -> [AIPendingActionResponse] { [] }
     func confirmAction(id: String) async throws -> AIConfirmedActionResponse { try await base.confirmAction(id: id) }
+    func portfolioLists() async throws -> [PortfolioListDTOResponse] { [] }
+    func confirmTrades(id _: String, portfolioListID _: String, trades _: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse { throw ScriptedAssistantService.Unused() }
     func cancelAction(id: String) async throws { try await base.cancelAction(id: id) }
     func memos(bookmarked: Bool?, conversationID: String?) async throws -> [PositionMemoListItem] { [] }
     func memo(id: String) async throws -> PositionMemoDetail { try await base.memo(id: id) }

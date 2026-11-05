@@ -87,6 +87,8 @@ private final class ImageTurnService: PersistentAssistantServicing, @unchecked S
     func updatePreferences(_: AIAssistantPreferencesResponse) async throws -> AIAssistantPreferencesResponse { throw Unused() }
     func dismissTip(id _: String) async throws { throw Unused() }
     func confirmAction(id _: String) async throws -> AIConfirmedActionResponse { throw Unused() }
+    func portfolioLists() async throws -> [PortfolioListDTOResponse] { [] }
+    func confirmTrades(id _: String, portfolioListID _: String, trades _: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse { throw Unused() }
     func cancelAction(id _: String) async throws { throw Unused() }
     func memos(bookmarked _: Bool?, conversationID _: String?) async throws -> [PositionMemoListItem] { [] }
     func memo(id _: String) async throws -> PositionMemoDetail { throw Unused() }
