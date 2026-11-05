@@ -107,12 +107,13 @@ private func parts(of body: Data, boundary: String) throws -> [SentPart] {
     let text = try XCTUnwrap(String(data: body, encoding: .isoLatin1))
     XCTAssertTrue(text.hasSuffix("--\(boundary)--\r\n"), "closing boundary missing")
     return try text.components(separatedBy: "--\(boundary)").dropFirst().dropLast().map { raw in
-        let section = raw.hasPrefix("\r\n") ? String(raw.dropFirst(2)) : raw
+        // "\r\n" is one Character in Swift, so this drops both bytes.
+        let section = raw.hasPrefix("\r\n") ? String(raw.dropFirst()) : raw
         let divider = try XCTUnwrap(section.range(of: "\r\n\r\n"))
         let headers = section[..<divider.lowerBound].components(separatedBy: "\r\n")
         var value = String(section[divider.upperBound...])
         XCTAssertTrue(value.hasSuffix("\r\n"), "part must end in CRLF")
-        value.removeLast()
+        value.removeLast() // the one Character "\r\n"
         let disposition = try XCTUnwrap(headers.first { $0.hasPrefix("Content-Disposition:") })
         func parameter(_ key: String) -> String? {
             guard let start = disposition.range(of: "\(key)=\"") else { return nil }
@@ -256,7 +257,13 @@ final class AssistantImageTurnTests: XCTestCase {
         XCTAssertEqual(String(data: ImageTurnURLProtocol.body, encoding: .utf8), #"{"content":"Hi"}"#)
 
         try await drain(makeClient().streamTurn(conversationID: "c1", content: "Hi", images: [], context: context))
-        XCTAssertEqual(ImageTurnURLProtocol.body, try AssistantStreamClient.turnBody(content: "Hi", context: context))
+        XCTAssertEqual(ImageTurnURLProtocol.request?.value(forHTTPHeaderField: "Content-Type"), "application/json")
+        // JSONEncoder does not promise a key order, so compare what the bytes say.
+        let sent = try XCTUnwrap(JSONSerialization.jsonObject(with: ImageTurnURLProtocol.body) as? NSDictionary)
+        let expected = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: AssistantStreamClient.turnBody(content: "Hi", context: context)) as? NSDictionary
+        )
+        XCTAssertEqual(sent, expected)
     }
 
     func testTextOnlyCallSendsNoImages() async throws {
