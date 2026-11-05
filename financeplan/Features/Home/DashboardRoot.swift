@@ -150,6 +150,7 @@ struct DashboardRoot: View {
       .navigationTitle(greetingText)
       .navigationBarTitleDisplayMode(.large)
       .aiViewSummary(.home)
+      .toolsDestinations()
       .navigationDestination(isPresented: $isChartBuilderPresented) {
         ChartBuilderStandaloneScreen()
       }
@@ -461,6 +462,8 @@ private struct DashboardContentSection: View {
       MacroTeaserCard()
 
       TaxForecasterTeaserCard()
+
+      ToolsDashboardCard()
 
       GoalPlanningDashboardCard(action: onGoalPlanningTap)
         .guidedTarget(.goalCard, in: .dashboard)

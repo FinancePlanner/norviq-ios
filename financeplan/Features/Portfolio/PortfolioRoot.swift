@@ -69,6 +69,7 @@ struct PortfolioRoot: View {
         StockDetailScreen(stockId: route.stockID, initialSymbol: route.symbol)
       }
       .pilotDestinations()
+      .toolsDestinations()
       .navigationDestination(item: $pendingAutomationDestination) { destination in
         switch destination {
         case let .smartScreen(id): ProGateView(billingManager: billingManager) { SmartScreeningScreen(
@@ -114,6 +115,9 @@ struct PortfolioRoot: View {
         // and these two belong together as one idea - path, and destination.
         ToolbarItem(placement: .topBarTrailing) {
           Menu("Planning", systemImage: "target") {
+            NavigationLink(value: ToolsRoute.hub) {
+              Label("All tools", systemImage: "wrench.and.screwdriver")
+            }
             NavigationLink(value: PortfolioRootRoute.grow) {
               Label("Grow", systemImage: "chart.line.uptrend.xyaxis")
             }
