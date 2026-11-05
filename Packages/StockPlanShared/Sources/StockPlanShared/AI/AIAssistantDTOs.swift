@@ -83,8 +83,12 @@ public struct AIAssistantPreferencesResponse: Codable, Sendable, Equatable {
     public let proactiveTipsEnabled: Bool
     public let pushEnabled: Bool
     public let timezone: String
-    public init(proactiveTipsEnabled: Bool, pushEnabled: Bool, timezone: String) {
+    /// Whether a turn may attach images. A backend from before images leaves it
+    /// out, and absent means no. Clients never send it, so it is nil on the way up.
+    public let imagesEnabled: Bool?
+    public init(proactiveTipsEnabled: Bool, pushEnabled: Bool, timezone: String, imagesEnabled: Bool? = nil) {
         self.proactiveTipsEnabled = proactiveTipsEnabled; self.pushEnabled = pushEnabled; self.timezone = timezone
+        self.imagesEnabled = imagesEnabled
     }
 }
 

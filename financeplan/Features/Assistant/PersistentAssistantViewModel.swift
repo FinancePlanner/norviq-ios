@@ -1,7 +1,9 @@
 import Factory
 import Foundation
 import Observation
+import PhotosUI
 import StockPlanShared
+import SwiftUI
 
 @Observable @MainActor
 final class PersistentAssistantViewModel {
@@ -29,6 +31,29 @@ final class PersistentAssistantViewModel {
     /// Standing-task cards the user answered but that stay on screen.
     private(set) var standingTaskOutcomes: [String: MuseStandingTaskOutcome] = [:]
     var draft = ""
+
+    /// The backend's limits for one turn (`maxTurnImages`, `maxTurnImageBytes`).
+    static let maxAttachments = 3
+    static let maxAttachmentBytes = 5 << 20
+    /// Images waiting to go with the next message.
+    private(set) var attachments: [ScreenshotUploadImage] = []
+    private(set) var preparingAttachmentCount = 0
+    /// Why an image did not attach or go through. Shown in the composer, where
+    /// it is still readable once a paywall sheet closes.
+    private(set) var attachmentNotice: String?
+    var pickedItems: [PhotosPickerItem] = [] {
+        didSet { handlePicked() }
+    }
+
+    /// Absent from a backend that predates images, which means no.
+    var imagesEnabled: Bool { preferences?.imagesEnabled ?? false }
+
+    var attachmentRoom: Int { max(Self.maxAttachments - attachments.count - preparingAttachmentCount, 0) }
+
+    var canSend: Bool {
+        let hasText = !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return (hasText || !attachments.isEmpty) && !isSending && preparingAttachmentCount == 0
+    }
 
     var memoService: any PersistentAssistantServicing { service }
 
@@ -177,23 +202,77 @@ final class PersistentAssistantViewModel {
         catch { errorMessage = readable(error, fallback: "The conversation could not be opened.") }
     }
 
+    private func handlePicked() {
+        guard !pickedItems.isEmpty else { return }
+        // Emptied so the picker never reopens on the last selection.
+        let items = pickedItems
+        pickedItems = []
+        Task {
+            await addAttachments(items.map { item in { try? await item.loadTransferable(type: Data.self) } })
+        }
+    }
+
+    /// Downscales and attaches what fits. Off the main actor, because a full-size
+    /// photo takes long enough to decode and encode that the composer would hitch.
+    func addAttachments(_ sources: [@Sendable () async -> Data?]) async {
+        attachmentNotice = nil
+        let room = attachmentRoom
+        if sources.count > room {
+            attachmentNotice = String(localized: "Attach up to \(Self.maxAttachments) images.")
+        }
+        let taken = sources.prefix(room)
+        preparingAttachmentCount += taken.count
+        let cap = Self.maxAttachmentBytes
+        for source in taken {
+            let prepared = await Task.detached(priority: .userInitiated) { () -> ScreenshotUploadImage? in
+                guard let data = await source() else { return nil }
+                return UploadImagePreparer.prepare(data, maxBytes: cap)
+            }.value
+            preparingAttachmentCount -= 1
+            if let prepared {
+                attachments.append(prepared)
+            } else {
+                attachmentNotice = String(localized: "This image could not be attached. Try another one.")
+            }
+        }
+    }
+
+    func removeAttachment(id: ScreenshotUploadImage.ID) {
+        attachments.removeAll { $0.id == id }
+        attachmentNotice = nil
+    }
+
     func send() async {
         let content = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !content.isEmpty, let conversation = activeConversation, !isSending else { return }
+        guard !content.isEmpty || !attachments.isEmpty,
+              let conversation = activeConversation,
+              !isSending,
+              preparingAttachmentCount == 0
+        else { return }
+        let resolution = AssistantCommandParser.resolve(content)
+        // A command answered on the device sends nothing, so its images stay put.
+        let outgoingImages: [ScreenshotUploadImage]
+        if case .local = resolution {
+            outgoingImages = []
+        } else {
+            outgoingImages = attachments
+            attachments = []
+        }
         draft = ""
+        attachmentNotice = nil
         isSending = true
         errorMessage = nil
         let optimistic = AIMessageResponse(
             id: UUID().uuidString,
             conversationId: conversation.id,
             role: .user,
-            content: content,
+            content: outgoingImages.isEmpty ? content : Self.storedImageTurnText(content),
             createdAt: ISO8601DateFormatter().string(from: Date())
         )
         activeConversation = replacingMessages(in: conversation, with: conversation.messages + [optimistic])
 
         let outgoingContent: String
-        switch AssistantCommandParser.resolve(content) {
+        switch resolution {
         case let .local(reply):
             let localReply = AIMessageResponse(
                 id: UUID().uuidString,
@@ -218,11 +297,12 @@ final class PersistentAssistantViewModel {
             activityLabel = nil
         }
         apply(.started)
+        var receivedTurn = false
         do {
-            var receivedTurn = false
             for try await event in service.streamTurn(
                 conversationID: conversation.id,
                 content: outgoingContent,
+                images: outgoingImages,
                 context: .current()
             ) {
                 switch event {
@@ -260,19 +340,41 @@ final class PersistentAssistantViewModel {
             // A turn that arrived before a later failure (e.g. refreshing
             // usage) still counts; only a turn that never landed is a snag.
             if agentState.phase == .working { apply(.failed) }
-            if let current = activeConversation {
-                activeConversation = replacingMessages(in: current, with: current.messages.filter { $0.id != optimistic.id })
+            // An image turn whose reply arrived is stored, and its images are
+            // gone from the server: sending them again could only repeat it.
+            if !(receivedTurn && !outgoingImages.isEmpty) {
+                if let current = activeConversation {
+                    activeConversation = replacingMessages(in: current, with: current.messages.filter { $0.id != optimistic.id })
+                }
+                // In front of whatever was typed while the turn ran.
+                draft = [content, draft].filter { !$0.isEmpty }.joined(separator: "\n")
+                attachments = outgoingImages + attachments
             }
-            draft = content
             switch AssistantTurnRecovery(error) {
             case .askForConsent:
                 AIConsentRequired.post()
             case .showPaywall:
                 isPaywallRequested = true
+                if !outgoingImages.isEmpty, Self.isUpgradeRefusal(error) {
+                    attachmentNotice = String(localized: "Attaching images is part of Pro. Upgrade to use it.")
+                }
             case .recreateConversation, .showMessage:
                 errorMessage = readable(error, fallback: "The assistant could not respond.")
             }
         }
+    }
+
+    /// The text the server stores for an image turn, so the bubble reads the
+    /// same before and after a reload. `defaultImagePrompt` and `imageMarker` in
+    /// the backend's `images.go`.
+    private static func storedImageTurnText(_ content: String) -> String {
+        (content.isEmpty ? "What's in this image?" : content) + " [image attached]"
+    }
+
+    private static func isUpgradeRefusal(_ error: any Error) -> Bool {
+        if let failure = error as? AssistantTurnFailure { return failure.code == "upgrade_required" }
+        if case .upgradeRequired? = error as? AssistantStreamClient.Failure { return true }
+        return false
     }
 
     /// The standing task a pending action proposes, or nil for other actions.

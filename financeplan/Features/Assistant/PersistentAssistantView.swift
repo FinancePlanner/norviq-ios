@@ -1,4 +1,5 @@
 import Factory
+import PhotosUI
 import StockPlanShared
 import SwiftUI
 
@@ -235,7 +236,30 @@ struct PersistentAssistantView: View {
             AssistantCommandSuggestionList(draft: viewModel.draft) { command in
                 viewModel.draft = command.argumentHint == nil ? command.trigger : command.trigger + " "
             }
+            AssistantAttachmentStrip(
+                attachments: viewModel.attachments,
+                preparingCount: viewModel.preparingAttachmentCount,
+                notice: viewModel.attachmentNotice,
+                onRemove: { viewModel.removeAttachment(id: $0) }
+            )
             HStack(alignment: .bottom, spacing: 8) {
+                if viewModel.imagesEnabled {
+                    PhotosPicker(
+                        selection: $viewModel.pickedItems,
+                        // What is left of the turn's 3, so the picker itself stops at the cap.
+                        maxSelectionCount: max(viewModel.attachmentRoom, 1),
+                        matching: .images,
+                        photoLibrary: .shared()
+                    ) {
+                        Image(systemName: "paperclip")
+                            .font(.title3)
+                            .frame(width: 34, height: 34)
+                    }
+                    .foregroundStyle(AppTheme.Colors.tint)
+                    .disabled(viewModel.isSending || viewModel.attachmentRoom == 0)
+                    .accessibilityLabel("Attach images")
+                    .accessibilityIdentifier("assistant.attachImages")
+                }
                 TextField("Ask about your finances", text: $viewModel.draft, axis: .vertical)
                     .focused($isComposerFocused)
                     .onChange(of: isComposerFocused) { _, focused in viewModel.composerFocusChanged(focused) }
@@ -245,10 +269,10 @@ struct PersistentAssistantView: View {
                     .padding(.vertical, 8)
                 Button { Task { await viewModel.send() } } label: { Image(systemName: "arrow.up.circle.fill").font(.title) }
                     .foregroundStyle(AppTheme.Colors.tint)
-                    .disabled(viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isSending)
+                    .disabled(!viewModel.canSend)
                     .accessibilityLabel("Send")
             }
-            .padding(.leading, 16).padding(.trailing, 6).padding(.vertical, 4)
+            .padding(.leading, viewModel.imagesEnabled ? 6 : 16).padding(.trailing, 6).padding(.vertical, 4)
             .background(AppTheme.Colors.tintSoft, in: .rect(cornerRadius: 24))
             .padding(.horizontal, 16).padding(.vertical, 8)
             .background(AppTheme.Colors.pageBackground)
@@ -309,12 +333,92 @@ struct PersistentAssistantView: View {
                     ))
                 }
                 aiDataSharingSection
-                Section { Text("Q sends your messages and the financial context it needs (portfolio, spending, budgets) to Anthropic and OpenRouter to write replies. Not used to train models; your name and email are not sent. Conversations are encrypted and retained for 30 days. Financial changes always require confirmation.").font(.footnote).foregroundStyle(.secondary) }
+                Section { Text("Q sends your messages and the financial context it needs (portfolio, spending, budgets) to Anthropic and OpenRouter to write replies. An image you attach to Q is sent only for that one message, to Anthropic and OpenRouter (or to your own provider if you connected a working key of your own). Norviq does not store the image. What Q reads from it, such as its reply or trades you save, is kept like any other message. Your data is not used to train models by Norviq's providers; your name and email are not sent, unless they are visible in an image you attach or import. Conversations are encrypted and retained for 30 days.").font(.footnote).foregroundStyle(.secondary) }
             }
             .navigationTitle("Assistant settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showsPreferences = false } } }
         }
         .presentationDetents([.medium, .large])
+    }
+}
+
+/// What is waiting to go with the next message. Draws nothing when empty.
+private struct AssistantAttachmentStrip: View {
+    let attachments: [ScreenshotUploadImage]
+    let preparingCount: Int
+    let notice: String?
+    let onRemove: (ScreenshotUploadImage.ID) -> Void
+
+    var body: some View {
+        if !attachments.isEmpty || preparingCount > 0 || notice != nil {
+            VStack(alignment: .leading, spacing: 6) {
+                if !attachments.isEmpty || preparingCount > 0 {
+                    HStack(spacing: 8) {
+                        ForEach(attachments) { attachment in
+                            AssistantAttachmentChip(attachment: attachment) { onRemove(attachment.id) }
+                        }
+                        ForEach(0..<preparingCount, id: \.self) { _ in
+                            ProgressView()
+                                .frame(width: AssistantAttachmentChip.side, height: AssistantAttachmentChip.side)
+                                .background(AppTheme.Colors.tintSoft, in: .rect(cornerRadius: 10))
+                                .accessibilityLabel("Preparing image")
+                        }
+                    }
+                }
+                if let notice {
+                    Text(notice)
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.Colors.danger)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .background(AppTheme.Colors.pageBackground)
+        }
+    }
+}
+
+private struct AssistantAttachmentChip: View {
+    static let side: CGFloat = 56
+
+    let attachment: ScreenshotUploadImage
+    let onRemove: () -> Void
+    @Environment(\.displayScale) private var displayScale
+    @State private var thumbnail: UIImage?
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Group {
+                if let thumbnail {
+                    Image(uiImage: thumbnail).resizable().scaledToFill()
+                } else {
+                    AppTheme.Colors.tintSoft
+                }
+            }
+            .frame(width: Self.side, height: Self.side)
+            .clipShape(.rect(cornerRadius: 10))
+            .accessibilityElement()
+            .accessibilityLabel("Attached image")
+            Button(action: onRemove) {
+                Image(systemName: "xmark.circle.fill")
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, .black.opacity(0.6))
+                    .frame(width: 28, height: 28)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Remove image")
+        }
+        .task { thumbnail = await makeThumbnail() }
+    }
+
+    /// `byPreparingThumbnail` stretches to the size it is given, so the size keeps
+    /// the picture's shape: its short edge fills the chip.
+    private func makeThumbnail() async -> UIImage? {
+        guard let image = UIImage(data: attachment.data), image.size.width > 0, image.size.height > 0 else { return nil }
+        let scale = Self.side * displayScale / min(image.size.width, image.size.height)
+        return await image.byPreparingThumbnail(ofSize: CGSize(width: image.size.width * scale, height: image.size.height * scale))
     }
 }

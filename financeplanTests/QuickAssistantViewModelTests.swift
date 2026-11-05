@@ -14,6 +14,7 @@ private final class ScriptedAssistantService: PersistentAssistantServicing, @unc
     private(set) var streamedConversations: [String] = []
     private(set) var streamedContent: [String] = []
     private(set) var contexts: [AssistantTurnContext?] = []
+    private(set) var streamedImages: [[ScreenshotUploadImage]] = []
     private(set) var confirmed: [String] = []
     private(set) var cancelled: [String] = []
 
@@ -28,10 +29,11 @@ private final class ScriptedAssistantService: PersistentAssistantServicing, @unc
         return AIConversationResponse(id: id, title: title ?? "", messages: [], createdAt: "2026-11-04T00:00:00Z", updatedAt: "2026-11-04T00:00:00Z")
     }
 
-    func streamTurn(conversationID: String, content: String, context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+    func streamTurn(conversationID: String, content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
         streamedConversations.append(conversationID)
         streamedContent.append(content)
         contexts.append(context)
+        streamedImages.append(images)
         let events = scripts.isEmpty ? [] : scripts.removeFirst()
         return AsyncThrowingStream { continuation in
             for event in events { continuation.yield(event) }
@@ -149,6 +151,7 @@ final class QuickAssistantViewModelTests: XCTestCase {
         await ask(viewModel, "two")
         XCTAssertEqual(service.streamedConversations, ["old", "old", "again"])
         XCTAssertEqual(service.streamedContent, ["one", "two", "two"])
+        XCTAssertEqual(service.streamedImages, [[], [], []], "Quick Q attaches nothing")
         XCTAssertEqual(viewModel.phase, .answered)
     }
 
@@ -411,8 +414,8 @@ private struct FullQService: PersistentAssistantServicing {
     func conversation(id: String) async throws -> AIConversationResponse {
         AIConversationResponse(id: id, title: "T", messages: [], createdAt: "2026-11-04T00:00:00Z", updatedAt: "2026-11-04T00:00:00Z")
     }
-    func streamTurn(conversationID: String, content: String, context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
-        base.streamTurn(conversationID: conversationID, content: content, context: context)
+    func streamTurn(conversationID: String, content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        base.streamTurn(conversationID: conversationID, content: content, images: images, context: context)
     }
     func usage() async throws -> AIAssistantUsageResponse {
         AIAssistantUsageResponse(month: "2026-11", used: 1, limit: nil, remaining: nil, isPro: true)

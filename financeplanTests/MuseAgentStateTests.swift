@@ -162,7 +162,7 @@ final class PersistentAssistantAgentStateTests: XCTestCase {
         func conversation(id: String) async throws -> AIConversationResponse {
             AIConversationResponse(id: id, title: "Test", messages: [], createdAt: "2026-09-23T00:00:00Z", updatedAt: "2026-09-23T00:00:00Z")
         }
-        func streamTurn(conversationID _: String, content _: String, context _: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        func streamTurn(conversationID _: String, content _: String, images _: [ScreenshotUploadImage], context _: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
             AsyncThrowingStream { continuation in
                 for event in events { continuation.yield(event) }
                 continuation.finish()

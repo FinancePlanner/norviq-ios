@@ -7,12 +7,12 @@ import UIKit
 /// megabytes and trips the backend's 8 MB per-image cap, and vision models
 /// tile images above roughly 1568px without reading anything more from them —
 /// so the extra pixels cost tokens and latency and buy no accuracy.
-enum UploadImagePreparer {
+nonisolated enum UploadImagePreparer {
   /// Longest-edge ceiling. Matches the tile size above which the major vision
   /// models stop gaining detail.
   static let maxDimension: CGFloat = 1568
 
-  /// Backend rejects anything larger. Kept here so the app fails fast with a
+  /// Backend rejects anything larger on the import routes. Kept here so the app fails fast with a
   /// clear message instead of round-tripping a doomed upload.
   static let maxBytes = 8 * 1024 * 1024
 
@@ -20,8 +20,13 @@ enum UploadImagePreparer {
   /// edge. Returns nil when the bytes are not a decodable image.
   ///
   /// Quality steps down only if the first encode is still over the cap, so the
-  /// common case pays for exactly one encode.
-  static func prepare(_ data: Data, quality: CGFloat = 0.7) -> ScreenshotUploadImage? {
+  /// common case pays for exactly one encode. `maxBytes` lets a call with a
+  /// tighter backend limit say so.
+  static func prepare(
+    _ data: Data,
+    quality: CGFloat = 0.7,
+    maxBytes: Int = UploadImagePreparer.maxBytes
+  ) -> ScreenshotUploadImage? {
     guard let image = UIImage(data: data) else { return nil }
 
     let resized = downscaled(image)

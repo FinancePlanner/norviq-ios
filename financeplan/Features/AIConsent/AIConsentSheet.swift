@@ -64,14 +64,15 @@ struct AIConsentSheet: View {
       Label("Research notes, price targets, recaps, achievements and group names", systemImage: "note.text")
       Label("Receipt and screenshot images you import", systemImage: "photo")
       Label("Your messages to the assistant", systemImage: "bubble.left")
+      Label("Images you attach to the assistant are sent too, for that message only.", systemImage: "paperclip")
     }
     .font(.subheadline)
   }
 
   private var promisesSection: some View {
     VStack(alignment: .leading, spacing: 10) {
-      Label("Not used to train AI models", systemImage: "checkmark.shield")
-      Label("Your name and email are not sent", systemImage: "person.crop.circle.badge.xmark")
+      Label("Not used to train AI models by Norviq's providers", systemImage: "checkmark.shield")
+      Label("Your name and email are not sent, unless they are visible in an image you attach or import", systemImage: "person.crop.circle.badge.xmark")
       Label("Turn it off anytime in Assistant settings", systemImage: "slider.horizontal.3")
     }
     .font(.subheadline)
