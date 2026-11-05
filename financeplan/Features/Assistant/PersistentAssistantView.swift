@@ -30,6 +30,7 @@ struct PersistentAssistantView: View {
     @State private var showsConversations = false
     @State private var showsPreferences = false
     @FocusState private var isComposerFocused: Bool
+    @InjectedObservable(\.billingManager) private var billingManager
     @InjectedObservable(\.aiConsentStore) private var aiConsent
 
     var body: some View {
@@ -91,6 +92,8 @@ struct PersistentAssistantView: View {
             }
             .sheet(isPresented: $showsConversations) { conversationsSheet }
             .sheet(isPresented: $showsPreferences) { preferencesSheet }
+            // Full Q opens from places outside HomeScreen, so it hosts its own.
+            .sheet(isPresented: $viewModel.isPaywallRequested) { PaywallView(billingManager: billingManager) }
             .alert("Q", isPresented: Binding(
                 get: { viewModel.errorMessage != nil },
                 set: { if !$0 { viewModel.clearMessage() } }

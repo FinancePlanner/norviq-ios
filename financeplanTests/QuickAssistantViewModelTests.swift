@@ -1,0 +1,402 @@
+import Foundation
+import StockPlanShared
+import XCTest
+@testable import financeplan
+
+/// Scripted service: each stream call plays the next script.
+private final class ScriptedAssistantService: PersistentAssistantServicing, @unchecked Sendable {
+    struct Unused: Error {}
+
+    var scripts: [[PersistentAssistantStreamEvent]]
+    var createResults: [Result<String, Error>]
+    var confirmResult: Result<String, Error> = .success("Deleted.")
+    private(set) var createdBindings: [Bool?] = []
+    private(set) var streamedConversations: [String] = []
+    private(set) var streamedContent: [String] = []
+    private(set) var contexts: [AssistantTurnContext?] = []
+    private(set) var confirmed: [String] = []
+    private(set) var cancelled: [String] = []
+
+    init(scripts: [[PersistentAssistantStreamEvent]] = [], createResults: [Result<String, Error>] = [.success("new")]) {
+        self.scripts = scripts
+        self.createResults = createResults
+    }
+
+    func createConversation(title: String?, bindMessaging: Bool?) async throws -> AIConversationResponse {
+        createdBindings.append(bindMessaging)
+        let id = try createResults.removeFirst().get()
+        return AIConversationResponse(id: id, title: title ?? "", messages: [], createdAt: "2026-11-04T00:00:00Z", updatedAt: "2026-11-04T00:00:00Z")
+    }
+
+    func streamTurn(conversationID: String, content: String, context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        streamedConversations.append(conversationID)
+        streamedContent.append(content)
+        contexts.append(context)
+        let events = scripts.isEmpty ? [] : scripts.removeFirst()
+        return AsyncThrowingStream { continuation in
+            for event in events { continuation.yield(event) }
+            continuation.finish()
+        }
+    }
+
+    func confirmAction(id: String) async throws -> AIConfirmedActionResponse {
+        confirmed.append(id)
+        let message = try confirmResult.get()
+        return AIConfirmedActionResponse(actionId: id, status: .completed, resultId: nil, message: message)
+    }
+
+    func cancelAction(id: String) async throws { cancelled.append(id) }
+
+    func conversation(id _: String) async throws -> AIConversationResponse { throw Unused() }
+    func conversations() async throws -> [AIConversationSummaryResponse] { [] }
+    func deleteConversation(id _: String) async throws { throw Unused() }
+    func turn(conversationID _: String, content _: String) async throws -> AIAssistantTurnResponse { throw Unused() }
+    func preferences() async throws -> AIAssistantPreferencesResponse { throw Unused() }
+    func updatePreferences(_: AIAssistantPreferencesResponse) async throws -> AIAssistantPreferencesResponse { throw Unused() }
+    func tips() async throws -> [AITipResponse] { [] }
+    func dismissTip(id _: String) async throws { throw Unused() }
+    func usage() async throws -> AIAssistantUsageResponse { throw Unused() }
+    func pendingActions() async throws -> [AIPendingActionResponse] { [] }
+    func memos(bookmarked _: Bool?, conversationID _: String?) async throws -> [PositionMemoListItem] { [] }
+    func memo(id _: String) async throws -> PositionMemoDetail { throw Unused() }
+    func bookmarkMemo(id _: String, bookmarked _: Bool) async throws -> PositionMemoCard { throw Unused() }
+    func deleteMemo(id _: String) async throws { throw Unused() }
+}
+
+private func turn(content: String = "You spent €120.", conversationID: String = "new", action: String? = nil) -> AIAssistantTurnResponse {
+    let pending = action.map {
+        #""pendingAction":{"id":"a1","conversationId":"\#(conversationID)","toolName":"\#($0)","summary":"Delete lunch","arguments":"{}","status":"pending","expiresAt":"2026-11-04T01:00:00Z","createdAt":"2026-11-04T00:00:00Z"},"#
+    } ?? ""
+    let json = #"""
+    {"kind":"message","conversationId":"\#(conversationID)",\#(pending)"message":{"id":"m1","conversationId":"\#(conversationID)","role":"assistant","content":"\#(content)","createdAt":"2026-11-04T00:00:00Z"}}
+    """#
+    return try! JSONDecoder().decode(AIAssistantTurnResponse.self, from: Data(json.utf8))
+}
+
+@MainActor
+final class QuickAssistantViewModelTests: XCTestCase {
+    private var defaults: UserDefaults!
+    private let suite = "QuickAssistantViewModelTests"
+
+    override func setUp() async throws {
+        defaults = UserDefaults(suiteName: suite)
+        defaults.removePersistentDomain(forName: suite)
+    }
+
+    private func makeViewModel(_ service: ScriptedAssistantService, user: String = "u1") -> QuickAssistantViewModel {
+        QuickAssistantViewModel(
+            service: service,
+            conversations: QuickAssistantConversationStore(defaults: defaults),
+            currentUserID: { user }
+        )
+    }
+
+    private func ask(_ viewModel: QuickAssistantViewModel, _ text: String = "How much did I spend?", scope: AIViewScope? = .home, inputMode: AssistantTurnContext.InputMode = .text) async {
+        viewModel.draft = text
+        await viewModel.send(scope: scope, inputMode: inputMode)
+    }
+
+    func testAnswerShowsTheLatestExchange() async {
+        let service = ScriptedAssistantService(scripts: [[.started, .tool("Reading your expenses…"), .turn(turn()), .done]])
+        let viewModel = makeViewModel(service)
+        await ask(viewModel)
+        XCTAssertEqual(viewModel.phase, .answered)
+        XCTAssertEqual(viewModel.question, "How much did I spend?")
+        XCTAssertEqual(viewModel.answer, "You spent €120.")
+        XCTAssertEqual(viewModel.draft, "")
+    }
+
+    func testFirstQuestionCreatesAConversationThatLeavesTelegramAlone() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn()), .done]])
+        await ask(makeViewModel(service))
+        XCTAssertEqual(service.createdBindings, [false])
+        XCTAssertEqual(service.streamedConversations, ["new"])
+    }
+
+    func testLaterQuestionReusesTheStoredConversation() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn()), .done], [.turn(turn()), .done]])
+        let viewModel = makeViewModel(service)
+        await ask(viewModel)
+        await ask(viewModel)
+        // A fresh card after relaunch finds the same one.
+        service.scripts = [[.turn(turn()), .done]]
+        await ask(makeViewModel(service))
+        XCTAssertEqual(service.createdBindings.count, 1)
+        XCTAssertEqual(service.streamedConversations, ["new", "new", "new"])
+    }
+
+    func testConversationIsKeptPerUser() async {
+        let service = ScriptedAssistantService(
+            scripts: [[.turn(turn()), .done], [.turn(turn()), .done]],
+            createResults: [.success("first"), .success("second")]
+        )
+        await ask(makeViewModel(service, user: "u1"))
+        await ask(makeViewModel(service, user: "u2"))
+        XCTAssertEqual(service.streamedConversations, ["first", "second"])
+    }
+
+    func testExpiredConversationIsRecreatedAndTheQuestionResent() async {
+        let service = ScriptedAssistantService(
+            scripts: [
+                [.turn(turn()), .done],
+                [.started, .error("This conversation no longer exists.", code: "conversation_not_found"), .done],
+                [.turn(turn(conversationID: "again")), .done],
+            ],
+            createResults: [.success("old"), .success("again")]
+        )
+        let viewModel = makeViewModel(service)
+        await ask(viewModel, "one")
+        await ask(viewModel, "two")
+        XCTAssertEqual(service.streamedConversations, ["old", "old", "again"])
+        XCTAssertEqual(service.streamedContent, ["one", "two", "two"])
+        XCTAssertEqual(viewModel.phase, .answered)
+    }
+
+    func testExpiredConversationRetriesOnlyOnce() async {
+        let gone = PersistentAssistantStreamEvent.error("Gone", code: "conversation_not_found")
+        let service = ScriptedAssistantService(scripts: [[gone], [gone]], createResults: [.success("a"), .success("b")])
+        let viewModel = makeViewModel(service)
+        await ask(viewModel, "one")
+        XCTAssertEqual(service.streamedContent.count, 2)
+        XCTAssertEqual(viewModel.phase, .failed("Gone"))
+        XCTAssertEqual(viewModel.draft, "one")
+    }
+
+    func testTurnSendsTheScreenAndInputMode() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn()), .done]])
+        await ask(makeViewModel(service), scope: .tax, inputMode: .voice)
+        let context = service.contexts.first ?? nil
+        XCTAssertEqual(context?.screen, "tax")
+        XCTAssertEqual(context?.inputMode, .voice)
+        XCTAssertEqual(context?.timeZone, TimeZone.current.identifier)
+    }
+
+    func testQuotaOpensThePaywallAndKeepsTheQuestion() async {
+        let service = ScriptedAssistantService(scripts: [[.started, .error("Out of turns", code: "quota_exhausted"), .done]])
+        let viewModel = makeViewModel(service)
+        await ask(viewModel, "one")
+        XCTAssertTrue(viewModel.isPaywallRequested)
+        XCTAssertEqual(viewModel.phase, .idle)
+        XCTAssertEqual(viewModel.draft, "one")
+        XCTAssertNil(viewModel.question)
+    }
+
+    func testUpgradeCodeOpensThePaywall() async {
+        let service = ScriptedAssistantService(scripts: [[.error("Pro only", code: "upgrade_required")]])
+        let viewModel = makeViewModel(service)
+        await ask(viewModel)
+        XCTAssertTrue(viewModel.isPaywallRequested)
+    }
+
+    func testConsentCodeAsksForConsentAndKeepsTheQuestion() async {
+        let posted = expectation(forNotification: .aiConsentRequired, object: nil)
+        let service = ScriptedAssistantService(scripts: [[.started, .error("Allow first", code: "ai_consent_required"), .done]])
+        let viewModel = makeViewModel(service)
+        await ask(viewModel, "one")
+        await fulfillment(of: [posted], timeout: 1)
+        XCTAssertEqual(viewModel.phase, .idle)
+        XCTAssertEqual(viewModel.draft, "one")
+        XCTAssertFalse(viewModel.isPaywallRequested)
+    }
+
+    func testOtherFailureShowsTheMessageAndKeepsTheQuestion() async {
+        let service = ScriptedAssistantService(scripts: [[.started, .error("Busy"), .done]])
+        let viewModel = makeViewModel(service)
+        await ask(viewModel, "one")
+        XCTAssertEqual(viewModel.phase, .failed("Busy"))
+        XCTAssertEqual(viewModel.draft, "one")
+        // It is back in the composer, so the card does not show it twice.
+        XCTAssertNil(viewModel.question)
+    }
+
+    func testStreamWithNoTurnIsAFailure() async {
+        let service = ScriptedAssistantService(scripts: [[.started, .done]])
+        let viewModel = makeViewModel(service)
+        await ask(viewModel)
+        guard case .failed = viewModel.phase else { return XCTFail("Expected failure, got \(viewModel.phase)") }
+    }
+
+    func testBlankQuestionSendsNothing() async {
+        let service = ScriptedAssistantService()
+        await ask(makeViewModel(service), "   \n ")
+        XCTAssertTrue(service.streamedContent.isEmpty)
+        XCTAssertTrue(service.createdBindings.isEmpty)
+    }
+
+    func testChangeWaitsForATapAndConfirmShowsTheResult() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn(action: "delete_expense")), .done]])
+        let viewModel = makeViewModel(service)
+        await ask(viewModel, "Delete my last expense", inputMode: .voice)
+        XCTAssertEqual(viewModel.pendingAction?.id, "a1")
+        XCTAssertTrue(service.confirmed.isEmpty)
+        await viewModel.confirmPendingAction()
+        XCTAssertEqual(service.confirmed, ["a1"])
+        XCTAssertNil(viewModel.pendingAction)
+        XCTAssertEqual(viewModel.answer, "Deleted.")
+    }
+
+    func testCancelDropsTheChange() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn(action: "delete_expense")), .done]])
+        let viewModel = makeViewModel(service)
+        await ask(viewModel)
+        await viewModel.cancelPendingAction()
+        XCTAssertEqual(service.cancelled, ["a1"])
+        XCTAssertTrue(service.confirmed.isEmpty)
+        XCTAssertNil(viewModel.pendingAction)
+        // The turn's text asks for confirmation, which no longer applies.
+        XCTAssertEqual(viewModel.answer, String(localized: "Nothing was changed."))
+    }
+
+    func testFailedConfirmKeepsTheCardAndSaysSo() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn(action: "delete_expense")), .done]])
+        service.confirmResult = .failure(ScriptedAssistantService.Unused())
+        let viewModel = makeViewModel(service)
+        await ask(viewModel)
+        await viewModel.confirmPendingAction()
+        XCTAssertEqual(viewModel.pendingAction?.id, "a1")
+        XCTAssertNotNil(viewModel.actionError)
+    }
+
+    func testWatchProposalIsLeftForFullQ() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn(action: MuseStandingTask.toolName)), .done]])
+        let viewModel = makeViewModel(service)
+        await ask(viewModel)
+        XCTAssertNil(viewModel.pendingAction)
+        XCTAssertTrue(viewModel.needsFullQ)
+    }
+
+    func testResetClearsTheCardButKeepsTheConversation() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn()), .done]])
+        let viewModel = makeViewModel(service)
+        await ask(viewModel)
+        viewModel.reset()
+        XCTAssertEqual(viewModel.phase, .idle)
+        XCTAssertNil(viewModel.question)
+        XCTAssertNil(viewModel.answer)
+        XCTAssertEqual(viewModel.conversationID, "new")
+    }
+}
+
+// `async` on purpose: see the toolchain crash noted in PilotsStoreTests.swift.
+@MainActor
+final class QuickAssistantCoordinatorTests: XCTestCase {
+    func testPresentsWhenAIIsAllowed() async {
+        var consentPrompts = 0
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: { consentPrompts += 1 })
+        coordinator.present(scope: .expenses)
+        XCTAssertTrue(coordinator.isPresented)
+        XCTAssertEqual(coordinator.scope, .expenses)
+        XCTAssertEqual(consentPrompts, 0)
+    }
+
+    func testAsksForConsentFirst() async {
+        var consentPrompts = 0
+        let coordinator = QuickAssistantCoordinator(allowsAI: { false }, presentConsent: { consentPrompts += 1 })
+        coordinator.present(scope: .home)
+        XCTAssertFalse(coordinator.isPresented)
+        XCTAssertEqual(consentPrompts, 1)
+    }
+
+    func testDismissCloses() async {
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
+        coordinator.present(scope: .home)
+        coordinator.dismiss()
+        XCTAssertFalse(coordinator.isPresented)
+    }
+}
+
+final class QuickAssistantTapGateTests: XCTestCase {
+    func testPlainTapPasses() {
+        var gate = QuickAssistantTapGate()
+        XCTAssertTrue(gate.allowsTap(at: Date(timeIntervalSince1970: 100)))
+    }
+
+    func testReleaseAfterLongPressIsSwallowed() {
+        var gate = QuickAssistantTapGate()
+        gate.noteLongPress(at: Date(timeIntervalSince1970: 100))
+        XCTAssertFalse(gate.allowsTap(at: Date(timeIntervalSince1970: 101)))
+    }
+
+    func testLaterTapPassesEvenWhenNoReleaseFired() {
+        var gate = QuickAssistantTapGate()
+        gate.noteLongPress(at: Date(timeIntervalSince1970: 100))
+        XCTAssertTrue(gate.allowsTap(at: Date(timeIntervalSince1970: 110)))
+    }
+
+    func testOnlyOneReleaseIsSwallowed() {
+        var gate = QuickAssistantTapGate()
+        gate.noteLongPress(at: Date(timeIntervalSince1970: 100))
+        XCTAssertFalse(gate.allowsTap(at: Date(timeIntervalSince1970: 101)))
+        XCTAssertTrue(gate.allowsTap(at: Date(timeIntervalSince1970: 101.5)))
+    }
+}
+
+@MainActor
+final class PersistentAssistantRoutingTests: XCTestCase {
+    private func sending(_ events: [PersistentAssistantStreamEvent]) async throws -> (PersistentAssistantViewModel, ScriptedAssistantService) {
+        let service = ScriptedAssistantService(scripts: [events])
+        let viewModel = PersistentAssistantViewModel(service: FullQService(base: service), sleep: { _ in })
+        try await viewModel.selectConversation(id: "c1")
+        viewModel.draft = "Hi"
+        await viewModel.send()
+        return (viewModel, service)
+    }
+
+    func testQuotaOpensThePaywallInsteadOfAnAlert() async throws {
+        let (viewModel, _) = try await sending([.started, .error("Out of turns", code: "quota_exhausted"), .done])
+        XCTAssertTrue(viewModel.isPaywallRequested)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
+    func testConsentCodePromptsInsteadOfAnAlert() async throws {
+        let posted = expectation(forNotification: .aiConsentRequired, object: nil)
+        let (viewModel, _) = try await sending([.started, .error("Allow first", code: "ai_consent_required"), .done])
+        await fulfillment(of: [posted], timeout: 1)
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertFalse(viewModel.isPaywallRequested)
+    }
+
+    func testOtherCodesStillShowTheMessage() async throws {
+        let (viewModel, _) = try await sending([.started, .error("Busy"), .done])
+        XCTAssertEqual(viewModel.errorMessage, "Busy")
+        XCTAssertFalse(viewModel.isPaywallRequested)
+    }
+
+    func testFullQSendsContextWithoutAScreen() async throws {
+        let (_, service) = try await sending([.started, .done])
+        let context = service.contexts.first ?? nil
+        XCTAssertNotNil(context)
+        XCTAssertNil(context?.screen)
+        XCTAssertEqual(context?.inputMode, .text)
+    }
+}
+
+/// Answers the conversation fetch full Q needs and forwards the rest.
+private struct FullQService: PersistentAssistantServicing {
+    let base: ScriptedAssistantService
+
+    func conversation(id: String) async throws -> AIConversationResponse {
+        AIConversationResponse(id: id, title: "T", messages: [], createdAt: "2026-11-04T00:00:00Z", updatedAt: "2026-11-04T00:00:00Z")
+    }
+    func streamTurn(conversationID: String, content: String, context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        base.streamTurn(conversationID: conversationID, content: content, context: context)
+    }
+    func usage() async throws -> AIAssistantUsageResponse {
+        AIAssistantUsageResponse(month: "2026-11", used: 1, limit: nil, remaining: nil, isPro: true)
+    }
+    func createConversation(title: String?, bindMessaging: Bool?) async throws -> AIConversationResponse { try await base.createConversation(title: title, bindMessaging: bindMessaging) }
+    func conversations() async throws -> [AIConversationSummaryResponse] { [] }
+    func deleteConversation(id: String) async throws { try await base.deleteConversation(id: id) }
+    func turn(conversationID: String, content: String) async throws -> AIAssistantTurnResponse { try await base.turn(conversationID: conversationID, content: content) }
+    func preferences() async throws -> AIAssistantPreferencesResponse { try await base.preferences() }
+    func updatePreferences(_ payload: AIAssistantPreferencesResponse) async throws -> AIAssistantPreferencesResponse { try await base.updatePreferences(payload) }
+    func tips() async throws -> [AITipResponse] { [] }
+    func dismissTip(id: String) async throws { try await base.dismissTip(id: id) }
+    func pendingActions() async throws -> [AIPendingActionResponse] { [] }
+    func confirmAction(id: String) async throws -> AIConfirmedActionResponse { try await base.confirmAction(id: id) }
+    func cancelAction(id: String) async throws { try await base.cancelAction(id: id) }
+    func memos(bookmarked: Bool?, conversationID: String?) async throws -> [PositionMemoListItem] { [] }
+    func memo(id: String) async throws -> PositionMemoDetail { try await base.memo(id: id) }
+    func bookmarkMemo(id: String, bookmarked: Bool) async throws -> PositionMemoCard { try await base.bookmarkMemo(id: id, bookmarked: bookmarked) }
+    func deleteMemo(id: String) async throws { try await base.deleteMemo(id: id) }
+}

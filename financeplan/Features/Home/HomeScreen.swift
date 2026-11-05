@@ -12,6 +12,7 @@ struct HomeScreen: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.colorScheme) private var colorScheme
   @InjectedObservable(\Container.billingManager) private var billingManager
+  @InjectedObservable(\Container.quickAssistantCoordinator) private var quickAssistant
   @InjectedObservable(\Container.socialStore) private var socialStore
   @InjectedObservable(\Container.boardsViewerStore) private var boardsViewer
   @InjectedObservable(\Container.groupsStore) private var groupsStore
@@ -61,6 +62,13 @@ struct HomeScreen: View {
     }
     .appAnimation(AppMotion.structural, value: billingManager.shouldShowTrialEndedBanner)
     .guidedSpotlight(step: guided?.activeStep, activeTab: guidedTab(for: selectedTab), onSkip: { guided?.skip() })
+    // After the spotlight, or its scrim draws over the card.
+    .overlay {
+      QuickAssistantOverlay(
+        onOpenInQ: { openAssistant(conversationID: $0) },
+        onPaywall: { isPaywallPresented = true }
+      )
+    }
     .environment(guided)
     .environment(\.norviqReopenGuidedStart, guided.map { coordinator in
       {
@@ -190,7 +198,7 @@ struct HomeScreen: View {
       AchievementsPresentation(
         coordinator: unlockCoordinator,
         isAchievementsPresented: $isAchievementsPresented,
-        isCovered: isSettingsPresented || isPaywallPresented || isCapturePresented || assistantLaunch != nil,
+        isCovered: isSheetOrCardCovering,
         isEnabled: socialStore.config.achievements
       )
     )
@@ -205,7 +213,7 @@ struct HomeScreen: View {
       isPaywallPresented = true
     }
     // Never let the review sheet land on top of a settings, paywall, or capture sheet.
-    .onChange(of: isSettingsPresented || isPaywallPresented || isCapturePresented || assistantLaunch != nil, initial: true) {
+    .onChange(of: isSheetOrCardCovering, initial: true) {
       _, isCovered in
       Container.shared.reviewPromptCoordinator().setContextEligible(!isCovered)
     }
@@ -269,6 +277,11 @@ struct HomeScreen: View {
     guard socialStore.config.enabled else { return }
     await socialStore.load()
     if groupsEnabled { await groupsStore.load() }
+  }
+
+  private var isSheetOrCardCovering: Bool {
+    isSettingsPresented || isPaywallPresented || isCapturePresented || assistantLaunch != nil
+      || quickAssistant.isPresented
   }
 
   private func openAssistant(conversationID: String?) {

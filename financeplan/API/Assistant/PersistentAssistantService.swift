@@ -4,11 +4,11 @@ import StockPlanShared
 
 protocol PersistentAssistantServicing: Sendable {
     func conversations() async throws -> [AIConversationSummaryResponse]
-    func createConversation(title: String?) async throws -> AIConversationResponse
+    func createConversation(title: String?, bindMessaging: Bool?) async throws -> AIConversationResponse
     func conversation(id: String) async throws -> AIConversationResponse
     func deleteConversation(id: String) async throws
     func turn(conversationID: String, content: String) async throws -> AIAssistantTurnResponse
-    func streamTurn(conversationID: String, content: String) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error>
+    func streamTurn(conversationID: String, content: String, context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error>
     func preferences() async throws -> AIAssistantPreferencesResponse
     func updatePreferences(_ payload: AIAssistantPreferencesResponse) async throws -> AIAssistantPreferencesResponse
     func tips() async throws -> [AITipResponse]
@@ -21,6 +21,13 @@ protocol PersistentAssistantServicing: Sendable {
     func memo(id: String) async throws -> PositionMemoDetail
     func bookmarkMemo(id: String, bookmarked: Bool) async throws -> PositionMemoCard
     func deleteMemo(id: String) async throws
+}
+
+extension PersistentAssistantServicing {
+    /// Rebinds linked chats to the new conversation, the server's default.
+    func createConversation(title: String?) async throws -> AIConversationResponse {
+        try await createConversation(title: title, bindMessaging: nil)
+    }
 }
 
 struct DefaultPersistentAssistantService: PersistentAssistantServicing, Sendable {
@@ -42,12 +49,12 @@ struct DefaultPersistentAssistantService: PersistentAssistantServicing, Sendable
     }
 
     func conversations() async throws -> [AIConversationSummaryResponse] { try await client.conversations() }
-    func createConversation(title: String?) async throws -> AIConversationResponse { try await client.createConversation(title: title) }
+    func createConversation(title: String?, bindMessaging: Bool?) async throws -> AIConversationResponse { try await client.createConversation(title: title, bindMessaging: bindMessaging) }
     func conversation(id: String) async throws -> AIConversationResponse { try await client.conversation(id: id) }
     func deleteConversation(id: String) async throws { try await client.deleteConversation(id: id) }
     func turn(conversationID: String, content: String) async throws -> AIAssistantTurnResponse { try await client.turn(conversationID: conversationID, content: content) }
-    func streamTurn(conversationID: String, content: String) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
-        streamClient.streamTurn(conversationID: conversationID, content: content)
+    func streamTurn(conversationID: String, content: String, context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        streamClient.streamTurn(conversationID: conversationID, content: content, context: context)
     }
     func preferences() async throws -> AIAssistantPreferencesResponse { try await client.preferences() }
     func updatePreferences(_ payload: AIAssistantPreferencesResponse) async throws -> AIAssistantPreferencesResponse { try await client.updatePreferences(payload) }

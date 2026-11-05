@@ -60,6 +60,8 @@ struct AIConsentSheet: View {
         .font(.headline)
       Label("Portfolio totals and holdings", systemImage: "chart.pie")
       Label("Spending and budgets", systemImage: "creditcard")
+      Label("Goals and tax, retirement and planning figures", systemImage: "target")
+      Label("Research notes, price targets, recaps, achievements and group names", systemImage: "note.text")
       Label("Receipt and screenshot images you import", systemImage: "photo")
       Label("Your messages to the assistant", systemImage: "bubble.left")
     }

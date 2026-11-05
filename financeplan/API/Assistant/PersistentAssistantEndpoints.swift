@@ -2,7 +2,12 @@ import AnyAPI
 import Foundation
 import StockPlanShared
 
-nonisolated struct AssistantCreateConversationPayload: Codable, Sendable { let title: String? }
+nonisolated struct AssistantCreateConversationPayload: Codable, Sendable {
+    let title: String?
+    /// False leaves linked chats such as Telegram on their current conversation.
+    /// Omitted, the server rebinds them to the new one.
+    var bindMessaging: Bool? = nil
+}
 nonisolated struct AssistantMessagePayload: Codable, Sendable { let content: String }
 
 nonisolated private func assistantParameters<T: Encodable>(_ value: T) throws -> Parameters {

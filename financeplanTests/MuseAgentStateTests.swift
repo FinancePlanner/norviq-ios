@@ -141,7 +141,7 @@ final class PersistentAssistantStreamDecodingTests: XCTestCase {
         guard case .done = try AssistantStreamClient.decodePersistent(event: "done", json: "{}") else {
             return XCTFail("expected done")
         }
-        guard case let .error(message) = try AssistantStreamClient.decodePersistent(
+        guard case let .error(message, _) = try AssistantStreamClient.decodePersistent(
             event: "error", json: #"{"message":"Nope"}"#
         ) else { return XCTFail("expected error") }
         XCTAssertEqual(message, "Nope")
@@ -162,14 +162,14 @@ final class PersistentAssistantAgentStateTests: XCTestCase {
         func conversation(id: String) async throws -> AIConversationResponse {
             AIConversationResponse(id: id, title: "Test", messages: [], createdAt: "2026-09-23T00:00:00Z", updatedAt: "2026-09-23T00:00:00Z")
         }
-        func streamTurn(conversationID _: String, content _: String) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        func streamTurn(conversationID _: String, content _: String, context _: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
             AsyncThrowingStream { continuation in
                 for event in events { continuation.yield(event) }
                 continuation.finish()
             }
         }
         func conversations() async throws -> [AIConversationSummaryResponse] { [] }
-        func createConversation(title _: String?) async throws -> AIConversationResponse { throw Unused() }
+        func createConversation(title _: String?, bindMessaging _: Bool?) async throws -> AIConversationResponse { throw Unused() }
         func deleteConversation(id _: String) async throws { throw Unused() }
         func turn(conversationID _: String, content _: String) async throws -> AIAssistantTurnResponse { throw Unused() }
         func preferences() async throws -> AIAssistantPreferencesResponse { throw Unused() }

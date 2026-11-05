@@ -76,6 +76,10 @@
 	<string>Norviq checks which of your contacts are on Norviq so you can add them as friends. Email addresses are turned into one-way codes on your iPhone and are never uploaded or stored.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Norviq uses the camera to scan receipt QR codes and photograph receipts for expense entry.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Norviq uses the microphone so you can ask Q questions by voice.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Norviq turns your voice into text on your iPhone, then sends that text to Q.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Norviq uses Face ID to unlock your app session.</string>
 	<key>NorviqAPIEnvironment</key>

@@ -155,6 +155,12 @@ jobs:
             -only-testing:financeplanTests/AchievementsPushTests \
             -only-testing:financeplanTests/SocialFeedStoreTests \
             -only-testing:financeplanTests/AchievementsLocalizationTests \
+            -only-testing:financeplanTests/QuickAssistantViewModelTests \
+            -only-testing:financeplanTests/QuickAssistantCoordinatorTests \
+            -only-testing:financeplanTests/QuickAssistantTapGateTests \
+            -only-testing:financeplanTests/QuickAssistantStreamTests \
+            -only-testing:financeplanTests/QuickAssistantVoiceTests \
+            -only-testing:financeplanTests/PersistentAssistantRoutingTests \
             -parallel-testing-enabled NO \
             -quiet
 

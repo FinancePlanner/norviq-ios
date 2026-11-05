@@ -18,6 +18,8 @@ final class PersistentAssistantViewModel {
     private(set) var agentState = MuseAgentState.idle
     private(set) var activeActionID: String?
     private(set) var errorMessage: String?
+    /// The server said this turn needs Pro or a fresh quota.
+    var isPaywallRequested = false
     /// Memo cards keyed by the assistant message that announced them.
     private(set) var memoCards: [String: PositionMemoCard] = [:]
     private(set) var memoBookmarkInFlight: Set<String> = []
@@ -218,7 +220,11 @@ final class PersistentAssistantViewModel {
         apply(.started)
         do {
             var receivedTurn = false
-            for try await event in service.streamTurn(conversationID: conversation.id, content: outgoingContent) {
+            for try await event in service.streamTurn(
+                conversationID: conversation.id,
+                content: outgoingContent,
+                context: .current()
+            ) {
                 switch event {
                 case .started:
                     activityLabel = "Reviewing your finances…"
@@ -237,14 +243,14 @@ final class PersistentAssistantViewModel {
                         pendingActions.insert(action, at: 0)
                         if let proposal = turn.watchProposal { watchProposals[action.id] = proposal }
                     }
-                case let .error(message):
-                    throw PersistentAssistantStreamFailure(message: message)
+                case let .error(message, code):
+                    throw AssistantTurnFailure(message: message, code: code)
                 case .done:
                     break
                 }
             }
             guard receivedTurn else {
-                throw PersistentAssistantStreamFailure(message: "The assistant returned no response.")
+                throw AssistantTurnFailure(message: "The assistant returned no response.")
             }
             async let usageRequest = service.usage()
             async let conversationsRequest = service.conversations()
@@ -258,7 +264,14 @@ final class PersistentAssistantViewModel {
                 activeConversation = replacingMessages(in: current, with: current.messages.filter { $0.id != optimistic.id })
             }
             draft = content
-            errorMessage = readable(error, fallback: "The assistant could not respond.")
+            switch AssistantTurnRecovery(error) {
+            case .askForConsent:
+                AIConsentRequired.post()
+            case .showPaywall:
+                isPaywallRequested = true
+            case .recreateConversation, .showMessage:
+                errorMessage = readable(error, fallback: "The assistant could not respond.")
+            }
         }
     }
 
@@ -377,11 +390,6 @@ final class PersistentAssistantViewModel {
         let value = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         return value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? fallback : value
     }
-}
-
-private struct PersistentAssistantStreamFailure: LocalizedError {
-    let message: String
-    var errorDescription: String? { message }
 }
 
 /// Reads the one-line pointer the server stores in place of a memo's body.
