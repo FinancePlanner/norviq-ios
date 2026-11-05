@@ -1,12 +1,19 @@
 import Foundation
 import Observation
 
-/// Opens and closes the Quick Q card from any screen's AI button. The card is
-/// mounted once, on `HomeScreen`.
+/// Opens and closes the Quick Q card from the floating button or any screen's AI
+/// button. The card and the floating button are mounted once, on `HomeScreen`.
 @Observable @MainActor
 final class QuickAssistantCoordinator {
     private(set) var isPresented = false
     private(set) var scope: AIViewScope?
+
+    /// How many visible screens have their own controls where the button sits.
+    private var floatingButtonHiders = 0
+
+    var showsFloatingButton: Bool {
+        !isPresented && floatingButtonHiders == 0
+    }
 
     private let allowsAI: @MainActor () -> Bool
     private let presentConsent: @MainActor () -> Void
@@ -16,7 +23,7 @@ final class QuickAssistantCoordinator {
         self.presentConsent = presentConsent
     }
 
-    func present(scope: AIViewScope) {
+    func present(scope: AIViewScope?) {
         guard allowsAI() else {
             presentConsent()
             return
@@ -27,6 +34,10 @@ final class QuickAssistantCoordinator {
 
     func dismiss() {
         isPresented = false
+    }
+
+    func setFloatingButtonHidden(_ hidden: Bool) {
+        floatingButtonHiders = max(0, floatingButtonHiders + (hidden ? 1 : -1))
     }
 }
 

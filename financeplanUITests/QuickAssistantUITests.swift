@@ -88,6 +88,64 @@ final class QuickAssistantUITests: XCTestCase {
         XCTAssertLessThanOrEqual(composer.frame.maxY, keyboard.frame.minY, "Keyboard covers the composer")
     }
 
+    @MainActor
+    private func floatingButton(_ app: XCUIApplication) -> XCUIElement {
+        app.buttons["quickAssistant.floatingButton"]
+    }
+
+    @MainActor
+    func testFloatingButtonOpensTheCardEvenForPro() {
+        let app = launch(billingTier: "pro")
+        _ = aiButton(app)
+        let button = floatingButton(app)
+        XCTAssertTrue(button.waitForExistence(timeout: 3), "Floating button missing")
+        XCTAssertEqual(button.label, "Ask Q")
+        button.tap()
+        XCTAssertTrue(card(app).waitForExistence(timeout: 3), "Card did not open")
+        XCTAssertFalse(summary(app).waitForExistence(timeout: 2), "Summary opened too")
+    }
+
+    @MainActor
+    func testFloatingButtonGivesWayToTheCard() {
+        let app = launch(billingTier: "free")
+        _ = aiButton(app)
+        let button = floatingButton(app)
+        XCTAssertTrue(button.waitForExistence(timeout: 3), "Floating button missing")
+        button.tap()
+        XCTAssertTrue(card(app).waitForExistence(timeout: 3), "Card did not open")
+        XCTAssertTrue(button.waitForNonExistence(timeout: 3), "Button stayed up behind the card")
+        app.buttons["Close Q"].tap()
+        XCTAssertTrue(button.waitForExistence(timeout: 3), "Button did not come back")
+    }
+
+    @MainActor
+    func testFloatingButtonStaysClearOfTheTabBarOnEveryTab() {
+        let app = launch(billingTier: "free")
+        _ = aiButton(app)
+        let tabBar = app.tabBars.firstMatch
+        let button = floatingButton(app)
+        XCTAssertTrue(button.waitForExistence(timeout: 3), "Floating button missing")
+        for tab in ["Portfolio", "Expenses", "Markets", "Home"] {
+            tabBar.buttons[tab].tap()
+            XCTAssertTrue(button.waitForExistence(timeout: 3), "Button missing on \(tab)")
+            XCTAssertLessThanOrEqual(button.frame.maxY, tabBar.frame.minY, "Button overlaps the tab bar on \(tab)")
+            XCTAssertGreaterThan(button.frame.maxY, tabBar.frame.minY - 40, "Button drifted up from the tab bar on \(tab)")
+            XCTAssertGreaterThan(button.frame.maxX, app.frame.maxX - 40, "Button left the trailing edge on \(tab)")
+        }
+    }
+
+    @MainActor
+    func testKeyboardCoversTheFloatingButtonRatherThanLiftingIt() {
+        let app = launch(billingTier: "free")
+        _ = aiButton(app)
+        let button = floatingButton(app)
+        XCTAssertTrue(button.waitForExistence(timeout: 3), "Floating button missing")
+        let resting = button.frame
+        app.searchFields.firstMatch.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "Keyboard missing")
+        XCTAssertEqual(button.frame.minY, resting.minY, accuracy: 1, "Button moved with the keyboard")
+    }
+
     /// Stops short of tapping the mic: on a simulator `AVAudioEngine.inputNode`
     /// can abort the app when the audio server times out, so capture is a device
     /// check. A simulator without on-device speech has no mic, like such a phone.

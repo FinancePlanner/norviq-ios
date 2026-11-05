@@ -59,6 +59,7 @@ struct BoardPostDetailScreen: View {
     .safeAreaInset(edge: .bottom) {
       if viewer.canWrite { composer }
     }
+    .hidesQuickAssistantButton()
     .sheet(item: $reportTarget) { BoardReportSheet(target: $0) }
     .sheet(item: Binding(get: { moderationUsername.map(BoardsUsername.init) }, set: { moderationUsername = $0?.value })) {
       BoardModerationSheet(username: $0.value)

@@ -297,6 +297,39 @@ final class QuickAssistantCoordinatorTests: XCTestCase {
         XCTAssertEqual(consentPrompts, 1)
     }
 
+    func testFloatingButtonCanOpenWithoutAScreen() async {
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
+        coordinator.present(scope: nil)
+        XCTAssertTrue(coordinator.isPresented)
+        XCTAssertNil(coordinator.scope)
+    }
+
+    func testFloatingButtonHidesWhileAnyScreenAsksAndReturnsAfterTheLast() async {
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
+        XCTAssertTrue(coordinator.showsFloatingButton)
+        coordinator.setFloatingButtonHidden(true)
+        coordinator.setFloatingButtonHidden(true)
+        coordinator.setFloatingButtonHidden(false)
+        XCTAssertFalse(coordinator.showsFloatingButton)
+        coordinator.setFloatingButtonHidden(false)
+        XCTAssertTrue(coordinator.showsFloatingButton)
+    }
+
+    func testFloatingButtonHidesWhileTheCardIsUp() async {
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
+        coordinator.present(scope: .home)
+        XCTAssertFalse(coordinator.showsFloatingButton)
+        coordinator.dismiss()
+        XCTAssertTrue(coordinator.showsFloatingButton)
+    }
+
+    func testAnExtraUnhideCannotLeaveTheButtonStuck() async {
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
+        coordinator.setFloatingButtonHidden(false)
+        coordinator.setFloatingButtonHidden(true)
+        XCTAssertFalse(coordinator.showsFloatingButton)
+    }
+
     func testDismissCloses() async {
         let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
         coordinator.present(scope: .home)

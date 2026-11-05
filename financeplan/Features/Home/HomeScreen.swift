@@ -66,7 +66,9 @@ struct HomeScreen: View {
     .overlay {
       QuickAssistantOverlay(
         onOpenInQ: { openAssistant(conversationID: $0) },
-        onPaywall: { isPaywallPresented = true }
+        onPaywall: { isPaywallPresented = true },
+        currentScope: assistantScope(for: selectedTab),
+        allowsFloatingButton: guided?.activeStep == nil
       )
     }
     .environment(guided)
@@ -142,6 +144,20 @@ struct HomeScreen: View {
       date: notification.userInfo?["tradingDate"] as? String
     )
     Container.shared.marketBriefRouter().open(ref)
+  }
+
+  private func assistantScope(for tab: HomeTab) -> AIViewScope? {
+    switch tab {
+    case .dashboard: .home
+    case .portfolio: .portfolio
+    case .economy: .economy
+    case .markets: .markets
+    case .crypto: .crypto
+    case .expenses: .expenses
+    case .reports: .reports
+    case .tax: .tax
+    case .insights, .social, .boards, .groups: nil
+    }
   }
 
   private func guidedTab(for tab: HomeTab) -> GuidedTab? {
