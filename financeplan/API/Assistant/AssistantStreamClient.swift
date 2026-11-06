@@ -132,8 +132,11 @@ struct AssistantStreamClient: Sendable {
         case 400 ..< 500:
             // A refusal names its code and carries a message to show as is.
             let body = String(decoding: try await smallBody(bytes), as: UTF8.self)
+            // The JSON error envelope carries the text as `reason`; `message` is
+            // the SSE frame's key, kept as a fallback.
             guard let code = field("code", in: body), code == "image_rejected" || code == "attachment_rejected",
-                  let message = field("message", in: body)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  let message = (field("reason", in: body) ?? field("message", in: body))?
+                  .trimmingCharacters(in: .whitespacesAndNewlines),
                   !message.isEmpty
             else { return nil }
             return .attachmentRejected(message)

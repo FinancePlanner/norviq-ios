@@ -233,14 +233,45 @@ final class AssistantAttachmentTests: XCTestCase {
         XCTAssertFalse(text.contains("name=\"image\""))
     }
 
-    func testRejectedJSONShowsServerMessage() async {
-        AttachmentURLProtocol.status = 422
-        AttachmentURLProtocol.responseBody = Data(#"{"code":"attachment_rejected","message":"That PDF has no readable text."}"#.utf8)
+    private func failure(status: Int, body: String) async -> AssistantStreamClient.Failure? {
+        AttachmentURLProtocol.status = status
+        AttachmentURLProtocol.responseBody = Data(body.utf8)
         do {
             for try await _ in makeClient().streamTurn(conversationID: "c1", content: "Hi", attachments: [pdf()], context: nil) {}
-            XCTFail("expected a failure")
+            return nil
         } catch {
-            XCTAssertEqual((error as? AssistantStreamClient.Failure)?.errorDescription, "That PDF has no readable text.")
+            return error as? AssistantStreamClient.Failure
         }
+    }
+
+    func testRejectedJSONShowsServerReason() async {
+        let failure = await failure(status: 422, body: #"{"error":true,"code":"attachment_rejected","reason":"That PDF has no readable text."}"#)
+        XCTAssertEqual(failure?.errorDescription, "That PDF has no readable text.")
+    }
+
+    func testImageRejectedJSONShowsServerReason() async {
+        let failure = await failure(status: 400, body: #"{"error":true,"code":"image_rejected","reason":"That image could not be read."}"#)
+        XCTAssertEqual(failure?.errorDescription, "That image could not be read.")
+    }
+
+    func testRejectedJSONFallsBackToMessage() async {
+        let failure = await failure(status: 422, body: #"{"code":"attachment_rejected","message":"Nope."}"#)
+        XCTAssertEqual(failure?.errorDescription, "Nope.")
+    }
+
+    func testOtherJSON4xxStaysServerFailure() async {
+        let failure = await failure(status: 400, body: #"{"error":true,"code":"bad_request","reason":"Bad."}"#)
+        guard case .server(400)? = failure else { return XCTFail("expected .server(400), got \(String(describing: failure))") }
+    }
+
+    func testSSEErrorFrameCarriesAttachmentRejectedMessage() async throws {
+        AttachmentURLProtocol.responseBody = Data(#"event: error\#ndata: {"code":"attachment_rejected","message":"That CSV has no rows."}\#n\#n"#.utf8)
+        var events: [PersistentAssistantStreamEvent] = []
+        for try await event in makeClient().streamTurn(conversationID: "c1", content: "Hi", attachments: [csv()], context: nil) {
+            events.append(event)
+        }
+        guard case let .error(message, code)? = events.first else { return XCTFail("no error frame: \(events)") }
+        XCTAssertEqual(message, "That CSV has no rows.")
+        XCTAssertEqual(code, "attachment_rejected")
     }
 }
