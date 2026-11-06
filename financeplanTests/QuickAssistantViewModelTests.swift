@@ -29,11 +29,11 @@ private final class ScriptedAssistantService: PersistentAssistantServicing, @unc
         return AIConversationResponse(id: id, title: title ?? "", messages: [], createdAt: "2026-11-04T00:00:00Z", updatedAt: "2026-11-04T00:00:00Z")
     }
 
-    func streamTurn(conversationID: String, content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+    func streamTurn(conversationID: String, content: String, attachments: [AssistantAttachment], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
         streamedConversations.append(conversationID)
         streamedContent.append(content)
         contexts.append(context)
-        streamedImages.append(images)
+        streamedImages.append(attachments.compactMap { if case let .image(image) = $0 { image } else { nil } })
         let events = scripts.isEmpty ? [] : scripts.removeFirst()
         return AsyncThrowingStream { continuation in
             for event in events { continuation.yield(event) }
@@ -427,8 +427,8 @@ private struct FullQService: PersistentAssistantServicing {
     func conversation(id: String) async throws -> AIConversationResponse {
         AIConversationResponse(id: id, title: "T", messages: [], createdAt: "2026-11-04T00:00:00Z", updatedAt: "2026-11-04T00:00:00Z")
     }
-    func streamTurn(conversationID: String, content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
-        base.streamTurn(conversationID: conversationID, content: content, images: images, context: context)
+    func streamTurn(conversationID: String, content: String, attachments: [AssistantAttachment], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        base.streamTurn(conversationID: conversationID, content: content, attachments: attachments, context: context)
     }
     func usage() async throws -> AIAssistantUsageResponse {
         AIAssistantUsageResponse(month: "2026-11", used: 1, limit: nil, remaining: nil, isPro: true)

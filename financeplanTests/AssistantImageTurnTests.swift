@@ -57,8 +57,8 @@ private final class ImageTurnService: PersistentAssistantServicing, @unchecked S
     var midTurn: (@Sendable () async -> Void)?
     private(set) var sent: [(content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?)] = []
 
-    func streamTurn(conversationID _: String, content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
-        sent.append((content, images, context))
+    func streamTurn(conversationID _: String, content: String, attachments: [AssistantAttachment], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        sent.append((content, attachments.compactMap { if case let .image(image) = $0 { image } else { nil } }, context))
         let events = events
         let streamError = streamError
         let midTurn = midTurn
@@ -218,7 +218,7 @@ final class AssistantImageTurnTests: XCTestCase {
         ImageTurnURLProtocol.status = status
         ImageTurnURLProtocol.responseBody = Data(body.utf8)
         do {
-            try await drain(makeClient().streamTurn(conversationID: "c1", content: "Hi", images: images, context: nil))
+            try await drain(makeClient().streamTurn(conversationID: "c1", content: "Hi", attachments: images.map(AssistantAttachment.image), context: nil))
             return nil
         } catch {
             return error as? AssistantStreamClient.Failure
@@ -241,7 +241,7 @@ final class AssistantImageTurnTests: XCTestCase {
         let first = ScreenshotUploadImage(data: Data([0xFF, 0xD8, 0xFF, 0x00, 0x0D, 0x0A, 0x01]))
         let second = ScreenshotUploadImage(data: Data([0xFF, 0xD8, 0xFF, 0x02]), contentType: "image/png", filename: "fills.png")
 
-        try await drain(makeClient().streamTurn(conversationID: "c1", content: "Which fills?", images: [first, second], context: context))
+        try await drain(makeClient().streamTurn(conversationID: "c1", content: "Which fills?", attachments: [.image(first), .image(second)], context: context))
 
         let request = try XCTUnwrap(ImageTurnURLProtocol.request)
         XCTAssertEqual(request.httpMethod, "POST")
@@ -254,7 +254,7 @@ final class AssistantImageTurnTests: XCTestCase {
         XCTAssertFalse(boundary.isEmpty)
 
         let sent = try parts(of: ImageTurnURLProtocol.body, boundary: boundary)
-        XCTAssertEqual(sent.map(\.name), ["content", "context", "image", "image"])
+        XCTAssertEqual(sent.map(\.name), ["content", "context", "file", "file"])
         XCTAssertEqual(String(data: sent[0].body, encoding: .utf8), "Which fills?")
         XCTAssertNil(sent[0].filename)
         let sentContext = try JSONDecoder().decode(AssistantTurnContext.self, from: sent[1].body)
@@ -271,23 +271,23 @@ final class AssistantImageTurnTests: XCTestCase {
     func testMultipartWithNoTextSendsEmptyContentAndNoContextPart() async throws {
         let image = ScreenshotUploadImage(data: Data([0xFF, 0xD8, 0xFF]))
 
-        try await drain(makeClient().streamTurn(conversationID: "c1", content: "", images: [image], context: nil))
+        try await drain(makeClient().streamTurn(conversationID: "c1", content: "", attachments: [.image(image)], context: nil))
 
         let contentType = try XCTUnwrap(ImageTurnURLProtocol.request?.value(forHTTPHeaderField: "Content-Type"))
         let sent = try parts(of: ImageTurnURLProtocol.body, boundary: String(contentType.dropFirst("multipart/form-data; boundary=".count)))
-        XCTAssertEqual(sent.map(\.name), ["content", "image"])
+        XCTAssertEqual(sent.map(\.name), ["content", "file"])
         XCTAssertEqual(sent[0].body, Data())
     }
 
     func testNoImagesKeepsJSONBody() async throws {
-        try await drain(makeClient().streamTurn(conversationID: "c1", content: "Hi", images: [], context: nil))
+        try await drain(makeClient().streamTurn(conversationID: "c1", content: "Hi", attachments: [], context: nil))
 
         let request = try XCTUnwrap(ImageTurnURLProtocol.request)
         XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), "text/event-stream")
         XCTAssertEqual(String(data: ImageTurnURLProtocol.body, encoding: .utf8), #"{"content":"Hi"}"#)
 
-        try await drain(makeClient().streamTurn(conversationID: "c1", content: "Hi", images: [], context: context))
+        try await drain(makeClient().streamTurn(conversationID: "c1", content: "Hi", attachments: [], context: context))
         XCTAssertEqual(ImageTurnURLProtocol.request?.value(forHTTPHeaderField: "Content-Type"), "application/json")
         // JSONEncoder does not promise a key order, so compare what the bytes say.
         let sent = try XCTUnwrap(JSONSerialization.jsonObject(with: ImageTurnURLProtocol.body) as? NSDictionary)

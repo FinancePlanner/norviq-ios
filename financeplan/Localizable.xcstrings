@@ -15194,6 +15194,86 @@
         }
       }
     },
+    "Couldn't read %@." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível ler %@."
+          }
+        }
+      }
+    },
+    "%@ is too large." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ é demasiado grande."
+          }
+        }
+      }
+    },
+    "This PDF is password-protected." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este PDF está protegido por palavra-passe."
+          }
+        }
+      }
+    },
+    "PDFs can have up to 20 pages." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os PDF podem ter até 20 páginas."
+          }
+        }
+      }
+    },
+    "This CSV isn't plain UTF-8 text." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este CSV não é texto simples em UTF-8."
+          }
+        }
+      }
+    },
+    "Attach one PDF at a time." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anexe um PDF de cada vez."
+          }
+        }
+      }
+    },
+    "Attach one CSV at a time." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anexe um CSV de cada vez."
+          }
+        }
+      }
+    },
+    "Attach up to 3 files." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anexe até 3 ficheiros."
+          }
+        }
+      }
+    },
     "That image is too large." : {
       "localizations" : {
         "pt-PT" : {

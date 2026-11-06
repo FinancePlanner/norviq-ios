@@ -87,7 +87,7 @@ private final class TradesService: PersistentAssistantServicing, @unchecked Send
     func conversations() async throws -> [AIConversationSummaryResponse] { [] }
     func tips() async throws -> [AITipResponse] { [] }
 
-    func streamTurn(conversationID _: String, content _: String, images _: [ScreenshotUploadImage], context _: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+    func streamTurn(conversationID _: String, content _: String, attachments _: [AssistantAttachment], context _: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
         AsyncThrowingStream { $0.finish(throwing: Unused()) }
     }
     func conversation(id _: String) async throws -> AIConversationResponse { throw Unused() }

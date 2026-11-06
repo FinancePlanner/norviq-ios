@@ -318,7 +318,7 @@ final class PersistentAssistantViewModel {
             for try await event in service.streamTurn(
                 conversationID: conversation.id,
                 content: outgoingContent,
-                images: outgoingImages,
+                attachments: outgoingImages.map(AssistantAttachment.image),
                 context: .current()
             ) {
                 switch event {

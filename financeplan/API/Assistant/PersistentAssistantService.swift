@@ -8,7 +8,7 @@ protocol PersistentAssistantServicing: Sendable {
     func conversation(id: String) async throws -> AIConversationResponse
     func deleteConversation(id: String) async throws
     func turn(conversationID: String, content: String) async throws -> AIAssistantTurnResponse
-    func streamTurn(conversationID: String, content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error>
+    func streamTurn(conversationID: String, content: String, attachments: [AssistantAttachment], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error>
     func preferences() async throws -> AIAssistantPreferencesResponse
     func updatePreferences(_ payload: AIAssistantPreferencesResponse) async throws -> AIAssistantPreferencesResponse
     func tips() async throws -> [AITipResponse]
@@ -35,7 +35,7 @@ extension PersistentAssistantServicing {
 
     /// A turn with nothing attached.
     func streamTurn(conversationID: String, content: String, context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
-        streamTurn(conversationID: conversationID, content: content, images: [], context: context)
+        streamTurn(conversationID: conversationID, content: content, attachments: [], context: context)
     }
 }
 
@@ -62,8 +62,8 @@ struct DefaultPersistentAssistantService: PersistentAssistantServicing, Sendable
     func conversation(id: String) async throws -> AIConversationResponse { try await client.conversation(id: id) }
     func deleteConversation(id: String) async throws { try await client.deleteConversation(id: id) }
     func turn(conversationID: String, content: String) async throws -> AIAssistantTurnResponse { try await client.turn(conversationID: conversationID, content: content) }
-    func streamTurn(conversationID: String, content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
-        streamClient.streamTurn(conversationID: conversationID, content: content, images: images, context: context)
+    func streamTurn(conversationID: String, content: String, attachments: [AssistantAttachment], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        streamClient.streamTurn(conversationID: conversationID, content: content, attachments: attachments, context: context)
     }
     func preferences() async throws -> AIAssistantPreferencesResponse { try await client.preferences() }
     func updatePreferences(_ payload: AIAssistantPreferencesResponse) async throws -> AIAssistantPreferencesResponse { try await client.updatePreferences(payload) }
