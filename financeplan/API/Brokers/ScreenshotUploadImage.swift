@@ -1,7 +1,9 @@
 import Foundation
 
 /// One screenshot on its way to the extractor.
-struct ScreenshotUploadImage: Sendable, Equatable {
+nonisolated struct ScreenshotUploadImage: Sendable, Equatable, Identifiable {
+  /// Tells two copies of one picture apart in a list. Not part of equality.
+  let id = UUID()
   let data: Data
   let contentType: String
   let filename: String?
@@ -10,5 +12,9 @@ struct ScreenshotUploadImage: Sendable, Equatable {
     self.data = data
     self.contentType = contentType
     self.filename = filename
+  }
+
+  static func == (lhs: Self, rhs: Self) -> Bool {
+    lhs.data == rhs.data && lhs.contentType == rhs.contentType && lhs.filename == rhs.filename
   }
 }

@@ -8,7 +8,7 @@ protocol PersistentAssistantServicing: Sendable {
     func conversation(id: String) async throws -> AIConversationResponse
     func deleteConversation(id: String) async throws
     func turn(conversationID: String, content: String) async throws -> AIAssistantTurnResponse
-    func streamTurn(conversationID: String, content: String, context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error>
+    func streamTurn(conversationID: String, content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error>
     func preferences() async throws -> AIAssistantPreferencesResponse
     func updatePreferences(_ payload: AIAssistantPreferencesResponse) async throws -> AIAssistantPreferencesResponse
     func tips() async throws -> [AITipResponse]
@@ -16,7 +16,11 @@ protocol PersistentAssistantServicing: Sendable {
     func usage() async throws -> AIAssistantUsageResponse
     func pendingActions() async throws -> [AIPendingActionResponse]
     func confirmAction(id: String) async throws -> AIConfirmedActionResponse
+    /// Confirms a `record_trades` card with only the rows the user kept.
+    func confirmTrades(id: String, portfolioListID: String, trades: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse
     func cancelAction(id: String) async throws
+    /// The user's portfolios, for the trades card's picker.
+    func portfolioLists() async throws -> [PortfolioListDTOResponse]
     func memos(bookmarked: Bool?, conversationID: String?) async throws -> [PositionMemoListItem]
     func memo(id: String) async throws -> PositionMemoDetail
     func bookmarkMemo(id: String, bookmarked: Bool) async throws -> PositionMemoCard
@@ -27,6 +31,11 @@ extension PersistentAssistantServicing {
     /// Rebinds linked chats to the new conversation, the server's default.
     func createConversation(title: String?) async throws -> AIConversationResponse {
         try await createConversation(title: title, bindMessaging: nil)
+    }
+
+    /// A turn with nothing attached.
+    func streamTurn(conversationID: String, content: String, context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        streamTurn(conversationID: conversationID, content: content, images: [], context: context)
     }
 }
 
@@ -53,8 +62,8 @@ struct DefaultPersistentAssistantService: PersistentAssistantServicing, Sendable
     func conversation(id: String) async throws -> AIConversationResponse { try await client.conversation(id: id) }
     func deleteConversation(id: String) async throws { try await client.deleteConversation(id: id) }
     func turn(conversationID: String, content: String) async throws -> AIAssistantTurnResponse { try await client.turn(conversationID: conversationID, content: content) }
-    func streamTurn(conversationID: String, content: String, context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
-        streamClient.streamTurn(conversationID: conversationID, content: content, context: context)
+    func streamTurn(conversationID: String, content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        streamClient.streamTurn(conversationID: conversationID, content: content, images: images, context: context)
     }
     func preferences() async throws -> AIAssistantPreferencesResponse { try await client.preferences() }
     func updatePreferences(_ payload: AIAssistantPreferencesResponse) async throws -> AIAssistantPreferencesResponse { try await client.updatePreferences(payload) }
@@ -63,7 +72,11 @@ struct DefaultPersistentAssistantService: PersistentAssistantServicing, Sendable
     func usage() async throws -> AIAssistantUsageResponse { try await client.usage() }
     func pendingActions() async throws -> [AIPendingActionResponse] { try await client.pendingActions() }
     func confirmAction(id: String) async throws -> AIConfirmedActionResponse { try await client.confirmAction(id: id) }
+    func confirmTrades(id: String, portfolioListID: String, trades: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse {
+        try await client.confirmTrades(id: id, portfolioListID: portfolioListID, trades: trades)
+    }
     func cancelAction(id: String) async throws { try await client.cancelAction(id: id) }
+    func portfolioLists() async throws -> [PortfolioListDTOResponse] { try await client.portfolioLists() }
     func memos(bookmarked: Bool?, conversationID: String?) async throws -> [PositionMemoListItem] {
         try await client.memos(bookmarked: bookmarked, conversationID: conversationID)
     }

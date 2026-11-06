@@ -56,6 +56,10 @@ struct AssistantStreamClient: Sendable {
         case rateLimited
         case aiConsentRequired
         case server(Int)
+        case imageTooLarge
+        case imageTurnsRateLimited
+        case imagesBusy(String)
+        case largeImagesBusy
 
         var errorDescription: String? {
             switch self {
@@ -65,6 +69,10 @@ struct AssistantStreamClient: Sendable {
             case .rateLimited: "You've reached today's assistant limit. Try again tomorrow."
             case .aiConsentRequired: "Allow AI data sharing to use the assistant."
             case let .server(code): "The assistant is unavailable (\(code)). Please try again."
+            case .imageTooLarge: String(localized: "That image is too large.")
+            case .imageTurnsRateLimited: String(localized: "Too many requests. Wait a minute and try again.")
+            case let .imagesBusy(reason): reason
+            case .largeImagesBusy: String(localized: "Too many large images right now. Try again in a moment.")
             }
         }
     }
@@ -83,14 +91,44 @@ struct AssistantStreamClient: Sendable {
         self.authTokenProvider = authTokenProvider
     }
 
-    /// Reads a small error body to tell "allow AI first" apart from "upgrade".
-    private static func isConsentRequired(_ bytes: URLSession.AsyncBytes) async throws -> Bool {
+    private static func smallBody(_ bytes: URLSession.AsyncBytes) async throws -> Data {
         var body = Data()
         for try await byte in bytes {
             body.append(byte)
             if body.count >= 4_096 { break }
         }
-        return AIConsentRequired.matches(statusCode: 403, body: body)
+        return body
+    }
+
+    /// Reads a small error body to tell "allow AI first" apart from "upgrade".
+    private static func isConsentRequired(_ bytes: URLSession.AsyncBytes) async throws -> Bool {
+        AIConsentRequired.matches(statusCode: 403, body: try await smallBody(bytes))
+    }
+
+    private static let largeImagesBusyReason = "Too many large images right now. Try again in a moment."
+
+    /// Statuses an image turn meets before its stream opens: the body cap, the
+    /// image rate limit (per minute, unlike the daily limit a text turn's 429
+    /// reports) and the large-image slots. A 503 with no JSON `reason` came from
+    /// something other than the backend, so it stays the generic failure.
+    private static func imageTurnFailure(status: Int, bytes: URLSession.AsyncBytes) async throws -> Failure? {
+        switch status {
+        case 413:
+            return .imageTooLarge
+        case 429:
+            return .imageTurnsRateLimited
+        case 503:
+            let body = String(decoding: try await smallBody(bytes), as: UTF8.self)
+            guard let reason = field("reason", in: body)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !reason.isEmpty
+            else { return nil }
+            // The backend's only busy reason (largeTurnsBusy in images.go) is
+            // English; say it in the app's language.
+            if reason == largeImagesBusyReason { return .largeImagesBusy }
+            return .imagesBusy(String(reason.prefix(300)))
+        default:
+            return nil
+        }
     }
 
     /// Sends the conversation and returns an async stream of assistant events.
@@ -146,10 +184,13 @@ struct AssistantStreamClient: Sendable {
     }
 
     /// Streams a persisted assistant turn. The backend writes the user and
-    /// assistant messages before emitting the final turn event.
+    /// assistant messages before emitting the final turn event. A turn with
+    /// images goes as a multipart form; any other stays JSON, because a multipart
+    /// request spends the user's image rate budget even with no image in it.
     func streamTurn(
         conversationID: String,
         content: String,
+        images: [ScreenshotUploadImage] = [],
         context: AssistantTurnContext? = nil
     ) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
         AsyncThrowingStream { continuation in
@@ -158,12 +199,18 @@ struct AssistantStreamClient: Sendable {
                     let path = "v1/ai/assistant/conversations/\(conversationID)/stream"
                     var request = URLRequest(url: baseURL.appendingPathComponent(path))
                     request.httpMethod = "POST"
-                    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
                     request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
                     if let token = await authTokenProvider() {
                         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                     }
-                    request.httpBody = try Self.turnBody(content: content, context: context)
+                    if images.isEmpty {
+                        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                        request.httpBody = try Self.turnBody(content: content, context: context)
+                    } else {
+                        let form = try Self.imageTurnForm(content: content, images: images, context: context)
+                        request.setValue(form.contentType, forHTTPHeaderField: "Content-Type")
+                        request.httpBody = form.finalizedData()
+                    }
 
                     let (bytes, response) = try await session.bytes(for: ClientCapabilities.applied(to: request))
                     guard let http = response as? HTTPURLResponse else {
@@ -172,6 +219,9 @@ struct AssistantStreamClient: Sendable {
                     if http.statusCode == 403, try await Self.isConsentRequired(bytes) {
                         AIConsentRequired.post()
                         throw Failure.aiConsentRequired
+                    }
+                    if !images.isEmpty, let failure = try await Self.imageTurnFailure(status: http.statusCode, bytes: bytes) {
+                        throw failure
                     }
                     switch http.statusCode {
                     case 200: break
@@ -208,6 +258,29 @@ struct AssistantStreamClient: Sendable {
 
     static func turnBody(content: String, context: AssistantTurnContext?) throws -> Data {
         try JSONEncoder().encode(PersistentAssistantTurnRequestDTO(content: content, context: context))
+    }
+
+    /// The backend counts a part as an image only if it has a filename, and
+    /// reads `context` as the same JSON a text turn's body carries.
+    private static func imageTurnForm(
+        content: String,
+        images: [ScreenshotUploadImage],
+        context: AssistantTurnContext?
+    ) throws -> MultipartFormBody {
+        var form = MultipartFormBody()
+        form.addField(name: "content", value: content)
+        if let context {
+            form.addField(name: "context", value: String(decoding: try JSONEncoder().encode(context), as: UTF8.self))
+        }
+        for (index, image) in images.enumerated() {
+            form.addFile(
+                name: "image",
+                filename: image.filename ?? "image-\(index + 1).jpg",
+                contentType: image.contentType,
+                data: image.data
+            )
+        }
+        return form
     }
 
     /// Maps one SSE frame of the persisted-turn stream. Frames this client

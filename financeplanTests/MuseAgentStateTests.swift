@@ -162,7 +162,7 @@ final class PersistentAssistantAgentStateTests: XCTestCase {
         func conversation(id: String) async throws -> AIConversationResponse {
             AIConversationResponse(id: id, title: "Test", messages: [], createdAt: "2026-09-23T00:00:00Z", updatedAt: "2026-09-23T00:00:00Z")
         }
-        func streamTurn(conversationID _: String, content _: String, context _: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        func streamTurn(conversationID _: String, content _: String, images _: [ScreenshotUploadImage], context _: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
             AsyncThrowingStream { continuation in
                 for event in events { continuation.yield(event) }
                 continuation.finish()
@@ -179,6 +179,8 @@ final class PersistentAssistantAgentStateTests: XCTestCase {
         func usage() async throws -> AIAssistantUsageResponse { throw Unused() }
         func pendingActions() async throws -> [AIPendingActionResponse] { [] }
         func confirmAction(id _: String) async throws -> AIConfirmedActionResponse { throw Unused() }
+        func portfolioLists() async throws -> [PortfolioListDTOResponse] { [] }
+        func confirmTrades(id _: String, portfolioListID _: String, trades _: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse { throw Unused() }
         func cancelAction(id _: String) async throws { throw Unused() }
         func memos(bookmarked _: Bool?, conversationID _: String?) async throws -> [PositionMemoListItem] { [] }
         func memo(id _: String) async throws -> PositionMemoDetail { throw Unused() }

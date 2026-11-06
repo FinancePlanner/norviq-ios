@@ -402,10 +402,12 @@ final class AssistantPushViewModelTests: XCTestCase {
       if missing.contains(id) { throw Unused() }
       return AIConversationResponse(id: id, title: "T", messages: messagesByConversation[id] ?? [], createdAt: "2026-09-24T00:00:00Z", updatedAt: "2026-09-24T00:00:00Z")
     }
-    func streamTurn(conversationID _: String, content _: String, context _: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+    func streamTurn(conversationID _: String, content _: String, images _: [ScreenshotUploadImage], context _: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
       AsyncThrowingStream { $0.finish() }
     }
     func confirmAction(id _: String) async throws -> AIConfirmedActionResponse { throw Unused() }
+    func portfolioLists() async throws -> [PortfolioListDTOResponse] { [] }
+    func confirmTrades(id _: String, portfolioListID _: String, trades _: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse { throw Unused() }
     func cancelAction(id _: String) async throws {}
     func pendingActions() async throws -> [AIPendingActionResponse] { [] }
     func conversations() async throws -> [AIConversationSummaryResponse] {

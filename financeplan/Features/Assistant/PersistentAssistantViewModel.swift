@@ -1,7 +1,9 @@
 import Factory
 import Foundation
 import Observation
+import PhotosUI
 import StockPlanShared
+import SwiftUI
 
 @Observable @MainActor
 final class PersistentAssistantViewModel {
@@ -28,7 +30,36 @@ final class PersistentAssistantViewModel {
     private(set) var watchProposals: [String: AIWatchProposalResponse] = [:]
     /// Standing-task cards the user answered but that stay on screen.
     private(set) var standingTaskOutcomes: [String: MuseStandingTaskOutcome] = [:]
+    /// Trades cards (`record_trades`) by action id, built when the action
+    /// arrives. The user's edits live here, so they outlive scrolling and reloads.
+    private(set) var tradesReviews: [String: AssistantTradesReview] = [:]
+    /// The portfolios a trades card can pick from. Nil until a card needs them,
+    /// or when loading failed: the card then saves to the list it proposed.
+    private(set) var portfolioLists: [PortfolioListDTOResponse]?
     var draft = ""
+
+    /// The backend's limits for one turn (`maxTurnImages`, `maxTurnImageBytes`).
+    static let maxAttachments = 3
+    static let maxAttachmentBytes = 5 << 20
+    /// Images waiting to go with the next message.
+    private(set) var attachments: [ScreenshotUploadImage] = []
+    private(set) var preparingAttachmentCount = 0
+    /// Why an image did not attach or go through. Shown in the composer, where
+    /// it is still readable once a paywall sheet closes.
+    private(set) var attachmentNotice: String?
+    var pickedItems: [PhotosPickerItem] = [] {
+        didSet { handlePicked() }
+    }
+
+    /// Absent from a backend that predates images, which means no.
+    var imagesEnabled: Bool { preferences?.imagesEnabled ?? false }
+
+    var attachmentRoom: Int { max(Self.maxAttachments - attachments.count - preparingAttachmentCount, 0) }
+
+    var canSend: Bool {
+        let hasText = !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return (hasText || !attachments.isEmpty) && !isSending && preparingAttachmentCount == 0
+    }
 
     var memoService: any PersistentAssistantServicing { service }
 
@@ -85,6 +116,7 @@ final class PersistentAssistantViewModel {
             usage = loadedUsage
             preferences = loadedPreferences
             pendingActions = loadedActions
+            rebuildTradesReviews()
             if let preferredConversationID, (try? await selectConversation(id: preferredConversationID)) != nil {
                 // Opened from a push or link.
             } else if let first = conversations.first {
@@ -92,6 +124,7 @@ final class PersistentAssistantViewModel {
             } else {
                 try await createConversation()
             }
+            await loadPortfolioListsIfNeeded()
         } catch {
             errorMessage = readable(error, fallback: "The assistant could not be loaded.")
         }
@@ -177,23 +210,85 @@ final class PersistentAssistantViewModel {
         catch { errorMessage = readable(error, fallback: "The conversation could not be opened.") }
     }
 
+    private func handlePicked() {
+        guard !pickedItems.isEmpty else { return }
+        // The picker is disabled mid-turn; this is a pick that lost the race
+        // with Send, which a failed turn's restore would otherwise add to.
+        guard !isSending else {
+            pickedItems = []
+            return
+        }
+        // Emptied so the picker never reopens on the last selection.
+        let items = pickedItems
+        pickedItems = []
+        Task {
+            await addAttachments(items.map { item in { try? await item.loadTransferable(type: Data.self) } })
+        }
+    }
+
+    /// Downscales and attaches what fits. Off the main actor, because a full-size
+    /// photo takes long enough to decode and encode that the composer would hitch.
+    func addAttachments(_ sources: [@Sendable () async -> Data?]) async {
+        // A pick loaded after Send would go with the next message instead.
+        guard !isSending else { return }
+        attachmentNotice = nil
+        let room = attachmentRoom
+        if sources.count > room {
+            attachmentNotice = String(localized: "Attach up to \(Self.maxAttachments) images.")
+        }
+        let taken = sources.prefix(room)
+        preparingAttachmentCount += taken.count
+        let cap = Self.maxAttachmentBytes
+        for source in taken {
+            let prepared = await Task.detached(priority: .userInitiated) { () -> ScreenshotUploadImage? in
+                guard let data = await source() else { return nil }
+                return UploadImagePreparer.prepare(data, maxBytes: cap)
+            }.value
+            preparingAttachmentCount -= 1
+            if let prepared {
+                attachments.append(prepared)
+            } else {
+                attachmentNotice = String(localized: "This image could not be attached. Try another one.")
+            }
+        }
+    }
+
+    func removeAttachment(id: ScreenshotUploadImage.ID) {
+        attachments.removeAll { $0.id == id }
+        attachmentNotice = nil
+    }
+
     func send() async {
         let content = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !content.isEmpty, let conversation = activeConversation, !isSending else { return }
+        guard !content.isEmpty || !attachments.isEmpty,
+              let conversation = activeConversation,
+              !isSending,
+              preparingAttachmentCount == 0
+        else { return }
+        let resolution = AssistantCommandParser.resolve(content)
+        // A command answered on the device sends nothing, so its images stay put.
+        let outgoingImages: [ScreenshotUploadImage]
+        if case .local = resolution {
+            outgoingImages = []
+        } else {
+            outgoingImages = attachments
+            attachments = []
+        }
         draft = ""
+        attachmentNotice = nil
         isSending = true
         errorMessage = nil
         let optimistic = AIMessageResponse(
             id: UUID().uuidString,
             conversationId: conversation.id,
             role: .user,
-            content: content,
+            content: outgoingImages.isEmpty ? content : Self.storedImageTurnText(content),
             createdAt: ISO8601DateFormatter().string(from: Date())
         )
         activeConversation = replacingMessages(in: conversation, with: conversation.messages + [optimistic])
 
         let outgoingContent: String
-        switch AssistantCommandParser.resolve(content) {
+        switch resolution {
         case let .local(reply):
             let localReply = AIMessageResponse(
                 id: UUID().uuidString,
@@ -218,11 +313,12 @@ final class PersistentAssistantViewModel {
             activityLabel = nil
         }
         apply(.started)
+        var receivedTurn = false
         do {
-            var receivedTurn = false
             for try await event in service.streamTurn(
                 conversationID: conversation.id,
                 content: outgoingContent,
+                images: outgoingImages,
                 context: .current()
             ) {
                 switch event {
@@ -242,6 +338,7 @@ final class PersistentAssistantViewModel {
                     if let action = turn.pendingAction {
                         pendingActions.insert(action, at: 0)
                         if let proposal = turn.watchProposal { watchProposals[action.id] = proposal }
+                        rebuildTradesReviews()
                     }
                 case let .error(message, code):
                     throw AssistantTurnFailure(message: message, code: code)
@@ -252,6 +349,8 @@ final class PersistentAssistantViewModel {
             guard receivedTurn else {
                 throw AssistantTurnFailure(message: "The assistant returned no response.")
             }
+            // Off the turn's path, so the composer is free as soon as the reply lands.
+            Task { await loadPortfolioListsIfNeeded() }
             async let usageRequest = service.usage()
             async let conversationsRequest = service.conversations()
             usage = try await usageRequest
@@ -260,19 +359,40 @@ final class PersistentAssistantViewModel {
             // A turn that arrived before a later failure (e.g. refreshing
             // usage) still counts; only a turn that never landed is a snag.
             if agentState.phase == .working { apply(.failed) }
+            // The reply is stored and on screen; only a refresh after it
+            // failed. Taking the message back would invite sending it twice.
+            guard !receivedTurn else { return }
             if let current = activeConversation {
                 activeConversation = replacingMessages(in: current, with: current.messages.filter { $0.id != optimistic.id })
             }
-            draft = content
+            // In front of whatever was typed while the turn ran.
+            draft = [content, draft].filter { !$0.isEmpty }.joined(separator: "\n")
+            attachments = Array((outgoingImages + attachments).prefix(Self.maxAttachments))
             switch AssistantTurnRecovery(error) {
             case .askForConsent:
                 AIConsentRequired.post()
             case .showPaywall:
                 isPaywallRequested = true
+                if !outgoingImages.isEmpty, Self.isUpgradeRefusal(error) {
+                    attachmentNotice = String(localized: "Attaching images is part of Pro. Upgrade to use it.")
+                }
             case .recreateConversation, .showMessage:
                 errorMessage = readable(error, fallback: "The assistant could not respond.")
             }
         }
+    }
+
+    /// The text the server stores for an image turn, so the bubble reads the
+    /// same before and after a reload. `defaultImagePrompt` and `imageMarker` in
+    /// the backend's `images.go`.
+    private static func storedImageTurnText(_ content: String) -> String {
+        (content.isEmpty ? "What's in this image?" : content) + " [image attached]"
+    }
+
+    private static func isUpgradeRefusal(_ error: any Error) -> Bool {
+        if let failure = error as? AssistantTurnFailure { return failure.code == "upgrade_required" }
+        if case .upgradeRequired? = error as? AssistantStreamClient.Failure { return true }
+        return false
     }
 
     /// The standing task a pending action proposes, or nil for other actions.
@@ -339,6 +459,99 @@ final class PersistentAssistantViewModel {
         pendingActions.removeAll { $0.id == id }
         watchProposals[id] = nil
         standingTaskOutcomes[id] = nil
+        tradesReviews[id] = nil
+    }
+
+    // MARK: - Trades cards
+
+    /// Takes the card's edits. A card that is gone stays gone.
+    func updateTradesReview(_ review: AssistantTradesReview) {
+        guard tradesReviews[review.actionID] != nil else { return }
+        tradesReviews[review.actionID] = review
+    }
+
+    /// A card for each `record_trades` action whose arguments read; one
+    /// already on screen keeps its edits. Others get the plain card.
+    private func rebuildTradesReviews() {
+        var reviews: [String: AssistantTradesReview] = [:]
+        for action in pendingActions {
+            reviews[action.id] = tradesReviews[action.id] ?? AssistantTradesReview(action: action)
+        }
+        tradesReviews = reviews
+    }
+
+    private var isLoadingPortfolioLists = false
+
+    /// Loads the picker's lists once a card needs them. A failed load leaves
+    /// them nil and is tried again the next time a card appears or asks, so a
+    /// card blocked by sync is never left with no other portfolio to pick.
+    func loadPortfolioListsIfNeeded() async {
+        guard !tradesReviews.isEmpty, portfolioLists == nil, !isLoadingPortfolioLists else { return }
+        isLoadingPortfolioLists = true
+        defer { isLoadingPortfolioLists = false }
+        portfolioLists = try? await service.portfolioLists()
+    }
+
+    /// Saves the card's kept rows as they stand. A 422 keeps the card with its
+    /// errors on the rows, unless the save failed after the backend claimed
+    /// the action, which settles it: a 422 then looks the same, so the action
+    /// is fetched again, and a card no longer pending is closed. A 409 means
+    /// it expired or was already answered.
+    ///
+    /// The backend finishes a claimed save even when the client has gone, so
+    /// a lost answer (a timeout, a dropped connection, a 5xx) may hide a save
+    /// (R30). The action is fetched again: gone means it may have been saved,
+    /// and the card says to check before sending the screenshot again. So does
+    /// a 409 once this card has tried to save.
+    func confirmTrades(_ action: AIPendingActionResponse) async {
+        guard activeActionID == nil, var review = tradesReviews[action.id], review.canSave else { return }
+        activeActionID = action.id
+        defer { activeActionID = nil }
+        let triedBefore = review.hasAttemptedSave
+        review.hasAttemptedSave = true
+        tradesReviews[action.id] = review
+        let body = review.confirmBody
+        do {
+            let result = try await service.confirmTrades(id: action.id, portfolioListID: body.portfolioListId, trades: body.trades)
+            removePendingAction(id: action.id)
+            errorMessage = result.message
+            return
+        } catch let PersistentAssistantHTTPClient.Error.unprocessable(reason, rowErrors) {
+            let reason = reason.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+            if await isStillPending(action.id) == false {
+                review.closedMessage = reason.map { "\($0) \(AssistantTradesReview.closedCopy)" } ?? AssistantTradesReview.closedCopy
+            } else {
+                review.refuse(reason ?? AssistantTradesReview.retryCopy, rowErrors: rowErrors)
+            }
+        } catch PersistentAssistantHTTPClient.Error.conflict {
+            review.closedMessage = triedBefore ? AssistantTradesReview.maybeSavedCopy : AssistantTradesReview.expiredCopy
+        } catch PersistentAssistantHTTPClient.Error.upgradeRequired {
+            review.refuse(AssistantTradesReview.upgradeCopy, rowErrors: [])
+        } catch {
+            if !Self.isClientRefusal(error), await isStillPending(action.id) == false {
+                review.closedMessage = AssistantTradesReview.maybeSavedCopy
+            } else {
+                review.refuse(AssistantTradesReview.retryCopy, rowErrors: [])
+            }
+        }
+        tradesReviews[action.id] = review
+    }
+
+    /// A 4xx the backend answered, which means it saved nothing. Anything else
+    /// (no answer, a 5xx, an unreadable one) may hide a finished save. A
+    /// transport failure arrives as `.api`, so `.api` is never counted as a refusal.
+    private static func isClientRefusal(_ error: any Error) -> Bool {
+        switch error as? PersistentAssistantHTTPClient.Error {
+        case .unauthorized?: true
+        case let .invalidStatus(code)?: (400..<500).contains(code)
+        default: false
+        }
+    }
+
+    /// Whether the action still waits for an answer; nil when that cannot be told.
+    private func isStillPending(_ id: String) async -> Bool? {
+        guard let actions = try? await service.pendingActions() else { return nil }
+        return actions.contains { $0.id.caseInsensitiveCompare(id) == .orderedSame && $0.status == .pending }
     }
 
     func cancel(_ action: AIPendingActionResponse) async {

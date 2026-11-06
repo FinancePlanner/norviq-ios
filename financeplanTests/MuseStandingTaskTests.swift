@@ -153,7 +153,7 @@ final class MuseStandingTaskFlowTests: XCTestCase {
             if failConversationFetch { throw Unused() }
             return AIConversationResponse(id: id, title: "Test", messages: messages, createdAt: "2026-09-24T00:00:00Z", updatedAt: "2026-09-24T00:00:00Z")
         }
-        func streamTurn(conversationID _: String, content _: String, context _: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        func streamTurn(conversationID _: String, content _: String, images _: [ScreenshotUploadImage], context _: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
             let events = events
             return AsyncThrowingStream { continuation in
                 for event in events { continuation.yield(event) }
@@ -166,6 +166,8 @@ final class MuseStandingTaskFlowTests: XCTestCase {
             messages += appendOnConfirm
             return result
         }
+        func portfolioLists() async throws -> [PortfolioListDTOResponse] { [] }
+        func confirmTrades(id _: String, portfolioListID _: String, trades _: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse { throw Unused() }
         func cancelAction(id: String) async throws {
             cancelled.append(id)
             try cancelResult.get()

@@ -11,6 +11,10 @@ nonisolated struct PersistentAssistantHTTPClient: Sendable {
         case api(String)
         /// 409: e.g. confirming an action that is no longer pending.
         case conflict(String?)
+        /// 422, with the trades card's row errors when the body carries them.
+        case unprocessable(reason: String?, rowErrors: [AITradeRowError])
+        /// 403 `upgrade_required`, with the body's `error`.
+        case upgradeRequired(String?)
 
         nonisolated var errorDescription: String? {
             switch self {
@@ -19,6 +23,8 @@ nonisolated struct PersistentAssistantHTTPClient: Sendable {
             case let .unauthorized(message): return message ?? "Your session expired. Please sign in again."
             case let .api(message): return message
             case let .conflict(message): return message ?? "This was already done."
+            case let .unprocessable(reason, _): return reason ?? "Request failed (422)."
+            case let .upgradeRequired(message): return message ?? "This is part of Pro."
             }
         }
 
@@ -26,6 +32,8 @@ nonisolated struct PersistentAssistantHTTPClient: Sendable {
             switch self {
             case let .invalidStatus(code): code
             case .conflict: 409
+            case .unprocessable: 422
+            case .upgradeRequired: 403
             default: nil
             }
         }
@@ -39,6 +47,31 @@ nonisolated struct PersistentAssistantHTTPClient: Sendable {
             if let message, !message.isEmpty { return .api(message) }
             return .invalidStatus(code)
         }
+
+        /// Keeps a trades confirm's 422 row errors and a 403 `upgrade_required`,
+        /// which the trades card answers differently from other failures.
+        static func makeStatus(_ code: Int, message: String?, body: Data) -> Error {
+            switch code {
+            case 422:
+                let refusal = try? JSONDecoder().decode(AITradesRefusalResponse.self, from: body)
+                let reason = refusal?.reason.flatMap { $0.isEmpty ? nil : $0 } ?? message
+                return .unprocessable(reason: reason, rowErrors: refusal?.rowErrors ?? [])
+            case 403:
+                if let billing = try? JSONDecoder().decode(UpgradeRequiredBody.self, from: body),
+                   billing.code == "upgrade_required" {
+                    return .upgradeRequired(billing.error ?? message)
+                }
+            default:
+                break
+            }
+            return makeStatus(code, message: message)
+        }
+    }
+
+    /// `{"success":false,"code":"upgrade_required","error":…}`, the fields read here.
+    nonisolated private struct UpgradeRequiredBody: Decodable {
+        let code: String?
+        let error: String?
     }
 
     private let client: BaseHTTPClient
@@ -105,8 +138,20 @@ nonisolated struct PersistentAssistantHTTPClient: Sendable {
         try await client.call(ConfirmAssistantActionEndpoint(id: id), errorType: Error.self)
     }
 
+    func confirmTrades(id: String, portfolioListID: String, trades: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse {
+        try await client.call(
+            ConfirmAssistantTradesEndpoint(id: id, payload: .init(portfolioListId: portfolioListID, trades: trades)),
+            errorType: Error.self
+        )
+    }
+
     func cancelAction(id: String) async throws {
         try await client.callWithoutResponse(CancelAssistantActionEndpoint(id: id), errorType: Error.self)
+    }
+
+    /// The portfolios a trades card can save to.
+    func portfolioLists() async throws -> [PortfolioListDTOResponse] {
+        try await client.call(GetPortfolioListsEndpoint(), errorType: Error.self)
     }
 
     func memos(bookmarked: Bool?, conversationID: String?) async throws -> [PositionMemoListItem] {
@@ -137,6 +182,8 @@ nonisolated extension PersistentAssistantHTTPClient.Error: Equatable {
         case let (.unauthorized(lhs), .unauthorized(rhs)): lhs == rhs
         case let (.api(lhs), .api(rhs)): lhs == rhs
         case let (.conflict(lhs), .conflict(rhs)): lhs == rhs
+        case let (.unprocessable(lr, le), .unprocessable(rr, re)): lr == rr && le == re
+        case let (.upgradeRequired(lhs), .upgradeRequired(rhs)): lhs == rhs
         default: false
         }
     }

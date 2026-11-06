@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%lld rows left out (options, shorts, dividends or fees)." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld linhas deixadas de fora (opções, vendas a descoberto, dividendos ou comissões)."
+          }
+        }
+      }
+    },
+    "1 row left out (options, shorts, dividends or fees)." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 linha deixada de fora (opções, vendas a descoberto, dividendos ou comissões)."
+          }
+        }
+      }
+    },
     "All tools" : {
       "localizations" : {
         "pt-PT" : {
@@ -21,6 +41,16 @@
         }
       }
     },
+    "Check each row against your screenshot. Only ticked rows are saved." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compare cada linha com a sua captura de ecrã. Só as linhas assinaladas são guardadas."
+          }
+        }
+      }
+    },
     "Encrypted. Your data stays yours." : {
       "comment" : "Precision rebrand copy (docs/precision-identity.md).",
       "localizations" : {
@@ -34,6 +64,86 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Encriptado. Os seus dados continuam seus."
+          }
+        }
+      }
+    },
+    "Enter a symbol." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduza um símbolo."
+          }
+        }
+      }
+    },
+    "Enter the date." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduza a data."
+          }
+        }
+      }
+    },
+    "Enter the number of shares." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduza o número de ações."
+          }
+        }
+      }
+    },
+    "Enter the price." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduza o preço."
+          }
+        }
+      }
+    },
+    "Expires %@" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expira às %@"
+          }
+        }
+      }
+    },
+    "Fees" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comissões"
+          }
+        }
+      }
+    },
+    "Fees must be a number, or blank." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As comissões têm de ser um número ou ficar em branco."
+          }
+        }
+      }
+    },
+    "Hard to read — check" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Difícil de ler — verifique"
           }
         }
       }
@@ -78,6 +188,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quanto vou ter daqui a X anos?"
+          }
+        }
+      }
+    },
+    "Is that %@ or %@? Type it without the comma." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "É %1$@ ou %2$@? Escreva sem a vírgula."
+          }
+        }
+      }
+    },
+    "Load your portfolios" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carregar os seus portefólios"
+          }
+        }
+      }
+    },
+    "Not applied" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não aplicado"
           }
         }
       }
@@ -618,6 +758,106 @@
         }
       }
     },
+    "Review trades" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rever transações"
+          }
+        }
+      }
+    },
+    "Save %@" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar %@"
+          }
+        }
+      }
+    },
+    "Save %lld trades" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar %lld transações"
+          }
+        }
+      }
+    },
+    "Save 1 trade" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar 1 transação"
+          }
+        }
+      }
+    },
+    "Saves as %@" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guarda como %@"
+          }
+        }
+      }
+    },
+    "Saves as %@, not %@" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guarda como %1$@, não %2$@"
+          }
+        }
+      }
+    },
+    "Saving to %@" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A guardar em %@"
+          }
+        }
+      }
+    },
+    "Saving trades from a screenshot is part of Pro." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar transações a partir de uma captura de ecrã faz parte do Pro."
+          }
+        }
+      }
+    },
+    "Sells update realized P&L, not yet your annual tax figures." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As vendas atualizam o P&L realizado, mas ainda não os seus valores fiscais anuais."
+          }
+        }
+      }
+    },
+    "Shares" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ações"
+          }
+        }
+      }
+    },
     "Show achievements to friends" : {
       "localizations" : {
         "en" : {
@@ -650,6 +890,16 @@
         }
       }
     },
+    "Side" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Operação"
+          }
+        }
+      }
+    },
     "Silver" : {
       "localizations" : {
         "en" : {
@@ -666,6 +916,16 @@
         }
       }
     },
+    "Spaces and a decimal point do not go together here. Type it without the spaces." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aqui não pode usar espaços e um ponto decimal juntos. Escreva sem os espaços."
+          }
+        }
+      }
+    },
     "That achievement is no longer available." : {
       "localizations" : {
         "en" : {
@@ -678,6 +938,66 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Essa conquista já não está disponível."
+          }
+        }
+      }
+    },
+    "That did not go through. Try again." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível concluir. Tente novamente."
+          }
+        }
+      }
+    },
+    "the proposed portfolio" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "o portefólio proposto"
+          }
+        }
+      }
+    },
+    "This may have been saved. Check your portfolio before sending the screenshot again." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isto pode ter sido guardado. Verifique o seu portefólio antes de enviar a captura de ecrã novamente."
+          }
+        }
+      }
+    },
+    "This portfolio syncs from IBKR, so saved trades would be overwritten. Pick another portfolio." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este portefólio sincroniza com a IBKR, por isso as transações guardadas seriam substituídas. Escolha outro portefólio."
+          }
+        }
+      }
+    },
+    "This review expired. Send the screenshot again." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta revisão expirou. Envie a captura de ecrã novamente."
+          }
+        }
+      }
+    },
+    "Those trades were not saved and this review is closed. Send the screenshot again." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essas transações não foram guardadas e esta revisão está fechada. Envie a captura de ecrã novamente."
           }
         }
       }
@@ -4634,7 +4954,14 @@
       "isCommentAutoGenerated" : true
     },
     "Buy" : {
-
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comprar"
+          }
+        }
+      }
     },
     "Buy %@" : {
       "comment" : "A button that opens a buy sheet for a given stock symbol.",
@@ -6147,7 +6474,14 @@
       }
     },
     "Currency" : {
-
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moeda"
+          }
+        }
+      }
     },
     "Current" : {
       "comment" : "A label displayed in the middle of a `StockSessionRangeBar`.",
@@ -12829,18 +13163,18 @@
     "Not started" : {
 
     },
-    "Not used to train AI models" : {
+    "Not used to train AI models by Norviq's providers" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not used to train AI models"
+            "value" : "Not used to train AI models by Norviq's providers"
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Não são usados para treinar modelos de IA"
+            "value" : "Não são usados para treinar modelos de IA pelos fornecedores da Norviq"
           }
         }
       }
@@ -14764,18 +15098,128 @@
       "comment" : "The title of the assistant view.",
       "isCommentAutoGenerated" : true
     },
-    "Q sends your messages and the financial context it needs (portfolio, spending, budgets) to Anthropic and OpenRouter to write replies. Not used to train models; your name and email are not sent. Conversations are encrypted and retained for 30 days. Financial changes always require confirmation." : {
+    "Q sends your messages and the financial context it needs (portfolio, spending, budgets) to Anthropic and OpenRouter to write replies. An image you attach to Q is sent only for that one message, to Anthropic and OpenRouter (or to your own provider if you connected a working key of your own). Norviq does not store the image. What Q reads from it, such as its reply or trades you save, is kept like any other message. Your data is not used to train models by Norviq's providers; your name and email are not sent, unless they are visible in an image you attach or import. Conversations are encrypted and retained for 30 days." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Q sends your messages and the financial context it needs (portfolio, spending, budgets) to Anthropic and OpenRouter to write replies. Not used to train models; your name and email are not sent. Conversations are encrypted and retained for 30 days. Financial changes always require confirmation."
+            "value" : "Q sends your messages and the financial context it needs (portfolio, spending, budgets) to Anthropic and OpenRouter to write replies. An image you attach to Q is sent only for that one message, to Anthropic and OpenRouter (or to your own provider if you connected a working key of your own). Norviq does not store the image. What Q reads from it, such as its reply or trades you save, is kept like any other message. Your data is not used to train models by Norviq's providers; your name and email are not sent, unless they are visible in an image you attach or import. Conversations are encrypted and retained for 30 days."
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O Q envia as suas mensagens e o contexto financeiro de que precisa (portefólio, despesas, orçamentos) à Anthropic e à OpenRouter para escrever as respostas. Não são usados para treinar modelos; o seu nome e email não são enviados. As conversas são encriptadas e guardadas durante 30 dias. Alterações financeiras exigem sempre confirmação."
+            "value" : "O Q envia as suas mensagens e o contexto financeiro de que precisa (portefólio, despesas, orçamentos) à Anthropic e à OpenRouter para escrever as respostas. Uma imagem que anexe ao Q é enviada apenas para essa mensagem, à Anthropic e à OpenRouter (ou ao seu próprio fornecedor, se tiver ligado uma chave própria válida). A Norviq não guarda a imagem. O que o Q lê nela, como a resposta ou as transações que guardar, é mantido como qualquer outra mensagem. Os seus dados não são usados para treinar modelos pelos fornecedores da Norviq; o seu nome e email não são enviados, a não ser que estejam visíveis numa imagem que anexar ou importar. As conversas são encriptadas e guardadas durante 30 dias."
+          }
+        }
+      }
+    },
+    "Images you attach to the assistant are sent too, for that message only. The images are not stored; what Q reads from them is kept like any other message." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As imagens que anexar ao assistente também são enviadas, apenas para essa mensagem. As imagens não são guardadas; o que o Q lê nelas é mantido como qualquer outra mensagem."
+          }
+        }
+      }
+    },
+    "Too many large images right now. Try again in a moment." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demasiadas imagens grandes neste momento. Tente novamente daqui a pouco."
+          }
+        }
+      }
+    },
+    "Attach images" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anexar imagens"
+          }
+        }
+      }
+    },
+    "Attach up to %lld images." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anexe até %lld imagens."
+          }
+        }
+      }
+    },
+    "Attached image" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imagem anexada"
+          }
+        }
+      }
+    },
+    "Attaching images is part of Pro. Upgrade to use it." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anexar imagens faz parte do Pro. Atualize para usar esta funcionalidade."
+          }
+        }
+      }
+    },
+    "Preparing image" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A preparar imagem"
+          }
+        }
+      }
+    },
+    "Remove image" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remover imagem"
+          }
+        }
+      }
+    },
+    "That image is too large." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essa imagem é demasiado grande."
+          }
+        }
+      }
+    },
+    "This image could not be attached. Try another one." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível anexar esta imagem. Experimente outra."
+          }
+        }
+      }
+    },
+    "Too many requests. Wait a minute and try again." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demasiados pedidos. Aguarde um minuto e tente novamente."
           }
         }
       }
@@ -22337,18 +22781,18 @@
         }
       }
     },
-    "Your name and email are not sent" : {
+    "Your name and email are not sent, unless they are visible in an image you attach or import" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your name and email are not sent"
+            "value" : "Your name and email are not sent, unless they are visible in an image you attach or import"
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O seu nome e email não são enviados"
+            "value" : "O seu nome e email não são enviados, a não ser que estejam visíveis numa imagem que anexar ou importar"
           }
         }
       }

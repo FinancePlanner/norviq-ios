@@ -14,6 +14,7 @@ private final class ScriptedAssistantService: PersistentAssistantServicing, @unc
     private(set) var streamedConversations: [String] = []
     private(set) var streamedContent: [String] = []
     private(set) var contexts: [AssistantTurnContext?] = []
+    private(set) var streamedImages: [[ScreenshotUploadImage]] = []
     private(set) var confirmed: [String] = []
     private(set) var cancelled: [String] = []
 
@@ -28,10 +29,11 @@ private final class ScriptedAssistantService: PersistentAssistantServicing, @unc
         return AIConversationResponse(id: id, title: title ?? "", messages: [], createdAt: "2026-11-04T00:00:00Z", updatedAt: "2026-11-04T00:00:00Z")
     }
 
-    func streamTurn(conversationID: String, content: String, context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+    func streamTurn(conversationID: String, content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
         streamedConversations.append(conversationID)
         streamedContent.append(content)
         contexts.append(context)
+        streamedImages.append(images)
         let events = scripts.isEmpty ? [] : scripts.removeFirst()
         return AsyncThrowingStream { continuation in
             for event in events { continuation.yield(event) }
@@ -45,6 +47,8 @@ private final class ScriptedAssistantService: PersistentAssistantServicing, @unc
         return AIConfirmedActionResponse(actionId: id, status: .completed, resultId: nil, message: message)
     }
 
+    func portfolioLists() async throws -> [PortfolioListDTOResponse] { [] }
+    func confirmTrades(id _: String, portfolioListID _: String, trades _: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse { throw Unused() }
     func cancelAction(id: String) async throws { cancelled.append(id) }
 
     func conversation(id _: String) async throws -> AIConversationResponse { throw Unused() }
@@ -149,6 +153,7 @@ final class QuickAssistantViewModelTests: XCTestCase {
         await ask(viewModel, "two")
         XCTAssertEqual(service.streamedConversations, ["old", "old", "again"])
         XCTAssertEqual(service.streamedContent, ["one", "two", "two"])
+        XCTAssertEqual(service.streamedImages, [[], [], []], "Quick Q attaches nothing")
         XCTAssertEqual(viewModel.phase, .answered)
     }
 
@@ -263,6 +268,17 @@ final class QuickAssistantViewModelTests: XCTestCase {
         await ask(viewModel)
         XCTAssertNil(viewModel.pendingAction)
         XCTAssertTrue(viewModel.needsFullQ)
+    }
+
+    /// A trades card saves only rows the user reviewed, and the backend refuses
+    /// a confirm with no rows (422), so Quick Q never offers one.
+    func testTradesCardIsLeftForFullQ() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn(action: AssistantTradesReview.toolName)), .done]])
+        let viewModel = makeViewModel(service)
+        await ask(viewModel)
+        XCTAssertNil(viewModel.pendingAction)
+        XCTAssertTrue(viewModel.needsFullQ)
+        XCTAssertEqual(viewModel.phase, .answered)
     }
 
     func testResetClearsTheCardButKeepsTheConversation() async {
@@ -411,8 +427,8 @@ private struct FullQService: PersistentAssistantServicing {
     func conversation(id: String) async throws -> AIConversationResponse {
         AIConversationResponse(id: id, title: "T", messages: [], createdAt: "2026-11-04T00:00:00Z", updatedAt: "2026-11-04T00:00:00Z")
     }
-    func streamTurn(conversationID: String, content: String, context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
-        base.streamTurn(conversationID: conversationID, content: content, context: context)
+    func streamTurn(conversationID: String, content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        base.streamTurn(conversationID: conversationID, content: content, images: images, context: context)
     }
     func usage() async throws -> AIAssistantUsageResponse {
         AIAssistantUsageResponse(month: "2026-11", used: 1, limit: nil, remaining: nil, isPro: true)
@@ -427,6 +443,8 @@ private struct FullQService: PersistentAssistantServicing {
     func dismissTip(id: String) async throws { try await base.dismissTip(id: id) }
     func pendingActions() async throws -> [AIPendingActionResponse] { [] }
     func confirmAction(id: String) async throws -> AIConfirmedActionResponse { try await base.confirmAction(id: id) }
+    func portfolioLists() async throws -> [PortfolioListDTOResponse] { [] }
+    func confirmTrades(id _: String, portfolioListID _: String, trades _: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse { throw ScriptedAssistantService.Unused() }
     func cancelAction(id: String) async throws { try await base.cancelAction(id: id) }
     func memos(bookmarked: Bool?, conversationID: String?) async throws -> [PositionMemoListItem] { [] }
     func memo(id: String) async throws -> PositionMemoDetail { try await base.memo(id: id) }

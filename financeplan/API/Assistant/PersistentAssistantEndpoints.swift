@@ -119,6 +119,22 @@ nonisolated struct ConfirmAssistantActionEndpoint: Endpoint {
     func asParameters() throws -> Parameters { [:] }
 }
 
+/// Confirms a `record_trades` card with the rows the user reviewed. The body
+/// is camel case (`portfolioListId`, `tradeDate`), so it skips the shared
+/// encoder's snake-case keys.
+nonisolated struct ConfirmAssistantTradesEndpoint: Endpoint {
+    typealias Response = AIConfirmedActionResponse
+    let id: String
+    let payload: AITradesConfirmRequest
+    var method: HTTPMethod { .post }
+    var path: String { "/v1/ai/assistant/actions/\(id)/confirm" }
+    var decoder: JSONDecoder { .stockPlanShared }
+    func asParameters() throws -> Parameters {
+        let data = try JSONEncoder().encode(payload)
+        return try JSONSerialization.jsonObject(with: data) as? Parameters ?? [:]
+    }
+}
+
 nonisolated struct CancelAssistantActionEndpoint: Endpoint {
     typealias Response = EmptyAPIResponse
     let id: String

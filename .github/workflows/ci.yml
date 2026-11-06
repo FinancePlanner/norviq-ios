@@ -161,6 +161,13 @@ jobs:
             -only-testing:financeplanTests/QuickAssistantStreamTests \
             -only-testing:financeplanTests/QuickAssistantVoiceTests \
             -only-testing:financeplanTests/PersistentAssistantRoutingTests \
+            -only-testing:financeplanTests/AssistantImageTurnTests \
+            -only-testing:financeplanTests/PersistentAssistantAgentStateTests \
+            -only-testing:financeplanTests/PersistentAssistantStreamDecodingTests \
+            -only-testing:financeplanTests/MuseStandingTaskFlowTests \
+            -only-testing:financeplanTests/AssistantPushViewModelTests \
+            -only-testing:financeplanTests/AssistantTradesCardTests \
+            -only-testing:financeplanTests/PortfolioCSVImportViewModelTests \
             -parallel-testing-enabled NO \
             -quiet
 

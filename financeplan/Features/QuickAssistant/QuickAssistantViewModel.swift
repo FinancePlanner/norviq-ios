@@ -22,7 +22,8 @@ final class QuickAssistantViewModel {
     private(set) var pendingAction: AIPendingActionResponse?
     private(set) var isActing = false
     private(set) var actionError: String?
-    /// The turn produced something only full Q can show: a memo or a watch proposal.
+    /// The turn produced something only full Q can show: a memo, a watch
+    /// proposal, or a trades card, whose confirm needs the reviewed rows.
     private(set) var needsFullQ = false
     private(set) var conversationID: String?
     var isPaywallRequested = false
@@ -149,7 +150,7 @@ final class QuickAssistantViewModel {
         answer = turn.message.content
         if turn.memo != nil { needsFullQ = true }
         guard let action = turn.pendingAction else { return }
-        if action.toolName == MuseStandingTask.toolName {
+        if action.toolName == MuseStandingTask.toolName || action.toolName == AssistantTradesReview.toolName {
             needsFullQ = true
         } else {
             pendingAction = action
