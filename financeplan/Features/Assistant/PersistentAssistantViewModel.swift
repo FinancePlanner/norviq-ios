@@ -4,6 +4,7 @@ import Observation
 import PhotosUI
 import StockPlanShared
 import SwiftUI
+import UniformTypeIdentifiers
 
 @Observable @MainActor
 final class PersistentAssistantViewModel {
@@ -39,12 +40,12 @@ final class PersistentAssistantViewModel {
     var draft = ""
 
     /// The backend's limits for one turn (`maxTurnImages`, `maxTurnImageBytes`).
-    static let maxAttachments = 3
-    static let maxAttachmentBytes = 5 << 20
-    /// Images waiting to go with the next message.
-    private(set) var attachments: [ScreenshotUploadImage] = []
+    static let maxAttachments = AssistantAttachmentLimits.maxFiles
+    static let maxAttachmentBytes = AssistantAttachmentLimits.maxImageBytes
+    /// Images, PDFs and CSVs waiting to go with the next message.
+    private(set) var attachments: [AssistantAttachment] = []
     private(set) var preparingAttachmentCount = 0
-    /// Why an image did not attach or go through. Shown in the composer, where
+    /// Why a file did not attach or go through. Shown in the composer, where
     /// it is still readable once a paywall sheet closes.
     private(set) var attachmentNotice: String?
     var pickedItems: [PhotosPickerItem] = [] {
@@ -53,6 +54,9 @@ final class PersistentAssistantViewModel {
 
     /// Absent from a backend that predates images, which means no.
     var imagesEnabled: Bool { preferences?.imagesEnabled ?? false }
+
+    /// Absent from a backend that predates documents, which means no.
+    var documentsEnabled: Bool { preferences?.documentsEnabled ?? false }
 
     var attachmentRoom: Int { max(Self.maxAttachments - attachments.count - preparingAttachmentCount, 0) }
 
@@ -246,14 +250,59 @@ final class PersistentAssistantViewModel {
             }.value
             preparingAttachmentCount -= 1
             if let prepared {
-                attachments.append(prepared)
+                attachments.append(.image(prepared))
             } else {
                 attachmentNotice = String(localized: "This image could not be attached. Try another one.")
             }
         }
     }
 
-    func removeAttachment(id: ScreenshotUploadImage.ID) {
+    /// Reads what the document picker returned, checks each file the way the
+    /// server will, and attaches what passes. A file that fails says why and
+    /// leaves the rest alone.
+    func addFiles(_ urls: [URL]) async {
+        guard !isSending else { return }
+        attachmentNotice = nil
+        let cap = Self.maxAttachmentBytes
+        for url in urls {
+            // Counted per file, so a second pick during this one sees the room it takes.
+            guard attachmentRoom > 0 else {
+                attachmentNotice = AttachmentCheckError.tooMany.errorDescription
+                break
+            }
+            preparingAttachmentCount += 1
+            let result = await Task.detached(priority: .userInitiated) { () -> Result<AssistantAttachment, AttachmentCheckError> in
+                do {
+                    let (data, name) = try AssistantAttachmentChecker.read(url: url)
+                    switch UTType(filenameExtension: url.pathExtension.lowercased()) {
+                    case let type? where type.conforms(to: .pdf):
+                        return .success(try AssistantAttachmentChecker.pdf(data: data, filename: name))
+                    case let type? where type.conforms(to: .image):
+                        guard let image = UploadImagePreparer.prepare(data, maxBytes: cap) else { throw AttachmentCheckError.unreadable(name) }
+                        return .success(.image(image))
+                    default:
+                        return .success(try AssistantAttachmentChecker.csv(data: data, filename: name))
+                    }
+                } catch let error as AttachmentCheckError {
+                    return .failure(error)
+                } catch {
+                    return .failure(.unreadable(url.lastPathComponent))
+                }
+            }.value
+            preparingAttachmentCount -= 1
+            // Send may have started while the file was read; it would go with the next message.
+            guard !isSending else { return }
+            do {
+                let attachment = try result.get()
+                try AssistantAttachmentChecker.admit(attachment, into: attachments)
+                attachments.append(attachment)
+            } catch {
+                attachmentNotice = (error as? AttachmentCheckError)?.errorDescription
+            }
+        }
+    }
+
+    func removeAttachment(id: AssistantAttachment.ID) {
         attachments.removeAll { $0.id == id }
         attachmentNotice = nil
     }
@@ -267,7 +316,7 @@ final class PersistentAssistantViewModel {
         else { return }
         let resolution = AssistantCommandParser.resolve(content)
         // A command answered on the device sends nothing, so its images stay put.
-        let outgoingImages: [ScreenshotUploadImage]
+        let outgoingImages: [AssistantAttachment]
         if case .local = resolution {
             outgoingImages = []
         } else {
@@ -282,7 +331,7 @@ final class PersistentAssistantViewModel {
             id: UUID().uuidString,
             conversationId: conversation.id,
             role: .user,
-            content: outgoingImages.isEmpty ? content : Self.storedImageTurnText(content),
+            content: outgoingImages.isEmpty ? content : Self.storedAttachmentTurnText(content, attachments: outgoingImages),
             createdAt: ISO8601DateFormatter().string(from: Date())
         )
         activeConversation = replacingMessages(in: conversation, with: conversation.messages + [optimistic])
@@ -318,7 +367,7 @@ final class PersistentAssistantViewModel {
             for try await event in service.streamTurn(
                 conversationID: conversation.id,
                 content: outgoingContent,
-                attachments: outgoingImages.map(AssistantAttachment.image),
+                attachments: outgoingImages,
                 context: .current()
             ) {
                 switch event {
@@ -374,7 +423,9 @@ final class PersistentAssistantViewModel {
             case .showPaywall:
                 isPaywallRequested = true
                 if !outgoingImages.isEmpty, Self.isUpgradeRefusal(error) {
-                    attachmentNotice = String(localized: "Attaching images is part of Pro. Upgrade to use it.")
+                    attachmentNotice = outgoingImages.contains(where: \.isDocument)
+                        ? String(localized: "Attaching files is part of Pro. Upgrade to use it.")
+                        : String(localized: "Attaching images is part of Pro. Upgrade to use it.")
                 }
             case .recreateConversation, .showMessage:
                 errorMessage = readable(error, fallback: "The assistant could not respond.")
@@ -382,11 +433,15 @@ final class PersistentAssistantViewModel {
         }
     }
 
-    /// The text the server stores for an image turn, so the bubble reads the
-    /// same before and after a reload. `defaultImagePrompt` and `imageMarker` in
-    /// the backend's `images.go`.
-    private static func storedImageTurnText(_ content: String) -> String {
-        (content.isEmpty ? "What's in this image?" : content) + " [image attached]"
+    /// The text the server stores for an attachment turn, so the bubble reads
+    /// the same before and after a reload. The prompts and markers are
+    /// `defaultImagePrompt`, `defaultFilePrompt`, `imageMarker` and `fileMarker`
+    /// in the backend's `attachments.go`: any PDF or CSV makes it a file turn.
+    private static func storedAttachmentTurnText(_ content: String, attachments: [AssistantAttachment]) -> String {
+        if attachments.contains(where: \.isDocument) {
+            return (content.isEmpty ? "What's in this file?" : content) + " [file attached]"
+        }
+        return (content.isEmpty ? "What's in this image?" : content) + " [image attached]"
     }
 
     private static func isUpgradeRefusal(_ error: any Error) -> Bool {

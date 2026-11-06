@@ -86,9 +86,12 @@ public struct AIAssistantPreferencesResponse: Codable, Sendable, Equatable {
     /// Whether a turn may attach images. A backend from before images leaves it
     /// out, and absent means no. Clients never send it, so it is nil on the way up.
     public let imagesEnabled: Bool?
-    public init(proactiveTipsEnabled: Bool, pushEnabled: Bool, timezone: String, imagesEnabled: Bool? = nil) {
+    /// The same for PDFs and CSVs: absent means no, and clients never send it.
+    public let documentsEnabled: Bool?
+    public init(proactiveTipsEnabled: Bool, pushEnabled: Bool, timezone: String, imagesEnabled: Bool? = nil, documentsEnabled: Bool? = nil) {
         self.proactiveTipsEnabled = proactiveTipsEnabled; self.pushEnabled = pushEnabled; self.timezone = timezone
         self.imagesEnabled = imagesEnabled
+        self.documentsEnabled = documentsEnabled
     }
 }
 
