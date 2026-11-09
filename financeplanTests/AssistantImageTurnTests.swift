@@ -806,6 +806,42 @@ final class AssistantImageTurnTests: XCTestCase {
         XCTAssertEqual(viewModel.attachmentNotice, AttachmentCheckError.tooMany.errorDescription)
     }
 
+    private func bigFile(name: String, bytes: Int) throws -> URL {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent(name)
+        try Data(repeating: 0x61, count: bytes).write(to: url)
+        return url
+    }
+
+    func testAddFilesRefusesOversizedCSVWithoutFullRead() async throws {
+        let viewModel = await loadedViewModel(ImageTurnService())
+
+        await viewModel.addFiles([try bigFile(name: "huge.csv", bytes: 3 << 20)])
+
+        XCTAssertTrue(viewModel.attachments.isEmpty)
+        XCTAssertEqual(viewModel.attachmentNotice, AttachmentCheckError.tooLarge("huge.csv").errorDescription)
+        XCTAssertEqual(viewModel.preparingAttachmentCount, 0)
+    }
+
+    func testAddFilesRefusesOversizedPDFWithoutFullRead() async throws {
+        let viewModel = await loadedViewModel(ImageTurnService())
+
+        await viewModel.addFiles([try bigFile(name: "huge.pdf", bytes: 9 << 20)])
+
+        XCTAssertTrue(viewModel.attachments.isEmpty)
+        XCTAssertEqual(viewModel.attachmentNotice, AttachmentCheckError.tooLarge("huge.pdf").errorDescription)
+    }
+
+    func testAddFilesRejectsUnknownType() async throws {
+        let viewModel = await loadedViewModel(ImageTurnService())
+
+        await viewModel.addFiles([try bigFile(name: "archive.zip", bytes: 100)])
+
+        XCTAssertTrue(viewModel.attachments.isEmpty)
+        XCTAssertEqual(viewModel.attachmentNotice, AttachmentCheckError.unreadable("archive.zip").errorDescription)
+    }
+
     func testAddFilesTakesAnImageFile() async throws {
         let viewModel = await loadedViewModel(ImageTurnService())
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

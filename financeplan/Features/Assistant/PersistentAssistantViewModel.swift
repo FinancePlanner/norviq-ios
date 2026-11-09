@@ -273,14 +273,17 @@ final class PersistentAssistantViewModel {
             preparingAttachmentCount += 1
             let result = await Task.detached(priority: .userInitiated) { () -> Result<AssistantAttachment, AttachmentCheckError> in
                 do {
-                    let (data, name) = try AssistantAttachmentChecker.read(url: url)
-                    switch UTType(filenameExtension: url.pathExtension.lowercased()) {
-                    case let type? where type.conforms(to: .pdf):
+                    guard let kind = AssistantAttachmentChecker.Kind(url: url) else {
+                        throw AttachmentCheckError.unreadable(url.lastPathComponent)
+                    }
+                    let (data, name) = try AssistantAttachmentChecker.read(url: url, limit: kind.readLimit)
+                    switch kind {
+                    case .pdf:
                         return .success(try AssistantAttachmentChecker.pdf(data: data, filename: name))
-                    case let type? where type.conforms(to: .image):
+                    case .image:
                         guard let image = UploadImagePreparer.prepare(data, maxBytes: cap) else { throw AttachmentCheckError.unreadable(name) }
                         return .success(.image(image))
-                    default:
+                    case .csv:
                         return .success(try AssistantAttachmentChecker.csv(data: data, filename: name))
                     }
                 } catch let error as AttachmentCheckError {
@@ -290,7 +293,7 @@ final class PersistentAssistantViewModel {
                 }
             }.value
             preparingAttachmentCount -= 1
-            // Send may have started while the file was read; it would go with the next message.
+            // Send may have started while the file was read; the rest of the pick would go with the next message, so stop.
             guard !isSending else { return }
             do {
                 let attachment = try result.get()

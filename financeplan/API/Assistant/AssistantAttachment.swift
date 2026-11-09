@@ -1,5 +1,6 @@
 import Foundation
 import PDFKit
+import UniformTypeIdentifiers
 
 /// One file on its way to Q: a screenshot, a PDF or a CSV.
 nonisolated enum AssistantAttachment: Identifiable, Sendable, Equatable {
@@ -73,6 +74,8 @@ nonisolated enum AssistantAttachmentLimits {
     static let maxPDFBytes = 8 << 20
     static let maxPDFPages = 20
     static let maxCSVBytes = 1 << 20
+    /// Raw cap on an image picked from Files; `UploadImagePreparer` shrinks it afterwards.
+    static let maxImageFileBytes = 20 << 20
 }
 
 /// Refuses on the device what the server would refuse, so the user hears it
@@ -107,15 +110,53 @@ nonisolated enum AssistantAttachmentChecker {
         }
     }
 
-    /// Reads a file the document picker handed over, inside its security scope.
-    static func read(url: URL) throws -> (Data, String) {
+    /// What a picked file is, decided from its type before a byte is read.
+    enum Kind: Equatable {
+        case pdf, csv, image
+
+        /// The most bytes worth reading for this kind.
+        var readLimit: Int {
+            switch self {
+            case .pdf: AssistantAttachmentLimits.maxPDFBytes
+            case .csv: AssistantAttachmentLimits.maxCSVBytes
+            case .image: AssistantAttachmentLimits.maxImageFileBytes
+            }
+        }
+
+        init?(url: URL) {
+            let ext = url.pathExtension.lowercased()
+            guard let type = UTType(filenameExtension: ext) else { return nil }
+            if type.conforms(to: .pdf) {
+                self = .pdf
+            } else if type.conforms(to: .image) {
+                self = .image
+            } else if type.conforms(to: .commaSeparatedText) || (type.identifier == "public.plain-text" && ext == "csv") {
+                self = .csv
+            } else {
+                return nil
+            }
+        }
+    }
+
+    /// Reads a file the document picker handed over, inside its security scope,
+    /// never more than `limit` bytes: one byte past it is enough to refuse.
+    static func read(url: URL, limit: Int = AssistantAttachmentLimits.maxPDFBytes) throws -> (Data, String) {
         let name = url.lastPathComponent
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        // The size is a hint that can be missing or wrong; the bounded read below decides.
+        if let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size > limit {
+            throw AttachmentCheckError.tooLarge(name)
+        }
+        let data: Data
         do {
-            return (try Data(contentsOf: url), name)
+            let handle = try FileHandle(forReadingFrom: url)
+            defer { try? handle.close() }
+            data = try handle.read(upToCount: limit + 1) ?? Data()
         } catch {
             throw AttachmentCheckError.unreadable(name)
         }
+        guard data.count <= limit else { throw AttachmentCheckError.tooLarge(name) }
+        return (data, name)
     }
 }

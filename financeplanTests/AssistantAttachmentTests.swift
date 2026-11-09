@@ -179,6 +179,27 @@ final class AssistantAttachmentTests: XCTestCase {
         XCTAssertEqual(name, url.lastPathComponent)
     }
 
+    func testReadRefusesAFileOverTheLimit() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).csv")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try Data(repeating: 0x61, count: 100).write(to: url)
+        XCTAssertThrowsError(try AssistantAttachmentChecker.read(url: url, limit: 99)) {
+            XCTAssertEqual($0 as? AttachmentCheckError, .tooLarge(url.lastPathComponent))
+        }
+        let (data, _) = try AssistantAttachmentChecker.read(url: url, limit: 100)
+        XCTAssertEqual(data.count, 100)
+    }
+
+    func testKindComesFromTheFileType() {
+        func kind(_ name: String) -> AssistantAttachmentChecker.Kind? { .init(url: URL(fileURLWithPath: "/tmp/\(name)")) }
+        XCTAssertEqual(kind("a.pdf"), .pdf)
+        XCTAssertEqual(kind("a.CSV"), .csv)
+        XCTAssertEqual(kind("a.jpg"), .image)
+        XCTAssertNil(kind("a.zip"))
+        XCTAssertNil(kind("a.txt"))
+        XCTAssertNil(kind("noextension"))
+    }
+
     // MARK: Copy
 
     func testErrorCopy() {
