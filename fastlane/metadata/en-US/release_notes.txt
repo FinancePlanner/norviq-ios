@@ -1,16 +1,14 @@
-A new look: Precision
+New: Quick Q
 
-• A calmer navy-and-gold design, with the new Norviq logo and launch screen
-• Clearer gain and loss colors, kept apart from the brand gold
-• Higher-contrast text in light mode
+• Ask Q from any screen with the floating Q button, by typing or by voice
+• Attach a screenshot, PDF or CSV and Q reads it for you, from a news article to a broker statement
+• Update your portfolio from a holdings screenshot or broker CSV: Q shows the rows, you check them and confirm
+• Log trades from a screenshot of your fills
 
-New: Achievements
+New: Tools
 
-• Earn achievements as you use Norviq, with a celebration when one unlocks
-• See friends' achievements in an activity feed and send congrats
-• Showcase your favorites on your profile, or keep them private with one toggle
+• All of Norviq's tools in one place, one tap from Home and Portfolio
 
-• Join the Norviq community on Discord from the app
 • Bug fixes
 
 Norviq is a planning and organization tool. Not financial advice.
