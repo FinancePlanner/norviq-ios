@@ -24,7 +24,8 @@ SPENDING
 • Personal inflation vs official CPI
 
 INTELLIGENCE
-• In-app AI assistant over your real holdings and budget
+• In-app AI assistant over your real holdings and budget, from any screen, by voice or text
+• Attach a screenshot, PDF or CSV: Q reads it, and updates your portfolio only after you confirm
 • Connect Claude, ChatGPT, or Cursor to your numbers via MCP (you bring the model)
 • Markets heatmap, movers, news, and a country-aware economy hub
 • Telegram connect and cloud sync across devices
