@@ -279,17 +279,75 @@ final class AssistantHoldingsCardTests: XCTestCase {
     }
 
     func testUpgradeRequiredShowsProCopy() async throws {
-        for failure in [PersistentAssistantHTTPClient.Error.upgradeRequired("nope")] {
-            let service = HoldingsService()
-            service.confirmResults = [.failure(failure)]
-            let viewModel = await loadedViewModel(service)
-            var review = try XCTUnwrap(viewModel.holdingsReviews["a1"])
-            review.rows[1].avgPrice = "9"
-            viewModel.updateHoldingsReview(review)
-            await viewModel.confirmHoldings(holdingsAction())
-            XCTAssertEqual(viewModel.holdingsReviews["a1"]?.refusal?.message, AssistantHoldingsReview.upgradeCopy)
-            XCTAssertNil(viewModel.holdingsReviews["a1"]?.closedMessage)
-        }
+        let body = Data(#"{"success":false,"code":"upgrade_required","error":"Limit reached."}"#.utf8)
+        let failure = PersistentAssistantHTTPClient.Error.makeStatus(403, message: "Limit reached.", body: body)
+        XCTAssertEqual(failure, .upgradeRequired("Limit reached."))
+        let service = HoldingsService()
+        service.confirmResults = [.failure(failure)]
+        let viewModel = await loadedViewModel(service)
+        var review = try XCTUnwrap(viewModel.holdingsReviews["a1"])
+        review.rows[1].avgPrice = "9"
+        viewModel.updateHoldingsReview(review)
+        await viewModel.confirmHoldings(holdingsAction())
+        XCTAssertEqual(viewModel.holdingsReviews["a1"]?.refusal?.message, AssistantHoldingsReview.upgradeCopy)
+        XCTAssertNil(viewModel.holdingsReviews["a1"]?.closedMessage)
+    }
+
+    func testGenericEnvelope422StaysUnprocessableAndShowsItsReason() async throws {
+        let body = Data(#"{"error":true,"code":"unprocessable_entity","reason":"x"}"#.utf8)
+        let failure = PersistentAssistantHTTPClient.Error.makeStatus(422, message: nil, body: body)
+        XCTAssertEqual(failure, .unprocessable(reason: "x", rowErrors: []))
+        let service = HoldingsService()
+        service.confirmResults = [.failure(failure)]
+        let viewModel = await loadedViewModel(service)
+        var review = try XCTUnwrap(viewModel.holdingsReviews["a1"])
+        review.rows[1].avgPrice = "9"
+        viewModel.updateHoldingsReview(review)
+        await viewModel.confirmHoldings(holdingsAction())
+        XCTAssertEqual(viewModel.holdingsReviews["a1"]?.refusal?.message, "x")
+    }
+
+    func testToggleStaysVisibleWhileOn() async throws {
+        let service = HoldingsService()
+        service.confirmResults = [
+            .failure(PersistentAssistantHTTPClient.Error.holdingsRefused(AIHoldingsRefusalResponse(
+                reason: "These holdings already exist: TSLA.", code: "holdings_collision", symbols: ["TSLA"], rows: []
+            ))),
+            .failure(PersistentAssistantHTTPClient.Error.holdingsRefused(AIHoldingsRefusalResponse(
+                reason: "Some rows need fixing.", code: nil, symbols: [],
+                rows: [AIHoldingRowError(index: 0, message: "AAPL: bad date.")]
+            ))),
+        ]
+        let viewModel = await loadedViewModel(service)
+        var review = try XCTUnwrap(viewModel.holdingsReviews["a1"])
+        review.rows[1].avgPrice = "9"
+        viewModel.updateHoldingsReview(review)
+        await viewModel.confirmHoldings(holdingsAction())
+        await viewModel.setReplaceExisting(true, for: holdingsAction())
+        let card = try XCTUnwrap(viewModel.holdingsReviews["a1"])
+        XCTAssertEqual(card.refusal?.byRow[0], ["AAPL: bad date."])
+        XCTAssertTrue(card.replaceExisting)
+        XCTAssertTrue(card.showsReplaceToggle, "row errors only, but the toggle is on")
+    }
+
+    func testExpiredAfterAttemptShowsMaybeSavedCopy() async throws {
+        let service = HoldingsService()
+        service.confirmResults = [
+            .failure(PersistentAssistantHTTPClient.Error.invalidStatus(500)),
+            .failure(PersistentAssistantHTTPClient.Error.conflict("gone")),
+        ]
+        let viewModel = await loadedViewModel(service)
+        var review = try XCTUnwrap(viewModel.holdingsReviews["a1"])
+        review.rows[1].avgPrice = "9"
+        viewModel.updateHoldingsReview(review)
+        await viewModel.confirmHoldings(holdingsAction())
+        XCTAssertEqual(viewModel.holdingsReviews["a1"]?.refusal?.message, "That did not go through. Try again.")
+        await viewModel.confirmHoldings(holdingsAction())
+        XCTAssertEqual(viewModel.holdingsReviews["a1"]?.closedMessage, AssistantHoldingsReview.maybeSavedCopy)
+    }
+
+    func testNewBadgeIsLocalisedKey() throws {
+        XCTAssertEqual(try card().rows[0].badge, "New")
     }
 
     func testNothingTickedNeverCallsTheBackend() async throws {
@@ -314,14 +372,6 @@ final class AssistantHoldingsCardTests: XCTestCase {
         )))
         let plain = PersistentAssistantHTTPClient.Error.makeStatus(422, message: nil, body: Data(#"{"reason":"Nothing was selected to save."}"#.utf8))
         XCTAssertEqual(plain, .unprocessable(reason: "Nothing was selected to save.", rowErrors: []))
-    }
-
-    func test402IsAnUpgrade() {
-        let body = Data(#"{"error":"Import limit reached."}"#.utf8)
-        XCTAssertEqual(
-            PersistentAssistantHTTPClient.Error.makeStatus(402, message: "Import limit reached.", body: body),
-            .upgradeRequired("Import limit reached.")
-        )
     }
 
     func testEndpointBodyIsCamelCase() throws {

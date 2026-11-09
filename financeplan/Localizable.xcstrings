@@ -208,6 +208,22 @@
         }
       }
     },
+    "holdings.badge.new" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nova"
+          }
+        }
+      }
+    },
     "How far has my portfolio drifted?" : {
       "extractionState" : "manual",
       "localizations" : {

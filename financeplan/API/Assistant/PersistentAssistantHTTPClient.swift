@@ -58,7 +58,7 @@ nonisolated struct PersistentAssistantHTTPClient: Sendable {
             case 422:
                 // A holdings confirm answers with `code`/`rows`; the trades one with `rowErrors`.
                 if let holdings = try? JSONDecoder().decode(AIHoldingsRefusalResponse.self, from: body),
-                   holdings.code != nil || !holdings.rows.isEmpty {
+                   holdings.code == AIHoldingsRefusalResponse.collisionCode || !holdings.rows.isEmpty {
                     return .holdingsRefused(AIHoldingsRefusalResponse(
                         reason: holdings.reason.flatMap { $0.isEmpty ? nil : $0 } ?? message,
                         code: holdings.code, symbols: holdings.symbols, rows: holdings.rows
@@ -67,10 +67,6 @@ nonisolated struct PersistentAssistantHTTPClient: Sendable {
                 let refusal = try? JSONDecoder().decode(AITradesRefusalResponse.self, from: body)
                 let reason = refusal?.reason.flatMap { $0.isEmpty ? nil : $0 } ?? message
                 return .unprocessable(reason: reason, rowErrors: refusal?.rowErrors ?? [])
-            case 402:
-                // The import limit (R19): the same upgrade answer as a 403.
-                let billing = try? JSONDecoder().decode(UpgradeRequiredBody.self, from: body)
-                return .upgradeRequired(billing?.error ?? message)
             case 403:
                 if let billing = try? JSONDecoder().decode(UpgradeRequiredBody.self, from: body),
                    billing.code == "upgrade_required" {

@@ -40,7 +40,7 @@ struct AssistantHoldingRow: Equatable, Identifiable {
     var badge: String {
         if existing == "imported" || willReplaceImport { return String(localized: "Replaces import") }
         if existing == "manual" || existing == "mixed" { return String(localized: "Replaces existing") }
-        return String(localized: "New")
+        return String(localized: "holdings.badge.new", defaultValue: "New")
     }
 
     /// Why this row cannot be sent yet, or "" when it can.
@@ -152,8 +152,8 @@ struct AssistantHoldingsReview: Equatable {
         )
     }
 
-    /// The switch shows once the backend named a collision.
-    var showsReplaceToggle: Bool { refusal?.isCollision == true }
+    /// The switch shows once the backend named a collision, and stays while on.
+    var showsReplaceToggle: Bool { refusal?.isCollision == true || replaceExisting }
 
     var saveTitle: String {
         let count = keptIndexes.count
