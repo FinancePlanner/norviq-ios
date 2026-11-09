@@ -18,5 +18,13 @@ final class IntegrationsNavigationTests: XCTestCase {
       source.contains(".accessibilityIdentifier(\"integrations.bankSync\")"),
       "Bank Sync navigation needs a stable identifier for UI regression coverage."
     )
+    XCTAssertTrue(
+      source.contains("reportingintegration@interactivebrokers.com"),
+      "The connect sheet must tell the user how to ask IBKR for the read-only feed."
+    )
+    XCTAssertTrue(
+      source.contains("does not add those positions"),
+      "Settings must keep saying the statement fetch does not write positions."
+    )
   }
 }

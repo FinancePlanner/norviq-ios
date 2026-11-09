@@ -41,7 +41,7 @@ struct IntegrationsView: View {
       } header: {
         Text("Connected accounts")
       } footer: {
-        Text("Norviq reads your holdings only. It can never place trades or move funds. Each user connects their own IBKR Web Service token and query ID.")
+        Text("Email reportingintegration@interactivebrokers.com to enable the Norviq Web Service, then paste the token and query ID from IBKR Portal → Reporting → Third-party Reports. Sync reads the previous business day's statement and does not add those positions yet. Norviq cannot place trades or move money.")
       }
     }
     .navigationTitle("Integrations")
@@ -71,7 +71,12 @@ struct IntegrationsView: View {
               .textInputAutocapitalization(.never)
               .autocorrectionDisabled()
           } footer: {
-            Text("Get these from IBKR after enabling the Norviq Web Service feed (Reporting → Third-party Reports).")
+            VStack(alignment: .leading, spacing: 6) {
+              Text("1. From your IBKR account, email reportingintegration@interactivebrokers.com and ask them to enable the Norviq Web Service feed.")
+              Text("2. After IBKR enables it, open IBKR Portal → Reporting → Third-party Reports and copy the token and the query ID.")
+              Text("3. Paste both here and tap Connect. Broker sync is part of Pro.")
+              Text("4. Sync reads the previous business day's statement. It does not add those positions to your portfolio yet.")
+            }
           }
         }
         .navigationTitle("Connect IBKR")
@@ -90,7 +95,7 @@ struct IntegrationsView: View {
           }
         }
       }
-      .presentationDetents([.medium])
+      .presentationDetents([.medium, .large])
     }
   }
 
