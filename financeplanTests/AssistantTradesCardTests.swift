@@ -75,6 +75,8 @@ private final class TradesService: PersistentAssistantServicing, @unchecked Send
         return try confirmResult.get()
     }
 
+    func confirmHoldings(id _: String, body _: AIReviewedHoldings) async throws -> AIConfirmedActionResponse { throw Unused() }
+
     func preferences() async throws -> AIAssistantPreferencesResponse {
         AIAssistantPreferencesResponse(proactiveTipsEnabled: false, pushEnabled: false, timezone: "UTC", imagesEnabled: true)
     }

@@ -397,3 +397,131 @@ public struct AITradesRefusalResponse: Codable, Sendable, Equatable {
         rowErrors = (try? container.decodeIfPresent([AITradeRowError].self, forKey: .rowErrors)) ?? []
     }
 }
+
+// MARK: - Holdings card (`update_holdings`)
+
+/// One row of the stored holdings card. `shares`, `avgPrice` and `buyDate` are
+/// null when the file did not say; `needsCost` marks a row with no cost.
+public struct AIProposedHolding: Codable, Sendable, Equatable {
+    public let symbol: String
+    public let shares: Double?
+    public let avgPrice: Double?
+    public let buyDate: String?
+    /// `none`, `manual`, `imported` or `mixed`: what the portfolio holds already.
+    public let existing: String
+    public let willReplaceImport: Bool
+    public let needsCost: Bool
+
+    public init(symbol: String, shares: Double?, avgPrice: Double?, buyDate: String?, existing: String, willReplaceImport: Bool, needsCost: Bool) {
+        self.symbol = symbol; self.shares = shares; self.avgPrice = avgPrice; self.buyDate = buyDate
+        self.existing = existing; self.willReplaceImport = willReplaceImport; self.needsCost = needsCost
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case symbol, shares, avgPrice, buyDate, existing, willReplaceImport, needsCost
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        symbol = try container.decode(String.self, forKey: .symbol)
+        shares = try container.decodeIfPresent(Double.self, forKey: .shares)
+        avgPrice = try container.decodeIfPresent(Double.self, forKey: .avgPrice)
+        buyDate = try container.decodeIfPresent(String.self, forKey: .buyDate)
+        existing = try container.decodeIfPresent(String.self, forKey: .existing) ?? "none"
+        willReplaceImport = try container.decodeIfPresent(Bool.self, forKey: .willReplaceImport) ?? false
+        needsCost = try container.decodeIfPresent(Bool.self, forKey: .needsCost) ?? false
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(symbol, forKey: .symbol)
+        try container.encode(shares, forKey: .shares)
+        try container.encode(avgPrice, forKey: .avgPrice)
+        try container.encode(buyDate, forKey: .buyDate)
+        try container.encode(existing, forKey: .existing)
+        try container.encode(willReplaceImport, forKey: .willReplaceImport)
+        try container.encode(needsCost, forKey: .needsCost)
+    }
+}
+
+/// The stored `arguments` of an `update_holdings` pending action (the backend's
+/// `assistant/holdings.go`). The keys are camel case; read it with
+/// `decode(arguments:)`, which uses a plain decoder.
+public struct AIProposedHoldings: Codable, Sendable, Equatable {
+    public let portfolioListId: String
+    public let fromCsv: Bool
+    public let rows: [AIProposedHolding]
+
+    public init(portfolioListId: String, fromCsv: Bool, rows: [AIProposedHolding]) {
+        self.portfolioListId = portfolioListId; self.fromCsv = fromCsv; self.rows = rows
+    }
+
+    /// The card in a pending action's `arguments`, or nil when they cannot be
+    /// read or hold no rows; the client then shows its plain card.
+    public static func decode(arguments: String) -> AIProposedHoldings? {
+        guard let proposal = try? JSONDecoder().decode(AIProposedHoldings.self, from: Data(arguments.utf8)),
+              !proposal.rows.isEmpty
+        else { return nil }
+        return proposal
+    }
+}
+
+/// One reviewed row of the holdings confirm body. A nil value is left out.
+public struct AIReviewedHolding: Codable, Sendable, Equatable {
+    public let symbol: String
+    public let shares: Double?
+    public let avgPrice: Double?
+    public let buyDate: String?
+
+    public init(symbol: String, shares: Double?, avgPrice: Double?, buyDate: String?) {
+        self.symbol = symbol; self.shares = shares; self.avgPrice = avgPrice; self.buyDate = buyDate
+    }
+}
+
+/// `POST /v1/ai/assistant/actions/:id/confirm` for `update_holdings`: only the
+/// ticked rows, as they stand on the card, and never an empty list. The keys
+/// are camel case; encode with a plain encoder, not the shared snake-case one.
+public struct AIReviewedHoldings: Codable, Sendable, Equatable {
+    public let portfolioListId: String?
+    public let replaceExisting: Bool
+    public let rows: [AIReviewedHolding]
+
+    public init(portfolioListId: String?, replaceExisting: Bool, rows: [AIReviewedHolding]) {
+        self.portfolioListId = portfolioListId; self.replaceExisting = replaceExisting; self.rows = rows
+    }
+}
+
+/// One entry of a holdings confirm 422's `rows`. `index` is into the rows that
+/// were **sent**, not the card's full list.
+public struct AIHoldingRowError: Codable, Sendable, Equatable {
+    public let index: Int
+    public let message: String
+
+    public init(index: Int, message: String) {
+        self.index = index; self.message = message
+    }
+}
+
+/// The 422 body of a refused holdings confirm: `{reason, code?, symbols?, rows?}`.
+public struct AIHoldingsRefusalResponse: Codable, Sendable, Equatable {
+    public static let collisionCode = "holdings_collision"
+
+    public let reason: String?
+    public let code: String?
+    public let symbols: [String]
+    public let rows: [AIHoldingRowError]
+
+    public init(reason: String?, code: String?, symbols: [String], rows: [AIHoldingRowError]) {
+        self.reason = reason; self.code = code; self.symbols = symbols; self.rows = rows
+    }
+
+    private enum CodingKeys: String, CodingKey { case reason, code, symbols, rows }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        reason = try? container.decodeIfPresent(String.self, forKey: .reason)
+        code = try? container.decodeIfPresent(String.self, forKey: .code)
+        symbols = (try? container.decodeIfPresent([String].self, forKey: .symbols)) ?? []
+        rows = (try? container.decodeIfPresent([AIHoldingRowError].self, forKey: .rows)) ?? []
+    }
+}

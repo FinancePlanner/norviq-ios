@@ -234,6 +234,17 @@ struct PersistentAssistantView: View {
             )
             // A failed lists load is tried again whenever a card shows.
             .task(id: action.id) { await viewModel.loadPortfolioListsIfNeeded() }
+        } else if let review = viewModel.holdingsReviews[action.id] {
+            AssistantHoldingsCard(
+                review: Binding(
+                    get: { viewModel.holdingsReviews[action.id] ?? review },
+                    set: { viewModel.updateHoldingsReview($0) }
+                ),
+                isBusy: isBusy,
+                onSave: { Task { await viewModel.confirmHoldings(action) } },
+                onCancel: { Task { await viewModel.cancel(action) } },
+                onReplaceChanged: { on in Task { await viewModel.setReplaceExisting(on, for: action) } }
+            )
         } else {
             AssistantPendingActionCard(
                 action: action,

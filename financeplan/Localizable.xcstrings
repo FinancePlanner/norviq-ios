@@ -31,12 +31,52 @@
         }
       }
     },
+    "Avg price" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preço médio"
+          }
+        }
+      }
+    },
+    "Buy date" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data de compra"
+          }
+        }
+      }
+    },
     "Calculators and planners for your money, in one place." : {
       "localizations" : {
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Calculadoras e planeadores financeiros, num só lugar."
+          }
+        }
+      }
+    },
+    "Check each row against your CSV. Only ticked rows are saved." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verifique cada linha com o seu CSV. Só as linhas assinaladas são guardadas."
+          }
+        }
+      }
+    },
+    "Check each row against your file. Only ticked rows are saved." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verifique cada linha com o seu ficheiro. Só as linhas assinaladas são guardadas."
           }
         }
       }
@@ -74,6 +114,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Introduza um símbolo."
+          }
+        }
+      }
+    },
+    "Enter the average price." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indique o preço médio."
+          }
+        }
+      }
+    },
+    "Enter the date as YYYY-MM-DD, or leave it blank." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indique a data como AAAA-MM-DD, ou deixe em branco."
           }
         }
       }
@@ -188,6 +248,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quanto vou ter daqui a X anos?"
+          }
+        }
+      }
+    },
+    "Importing holdings from a file is part of Pro." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importar posições de um ficheiro faz parte do Pro."
           }
         }
       }
@@ -758,6 +828,46 @@
         }
       }
     },
+    "Replace existing" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Substituir existentes"
+          }
+        }
+      }
+    },
+    "Replaces existing" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Substitui existente"
+          }
+        }
+      }
+    },
+    "Replaces import" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Substitui importação"
+          }
+        }
+      }
+    },
+    "Review holdings" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rever posições"
+          }
+        }
+      }
+    },
     "Review trades" : {
       "localizations" : {
         "pt-PT" : {
@@ -778,12 +888,32 @@
         }
       }
     },
+    "Save %lld holdings" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar %lld posições"
+          }
+        }
+      }
+    },
     "Save %lld trades" : {
       "localizations" : {
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Guardar %lld transações"
+          }
+        }
+      }
+    },
+    "Save 1 holding" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar 1 posição"
           }
         }
       }
@@ -962,6 +1092,26 @@
         }
       }
     },
+    "This card expired. Send the file again." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este cartão expirou. Envie o ficheiro novamente."
+          }
+        }
+      }
+    },
+    "This may have been saved. Check your portfolio before sending the file again." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isto pode ter sido guardado. Verifique a sua carteira antes de enviar o ficheiro novamente."
+          }
+        }
+      }
+    },
     "This may have been saved. Check your portfolio before sending the screenshot again." : {
       "localizations" : {
         "pt-PT" : {
@@ -988,6 +1138,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Esta revisão expirou. Envie a captura de ecrã novamente."
+          }
+        }
+      }
+    },
+    "Those holdings were not saved and this card is closed. Send the file again." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essas posições não foram guardadas e este cartão está fechado. Envie o ficheiro novamente."
           }
         }
       }
@@ -1115,6 +1275,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Podes afixar até 3 conquistas."
+          }
+        }
+      }
+    },
+    "YYYY-MM-DD" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AAAA-MM-DD"
           }
         }
       }

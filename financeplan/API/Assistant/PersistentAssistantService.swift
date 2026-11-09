@@ -18,6 +18,8 @@ protocol PersistentAssistantServicing: Sendable {
     func confirmAction(id: String) async throws -> AIConfirmedActionResponse
     /// Confirms a `record_trades` card with only the rows the user kept.
     func confirmTrades(id: String, portfolioListID: String, trades: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse
+    /// Confirms an `update_holdings` card with only the rows the user ticked.
+    func confirmHoldings(id: String, body: AIReviewedHoldings) async throws -> AIConfirmedActionResponse
     func cancelAction(id: String) async throws
     /// The user's portfolios, for the trades card's picker.
     func portfolioLists() async throws -> [PortfolioListDTOResponse]
@@ -74,6 +76,9 @@ struct DefaultPersistentAssistantService: PersistentAssistantServicing, Sendable
     func confirmAction(id: String) async throws -> AIConfirmedActionResponse { try await client.confirmAction(id: id) }
     func confirmTrades(id: String, portfolioListID: String, trades: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse {
         try await client.confirmTrades(id: id, portfolioListID: portfolioListID, trades: trades)
+    }
+    func confirmHoldings(id: String, body: AIReviewedHoldings) async throws -> AIConfirmedActionResponse {
+        try await client.confirmHoldings(id: id, body: body)
     }
     func cancelAction(id: String) async throws { try await client.cancelAction(id: id) }
     func portfolioLists() async throws -> [PortfolioListDTOResponse] { try await client.portfolioLists() }

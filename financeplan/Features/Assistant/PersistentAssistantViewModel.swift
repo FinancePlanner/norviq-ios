@@ -37,6 +37,8 @@ final class PersistentAssistantViewModel {
     /// The portfolios a trades card can pick from. Nil until a card needs them,
     /// or when loading failed: the card then saves to the list it proposed.
     private(set) var portfolioLists: [PortfolioListDTOResponse]?
+    /// Holdings cards (`update_holdings`) by action id, kept like `tradesReviews`.
+    private(set) var holdingsReviews: [String: AssistantHoldingsReview] = [:]
     var draft = ""
 
     /// The backend's limits for one turn (`maxTurnImages`, `maxTurnImageBytes`).
@@ -481,6 +483,7 @@ final class PersistentAssistantViewModel {
         watchProposals[id] = nil
         standingTaskOutcomes[id] = nil
         tradesReviews[id] = nil
+        holdingsReviews[id] = nil
     }
 
     // MARK: - Trades cards
@@ -499,6 +502,74 @@ final class PersistentAssistantViewModel {
             reviews[action.id] = tradesReviews[action.id] ?? AssistantTradesReview(action: action)
         }
         tradesReviews = reviews
+        var holdings: [String: AssistantHoldingsReview] = [:]
+        for action in pendingActions {
+            holdings[action.id] = holdingsReviews[action.id] ?? AssistantHoldingsReview(action: action)
+        }
+        holdingsReviews = holdings
+    }
+
+    // MARK: - Holdings cards
+
+    /// Takes the card's edits. A card that is gone stays gone.
+    func updateHoldingsReview(_ review: AssistantHoldingsReview) {
+        guard holdingsReviews[review.actionID] != nil else { return }
+        holdingsReviews[review.actionID] = review
+    }
+
+    /// Turns "Replace existing" on or off. Turning it on resends, which is
+    /// what the collision refusal asked for.
+    func setReplaceExisting(_ on: Bool, for action: AIPendingActionResponse) async {
+        guard var review = holdingsReviews[action.id], review.replaceExisting != on else { return }
+        review.replaceExisting = on
+        holdingsReviews[action.id] = review
+        if on { await confirmHoldings(action) }
+    }
+
+    /// Saves the card's ticked rows as they stand. A 422 keeps the card with
+    /// its collision and row errors, unless the save failed after the backend
+    /// claimed the action, which settles it. A 409 means it expired. A 402 or
+    /// 403 is the Pro limit. Success settles the card with the backend's
+    /// message, which names what was saved and, on a partial save, what was not.
+    func confirmHoldings(_ action: AIPendingActionResponse) async {
+        guard activeActionID == nil, var review = holdingsReviews[action.id], review.canSave else { return }
+        activeActionID = action.id
+        defer { activeActionID = nil }
+        let triedBefore = review.hasAttemptedSave
+        review.hasAttemptedSave = true
+        holdingsReviews[action.id] = review
+        do {
+            let result = try await service.confirmHoldings(id: action.id, body: review.confirmBody)
+            review.completedMessage = result.message
+            review.refusal = nil
+            errorMessage = result.message
+        } catch let PersistentAssistantHTTPClient.Error.holdingsRefused(refusal) {
+            let reason = refusal.reason.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+            let isCollision = refusal.code == AIHoldingsRefusalResponse.collisionCode
+            if await isStillPending(action.id) == false {
+                review.closedMessage = reason.map { "\($0) \(AssistantHoldingsReview.closedCopy)" } ?? AssistantHoldingsReview.closedCopy
+            } else {
+                review.refuse(reason ?? AssistantHoldingsReview.retryCopy, isCollision: isCollision, rowErrors: refusal.rows)
+            }
+        } catch let PersistentAssistantHTTPClient.Error.unprocessable(reason, _) {
+            let reason = reason.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+            if await isStillPending(action.id) == false {
+                review.closedMessage = reason.map { "\($0) \(AssistantHoldingsReview.closedCopy)" } ?? AssistantHoldingsReview.closedCopy
+            } else {
+                review.refuse(reason ?? AssistantHoldingsReview.retryCopy, rowErrors: [])
+            }
+        } catch PersistentAssistantHTTPClient.Error.conflict {
+            review.closedMessage = triedBefore ? AssistantHoldingsReview.maybeSavedCopy : AssistantHoldingsReview.expiredCopy
+        } catch PersistentAssistantHTTPClient.Error.upgradeRequired {
+            review.refuse(AssistantHoldingsReview.upgradeCopy, rowErrors: [])
+        } catch {
+            if !Self.isClientRefusal(error), await isStillPending(action.id) == false {
+                review.closedMessage = AssistantHoldingsReview.maybeSavedCopy
+            } else {
+                review.refuse(AssistantHoldingsReview.retryCopy, rowErrors: [])
+            }
+        }
+        holdingsReviews[action.id] = review
     }
 
     private var isLoadingPortfolioLists = false

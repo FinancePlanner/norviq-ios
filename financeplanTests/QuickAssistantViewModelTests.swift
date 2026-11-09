@@ -59,6 +59,7 @@ private final class ScriptedAssistantService: PersistentAssistantServicing, @unc
 
     func portfolioLists() async throws -> [PortfolioListDTOResponse] { [] }
     func confirmTrades(id _: String, portfolioListID _: String, trades _: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse { throw Unused() }
+    func confirmHoldings(id _: String, body _: AIReviewedHoldings) async throws -> AIConfirmedActionResponse { throw Unused() }
     func cancelAction(id: String) async throws { cancelled.append(id) }
 
     func conversation(id _: String) async throws -> AIConversationResponse { throw Unused() }
@@ -591,6 +592,7 @@ private struct FullQService: PersistentAssistantServicing {
     func confirmAction(id: String) async throws -> AIConfirmedActionResponse { try await base.confirmAction(id: id) }
     func portfolioLists() async throws -> [PortfolioListDTOResponse] { [] }
     func confirmTrades(id _: String, portfolioListID _: String, trades _: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse { throw ScriptedAssistantService.Unused() }
+    func confirmHoldings(id _: String, body _: AIReviewedHoldings) async throws -> AIConfirmedActionResponse { throw ScriptedAssistantService.Unused() }
     func cancelAction(id: String) async throws { try await base.cancelAction(id: id) }
     func memos(bookmarked: Bool?, conversationID: String?) async throws -> [PositionMemoListItem] { [] }
     func memo(id: String) async throws -> PositionMemoDetail { try await base.memo(id: id) }

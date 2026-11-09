@@ -168,6 +168,7 @@ final class MuseStandingTaskFlowTests: XCTestCase {
         }
         func portfolioLists() async throws -> [PortfolioListDTOResponse] { [] }
         func confirmTrades(id _: String, portfolioListID _: String, trades _: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse { throw Unused() }
+        func confirmHoldings(id _: String, body _: AIReviewedHoldings) async throws -> AIConfirmedActionResponse { throw Unused() }
         func cancelAction(id: String) async throws {
             cancelled.append(id)
             try cancelResult.get()

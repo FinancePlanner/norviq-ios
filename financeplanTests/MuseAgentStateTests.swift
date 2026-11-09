@@ -181,6 +181,7 @@ final class PersistentAssistantAgentStateTests: XCTestCase {
         func confirmAction(id _: String) async throws -> AIConfirmedActionResponse { throw Unused() }
         func portfolioLists() async throws -> [PortfolioListDTOResponse] { [] }
         func confirmTrades(id _: String, portfolioListID _: String, trades _: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse { throw Unused() }
+        func confirmHoldings(id _: String, body _: AIReviewedHoldings) async throws -> AIConfirmedActionResponse { throw Unused() }
         func cancelAction(id _: String) async throws { throw Unused() }
         func memos(bookmarked _: Bool?, conversationID _: String?) async throws -> [PositionMemoListItem] { [] }
         func memo(id _: String) async throws -> PositionMemoDetail { throw Unused() }

@@ -13,6 +13,8 @@ nonisolated struct PersistentAssistantHTTPClient: Sendable {
         case conflict(String?)
         /// 422, with the trades card's row errors when the body carries them.
         case unprocessable(reason: String?, rowErrors: [AITradeRowError])
+        /// 422 from a holdings confirm that names a collision or rows (`rows`, not `rowErrors`).
+        case holdingsRefused(AIHoldingsRefusalResponse)
         /// 403 `upgrade_required`, with the body's `error`.
         case upgradeRequired(String?)
 
@@ -24,6 +26,7 @@ nonisolated struct PersistentAssistantHTTPClient: Sendable {
             case let .api(message): return message
             case let .conflict(message): return message ?? "This was already done."
             case let .unprocessable(reason, _): return reason ?? "Request failed (422)."
+            case let .holdingsRefused(refusal): return refusal.reason ?? "Request failed (422)."
             case let .upgradeRequired(message): return message ?? "This is part of Pro."
             }
         }
@@ -32,7 +35,7 @@ nonisolated struct PersistentAssistantHTTPClient: Sendable {
             switch self {
             case let .invalidStatus(code): code
             case .conflict: 409
-            case .unprocessable: 422
+            case .unprocessable, .holdingsRefused: 422
             case .upgradeRequired: 403
             default: nil
             }
@@ -53,9 +56,21 @@ nonisolated struct PersistentAssistantHTTPClient: Sendable {
         static func makeStatus(_ code: Int, message: String?, body: Data) -> Error {
             switch code {
             case 422:
+                // A holdings confirm answers with `code`/`rows`; the trades one with `rowErrors`.
+                if let holdings = try? JSONDecoder().decode(AIHoldingsRefusalResponse.self, from: body),
+                   holdings.code != nil || !holdings.rows.isEmpty {
+                    return .holdingsRefused(AIHoldingsRefusalResponse(
+                        reason: holdings.reason.flatMap { $0.isEmpty ? nil : $0 } ?? message,
+                        code: holdings.code, symbols: holdings.symbols, rows: holdings.rows
+                    ))
+                }
                 let refusal = try? JSONDecoder().decode(AITradesRefusalResponse.self, from: body)
                 let reason = refusal?.reason.flatMap { $0.isEmpty ? nil : $0 } ?? message
                 return .unprocessable(reason: reason, rowErrors: refusal?.rowErrors ?? [])
+            case 402:
+                // The import limit (R19): the same upgrade answer as a 403.
+                let billing = try? JSONDecoder().decode(UpgradeRequiredBody.self, from: body)
+                return .upgradeRequired(billing?.error ?? message)
             case 403:
                 if let billing = try? JSONDecoder().decode(UpgradeRequiredBody.self, from: body),
                    billing.code == "upgrade_required" {
@@ -145,6 +160,10 @@ nonisolated struct PersistentAssistantHTTPClient: Sendable {
         )
     }
 
+    func confirmHoldings(id: String, body: AIReviewedHoldings) async throws -> AIConfirmedActionResponse {
+        try await client.call(ConfirmAssistantHoldingsEndpoint(id: id, payload: body), errorType: Error.self)
+    }
+
     func cancelAction(id: String) async throws {
         try await client.callWithoutResponse(CancelAssistantActionEndpoint(id: id), errorType: Error.self)
     }
@@ -183,6 +202,7 @@ nonisolated extension PersistentAssistantHTTPClient.Error: Equatable {
         case let (.api(lhs), .api(rhs)): lhs == rhs
         case let (.conflict(lhs), .conflict(rhs)): lhs == rhs
         case let (.unprocessable(lr, le), .unprocessable(rr, re)): lr == rr && le == re
+        case let (.holdingsRefused(lhs), .holdingsRefused(rhs)): lhs == rhs
         case let (.upgradeRequired(lhs), .upgradeRequired(rhs)): lhs == rhs
         default: false
         }
