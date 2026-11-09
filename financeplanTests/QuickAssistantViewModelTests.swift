@@ -231,6 +231,46 @@ final class QuickAssistantViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.attachmentNotice, AttachmentCheckError.tooMany.errorDescription)
     }
 
+    /// Holds a pick open until the test lets it through.
+    private actor Gate {
+        private var open = false
+        private var waiters: [CheckedContinuation<Void, Never>] = []
+        func wait() async {
+            if open { return }
+            await withCheckedContinuation { waiters.append($0) }
+        }
+        func release() {
+            open = true
+            waiters.forEach { $0.resume() }
+            waiters = []
+        }
+    }
+
+    func testResetDuringSlowPickDropsTheFile() async throws {
+        let viewModel = makeViewModel(ScriptedAssistantService())
+        let image = jpeg()
+        let gate = Gate()
+        let pick = Task { await viewModel.addAttachments([{ await gate.wait(); return image }]) }
+        while viewModel.preparingAttachmentCount == 0 { await Task.yield() }
+        viewModel.reset()
+        XCTAssertEqual(viewModel.preparingAttachmentCount, 0)
+        await gate.release()
+        await pick.value
+        XCTAssertTrue(viewModel.attachments.isEmpty, "the next card must not open with the old pick")
+        XCTAssertEqual(viewModel.preparingAttachmentCount, 0, "never negative after a reset")
+    }
+
+    func testResetDuringSlowFilePickDropsTheFile() async throws {
+        let viewModel = makeViewModel(ScriptedAssistantService())
+        let url = try csvURL()
+        let pick = Task { await viewModel.addFiles([url]) }
+        while viewModel.preparingAttachmentCount == 0, !pick.isCancelled, viewModel.attachments.isEmpty { await Task.yield() }
+        viewModel.reset()
+        await pick.value
+        XCTAssertTrue(viewModel.attachments.isEmpty)
+        XCTAssertEqual(viewModel.preparingAttachmentCount, 0)
+    }
+
     func testQuickQRemoveAttachment() async throws {
         let viewModel = makeViewModel(ScriptedAssistantService())
         await viewModel.addFiles([try csvURL()])

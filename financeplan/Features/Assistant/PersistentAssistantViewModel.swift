@@ -240,7 +240,7 @@ final class PersistentAssistantViewModel {
         attachmentNotice = nil
         let room = attachmentRoom
         if sources.count > room {
-            attachmentNotice = String(localized: "Attach up to \(Self.maxAttachments) images.")
+            attachmentNotice = AttachmentCheckError.tooMany.errorDescription
         }
         let taken = sources.prefix(room)
         preparingAttachmentCount += taken.count
@@ -542,7 +542,6 @@ final class PersistentAssistantViewModel {
             let result = try await service.confirmHoldings(id: action.id, body: review.confirmBody)
             review.completedMessage = result.message
             review.refusal = nil
-            errorMessage = result.message
         } catch let PersistentAssistantHTTPClient.Error.holdingsRefused(refusal) {
             let reason = refusal.reason.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
             let isCollision = refusal.code == AIHoldingsRefusalResponse.collisionCode

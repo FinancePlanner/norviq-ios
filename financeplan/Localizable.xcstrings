@@ -884,6 +884,16 @@
         }
       }
     },
+    "Review it in Q." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reveja no Q."
+          }
+        }
+      }
+    },
     "Review trades" : {
       "localizations" : {
         "pt-PT" : {
@@ -15422,16 +15432,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Anexar imagens"
-          }
-        }
-      }
-    },
-    "Attach up to %lld images." : {
-      "localizations" : {
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anexe até %lld imagens."
           }
         }
       }

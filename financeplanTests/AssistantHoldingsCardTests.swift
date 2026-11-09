@@ -274,6 +274,7 @@ final class AssistantHoldingsCardTests: XCTestCase {
         await viewModel.confirmHoldings(holdingsAction())
         let card = try XCTUnwrap(viewModel.holdingsReviews["a1"])
         XCTAssertEqual(card.completedMessage, message)
+        XCTAssertNil(viewModel.errorMessage, "the settled card shows it; no alert as well")
         XCTAssertTrue(card.completedMessage?.contains("Couldn't save TSLA: Unknown symbol.") == true)
         XCTAssertFalse(card.canSave, "a settled card cannot be saved again")
     }

@@ -36,6 +36,11 @@ struct QuickAssistantCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
+            if viewModel.needsFullQ, viewModel.phase == .answered {
+                Text("Review it in Q.")
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.Colors.secondaryText)
+            }
             exchange
             if let notice {
                 Text(notice)

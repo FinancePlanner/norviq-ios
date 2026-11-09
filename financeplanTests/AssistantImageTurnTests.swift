@@ -56,10 +56,17 @@ private final class ImageTurnService: PersistentAssistantServicing, @unchecked S
     var failUsageAfterTurn = false
     /// Runs before the stream ends, for what the user does mid-turn.
     var midTurn: (@Sendable () async -> Void)?
-    private(set) var sent: [(content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?, attachments: [AssistantAttachment])] = []
+    struct SentTurn {
+        let content: String
+        let images: [ScreenshotUploadImage]
+        let context: AssistantTurnContext?
+        let attachments: [AssistantAttachment]
+    }
+
+    private(set) var sent: [SentTurn] = []
 
     func streamTurn(conversationID _: String, content: String, attachments: [AssistantAttachment], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
-        sent.append((content, attachments.compactMap { if case let .image(image) = $0 { image } else { nil } }, context, attachments))
+        sent.append(SentTurn(content: content, images: attachments.compactMap { if case let .image(image) = $0 { image } else { nil } }, context: context, attachments: attachments))
         let events = events
         let streamError = streamError
         let midTurn = midTurn
@@ -400,7 +407,7 @@ final class AssistantImageTurnTests: XCTestCase {
         await viewModel.addAttachments(sources(4))
         XCTAssertEqual(viewModel.attachments.count, 3)
         XCTAssertEqual(viewModel.attachmentRoom, 0)
-        XCTAssertEqual(viewModel.attachmentNotice, "Attach up to 3 images.")
+        XCTAssertEqual(viewModel.attachmentNotice, AttachmentCheckError.tooMany.errorDescription)
 
         await viewModel.addAttachments(sources(1))
         XCTAssertEqual(viewModel.attachments.count, 3)
@@ -937,7 +944,7 @@ final class AssistantImageTurnTests: XCTestCase {
             "Attach images", "Attached image", "Preparing image", "Remove image",
             "Attach", "Photos", "Camera", "Files", "Attached file", "Remove file", "Preparing attachment",
             "Attaching files is part of Pro. Upgrade to use it.",
-            "Attach up to %lld images.", "This image could not be attached. Try another one.",
+            "This image could not be attached. Try another one.",
             "Attaching images is part of Pro. Upgrade to use it.",
             "That image is too large.", "Too many requests. Wait a minute and try again.",
             "Too many large images right now. Try again in a moment.",

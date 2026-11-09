@@ -23,7 +23,7 @@ final class QuickAssistantViewModel {
     private(set) var isActing = false
     private(set) var actionError: String?
     /// The turn produced something only full Q can show: a memo, a watch
-    /// proposal, or a trades card, whose confirm needs the reviewed rows.
+    /// proposal, or a trades or holdings card, whose confirm needs the reviewed rows.
     private(set) var needsFullQ = false
     private(set) var conversationID: String?
     var isPaywallRequested = false
@@ -31,6 +31,8 @@ final class QuickAssistantViewModel {
     private(set) var attachments: [AssistantAttachment] = []
     private(set) var attachmentNotice: String?
     private(set) var preparingAttachmentCount = 0
+    /// Bumped by `reset()`. A pick that started in an earlier epoch is dropped when it finishes.
+    private var attachmentEpoch = 0
     private(set) var imagesEnabled = false
     private(set) var documentsEnabled = false
 
@@ -91,12 +93,15 @@ final class QuickAssistantViewModel {
         }
         let taken = sources.prefix(room)
         preparingAttachmentCount += taken.count
+        let epoch = attachmentEpoch
         let cap = Self.maxAttachmentBytes
         for source in taken {
             let prepared = await Task.detached(priority: .userInitiated) { () -> ScreenshotUploadImage? in
                 guard let data = await source() else { return nil }
                 return UploadImagePreparer.prepare(data, maxBytes: cap)
             }.value
+            // A reset zeroed the count and cleared the card: this pick is stale.
+            guard epoch == attachmentEpoch else { return }
             preparingAttachmentCount -= 1
             if let prepared {
                 attachments.append(.image(prepared))
@@ -113,6 +118,7 @@ final class QuickAssistantViewModel {
         guard !isThinking else { return }
         attachmentNotice = nil
         let cap = Self.maxAttachmentBytes
+        let epoch = attachmentEpoch
         for url in urls {
             guard attachmentRoom > 0 else {
                 attachmentNotice = AttachmentCheckError.tooMany.errorDescription
@@ -122,6 +128,7 @@ final class QuickAssistantViewModel {
             let result = await Task.detached(priority: .userInitiated) {
                 AssistantAttachmentChecker.load(url: url, maxImageBytes: cap)
             }.value
+            guard epoch == attachmentEpoch else { return }
             preparingAttachmentCount -= 1
             guard !isThinking else { return }
             do {
@@ -196,6 +203,8 @@ final class QuickAssistantViewModel {
         draft = ""
         attachments = []
         attachmentNotice = nil
+        attachmentEpoch += 1
+        preparingAttachmentCount = 0
         phase = .idle
     }
 
