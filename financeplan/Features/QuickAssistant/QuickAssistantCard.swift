@@ -200,21 +200,30 @@ struct QuickAssistantCard: View {
             }
             .foregroundStyle(AppTheme.Colors.tint)
             .accessibilityLabel("Stop listening")
-        } else if voice != nil, viewModel.draft.isEmpty, viewModel.attachments.isEmpty, !viewModel.isThinking {
-            Button(action: onMic) {
-                Image(systemName: "mic.circle.fill").font(.title2)
+        } else if voice != nil, viewModel.draft.isEmpty, !viewModel.isThinking {
+            // With a file pending, the mic sits beside Send: speak a question
+            // about it, or send the file alone.
+            HStack(spacing: 4) {
+                Button(action: onMic) {
+                    Image(systemName: "mic.circle.fill").font(.title2)
+                }
+                .foregroundStyle(AppTheme.Colors.tint)
+                .accessibilityLabel("Ask by voice")
+                if !viewModel.attachments.isEmpty { sendButton }
             }
-            .foregroundStyle(AppTheme.Colors.tint)
-            .accessibilityLabel("Ask by voice")
         } else {
-            Button(action: onSend) {
-                Image(systemName: "arrow.up.circle.fill").font(.title2)
-            }
-            .foregroundStyle(AppTheme.Colors.tint)
-            .opacity(canSend ? 1 : 0.4)
-            .disabled(!canSend)
-            .accessibilityLabel("Send")
+            sendButton
         }
+    }
+
+    private var sendButton: some View {
+        Button(action: onSend) {
+            Image(systemName: "arrow.up.circle.fill").font(.title2)
+        }
+        .foregroundStyle(AppTheme.Colors.tint)
+        .opacity(canSend ? 1 : 0.4)
+        .disabled(!canSend)
+        .accessibilityLabel("Send")
     }
 
     private static func rendered(_ text: String) -> AttributedString {

@@ -18,6 +18,8 @@ private final class ScriptedAssistantService: PersistentAssistantServicing, @unc
     private(set) var streamedImages: [[ScreenshotUploadImage]] = []
     private(set) var streamedAttachments: [[AssistantAttachment]] = []
     private(set) var preferencesCalls = 0
+    /// The next stream yields nothing and ends only when its consumer cancels.
+    var hangs = false
     var preferencesResult: Result<AIAssistantPreferencesResponse, Error> = .failure(Unused())
     private(set) var confirmed: [String] = []
     private(set) var cancelled: [String] = []
@@ -39,6 +41,9 @@ private final class ScriptedAssistantService: PersistentAssistantServicing, @unc
         contexts.append(context)
         streamedAttachments.append(attachments)
         streamedImages.append(attachments.compactMap { if case let .image(image) = $0 { image } else { nil } })
+        if hangs {
+            return AsyncThrowingStream { _ in }
+        }
         let events = scripts.isEmpty ? [] : scripts.removeFirst()
         return AsyncThrowingStream { continuation in
             for event in events { continuation.yield(event) }
@@ -201,6 +206,28 @@ final class QuickAssistantViewModelTests: XCTestCase {
         await ask(viewModel)
         XCTAssertEqual(viewModel.attachments.count, 1)
         XCTAssertEqual(viewModel.draft, "How much did I spend?")
+    }
+
+    func testQuickQCancelledSendThenResetLeavesNoAttachments() async {
+        let service = ScriptedAssistantService()
+        service.hangs = true
+        let viewModel = makeViewModel(service)
+        let image = jpeg()
+        await viewModel.addAttachments([{ image }])
+        viewModel.draft = "What is this?"
+        let task = Task { await viewModel.send(scope: .home) }
+        while service.streamedAttachments.isEmpty { await Task.yield() }
+        task.cancel()
+        viewModel.reset()
+        await task.value
+        XCTAssertTrue(viewModel.attachments.isEmpty)
+    }
+
+    func testQuickQLimitNoticeIsNotAboutImagesOnly() async {
+        let viewModel = makeViewModel(ScriptedAssistantService())
+        let image = jpeg()
+        await viewModel.addAttachments(Array(repeating: { image }, count: 4))
+        XCTAssertEqual(viewModel.attachmentNotice, AttachmentCheckError.tooMany.errorDescription)
     }
 
     func testQuickQRemoveAttachment() async throws {

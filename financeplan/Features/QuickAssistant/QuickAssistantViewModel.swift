@@ -87,7 +87,7 @@ final class QuickAssistantViewModel {
         attachmentNotice = nil
         let room = attachmentRoom
         if sources.count > room {
-            attachmentNotice = String(localized: "Attach up to \(Self.maxAttachments) images.")
+            attachmentNotice = AttachmentCheckError.tooMany.errorDescription
         }
         let taken = sources.prefix(room)
         preparingAttachmentCount += taken.count
@@ -154,13 +154,10 @@ final class QuickAssistantViewModel {
             try await runTurn(text, attachments: outgoing, context: context, mayRecreate: true)
             phase = .answered
         } catch is CancellationError {
-            attachments = outgoing
+            // Dismissing the card cancels the turn; its files must not reappear on the next card.
             return
         } catch {
-            if Task.isCancelled {
-                attachments = outgoing
-                return
-            }
+            if Task.isCancelled { return }
             handle(error, question: text, attachments: outgoing)
         }
     }
