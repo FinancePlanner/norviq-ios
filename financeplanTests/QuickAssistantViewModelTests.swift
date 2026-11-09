@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import StockPlanShared
 import XCTest
 @testable import financeplan
@@ -15,6 +16,11 @@ private final class ScriptedAssistantService: PersistentAssistantServicing, @unc
     private(set) var streamedContent: [String] = []
     private(set) var contexts: [AssistantTurnContext?] = []
     private(set) var streamedImages: [[ScreenshotUploadImage]] = []
+    private(set) var streamedAttachments: [[AssistantAttachment]] = []
+    private(set) var preferencesCalls = 0
+    /// The next stream yields nothing and ends only when its consumer cancels.
+    var hangs = false
+    var preferencesResult: Result<AIAssistantPreferencesResponse, Error> = .failure(Unused())
     private(set) var confirmed: [String] = []
     private(set) var cancelled: [String] = []
 
@@ -29,11 +35,15 @@ private final class ScriptedAssistantService: PersistentAssistantServicing, @unc
         return AIConversationResponse(id: id, title: title ?? "", messages: [], createdAt: "2026-11-04T00:00:00Z", updatedAt: "2026-11-04T00:00:00Z")
     }
 
-    func streamTurn(conversationID: String, content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+    func streamTurn(conversationID: String, content: String, attachments: [AssistantAttachment], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
         streamedConversations.append(conversationID)
         streamedContent.append(content)
         contexts.append(context)
-        streamedImages.append(images)
+        streamedAttachments.append(attachments)
+        streamedImages.append(attachments.compactMap { if case let .image(image) = $0 { image } else { nil } })
+        if hangs {
+            return AsyncThrowingStream { _ in }
+        }
         let events = scripts.isEmpty ? [] : scripts.removeFirst()
         return AsyncThrowingStream { continuation in
             for event in events { continuation.yield(event) }
@@ -49,13 +59,17 @@ private final class ScriptedAssistantService: PersistentAssistantServicing, @unc
 
     func portfolioLists() async throws -> [PortfolioListDTOResponse] { [] }
     func confirmTrades(id _: String, portfolioListID _: String, trades _: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse { throw Unused() }
+    func confirmHoldings(id _: String, body _: AIReviewedHoldings) async throws -> AIConfirmedActionResponse { throw Unused() }
     func cancelAction(id: String) async throws { cancelled.append(id) }
 
     func conversation(id _: String) async throws -> AIConversationResponse { throw Unused() }
     func conversations() async throws -> [AIConversationSummaryResponse] { [] }
     func deleteConversation(id _: String) async throws { throw Unused() }
     func turn(conversationID _: String, content _: String) async throws -> AIAssistantTurnResponse { throw Unused() }
-    func preferences() async throws -> AIAssistantPreferencesResponse { throw Unused() }
+    func preferences() async throws -> AIAssistantPreferencesResponse {
+        preferencesCalls += 1
+        return try preferencesResult.get()
+    }
     func updatePreferences(_: AIAssistantPreferencesResponse) async throws -> AIAssistantPreferencesResponse { throw Unused() }
     func tips() async throws -> [AITipResponse] { [] }
     func dismissTip(id _: String) async throws { throw Unused() }
@@ -90,14 +104,187 @@ final class QuickAssistantViewModelTests: XCTestCase {
     private func makeViewModel(_ service: ScriptedAssistantService, user: String = "u1") -> QuickAssistantViewModel {
         QuickAssistantViewModel(
             service: service,
-            conversations: QuickAssistantConversationStore(defaults: defaults),
+            conversations: QuickAssistantConversationStore(defaults: defaults, flags: flagCache),
             currentUserID: { user }
         )
+    }
+
+    private var flagCache = AttachmentFlagCache()
+
+    private static func prefs(images: Bool?, documents: Bool?) -> AIAssistantPreferencesResponse {
+        AIAssistantPreferencesResponse(proactiveTipsEnabled: false, pushEnabled: false, timezone: "UTC", imagesEnabled: images, documentsEnabled: documents)
+    }
+
+    private func jpeg() -> Data {
+        UIGraphicsImageRenderer(size: CGSize(width: 40, height: 40)).jpegData(withCompressionQuality: 0.8) { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 40, height: 40))
+        }
+    }
+
+    private func csvURL() throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString)-fills.csv")
+        try Data("a,b\n1,2\n".utf8).write(to: url)
+        return url
     }
 
     private func ask(_ viewModel: QuickAssistantViewModel, _ text: String = "How much did I spend?", scope: AIViewScope? = .home, inputMode: AssistantTurnContext.InputMode = .text) async {
         viewModel.draft = text
         await viewModel.send(scope: scope, inputMode: inputMode)
+    }
+
+    func testFlagsFollowPreferences() async {
+        let service = ScriptedAssistantService()
+        service.preferencesResult = .success(Self.prefs(images: true, documents: nil))
+        let viewModel = makeViewModel(service)
+        await viewModel.loadAttachmentFlags()
+        XCTAssertTrue(viewModel.imagesEnabled)
+        XCTAssertFalse(viewModel.documentsEnabled)
+    }
+
+    func testFailedPreferencesLeaveBothFlagsOffAndTextStillSends() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn()), .done]])
+        let viewModel = makeViewModel(service)
+        await viewModel.loadAttachmentFlags()
+        XCTAssertFalse(viewModel.imagesEnabled)
+        XCTAssertFalse(viewModel.documentsEnabled)
+        await ask(viewModel)
+        XCTAssertEqual(viewModel.phase, .answered)
+    }
+
+    func testQuickQFlagsLoadedOncePerSession() async {
+        let service = ScriptedAssistantService()
+        service.preferencesResult = .success(Self.prefs(images: true, documents: true))
+        let first = makeViewModel(service)
+        await first.loadAttachmentFlags()
+        // A later presentation builds a fresh view model over the same store.
+        let second = makeViewModel(service)
+        await second.loadAttachmentFlags()
+        XCTAssertEqual(service.preferencesCalls, 1)
+        XCTAssertTrue(second.imagesEnabled)
+        XCTAssertTrue(second.documentsEnabled)
+    }
+
+    func testQuickQSendsAttachments() async throws {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn()), .done]])
+        let viewModel = makeViewModel(service)
+        let image = jpeg()
+        await viewModel.addAttachments([{ image }])
+        await viewModel.addFiles([try csvURL()])
+        XCTAssertEqual(viewModel.attachments.count, 2)
+        await ask(viewModel)
+        XCTAssertEqual(service.streamedAttachments.first?.count, 2)
+        XCTAssertTrue(viewModel.attachments.isEmpty)
+        XCTAssertEqual(viewModel.question, "How much did I spend? [file attached]")
+    }
+
+    func testQuickQAttachmentOnlyTurnSends() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn()), .done]])
+        let viewModel = makeViewModel(service)
+        let image = jpeg()
+        await viewModel.addAttachments([{ image }])
+        viewModel.draft = ""
+        await viewModel.send(scope: .home)
+        XCTAssertEqual(service.streamedAttachments.first?.count, 1)
+        XCTAssertEqual(viewModel.question, "What's in this image? [image attached]")
+    }
+
+    func testQuickQVoiceSendKeepsAttachments() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn()), .done]])
+        let viewModel = makeViewModel(service)
+        let image = jpeg()
+        await viewModel.addAttachments([{ image }])
+        await ask(viewModel, "What is this?", inputMode: .voice)
+        XCTAssertEqual(service.streamedAttachments.first?.count, 1)
+        XCTAssertEqual(service.contexts.first??.inputMode, .voice)
+    }
+
+    func testQuickQFailedSendRestoresAttachments() async {
+        let service = ScriptedAssistantService(scripts: [[.error("boom")]])
+        let viewModel = makeViewModel(service)
+        let image = jpeg()
+        await viewModel.addAttachments([{ image }])
+        await ask(viewModel)
+        XCTAssertEqual(viewModel.attachments.count, 1)
+        XCTAssertEqual(viewModel.draft, "How much did I spend?")
+    }
+
+    func testQuickQCancelledSendThenResetLeavesNoAttachments() async {
+        let service = ScriptedAssistantService()
+        service.hangs = true
+        let viewModel = makeViewModel(service)
+        let image = jpeg()
+        await viewModel.addAttachments([{ image }])
+        viewModel.draft = "What is this?"
+        let task = Task { await viewModel.send(scope: .home) }
+        while service.streamedAttachments.isEmpty { await Task.yield() }
+        task.cancel()
+        viewModel.reset()
+        await task.value
+        XCTAssertTrue(viewModel.attachments.isEmpty)
+    }
+
+    func testQuickQLimitNoticeIsNotAboutImagesOnly() async {
+        let viewModel = makeViewModel(ScriptedAssistantService())
+        let image = jpeg()
+        await viewModel.addAttachments(Array(repeating: { image }, count: 4))
+        XCTAssertEqual(viewModel.attachmentNotice, AttachmentCheckError.tooMany.errorDescription)
+    }
+
+    /// Holds a pick open until the test lets it through.
+    private actor Gate {
+        private var open = false
+        private var waiters: [CheckedContinuation<Void, Never>] = []
+        func wait() async {
+            if open { return }
+            await withCheckedContinuation { waiters.append($0) }
+        }
+        func release() {
+            open = true
+            waiters.forEach { $0.resume() }
+            waiters = []
+        }
+    }
+
+    func testResetDuringSlowPickDropsTheFile() async throws {
+        let viewModel = makeViewModel(ScriptedAssistantService())
+        let image = jpeg()
+        let gate = Gate()
+        let pick = Task { await viewModel.addAttachments([{ await gate.wait(); return image }]) }
+        while viewModel.preparingAttachmentCount == 0 { await Task.yield() }
+        viewModel.reset()
+        XCTAssertEqual(viewModel.preparingAttachmentCount, 0)
+        await gate.release()
+        await pick.value
+        XCTAssertTrue(viewModel.attachments.isEmpty, "the next card must not open with the old pick")
+        XCTAssertEqual(viewModel.preparingAttachmentCount, 0, "never negative after a reset")
+    }
+
+    func testResetDuringSlowFilePickDropsTheFile() async throws {
+        let viewModel = makeViewModel(ScriptedAssistantService())
+        let url = try csvURL()
+        let pick = Task { await viewModel.addFiles([url]) }
+        while viewModel.preparingAttachmentCount == 0, !pick.isCancelled, viewModel.attachments.isEmpty { await Task.yield() }
+        viewModel.reset()
+        await pick.value
+        XCTAssertTrue(viewModel.attachments.isEmpty)
+        XCTAssertEqual(viewModel.preparingAttachmentCount, 0)
+    }
+
+    func testQuickQRemoveAttachment() async throws {
+        let viewModel = makeViewModel(ScriptedAssistantService())
+        await viewModel.addFiles([try csvURL()])
+        let id = try XCTUnwrap(viewModel.attachments.first?.id)
+        viewModel.removeAttachment(id: id)
+        XCTAssertTrue(viewModel.attachments.isEmpty)
+    }
+
+    func testQuickQHandsOffHoldingsCard() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn(action: AssistantHoldingsReview.toolName)), .done]])
+        let viewModel = makeViewModel(service)
+        await ask(viewModel)
+        XCTAssertTrue(viewModel.needsFullQ)
+        XCTAssertNil(viewModel.pendingAction)
     }
 
     func testAnswerShowsTheLatestExchange() async {
@@ -427,8 +614,8 @@ private struct FullQService: PersistentAssistantServicing {
     func conversation(id: String) async throws -> AIConversationResponse {
         AIConversationResponse(id: id, title: "T", messages: [], createdAt: "2026-11-04T00:00:00Z", updatedAt: "2026-11-04T00:00:00Z")
     }
-    func streamTurn(conversationID: String, content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
-        base.streamTurn(conversationID: conversationID, content: content, images: images, context: context)
+    func streamTurn(conversationID: String, content: String, attachments: [AssistantAttachment], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        base.streamTurn(conversationID: conversationID, content: content, attachments: attachments, context: context)
     }
     func usage() async throws -> AIAssistantUsageResponse {
         AIAssistantUsageResponse(month: "2026-11", used: 1, limit: nil, remaining: nil, isPro: true)
@@ -445,6 +632,7 @@ private struct FullQService: PersistentAssistantServicing {
     func confirmAction(id: String) async throws -> AIConfirmedActionResponse { try await base.confirmAction(id: id) }
     func portfolioLists() async throws -> [PortfolioListDTOResponse] { [] }
     func confirmTrades(id _: String, portfolioListID _: String, trades _: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse { throw ScriptedAssistantService.Unused() }
+    func confirmHoldings(id _: String, body _: AIReviewedHoldings) async throws -> AIConfirmedActionResponse { throw ScriptedAssistantService.Unused() }
     func cancelAction(id: String) async throws { try await base.cancelAction(id: id) }
     func memos(bookmarked: Bool?, conversationID: String?) async throws -> [PositionMemoListItem] { [] }
     func memo(id: String) async throws -> PositionMemoDetail { try await base.memo(id: id) }

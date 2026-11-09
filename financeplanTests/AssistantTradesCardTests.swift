@@ -75,6 +75,8 @@ private final class TradesService: PersistentAssistantServicing, @unchecked Send
         return try confirmResult.get()
     }
 
+    func confirmHoldings(id _: String, body _: AIReviewedHoldings) async throws -> AIConfirmedActionResponse { throw Unused() }
+
     func preferences() async throws -> AIAssistantPreferencesResponse {
         AIAssistantPreferencesResponse(proactiveTipsEnabled: false, pushEnabled: false, timezone: "UTC", imagesEnabled: true)
     }
@@ -87,7 +89,7 @@ private final class TradesService: PersistentAssistantServicing, @unchecked Send
     func conversations() async throws -> [AIConversationSummaryResponse] { [] }
     func tips() async throws -> [AITipResponse] { [] }
 
-    func streamTurn(conversationID _: String, content _: String, images _: [ScreenshotUploadImage], context _: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+    func streamTurn(conversationID _: String, content _: String, attachments _: [AssistantAttachment], context _: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
         AsyncThrowingStream { $0.finish(throwing: Unused()) }
     }
     func conversation(id _: String) async throws -> AIConversationResponse { throw Unused() }

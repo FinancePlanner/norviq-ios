@@ -1,3 +1,4 @@
+import PhotosUI
 import StockPlanShared
 import SwiftUI
 
@@ -26,18 +27,27 @@ struct QuickAssistantCard: View {
     }
 
     private var canSend: Bool {
-        !viewModel.isThinking && !viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard !viewModel.isThinking, viewModel.preparingAttachmentCount == 0 else { return false }
+        return !viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !viewModel.attachments.isEmpty
     }
+
+    private var canAttach: Bool { viewModel.imagesEnabled || viewModel.documentsEnabled }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
+            if viewModel.needsFullQ, viewModel.phase == .answered {
+                Text("Review it in Q.")
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.Colors.secondaryText)
+            }
             exchange
             if let notice {
                 Text(notice)
                     .font(.footnote)
                     .foregroundStyle(AppTheme.Colors.secondaryText)
             }
+            attachmentStrip
             composer
         }
         .padding(16)
@@ -137,8 +147,35 @@ struct QuickAssistantCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// One line high: chips scroll sideways inside the strip.
+    private var attachmentStrip: some View {
+        AssistantAttachmentStrip(
+            attachments: viewModel.attachments,
+            preparingCount: viewModel.preparingAttachmentCount,
+            notice: viewModel.attachmentNotice,
+            framed: false,
+            onRemove: { viewModel.removeAttachment(id: $0) }
+        )
+    }
+
     private var composer: some View {
         HStack(alignment: .bottom, spacing: 8) {
+            if canAttach {
+                AssistantAttachMenu(
+                    imagesEnabled: viewModel.imagesEnabled,
+                    documentsEnabled: viewModel.documentsEnabled,
+                    room: viewModel.attachmentRoom,
+                    isDisabled: viewModel.isThinking || isListening,
+                    onPhotos: { items in
+                        Task {
+                            await viewModel.addAttachments(items.map { item in { try? await item.loadTransferable(type: Data.self) } })
+                        }
+                    },
+                    onCamera: { data in Task { await viewModel.addAttachments([{ data }]) } },
+                    onFiles: { urls in Task { await viewModel.addFiles(urls) } }
+                )
+                .padding(.bottom, 2)
+            }
             TextField(
                 isListening ? "Listening…" : "Ask about your finances",
                 text: $viewModel.draft,
@@ -153,7 +190,7 @@ struct QuickAssistantCard: View {
             trailingButton
                 .padding(.bottom, 4)
         }
-        .padding(.leading, 16)
+        .padding(.leading, canAttach ? 6 : 16)
         .padding(.trailing, 8)
         .padding(.vertical, 4)
         .background(AppTheme.Colors.tintSoft, in: .rect(cornerRadius: 20))
@@ -169,20 +206,29 @@ struct QuickAssistantCard: View {
             .foregroundStyle(AppTheme.Colors.tint)
             .accessibilityLabel("Stop listening")
         } else if voice != nil, viewModel.draft.isEmpty, !viewModel.isThinking {
-            Button(action: onMic) {
-                Image(systemName: "mic.circle.fill").font(.title2)
+            // With a file pending, the mic sits beside Send: speak a question
+            // about it, or send the file alone.
+            HStack(spacing: 4) {
+                Button(action: onMic) {
+                    Image(systemName: "mic.circle.fill").font(.title2)
+                }
+                .foregroundStyle(AppTheme.Colors.tint)
+                .accessibilityLabel("Ask by voice")
+                if !viewModel.attachments.isEmpty { sendButton }
             }
-            .foregroundStyle(AppTheme.Colors.tint)
-            .accessibilityLabel("Ask by voice")
         } else {
-            Button(action: onSend) {
-                Image(systemName: "arrow.up.circle.fill").font(.title2)
-            }
-            .foregroundStyle(AppTheme.Colors.tint)
-            .opacity(canSend ? 1 : 0.4)
-            .disabled(!canSend)
-            .accessibilityLabel("Send")
+            sendButton
         }
+    }
+
+    private var sendButton: some View {
+        Button(action: onSend) {
+            Image(systemName: "arrow.up.circle.fill").font(.title2)
+        }
+        .foregroundStyle(AppTheme.Colors.tint)
+        .opacity(canSend ? 1 : 0.4)
+        .disabled(!canSend)
+        .accessibilityLabel("Send")
     }
 
     private static func rendered(_ text: String) -> AttributedString {

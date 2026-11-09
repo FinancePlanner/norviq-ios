@@ -4,6 +4,7 @@ import Observation
 import PhotosUI
 import StockPlanShared
 import SwiftUI
+import UniformTypeIdentifiers
 
 @Observable @MainActor
 final class PersistentAssistantViewModel {
@@ -36,15 +37,17 @@ final class PersistentAssistantViewModel {
     /// The portfolios a trades card can pick from. Nil until a card needs them,
     /// or when loading failed: the card then saves to the list it proposed.
     private(set) var portfolioLists: [PortfolioListDTOResponse]?
+    /// Holdings cards (`update_holdings`) by action id, kept like `tradesReviews`.
+    private(set) var holdingsReviews: [String: AssistantHoldingsReview] = [:]
     var draft = ""
 
     /// The backend's limits for one turn (`maxTurnImages`, `maxTurnImageBytes`).
-    static let maxAttachments = 3
-    static let maxAttachmentBytes = 5 << 20
-    /// Images waiting to go with the next message.
-    private(set) var attachments: [ScreenshotUploadImage] = []
+    static let maxAttachments = AssistantAttachmentLimits.maxFiles
+    static let maxAttachmentBytes = AssistantAttachmentLimits.maxImageBytes
+    /// Images, PDFs and CSVs waiting to go with the next message.
+    private(set) var attachments: [AssistantAttachment] = []
     private(set) var preparingAttachmentCount = 0
-    /// Why an image did not attach or go through. Shown in the composer, where
+    /// Why a file did not attach or go through. Shown in the composer, where
     /// it is still readable once a paywall sheet closes.
     private(set) var attachmentNotice: String?
     var pickedItems: [PhotosPickerItem] = [] {
@@ -53,6 +56,9 @@ final class PersistentAssistantViewModel {
 
     /// Absent from a backend that predates images, which means no.
     var imagesEnabled: Bool { preferences?.imagesEnabled ?? false }
+
+    /// Absent from a backend that predates documents, which means no.
+    var documentsEnabled: Bool { preferences?.documentsEnabled ?? false }
 
     var attachmentRoom: Int { max(Self.maxAttachments - attachments.count - preparingAttachmentCount, 0) }
 
@@ -234,7 +240,7 @@ final class PersistentAssistantViewModel {
         attachmentNotice = nil
         let room = attachmentRoom
         if sources.count > room {
-            attachmentNotice = String(localized: "Attach up to \(Self.maxAttachments) images.")
+            attachmentNotice = AttachmentCheckError.tooMany.errorDescription
         }
         let taken = sources.prefix(room)
         preparingAttachmentCount += taken.count
@@ -246,14 +252,44 @@ final class PersistentAssistantViewModel {
             }.value
             preparingAttachmentCount -= 1
             if let prepared {
-                attachments.append(prepared)
+                attachments.append(.image(prepared))
             } else {
                 attachmentNotice = String(localized: "This image could not be attached. Try another one.")
             }
         }
     }
 
-    func removeAttachment(id: ScreenshotUploadImage.ID) {
+    /// Reads what the document picker returned, checks each file the way the
+    /// server will, and attaches what passes. A file that fails says why and
+    /// leaves the rest alone.
+    func addFiles(_ urls: [URL]) async {
+        guard !isSending else { return }
+        attachmentNotice = nil
+        let cap = Self.maxAttachmentBytes
+        for url in urls {
+            // Counted per file, so a second pick during this one sees the room it takes.
+            guard attachmentRoom > 0 else {
+                attachmentNotice = AttachmentCheckError.tooMany.errorDescription
+                break
+            }
+            preparingAttachmentCount += 1
+            let result = await Task.detached(priority: .userInitiated) {
+                AssistantAttachmentChecker.load(url: url, maxImageBytes: cap)
+            }.value
+            preparingAttachmentCount -= 1
+            // Send may have started while the file was read; the rest of the pick would go with the next message, so stop.
+            guard !isSending else { return }
+            do {
+                let attachment = try result.get()
+                try AssistantAttachmentChecker.admit(attachment, into: attachments)
+                attachments.append(attachment)
+            } catch {
+                attachmentNotice = (error as? AttachmentCheckError)?.errorDescription
+            }
+        }
+    }
+
+    func removeAttachment(id: AssistantAttachment.ID) {
         attachments.removeAll { $0.id == id }
         attachmentNotice = nil
     }
@@ -267,7 +303,7 @@ final class PersistentAssistantViewModel {
         else { return }
         let resolution = AssistantCommandParser.resolve(content)
         // A command answered on the device sends nothing, so its images stay put.
-        let outgoingImages: [ScreenshotUploadImage]
+        let outgoingImages: [AssistantAttachment]
         if case .local = resolution {
             outgoingImages = []
         } else {
@@ -282,7 +318,7 @@ final class PersistentAssistantViewModel {
             id: UUID().uuidString,
             conversationId: conversation.id,
             role: .user,
-            content: outgoingImages.isEmpty ? content : Self.storedImageTurnText(content),
+            content: outgoingImages.isEmpty ? content : AssistantAttachmentChecker.turnText(content, attachments: outgoingImages),
             createdAt: ISO8601DateFormatter().string(from: Date())
         )
         activeConversation = replacingMessages(in: conversation, with: conversation.messages + [optimistic])
@@ -318,7 +354,7 @@ final class PersistentAssistantViewModel {
             for try await event in service.streamTurn(
                 conversationID: conversation.id,
                 content: outgoingContent,
-                images: outgoingImages,
+                attachments: outgoingImages,
                 context: .current()
             ) {
                 switch event {
@@ -373,26 +409,13 @@ final class PersistentAssistantViewModel {
                 AIConsentRequired.post()
             case .showPaywall:
                 isPaywallRequested = true
-                if !outgoingImages.isEmpty, Self.isUpgradeRefusal(error) {
-                    attachmentNotice = String(localized: "Attaching images is part of Pro. Upgrade to use it.")
+                if !outgoingImages.isEmpty, AssistantAttachmentChecker.isUpgradeRefusal(error) {
+                    attachmentNotice = AssistantAttachmentChecker.upgradeNotice(for: outgoingImages)
                 }
             case .recreateConversation, .showMessage:
                 errorMessage = readable(error, fallback: "The assistant could not respond.")
             }
         }
-    }
-
-    /// The text the server stores for an image turn, so the bubble reads the
-    /// same before and after a reload. `defaultImagePrompt` and `imageMarker` in
-    /// the backend's `images.go`.
-    private static func storedImageTurnText(_ content: String) -> String {
-        (content.isEmpty ? "What's in this image?" : content) + " [image attached]"
-    }
-
-    private static func isUpgradeRefusal(_ error: any Error) -> Bool {
-        if let failure = error as? AssistantTurnFailure { return failure.code == "upgrade_required" }
-        if case .upgradeRequired? = error as? AssistantStreamClient.Failure { return true }
-        return false
     }
 
     /// The standing task a pending action proposes, or nil for other actions.
@@ -460,6 +483,7 @@ final class PersistentAssistantViewModel {
         watchProposals[id] = nil
         standingTaskOutcomes[id] = nil
         tradesReviews[id] = nil
+        holdingsReviews[id] = nil
     }
 
     // MARK: - Trades cards
@@ -478,6 +502,73 @@ final class PersistentAssistantViewModel {
             reviews[action.id] = tradesReviews[action.id] ?? AssistantTradesReview(action: action)
         }
         tradesReviews = reviews
+        var holdings: [String: AssistantHoldingsReview] = [:]
+        for action in pendingActions {
+            holdings[action.id] = holdingsReviews[action.id] ?? AssistantHoldingsReview(action: action)
+        }
+        holdingsReviews = holdings
+    }
+
+    // MARK: - Holdings cards
+
+    /// Takes the card's edits. A card that is gone stays gone.
+    func updateHoldingsReview(_ review: AssistantHoldingsReview) {
+        guard holdingsReviews[review.actionID] != nil else { return }
+        holdingsReviews[review.actionID] = review
+    }
+
+    /// Turns "Replace existing" on or off. Turning it on resends, which is
+    /// what the collision refusal asked for.
+    func setReplaceExisting(_ on: Bool, for action: AIPendingActionResponse) async {
+        guard var review = holdingsReviews[action.id], review.replaceExisting != on else { return }
+        review.replaceExisting = on
+        holdingsReviews[action.id] = review
+        if on { await confirmHoldings(action) }
+    }
+
+    /// Saves the card's ticked rows as they stand. A 422 keeps the card with
+    /// its collision and row errors, unless the save failed after the backend
+    /// claimed the action, which settles it. A 409 means it expired. A 402 or
+    /// 403 is the Pro limit. Success settles the card with the backend's
+    /// message, which names what was saved and, on a partial save, what was not.
+    func confirmHoldings(_ action: AIPendingActionResponse) async {
+        guard activeActionID == nil, var review = holdingsReviews[action.id], review.canSave else { return }
+        activeActionID = action.id
+        defer { activeActionID = nil }
+        let triedBefore = review.hasAttemptedSave
+        review.hasAttemptedSave = true
+        holdingsReviews[action.id] = review
+        do {
+            let result = try await service.confirmHoldings(id: action.id, body: review.confirmBody)
+            review.completedMessage = result.message
+            review.refusal = nil
+        } catch let PersistentAssistantHTTPClient.Error.holdingsRefused(refusal) {
+            let reason = refusal.reason.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+            let isCollision = refusal.code == AIHoldingsRefusalResponse.collisionCode
+            if await isStillPending(action.id) == false {
+                review.closedMessage = reason.map { "\($0) \(AssistantHoldingsReview.closedCopy)" } ?? AssistantHoldingsReview.closedCopy
+            } else {
+                review.refuse(reason ?? AssistantHoldingsReview.retryCopy, isCollision: isCollision, rowErrors: refusal.rows)
+            }
+        } catch let PersistentAssistantHTTPClient.Error.unprocessable(reason, _) {
+            let reason = reason.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+            if await isStillPending(action.id) == false {
+                review.closedMessage = reason.map { "\($0) \(AssistantHoldingsReview.closedCopy)" } ?? AssistantHoldingsReview.closedCopy
+            } else {
+                review.refuse(reason ?? AssistantHoldingsReview.retryCopy, rowErrors: [])
+            }
+        } catch PersistentAssistantHTTPClient.Error.conflict {
+            review.closedMessage = triedBefore ? AssistantHoldingsReview.maybeSavedCopy : AssistantHoldingsReview.expiredCopy
+        } catch PersistentAssistantHTTPClient.Error.upgradeRequired {
+            review.refuse(AssistantHoldingsReview.upgradeCopy, rowErrors: [])
+        } catch {
+            if !Self.isClientRefusal(error), await isStillPending(action.id) == false {
+                review.closedMessage = AssistantHoldingsReview.maybeSavedCopy
+            } else {
+                review.refuse(AssistantHoldingsReview.retryCopy, rowErrors: [])
+            }
+        }
+        holdingsReviews[action.id] = review
     }
 
     private var isLoadingPortfolioLists = false

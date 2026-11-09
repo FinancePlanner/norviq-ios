@@ -1,5 +1,6 @@
 import Foundation
 import ImageIO
+import PDFKit
 import StockPlanShared
 import UIKit
 import UniformTypeIdentifiers
@@ -49,16 +50,23 @@ private final class ImageTurnService: PersistentAssistantServicing, @unchecked S
     struct Unused: Error {}
     struct RefreshFailed: Error {}
 
-    var preferencesResponse = AIAssistantPreferencesResponse(proactiveTipsEnabled: false, pushEnabled: false, timezone: "UTC", imagesEnabled: true)
+    var preferencesResponse = AIAssistantPreferencesResponse(proactiveTipsEnabled: false, pushEnabled: false, timezone: "UTC", imagesEnabled: true, documentsEnabled: true)
     var events: [PersistentAssistantStreamEvent] = []
     var streamError: Error?
     var failUsageAfterTurn = false
     /// Runs before the stream ends, for what the user does mid-turn.
     var midTurn: (@Sendable () async -> Void)?
-    private(set) var sent: [(content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?)] = []
+    struct SentTurn {
+        let content: String
+        let images: [ScreenshotUploadImage]
+        let context: AssistantTurnContext?
+        let attachments: [AssistantAttachment]
+    }
 
-    func streamTurn(conversationID _: String, content: String, images: [ScreenshotUploadImage], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
-        sent.append((content, images, context))
+    private(set) var sent: [SentTurn] = []
+
+    func streamTurn(conversationID _: String, content: String, attachments: [AssistantAttachment], context: AssistantTurnContext?) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
+        sent.append(SentTurn(content: content, images: attachments.compactMap { if case let .image(image) = $0 { image } else { nil } }, context: context, attachments: attachments))
         let events = events
         let streamError = streamError
         let midTurn = midTurn
@@ -91,6 +99,7 @@ private final class ImageTurnService: PersistentAssistantServicing, @unchecked S
     func confirmAction(id _: String) async throws -> AIConfirmedActionResponse { throw Unused() }
     func portfolioLists() async throws -> [PortfolioListDTOResponse] { [] }
     func confirmTrades(id _: String, portfolioListID _: String, trades _: [AIReviewedTrade]) async throws -> AIConfirmedActionResponse { throw Unused() }
+    func confirmHoldings(id _: String, body _: AIReviewedHoldings) async throws -> AIConfirmedActionResponse { throw Unused() }
     func cancelAction(id _: String) async throws { throw Unused() }
     func memos(bookmarked _: Bool?, conversationID _: String?) async throws -> [PositionMemoListItem] { [] }
     func memo(id _: String) async throws -> PositionMemoDetail { throw Unused() }
@@ -183,7 +192,7 @@ private let turnAnswered: AIAssistantTurnResponse = {
 
 @MainActor
 final class AssistantImageTurnTests: XCTestCase {
-    private static let privacyNote = "Q sends your messages and the financial context it needs (portfolio, spending, budgets) to Anthropic and OpenRouter to write replies. An image you attach to Q is sent only for that one message, to Anthropic and OpenRouter (or to your own provider if you connected a working key of your own). Norviq does not store the image. What Q reads from it, such as its reply or trades you save, is kept like any other message. Your data is not used to train models by Norviq's providers; your name and email are not sent, unless they are visible in an image you attach or import. Conversations are encrypted and retained for 30 days."
+    private static let privacyNote = "Q sends your messages and the financial context it needs (portfolio, spending, budgets) to Anthropic and OpenRouter to write replies. An image or document (PDF or CSV) you attach to Q is sent only for that one message, to Anthropic and OpenRouter (or to your own provider if you connected a working key of your own). Norviq does not store the file. What Q reads from it, such as its reply or trades you save, is kept like any other message. Your data is not used to train models by Norviq's providers; your name and email are not sent, unless they are visible in an image or document you attach or import. Conversations are encrypted and retained for 30 days."
 
     private let sse = Data("event: started\ndata: {}\n\nevent: done\ndata: {}\n\n".utf8)
     private let context = AssistantTurnContext(screen: nil, timeZone: "Europe/Lisbon", locale: "pt-PT", inputMode: .text)
@@ -218,7 +227,7 @@ final class AssistantImageTurnTests: XCTestCase {
         ImageTurnURLProtocol.status = status
         ImageTurnURLProtocol.responseBody = Data(body.utf8)
         do {
-            try await drain(makeClient().streamTurn(conversationID: "c1", content: "Hi", images: images, context: nil))
+            try await drain(makeClient().streamTurn(conversationID: "c1", content: "Hi", attachments: images.map(AssistantAttachment.image), context: nil))
             return nil
         } catch {
             return error as? AssistantStreamClient.Failure
@@ -241,7 +250,7 @@ final class AssistantImageTurnTests: XCTestCase {
         let first = ScreenshotUploadImage(data: Data([0xFF, 0xD8, 0xFF, 0x00, 0x0D, 0x0A, 0x01]))
         let second = ScreenshotUploadImage(data: Data([0xFF, 0xD8, 0xFF, 0x02]), contentType: "image/png", filename: "fills.png")
 
-        try await drain(makeClient().streamTurn(conversationID: "c1", content: "Which fills?", images: [first, second], context: context))
+        try await drain(makeClient().streamTurn(conversationID: "c1", content: "Which fills?", attachments: [.image(first), .image(second)], context: context))
 
         let request = try XCTUnwrap(ImageTurnURLProtocol.request)
         XCTAssertEqual(request.httpMethod, "POST")
@@ -254,7 +263,7 @@ final class AssistantImageTurnTests: XCTestCase {
         XCTAssertFalse(boundary.isEmpty)
 
         let sent = try parts(of: ImageTurnURLProtocol.body, boundary: boundary)
-        XCTAssertEqual(sent.map(\.name), ["content", "context", "image", "image"])
+        XCTAssertEqual(sent.map(\.name), ["content", "context", "file", "file"])
         XCTAssertEqual(String(data: sent[0].body, encoding: .utf8), "Which fills?")
         XCTAssertNil(sent[0].filename)
         let sentContext = try JSONDecoder().decode(AssistantTurnContext.self, from: sent[1].body)
@@ -271,23 +280,23 @@ final class AssistantImageTurnTests: XCTestCase {
     func testMultipartWithNoTextSendsEmptyContentAndNoContextPart() async throws {
         let image = ScreenshotUploadImage(data: Data([0xFF, 0xD8, 0xFF]))
 
-        try await drain(makeClient().streamTurn(conversationID: "c1", content: "", images: [image], context: nil))
+        try await drain(makeClient().streamTurn(conversationID: "c1", content: "", attachments: [.image(image)], context: nil))
 
         let contentType = try XCTUnwrap(ImageTurnURLProtocol.request?.value(forHTTPHeaderField: "Content-Type"))
         let sent = try parts(of: ImageTurnURLProtocol.body, boundary: String(contentType.dropFirst("multipart/form-data; boundary=".count)))
-        XCTAssertEqual(sent.map(\.name), ["content", "image"])
+        XCTAssertEqual(sent.map(\.name), ["content", "file"])
         XCTAssertEqual(sent[0].body, Data())
     }
 
     func testNoImagesKeepsJSONBody() async throws {
-        try await drain(makeClient().streamTurn(conversationID: "c1", content: "Hi", images: [], context: nil))
+        try await drain(makeClient().streamTurn(conversationID: "c1", content: "Hi", attachments: [], context: nil))
 
         let request = try XCTUnwrap(ImageTurnURLProtocol.request)
         XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), "text/event-stream")
         XCTAssertEqual(String(data: ImageTurnURLProtocol.body, encoding: .utf8), #"{"content":"Hi"}"#)
 
-        try await drain(makeClient().streamTurn(conversationID: "c1", content: "Hi", images: [], context: context))
+        try await drain(makeClient().streamTurn(conversationID: "c1", content: "Hi", attachments: [], context: context))
         XCTAssertEqual(ImageTurnURLProtocol.request?.value(forHTTPHeaderField: "Content-Type"), "application/json")
         // JSONEncoder does not promise a key order, so compare what the bytes say.
         let sent = try XCTUnwrap(JSONSerialization.jsonObject(with: ImageTurnURLProtocol.body) as? NSDictionary)
@@ -398,7 +407,7 @@ final class AssistantImageTurnTests: XCTestCase {
         await viewModel.addAttachments(sources(4))
         XCTAssertEqual(viewModel.attachments.count, 3)
         XCTAssertEqual(viewModel.attachmentRoom, 0)
-        XCTAssertEqual(viewModel.attachmentNotice, "Attach up to 3 images.")
+        XCTAssertEqual(viewModel.attachmentNotice, AttachmentCheckError.tooMany.errorDescription)
 
         await viewModel.addAttachments(sources(1))
         XCTAssertEqual(viewModel.attachments.count, 3)
@@ -741,6 +750,187 @@ final class AssistantImageTurnTests: XCTestCase {
         XCTAssertEqual(decoded.size.width * decoded.scale, 1568, accuracy: 1)
     }
 
+    // MARK: Files
+
+    private func pdfFile(pages: Int = 1, password: String? = nil, name: String = "statement.pdf") throws -> URL {
+        let document = PDFDocument()
+        for index in 0..<pages {
+            let image = UIGraphicsImageRenderer(size: CGSize(width: 50, height: 50)).image { _ in
+                UIColor.white.setFill(); UIRectFill(CGRect(x: 0, y: 0, width: 50, height: 50))
+            }
+            if let page = PDFPage(image: image) { document.insert(page, at: index) }
+        }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent(name)
+        if let password {
+            XCTAssertTrue(document.write(to: url, withOptions: [.ownerPasswordOption: password, .userPasswordOption: password]))
+        } else {
+            XCTAssertTrue(document.write(to: url))
+        }
+        return url
+    }
+
+    private func csvFile(name: String = "trades.csv") throws -> URL {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent(name)
+        try Data("date,ticker\n2026-11-01,AAPL\n".utf8).write(to: url)
+        return url
+    }
+
+    func testAddFilesAdmitsPDFAndCSV() async throws {
+        let viewModel = await loadedViewModel(ImageTurnService())
+
+        await viewModel.addFiles([try pdfFile(), try csvFile()])
+
+        XCTAssertEqual(viewModel.attachments.map(\.filename), ["statement.pdf", "trades.csv"])
+        XCTAssertEqual(viewModel.attachments.map(\.isDocument), [true, true])
+        XCTAssertNil(viewModel.attachmentNotice)
+        XCTAssertEqual(viewModel.preparingAttachmentCount, 0)
+        XCTAssertEqual(viewModel.attachmentRoom, 1)
+    }
+
+    func testAddFilesShowsNoticeForEncryptedPDF() async throws {
+        let viewModel = await loadedViewModel(ImageTurnService())
+
+        await viewModel.addFiles([try pdfFile(password: "secret"), try csvFile()])
+
+        XCTAssertEqual(viewModel.attachments.map(\.filename), ["trades.csv"], "the rest still attach")
+        XCTAssertEqual(viewModel.attachmentNotice, AttachmentCheckError.encrypted.errorDescription)
+    }
+
+    func testAddFilesRefusesASecondPDFAndAFourthFile() async throws {
+        let viewModel = await loadedViewModel(ImageTurnService())
+        await viewModel.addFiles([try pdfFile(), try pdfFile(name: "second.pdf")])
+        XCTAssertEqual(viewModel.attachments.count, 1)
+        XCTAssertEqual(viewModel.attachmentNotice, AttachmentCheckError.onePDF.errorDescription)
+
+        await viewModel.addAttachments(sources(2))
+        await viewModel.addFiles([try csvFile()])
+        XCTAssertEqual(viewModel.attachments.count, 3)
+        await viewModel.addFiles([try csvFile(name: "more.csv")])
+        XCTAssertEqual(viewModel.attachments.count, 3)
+        XCTAssertEqual(viewModel.attachmentNotice, AttachmentCheckError.tooMany.errorDescription)
+    }
+
+    private func bigFile(name: String, bytes: Int) throws -> URL {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent(name)
+        try Data(repeating: 0x61, count: bytes).write(to: url)
+        return url
+    }
+
+    func testAddFilesRefusesOversizedCSVWithoutFullRead() async throws {
+        let viewModel = await loadedViewModel(ImageTurnService())
+
+        await viewModel.addFiles([try bigFile(name: "huge.csv", bytes: 3 << 20)])
+
+        XCTAssertTrue(viewModel.attachments.isEmpty)
+        XCTAssertEqual(viewModel.attachmentNotice, AttachmentCheckError.tooLarge("huge.csv").errorDescription)
+        XCTAssertEqual(viewModel.preparingAttachmentCount, 0)
+    }
+
+    func testAddFilesRefusesOversizedPDFWithoutFullRead() async throws {
+        let viewModel = await loadedViewModel(ImageTurnService())
+
+        await viewModel.addFiles([try bigFile(name: "huge.pdf", bytes: 9 << 20)])
+
+        XCTAssertTrue(viewModel.attachments.isEmpty)
+        XCTAssertEqual(viewModel.attachmentNotice, AttachmentCheckError.tooLarge("huge.pdf").errorDescription)
+    }
+
+    func testAddFilesRejectsUnknownType() async throws {
+        let viewModel = await loadedViewModel(ImageTurnService())
+
+        await viewModel.addFiles([try bigFile(name: "archive.zip", bytes: 100)])
+
+        XCTAssertTrue(viewModel.attachments.isEmpty)
+        XCTAssertEqual(viewModel.attachmentNotice, AttachmentCheckError.unreadable("archive.zip").errorDescription)
+    }
+
+    func testAddFilesTakesAnImageFile() async throws {
+        let viewModel = await loadedViewModel(ImageTurnService())
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent("shot.jpg")
+        try jpeg().write(to: url)
+
+        await viewModel.addFiles([url])
+
+        XCTAssertEqual(viewModel.attachments.count, 1)
+        XCTAssertFalse(viewModel.attachments[0].isDocument)
+    }
+
+    func testDocumentsHiddenWhenFlagOff() async throws {
+        let service = ImageTurnService()
+        service.preferencesResponse = try preferences(from: #"{"proactiveTipsEnabled":true,"pushEnabled":false,"timezone":"UTC","imagesEnabled":true}"#)
+        let viewModel = PersistentAssistantViewModel(service: service, sleep: { _ in })
+        XCTAssertFalse(viewModel.documentsEnabled, "before preferences load")
+        await viewModel.load()
+        XCTAssertFalse(viewModel.documentsEnabled)
+        XCTAssertTrue(viewModel.imagesEnabled)
+
+        service.preferencesResponse = try preferences(from: #"{"proactiveTipsEnabled":true,"pushEnabled":false,"timezone":"UTC","documentsEnabled":true}"#)
+        let on = await loadedViewModel(service)
+        XCTAssertTrue(on.documentsEnabled)
+    }
+
+    func testOptimisticBubbleFileMarker() async throws {
+        let service = ImageTurnService()
+        service.events = [.turn(turnAnswered), .done]
+        let viewModel = await loadedViewModel(service)
+        viewModel.draft = "Summarise"
+        await viewModel.addFiles([try pdfFile()])
+
+        await viewModel.send()
+
+        XCTAssertEqual(service.sent[0].content, "Summarise")
+        XCTAssertEqual(service.sent[0].attachments.count, 1)
+        XCTAssertEqual(viewModel.activeConversation?.messages.first?.content, "Summarise [file attached]")
+    }
+
+    func testFileOnlyTurnUsesTheBackendsDefaultPrompt() async throws {
+        let service = ImageTurnService()
+        service.events = [.turn(turnAnswered), .done]
+        let viewModel = await loadedViewModel(service)
+        await viewModel.addFiles([try csvFile()])
+        XCTAssertTrue(viewModel.canSend)
+
+        await viewModel.send()
+
+        XCTAssertEqual(viewModel.activeConversation?.messages.first?.content, "What's in this file? [file attached]")
+    }
+
+    func testFailedSendRestoresDocuments() async throws {
+        let service = ImageTurnService()
+        service.streamError = AssistantStreamClient.Failure.imageTooLarge
+        let viewModel = await loadedViewModel(service)
+        viewModel.draft = "Summarise"
+        await viewModel.addFiles([try pdfFile(), try csvFile()])
+        let attached = viewModel.attachments.map(\.id)
+
+        await viewModel.send()
+
+        XCTAssertEqual(viewModel.attachments.map(\.id), attached)
+        XCTAssertEqual(viewModel.draft, "Summarise")
+        XCTAssertEqual(viewModel.activeConversation?.messages, [])
+    }
+
+    func testUpgradeRefusalOnADocumentTurnSaysWhy() async throws {
+        let service = ImageTurnService()
+        service.streamError = AssistantStreamClient.Failure.upgradeRequired
+        let viewModel = await loadedViewModel(service)
+        await viewModel.addFiles([try pdfFile()])
+
+        await viewModel.send()
+
+        XCTAssertTrue(viewModel.isPaywallRequested)
+        XCTAssertEqual(viewModel.attachmentNotice, "Attaching files is part of Pro. Upgrade to use it.")
+        XCTAssertEqual(viewModel.attachments.count, 1)
+    }
+
     // MARK: Copy
 
     func testNewStringsHavePortuguese() throws {
@@ -752,14 +942,16 @@ final class AssistantImageTurnTests: XCTestCase {
         let strings = try XCTUnwrap(catalog["strings"] as? [String: Any])
         let keys = [
             "Attach images", "Attached image", "Preparing image", "Remove image",
-            "Attach up to %lld images.", "This image could not be attached. Try another one.",
+            "Attach", "Photos", "Camera", "Files", "Attached file", "Remove file", "Preparing attachment",
+            "Attaching files is part of Pro. Upgrade to use it.",
+            "This image could not be attached. Try another one.",
             "Attaching images is part of Pro. Upgrade to use it.",
             "That image is too large.", "Too many requests. Wait a minute and try again.",
             "Too many large images right now. Try again in a moment.",
             Self.privacyNote,
-            "Images you attach to the assistant are sent too, for that message only. The images are not stored; what Q reads from them is kept like any other message.",
+            "Images and documents (PDF or CSV) you attach to the assistant are sent too, for that message only. The files are not stored; what Q reads from them is kept like any other message.",
             "Not used to train AI models by Norviq's providers",
-            "Your name and email are not sent, unless they are visible in an image you attach or import"
+            "Your name and email are not sent, unless they are visible in an image or document you attach or import"
         ]
         for key in keys {
             let entry = strings[key] as? [String: Any]
@@ -771,6 +963,7 @@ final class AssistantImageTurnTests: XCTestCase {
         XCTAssertFalse(strings.keys.contains { $0.contains("Financial changes always require confirmation") })
         XCTAssertNil(strings["Not used to train AI models"], "replaced by the wording naming Norviq's providers")
         XCTAssertNil(strings["Your name and email are not sent"], "replaced by the wording that excepts images")
+        XCTAssertNil(strings["Your name and email are not sent, unless they are visible in an image you attach or import"], "replaced by the wording that adds documents")
     }
 
     func testViewShowsThePrivacyNoteWithoutTheFalseLine() throws {
@@ -783,14 +976,14 @@ final class AssistantImageTurnTests: XCTestCase {
         XCTAssertFalse(source.contains("always require confirmation"))
     }
 
-    func testConsentSheetSaysImagesAreSent() throws {
+    func testConsentSheetSaysImagesAndDocumentsAreSent() throws {
         let sheetURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .appendingPathComponent("financeplan/Features/AIConsent/AIConsentSheet.swift")
         let source = try String(contentsOf: sheetURL, encoding: .utf8)
-        XCTAssertTrue(source.contains("Images you attach to the assistant are sent too, for that message only. The images are not stored; what Q reads from them is kept like any other message."))
+        XCTAssertTrue(source.contains("Images and documents (PDF or CSV) you attach to the assistant are sent too, for that message only. The files are not stored; what Q reads from them is kept like any other message."))
         XCTAssertTrue(source.contains("Not used to train AI models by Norviq's providers"))
-        XCTAssertTrue(source.contains("Your name and email are not sent, unless they are visible in an image you attach or import"))
+        XCTAssertTrue(source.contains("Your name and email are not sent, unless they are visible in an image or document you attach or import"))
     }
 }

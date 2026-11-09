@@ -72,6 +72,7 @@ struct QuickAssistantOverlay: View {
         .onChange(of: coordinator.isPresented) { _, presented in
             guard !presented else {
                 isVoiceSupported = VoiceInputController.isSupported()
+                Task { await viewModel.loadAttachmentFlags() }
                 return
             }
             stopVoice()

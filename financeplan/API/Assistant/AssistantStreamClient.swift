@@ -60,6 +60,8 @@ struct AssistantStreamClient: Sendable {
         case imageTurnsRateLimited
         case imagesBusy(String)
         case largeImagesBusy
+        /// The server refused an attachment (`image_rejected` or `attachment_rejected`); the message is its own, user-facing.
+        case attachmentRejected(String)
 
         var errorDescription: String? {
             switch self {
@@ -73,6 +75,7 @@ struct AssistantStreamClient: Sendable {
             case .imageTurnsRateLimited: String(localized: "Too many requests. Wait a minute and try again.")
             case let .imagesBusy(reason): reason
             case .largeImagesBusy: String(localized: "Too many large images right now. Try again in a moment.")
+            case let .attachmentRejected(message): message
             }
         }
     }
@@ -126,6 +129,17 @@ struct AssistantStreamClient: Sendable {
             // English; say it in the app's language.
             if reason == largeImagesBusyReason { return .largeImagesBusy }
             return .imagesBusy(String(reason.prefix(300)))
+        case 400 ..< 500:
+            // A refusal names its code and carries a message to show as is.
+            let body = String(decoding: try await smallBody(bytes), as: UTF8.self)
+            // The JSON error envelope carries the text as `reason`; `message` is
+            // the SSE frame's key, kept as a fallback.
+            guard let code = field("code", in: body), code == "image_rejected" || code == "attachment_rejected",
+                  let message = (field("reason", in: body) ?? field("message", in: body))?
+                  .trimmingCharacters(in: .whitespacesAndNewlines),
+                  !message.isEmpty
+            else { return nil }
+            return .attachmentRejected(message)
         default:
             return nil
         }
@@ -185,12 +199,12 @@ struct AssistantStreamClient: Sendable {
 
     /// Streams a persisted assistant turn. The backend writes the user and
     /// assistant messages before emitting the final turn event. A turn with
-    /// images goes as a multipart form; any other stays JSON, because a multipart
-    /// request spends the user's image rate budget even with no image in it.
+    /// attachments goes as a multipart form; any other stays JSON, because a multipart
+    /// request spends the user's image rate budget even with no attachment in it.
     func streamTurn(
         conversationID: String,
         content: String,
-        images: [ScreenshotUploadImage] = [],
+        attachments: [AssistantAttachment] = [],
         context: AssistantTurnContext? = nil
     ) -> AsyncThrowingStream<PersistentAssistantStreamEvent, Error> {
         AsyncThrowingStream { continuation in
@@ -203,11 +217,11 @@ struct AssistantStreamClient: Sendable {
                     if let token = await authTokenProvider() {
                         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                     }
-                    if images.isEmpty {
+                    if attachments.isEmpty {
                         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
                         request.httpBody = try Self.turnBody(content: content, context: context)
                     } else {
-                        let form = try Self.imageTurnForm(content: content, images: images, context: context)
+                        let form = try Self.attachmentTurnForm(content: content, attachments: attachments, context: context)
                         request.setValue(form.contentType, forHTTPHeaderField: "Content-Type")
                         request.httpBody = form.finalizedData()
                     }
@@ -220,7 +234,7 @@ struct AssistantStreamClient: Sendable {
                         AIConsentRequired.post()
                         throw Failure.aiConsentRequired
                     }
-                    if !images.isEmpty, let failure = try await Self.imageTurnFailure(status: http.statusCode, bytes: bytes) {
+                    if !attachments.isEmpty, let failure = try await Self.imageTurnFailure(status: http.statusCode, bytes: bytes) {
                         throw failure
                     }
                     switch http.statusCode {
@@ -260,11 +274,11 @@ struct AssistantStreamClient: Sendable {
         try JSONEncoder().encode(PersistentAssistantTurnRequestDTO(content: content, context: context))
     }
 
-    /// The backend counts a part as an image only if it has a filename, and
+    /// The backend counts a part as a file only if it has a filename, and
     /// reads `context` as the same JSON a text turn's body carries.
-    private static func imageTurnForm(
+    private static func attachmentTurnForm(
         content: String,
-        images: [ScreenshotUploadImage],
+        attachments: [AssistantAttachment],
         context: AssistantTurnContext?
     ) throws -> MultipartFormBody {
         var form = MultipartFormBody()
@@ -272,13 +286,10 @@ struct AssistantStreamClient: Sendable {
         if let context {
             form.addField(name: "context", value: String(decoding: try JSONEncoder().encode(context), as: UTF8.self))
         }
-        for (index, image) in images.enumerated() {
-            form.addFile(
-                name: "image",
-                filename: image.filename ?? "image-\(index + 1).jpg",
-                contentType: image.contentType,
-                data: image.data
-            )
+        for (index, attachment) in attachments.enumerated() {
+            var filename = attachment.filename
+            if case let .image(image) = attachment, image.filename == nil { filename = "image-\(index + 1).jpg" }
+            form.addFile(name: "file", filename: filename, contentType: attachment.contentType, data: attachment.data)
         }
         return form
     }
