@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import StockPlanShared
 import XCTest
 @testable import financeplan
@@ -15,6 +16,9 @@ private final class ScriptedAssistantService: PersistentAssistantServicing, @unc
     private(set) var streamedContent: [String] = []
     private(set) var contexts: [AssistantTurnContext?] = []
     private(set) var streamedImages: [[ScreenshotUploadImage]] = []
+    private(set) var streamedAttachments: [[AssistantAttachment]] = []
+    private(set) var preferencesCalls = 0
+    var preferencesResult: Result<AIAssistantPreferencesResponse, Error> = .failure(Unused())
     private(set) var confirmed: [String] = []
     private(set) var cancelled: [String] = []
 
@@ -33,6 +37,7 @@ private final class ScriptedAssistantService: PersistentAssistantServicing, @unc
         streamedConversations.append(conversationID)
         streamedContent.append(content)
         contexts.append(context)
+        streamedAttachments.append(attachments)
         streamedImages.append(attachments.compactMap { if case let .image(image) = $0 { image } else { nil } })
         let events = scripts.isEmpty ? [] : scripts.removeFirst()
         return AsyncThrowingStream { continuation in
@@ -55,7 +60,10 @@ private final class ScriptedAssistantService: PersistentAssistantServicing, @unc
     func conversations() async throws -> [AIConversationSummaryResponse] { [] }
     func deleteConversation(id _: String) async throws { throw Unused() }
     func turn(conversationID _: String, content _: String) async throws -> AIAssistantTurnResponse { throw Unused() }
-    func preferences() async throws -> AIAssistantPreferencesResponse { throw Unused() }
+    func preferences() async throws -> AIAssistantPreferencesResponse {
+        preferencesCalls += 1
+        return try preferencesResult.get()
+    }
     func updatePreferences(_: AIAssistantPreferencesResponse) async throws -> AIAssistantPreferencesResponse { throw Unused() }
     func tips() async throws -> [AITipResponse] { [] }
     func dismissTip(id _: String) async throws { throw Unused() }
@@ -90,14 +98,125 @@ final class QuickAssistantViewModelTests: XCTestCase {
     private func makeViewModel(_ service: ScriptedAssistantService, user: String = "u1") -> QuickAssistantViewModel {
         QuickAssistantViewModel(
             service: service,
-            conversations: QuickAssistantConversationStore(defaults: defaults),
+            conversations: QuickAssistantConversationStore(defaults: defaults, flags: flagCache),
             currentUserID: { user }
         )
+    }
+
+    private var flagCache = AttachmentFlagCache()
+
+    private static func prefs(images: Bool?, documents: Bool?) -> AIAssistantPreferencesResponse {
+        AIAssistantPreferencesResponse(proactiveTipsEnabled: false, pushEnabled: false, timezone: "UTC", imagesEnabled: images, documentsEnabled: documents)
+    }
+
+    private func jpeg() -> Data {
+        UIGraphicsImageRenderer(size: CGSize(width: 40, height: 40)).jpegData(withCompressionQuality: 0.8) { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 40, height: 40))
+        }
+    }
+
+    private func csvURL() throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString)-fills.csv")
+        try Data("a,b\n1,2\n".utf8).write(to: url)
+        return url
     }
 
     private func ask(_ viewModel: QuickAssistantViewModel, _ text: String = "How much did I spend?", scope: AIViewScope? = .home, inputMode: AssistantTurnContext.InputMode = .text) async {
         viewModel.draft = text
         await viewModel.send(scope: scope, inputMode: inputMode)
+    }
+
+    func testFlagsFollowPreferences() async {
+        let service = ScriptedAssistantService()
+        service.preferencesResult = .success(Self.prefs(images: true, documents: nil))
+        let viewModel = makeViewModel(service)
+        await viewModel.loadAttachmentFlags()
+        XCTAssertTrue(viewModel.imagesEnabled)
+        XCTAssertFalse(viewModel.documentsEnabled)
+    }
+
+    func testFailedPreferencesLeaveBothFlagsOffAndTextStillSends() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn()), .done]])
+        let viewModel = makeViewModel(service)
+        await viewModel.loadAttachmentFlags()
+        XCTAssertFalse(viewModel.imagesEnabled)
+        XCTAssertFalse(viewModel.documentsEnabled)
+        await ask(viewModel)
+        XCTAssertEqual(viewModel.phase, .answered)
+    }
+
+    func testQuickQFlagsLoadedOncePerSession() async {
+        let service = ScriptedAssistantService()
+        service.preferencesResult = .success(Self.prefs(images: true, documents: true))
+        let first = makeViewModel(service)
+        await first.loadAttachmentFlags()
+        // A later presentation builds a fresh view model over the same store.
+        let second = makeViewModel(service)
+        await second.loadAttachmentFlags()
+        XCTAssertEqual(service.preferencesCalls, 1)
+        XCTAssertTrue(second.imagesEnabled)
+        XCTAssertTrue(second.documentsEnabled)
+    }
+
+    func testQuickQSendsAttachments() async throws {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn()), .done]])
+        let viewModel = makeViewModel(service)
+        let image = jpeg()
+        await viewModel.addAttachments([{ image }])
+        await viewModel.addFiles([try csvURL()])
+        XCTAssertEqual(viewModel.attachments.count, 2)
+        await ask(viewModel)
+        XCTAssertEqual(service.streamedAttachments.first?.count, 2)
+        XCTAssertTrue(viewModel.attachments.isEmpty)
+        XCTAssertEqual(viewModel.question, "How much did I spend? [file attached]")
+    }
+
+    func testQuickQAttachmentOnlyTurnSends() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn()), .done]])
+        let viewModel = makeViewModel(service)
+        let image = jpeg()
+        await viewModel.addAttachments([{ image }])
+        viewModel.draft = ""
+        await viewModel.send(scope: .home)
+        XCTAssertEqual(service.streamedAttachments.first?.count, 1)
+        XCTAssertEqual(viewModel.question, "What's in this image? [image attached]")
+    }
+
+    func testQuickQVoiceSendKeepsAttachments() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn()), .done]])
+        let viewModel = makeViewModel(service)
+        let image = jpeg()
+        await viewModel.addAttachments([{ image }])
+        await ask(viewModel, "What is this?", inputMode: .voice)
+        XCTAssertEqual(service.streamedAttachments.first?.count, 1)
+        XCTAssertEqual(service.contexts.first??.inputMode, .voice)
+    }
+
+    func testQuickQFailedSendRestoresAttachments() async {
+        let service = ScriptedAssistantService(scripts: [[.error("boom")]])
+        let viewModel = makeViewModel(service)
+        let image = jpeg()
+        await viewModel.addAttachments([{ image }])
+        await ask(viewModel)
+        XCTAssertEqual(viewModel.attachments.count, 1)
+        XCTAssertEqual(viewModel.draft, "How much did I spend?")
+    }
+
+    func testQuickQRemoveAttachment() async throws {
+        let viewModel = makeViewModel(ScriptedAssistantService())
+        await viewModel.addFiles([try csvURL()])
+        let id = try XCTUnwrap(viewModel.attachments.first?.id)
+        viewModel.removeAttachment(id: id)
+        XCTAssertTrue(viewModel.attachments.isEmpty)
+    }
+
+    func testQuickQHandsOffHoldingsCard() async {
+        let service = ScriptedAssistantService(scripts: [[.turn(turn(action: AssistantHoldingsReview.toolName)), .done]])
+        let viewModel = makeViewModel(service)
+        await ask(viewModel)
+        XCTAssertTrue(viewModel.needsFullQ)
+        XCTAssertNil(viewModel.pendingAction)
     }
 
     func testAnswerShowsTheLatestExchange() async {

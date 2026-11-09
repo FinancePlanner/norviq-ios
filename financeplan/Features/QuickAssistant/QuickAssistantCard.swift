@@ -1,3 +1,4 @@
+import PhotosUI
 import StockPlanShared
 import SwiftUI
 
@@ -26,8 +27,11 @@ struct QuickAssistantCard: View {
     }
 
     private var canSend: Bool {
-        !viewModel.isThinking && !viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard !viewModel.isThinking, viewModel.preparingAttachmentCount == 0 else { return false }
+        return !viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !viewModel.attachments.isEmpty
     }
+
+    private var canAttach: Bool { viewModel.imagesEnabled || viewModel.documentsEnabled }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -38,6 +42,7 @@ struct QuickAssistantCard: View {
                     .font(.footnote)
                     .foregroundStyle(AppTheme.Colors.secondaryText)
             }
+            attachmentStrip
             composer
         }
         .padding(16)
@@ -137,8 +142,35 @@ struct QuickAssistantCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// One line high: chips scroll sideways inside the strip.
+    private var attachmentStrip: some View {
+        AssistantAttachmentStrip(
+            attachments: viewModel.attachments,
+            preparingCount: viewModel.preparingAttachmentCount,
+            notice: viewModel.attachmentNotice,
+            framed: false,
+            onRemove: { viewModel.removeAttachment(id: $0) }
+        )
+    }
+
     private var composer: some View {
         HStack(alignment: .bottom, spacing: 8) {
+            if canAttach {
+                AssistantAttachMenu(
+                    imagesEnabled: viewModel.imagesEnabled,
+                    documentsEnabled: viewModel.documentsEnabled,
+                    room: viewModel.attachmentRoom,
+                    isDisabled: viewModel.isThinking || isListening,
+                    onPhotos: { items in
+                        Task {
+                            await viewModel.addAttachments(items.map { item in { try? await item.loadTransferable(type: Data.self) } })
+                        }
+                    },
+                    onCamera: { data in Task { await viewModel.addAttachments([{ data }]) } },
+                    onFiles: { urls in Task { await viewModel.addFiles(urls) } }
+                )
+                .padding(.bottom, 2)
+            }
             TextField(
                 isListening ? "Listening…" : "Ask about your finances",
                 text: $viewModel.draft,
@@ -153,7 +185,7 @@ struct QuickAssistantCard: View {
             trailingButton
                 .padding(.bottom, 4)
         }
-        .padding(.leading, 16)
+        .padding(.leading, canAttach ? 6 : 16)
         .padding(.trailing, 8)
         .padding(.vertical, 4)
         .background(AppTheme.Colors.tintSoft, in: .rect(cornerRadius: 20))
@@ -168,7 +200,7 @@ struct QuickAssistantCard: View {
             }
             .foregroundStyle(AppTheme.Colors.tint)
             .accessibilityLabel("Stop listening")
-        } else if voice != nil, viewModel.draft.isEmpty, !viewModel.isThinking {
+        } else if voice != nil, viewModel.draft.isEmpty, viewModel.attachments.isEmpty, !viewModel.isThinking {
             Button(action: onMic) {
                 Image(systemName: "mic.circle.fill").font(.title2)
             }

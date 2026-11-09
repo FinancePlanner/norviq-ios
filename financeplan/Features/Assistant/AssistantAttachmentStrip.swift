@@ -6,6 +6,8 @@ struct AssistantAttachmentStrip: View {
     let attachments: [AssistantAttachment]
     let preparingCount: Int
     let notice: String?
+    /// Full Q's page padding and background. Off where the host supplies its own, as in Quick Q's card.
+    var framed = true
     let onRemove: (AssistantAttachment.ID) -> Void
 
     var body: some View {
@@ -34,9 +36,9 @@ struct AssistantAttachmentStrip: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
-            .background(AppTheme.Colors.pageBackground)
+            .padding(.horizontal, framed ? 20 : 0)
+            .padding(.top, framed ? 8 : 0)
+            .background(framed ? AppTheme.Colors.pageBackground : .clear)
         }
     }
 }

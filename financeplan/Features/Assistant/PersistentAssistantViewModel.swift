@@ -271,26 +271,8 @@ final class PersistentAssistantViewModel {
                 break
             }
             preparingAttachmentCount += 1
-            let result = await Task.detached(priority: .userInitiated) { () -> Result<AssistantAttachment, AttachmentCheckError> in
-                do {
-                    guard let kind = AssistantAttachmentChecker.Kind(url: url) else {
-                        throw AttachmentCheckError.unreadable(url.lastPathComponent)
-                    }
-                    let (data, name) = try AssistantAttachmentChecker.read(url: url, limit: kind.readLimit)
-                    switch kind {
-                    case .pdf:
-                        return .success(try AssistantAttachmentChecker.pdf(data: data, filename: name))
-                    case .image:
-                        guard let image = UploadImagePreparer.prepare(data, maxBytes: cap) else { throw AttachmentCheckError.unreadable(name) }
-                        return .success(.image(image))
-                    case .csv:
-                        return .success(try AssistantAttachmentChecker.csv(data: data, filename: name))
-                    }
-                } catch let error as AttachmentCheckError {
-                    return .failure(error)
-                } catch {
-                    return .failure(.unreadable(url.lastPathComponent))
-                }
+            let result = await Task.detached(priority: .userInitiated) {
+                AssistantAttachmentChecker.load(url: url, maxImageBytes: cap)
             }.value
             preparingAttachmentCount -= 1
             // Send may have started while the file was read; the rest of the pick would go with the next message, so stop.
@@ -334,7 +316,7 @@ final class PersistentAssistantViewModel {
             id: UUID().uuidString,
             conversationId: conversation.id,
             role: .user,
-            content: outgoingImages.isEmpty ? content : Self.storedAttachmentTurnText(content, attachments: outgoingImages),
+            content: outgoingImages.isEmpty ? content : AssistantAttachmentChecker.turnText(content, attachments: outgoingImages),
             createdAt: ISO8601DateFormatter().string(from: Date())
         )
         activeConversation = replacingMessages(in: conversation, with: conversation.messages + [optimistic])
@@ -425,32 +407,13 @@ final class PersistentAssistantViewModel {
                 AIConsentRequired.post()
             case .showPaywall:
                 isPaywallRequested = true
-                if !outgoingImages.isEmpty, Self.isUpgradeRefusal(error) {
-                    attachmentNotice = outgoingImages.contains(where: \.isDocument)
-                        ? String(localized: "Attaching files is part of Pro. Upgrade to use it.")
-                        : String(localized: "Attaching images is part of Pro. Upgrade to use it.")
+                if !outgoingImages.isEmpty, AssistantAttachmentChecker.isUpgradeRefusal(error) {
+                    attachmentNotice = AssistantAttachmentChecker.upgradeNotice(for: outgoingImages)
                 }
             case .recreateConversation, .showMessage:
                 errorMessage = readable(error, fallback: "The assistant could not respond.")
             }
         }
-    }
-
-    /// The text the server stores for an attachment turn, so the bubble reads
-    /// the same before and after a reload. The prompts and markers are
-    /// `defaultImagePrompt`, `defaultFilePrompt`, `imageMarker` and `fileMarker`
-    /// in the backend's `attachments.go`: any PDF or CSV makes it a file turn.
-    private static func storedAttachmentTurnText(_ content: String, attachments: [AssistantAttachment]) -> String {
-        if attachments.contains(where: \.isDocument) {
-            return (content.isEmpty ? "What's in this file?" : content) + " [file attached]"
-        }
-        return (content.isEmpty ? "What's in this image?" : content) + " [image attached]"
-    }
-
-    private static func isUpgradeRefusal(_ error: any Error) -> Bool {
-        if let failure = error as? AssistantTurnFailure { return failure.code == "upgrade_required" }
-        if case .upgradeRequired? = error as? AssistantStreamClient.Failure { return true }
-        return false
     }
 
     /// The standing task a pending action proposes, or nil for other actions.

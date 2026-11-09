@@ -81,6 +81,51 @@ nonisolated enum AssistantAttachmentLimits {
 /// Refuses on the device what the server would refuse, so the user hears it
 /// before an upload and a turn are spent.
 nonisolated enum AssistantAttachmentChecker {
+    /// Reads and checks one file from the document picker, whatever its kind.
+    /// Blocking: call it off the main actor.
+    static func load(url: URL, maxImageBytes: Int) -> Result<AssistantAttachment, AttachmentCheckError> {
+        do {
+            guard let kind = Kind(url: url) else { throw AttachmentCheckError.unreadable(url.lastPathComponent) }
+            let (data, name) = try read(url: url, limit: kind.readLimit)
+            switch kind {
+            case .pdf:
+                return .success(try pdf(data: data, filename: name))
+            case .image:
+                guard let image = UploadImagePreparer.prepare(data, maxBytes: maxImageBytes) else { throw AttachmentCheckError.unreadable(name) }
+                return .success(.image(image))
+            case .csv:
+                return .success(try csv(data: data, filename: name))
+            }
+        } catch let error as AttachmentCheckError {
+            return .failure(error)
+        } catch {
+            return .failure(.unreadable(url.lastPathComponent))
+        }
+    }
+
+    /// The text the server stores for an attachment turn, so the bubble reads
+    /// the same before and after a reload. The prompts and markers are
+    /// `defaultImagePrompt`, `defaultFilePrompt`, `imageMarker` and `fileMarker`
+    /// in the backend's `attachments.go`: any PDF or CSV makes it a file turn.
+    static func turnText(_ content: String, attachments: [AssistantAttachment]) -> String {
+        if attachments.contains(where: \.isDocument) {
+            return (content.isEmpty ? "What's in this file?" : content) + " [file attached]"
+        }
+        return (content.isEmpty ? "What's in this image?" : content) + " [image attached]"
+    }
+
+    static func isUpgradeRefusal(_ error: any Error) -> Bool {
+        if let failure = error as? AssistantTurnFailure { return failure.code == "upgrade_required" }
+        if case .upgradeRequired? = error as? AssistantStreamClient.Failure { return true }
+        return false
+    }
+
+    static func upgradeNotice(for attachments: [AssistantAttachment]) -> String {
+        attachments.contains(where: \.isDocument)
+            ? String(localized: "Attaching files is part of Pro. Upgrade to use it.")
+            : String(localized: "Attaching images is part of Pro. Upgrade to use it.")
+    }
+
     static func pdf(data: Data, filename: String) throws -> AssistantAttachment {
         guard data.count <= AssistantAttachmentLimits.maxPDFBytes else { throw AttachmentCheckError.tooLarge(filename) }
         guard let document = PDFDocument(data: data) else { throw AttachmentCheckError.unreadable(filename) }

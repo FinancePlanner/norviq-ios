@@ -28,6 +28,16 @@ final class QuickAssistantViewModel {
     private(set) var conversationID: String?
     var isPaywallRequested = false
     var draft = ""
+    private(set) var attachments: [AssistantAttachment] = []
+    private(set) var attachmentNotice: String?
+    private(set) var preparingAttachmentCount = 0
+    private(set) var imagesEnabled = false
+    private(set) var documentsEnabled = false
+
+    static let maxAttachments = AssistantAttachmentLimits.maxFiles
+    private static let maxAttachmentBytes = AssistantAttachmentLimits.maxImageBytes
+
+    var attachmentRoom: Int { max(Self.maxAttachments - attachments.count - preparingAttachmentCount, 0) }
 
     private let service: any PersistentAssistantServicing
     private let conversations: QuickAssistantConversationStore
@@ -55,22 +65,103 @@ final class QuickAssistantViewModel {
         return false
     }
 
+    /// One preferences request per app session; later presentations reuse it.
+    /// A failure leaves both off, which only hides the "+" menu.
+    func loadAttachmentFlags() async {
+        let userID = await currentUserID()
+        if let cached = conversations.flags.flags(forUser: userID) {
+            imagesEnabled = cached.images
+            documentsEnabled = cached.documents
+            return
+        }
+        guard let prefs = try? await service.preferences() else { return }
+        let flags = AttachmentFlagCache.Flags(images: prefs.imagesEnabled ?? false, documents: prefs.documentsEnabled ?? false)
+        conversations.flags.set(flags, forUser: userID)
+        imagesEnabled = flags.images
+        documentsEnabled = flags.documents
+    }
+
+    /// Downscales and attaches what fits, off the main actor.
+    func addAttachments(_ sources: [@Sendable () async -> Data?]) async {
+        guard !isThinking else { return }
+        attachmentNotice = nil
+        let room = attachmentRoom
+        if sources.count > room {
+            attachmentNotice = String(localized: "Attach up to \(Self.maxAttachments) images.")
+        }
+        let taken = sources.prefix(room)
+        preparingAttachmentCount += taken.count
+        let cap = Self.maxAttachmentBytes
+        for source in taken {
+            let prepared = await Task.detached(priority: .userInitiated) { () -> ScreenshotUploadImage? in
+                guard let data = await source() else { return nil }
+                return UploadImagePreparer.prepare(data, maxBytes: cap)
+            }.value
+            preparingAttachmentCount -= 1
+            if let prepared {
+                attachments.append(.image(prepared))
+            } else {
+                attachmentNotice = String(localized: "This image could not be attached. Try another one.")
+            }
+        }
+    }
+
+    /// Checks each picked file the way the server will and attaches what
+    /// passes. A file that fails says why and leaves the rest alone.
+    func addFiles(_ urls: [URL]) async {
+        // A pick loaded after Send would go with the next message instead.
+        guard !isThinking else { return }
+        attachmentNotice = nil
+        let cap = Self.maxAttachmentBytes
+        for url in urls {
+            guard attachmentRoom > 0 else {
+                attachmentNotice = AttachmentCheckError.tooMany.errorDescription
+                break
+            }
+            preparingAttachmentCount += 1
+            let result = await Task.detached(priority: .userInitiated) {
+                AssistantAttachmentChecker.load(url: url, maxImageBytes: cap)
+            }.value
+            preparingAttachmentCount -= 1
+            guard !isThinking else { return }
+            do {
+                let attachment = try result.get()
+                try AssistantAttachmentChecker.admit(attachment, into: attachments)
+                attachments.append(attachment)
+            } catch {
+                attachmentNotice = (error as? AttachmentCheckError)?.errorDescription
+            }
+        }
+    }
+
+    func removeAttachment(id: AssistantAttachment.ID) {
+        attachments.removeAll { $0.id == id }
+        attachmentNotice = nil
+    }
+
     func send(scope: AIViewScope?, inputMode: AssistantTurnContext.InputMode = .text) async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, !isThinking else { return }
+        guard !text.isEmpty || !attachments.isEmpty, !isThinking, preparingAttachmentCount == 0 else { return }
         clearExchange()
+        let outgoing = attachments
+        attachments = []
+        attachmentNotice = nil
         draft = ""
-        question = text
+        question = outgoing.isEmpty ? text : AssistantAttachmentChecker.turnText(text, attachments: outgoing)
         phase = .thinking(activity: nil)
         let context = AssistantTurnContext.current(screen: scope, inputMode: inputMode)
         do {
-            try await runTurn(text, context: context, mayRecreate: true)
+            try await runTurn(text, attachments: outgoing, context: context, mayRecreate: true)
             phase = .answered
         } catch is CancellationError {
+            attachments = outgoing
             return
         } catch {
-            if Task.isCancelled { return }
-            handle(error, question: text)
+            if Task.isCancelled {
+                attachments = outgoing
+                return
+            }
+            handle(error, question: text, attachments: outgoing)
         }
     }
 
@@ -106,6 +197,8 @@ final class QuickAssistantViewModel {
     func reset() {
         clearExchange()
         draft = ""
+        attachments = []
+        attachmentNotice = nil
         phase = .idle
     }
 
@@ -117,11 +210,11 @@ final class QuickAssistantViewModel {
         needsFullQ = false
     }
 
-    private func runTurn(_ text: String, context: AssistantTurnContext, mayRecreate: Bool) async throws {
+    private func runTurn(_ text: String, attachments: [AssistantAttachment], context: AssistantTurnContext, mayRecreate: Bool) async throws {
         let id = try await resolveConversation()
         do {
             var receivedTurn = false
-            for try await event in service.streamTurn(conversationID: id, content: text, context: context) {
+            for try await event in service.streamTurn(conversationID: id, content: text, attachments: attachments, context: context) {
                 switch event {
                 case .started:
                     break
@@ -142,7 +235,7 @@ final class QuickAssistantViewModel {
         } catch where mayRecreate && AssistantTurnRecovery(error) == .recreateConversation {
             // Conversations expire after 30 days without a message.
             await forgetConversation()
-            try await runTurn(text, context: context, mayRecreate: false)
+            try await runTurn(text, attachments: attachments, context: context, mayRecreate: false)
         }
     }
 
@@ -150,7 +243,9 @@ final class QuickAssistantViewModel {
         answer = turn.message.content
         if turn.memo != nil { needsFullQ = true }
         guard let action = turn.pendingAction else { return }
-        if action.toolName == MuseStandingTask.toolName || action.toolName == AssistantTradesReview.toolName {
+        if action.toolName == MuseStandingTask.toolName
+            || action.toolName == AssistantTradesReview.toolName
+            || action.toolName == AssistantHoldingsReview.toolName {
             needsFullQ = true
         } else {
             pendingAction = action
@@ -175,8 +270,13 @@ final class QuickAssistantViewModel {
         conversations.setConversationID(nil, forUser: await currentUserID())
     }
 
-    private func handle(_ error: any Error, question text: String) {
+    private func handle(_ error: any Error, question text: String, attachments outgoing: [AssistantAttachment]) {
         draft = text
+        // Back in the composer, ahead of anything picked while the turn ran.
+        attachments = Array((outgoing + attachments).prefix(Self.maxAttachments))
+        if !outgoing.isEmpty, AssistantAttachmentChecker.isUpgradeRefusal(error) {
+            attachmentNotice = AssistantAttachmentChecker.upgradeNotice(for: outgoing)
+        }
         switch AssistantTurnRecovery(error) {
         case .askForConsent:
             AIConsentRequired.post()
