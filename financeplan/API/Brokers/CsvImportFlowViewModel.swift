@@ -189,7 +189,7 @@ final class CsvImportFlowViewModel: ObservableObject {
 
     do {
       _ = try await brokerService.connectIBKR(portfolioListId: portfolioListId)
-      brokerStatusMessage = "Connected IBKR."
+      brokerStatusMessage = String(localized: "Connected IBKR.")
       await loadProviders(force: true)
       return true
     } catch {
@@ -213,7 +213,7 @@ final class CsvImportFlowViewModel: ObservableObject {
         queryId: queryId,
         portfolioListId: portfolioListId
       )
-      brokerStatusMessage = "Connected IBKR Web Service."
+      brokerStatusMessage = String(localized: "Connected IBKR Web Service.")
       await loadProviders(force: true)
       return true
     } catch {
@@ -233,7 +233,7 @@ final class CsvImportFlowViewModel: ObservableObject {
 
     do {
       _ = try await brokerService.syncIBKR()
-      brokerStatusMessage = "Sync complete."
+      brokerStatusMessage = String(localized: "Sync complete.")
       await loadProviders(force: true)
       return true
     } catch {
@@ -253,7 +253,7 @@ final class CsvImportFlowViewModel: ObservableObject {
 
     do {
       let connection = try await brokerService.disconnectIBKR()
-      brokerStatusMessage = "\(connection.provider.uppercased()) disconnected."
+      brokerStatusMessage = String(localized: "\(connection.provider.uppercased()) disconnected.")
       await loadProviders(force: true)
       return true
     } catch {
