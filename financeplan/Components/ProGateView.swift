@@ -19,21 +19,28 @@ struct ProGateView<Content: View>: View {
         if billingManager.isPro {
             content
         } else {
-            content
-                .blur(radius: 8)
-                .overlay(overlay)
-                .allowsHitTesting(false)
-                .overlay(
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture { showPaywall = true }
-                        .accessibilityAddTraits(.isButton)
-                        .accessibilityLabel("Unlock Pro feature")
-                        .accessibilityIdentifier("proGate.lockedOverlay")
-                )
-                .sheet(isPresented: $showPaywall) {
-                    PaywallView(billingManager: billingManager)
-                }
+            // One container, sized to the larger of content and prompt. `content`
+            // can be several sibling views (rows in a List section); modifiers on
+            // such a group apply to each child, which drew one clipped prompt per
+            // row. The ZStack also lets a short row grow to fit the prompt.
+            ZStack {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.md) { content }
+                    .blur(radius: 8)
+                    .accessibilityHidden(true)
+                overlay
+            }
+            .allowsHitTesting(false)
+            .overlay(
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { showPaywall = true }
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityLabel("Unlock Pro feature")
+                    .accessibilityIdentifier("proGate.lockedOverlay")
+            )
+            .sheet(isPresented: $showPaywall) {
+                PaywallView(billingManager: billingManager)
+            }
         }
     }
 

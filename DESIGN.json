@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-10T20:40:00Z",
+  "title": "Design System: Norviq",
+  "extensions": {
+    "colorMeta": {
+      "tint": { "role": "primary", "displayName": "Deep Gold / Champagne Gold", "colorSetName": "VigilTint", "hasDarkVariant": true, "light": "#80612A", "dark": "#D8B477" },
+      "tint-soft": { "role": "primary", "displayName": "Gold Wash", "colorSetName": "VigilTintSoft", "hasDarkVariant": true, "light": "#80612A at 10%", "dark": "#D8B477 at 12%" },
+      "tint-secondary": { "role": "primary", "displayName": "Precision Gold", "colorSetName": "VigilSecondaryTint", "hasDarkVariant": true, "light": "#A07C3E", "dark": "#F0CA8A" },
+      "on-tint": { "role": "primary", "displayName": "Ink on Gold", "colorSetName": "OnTint", "hasDarkVariant": true, "light": "#FFFFFF", "dark": "#0A101A" },
+      "accent": { "role": "primary", "displayName": "System Accent", "colorSetName": "AccentColor", "hasDarkVariant": true, "light": "#80612A", "dark": "#D8B477" },
+      "page": { "role": "neutral", "displayName": "Warm Paper / Obsidian", "colorSetName": "VigilPageBackground", "hasDarkVariant": true, "light": "#F7F4EE", "dark": "#0A101A" },
+      "card": { "role": "neutral", "displayName": "Card / Midnight Navy", "colorSetName": "VigilCardBackground", "hasDarkVariant": true, "light": "#FFFFFF", "dark": "#111B2B" },
+      "card-elevated": { "role": "neutral", "displayName": "Raised Paper / Armor Blue", "colorSetName": "VigilElevatedCard", "hasDarkVariant": true, "light": "#EFEBE3", "dark": "#1B2940" },
+      "top-bar": { "role": "neutral", "displayName": "Top Bar", "colorSetName": "VigilTopBarBackground", "hasDarkVariant": true, "light": "#FBF9F5", "dark": "#0E1624" },
+      "launch": { "role": "neutral", "displayName": "Launch Canvas", "colorSetName": "LaunchBackground", "hasDarkVariant": true, "light": "#F7F4EE", "dark": "#0A101A" },
+      "text": { "role": "neutral", "displayName": "Deep Navy / Platinum", "colorSetName": "VigilForeground", "hasDarkVariant": true, "light": "#111B2B", "dark": "#E9E9E5" },
+      "text-secondary": { "role": "neutral", "displayName": "Slate / Muted Silver", "colorSetName": "VigilSecondaryText", "hasDarkVariant": true, "light": "#4A5568", "dark": "#9DA9B8" },
+      "text-tertiary": { "role": "neutral", "displayName": "Quiet Slate", "colorSetName": "VigilTertiaryText", "hasDarkVariant": true, "light": "#5F6B78", "dark": "#7F8A9B" },
+      "separator": { "role": "neutral", "displayName": "Hairline", "colorSetName": "VigilSeparator", "hasDarkVariant": true, "light": "#E2DCD0", "dark": "#344258" },
+      "fill-tertiary": { "role": "neutral", "displayName": "Quiet Fill", "colorSetName": "TertiaryFill", "hasDarkVariant": true, "light": "#000000 at 5%", "dark": "#FFFFFF at 8%" },
+      "gain": { "role": "semantic", "displayName": "Gain", "colorSetName": "VigilGain", "hasDarkVariant": true, "light": "#1B6E51", "dark": "#42B894" },
+      "loss": { "role": "semantic", "displayName": "Loss", "colorSetName": "VigilLoss", "hasDarkVariant": true, "light": "#AB3640", "dark": "#E16D75" },
+      "flat": { "role": "semantic", "displayName": "Flat", "colorSetName": "VigilFlat", "hasDarkVariant": true, "light": "#57626E", "dark": "#A6AFBA" },
+      "info": { "role": "semantic", "displayName": "Information", "colorSetName": "VigilInfo", "hasDarkVariant": true, "light": "#2B6594", "dark": "#6BA7D6" },
+      "warning": { "role": "semantic", "displayName": "Warning", "colorSetName": "VigilWarning", "hasDarkVariant": true, "light": "#885613", "dark": "#E6AE63" }
+    },
+    "typographyMeta": {
+      "display-number": { "displayName": "Display number", "fontSource": ".typography(.displayNumber)", "dynamicType": true, "purpose": "The one large figure on a screen. Tabular." },
+      "hero": { "displayName": "Hero", "fontSource": ".typography(.hero)", "dynamicType": true, "purpose": "A screen's lead statement." },
+      "title": { "displayName": "Title", "fontSource": ".typography(.title)", "dynamicType": true, "purpose": "Section and card titles." },
+      "headline": { "displayName": "Headline", "fontSource": ".typography(.headline)", "dynamicType": true, "purpose": "Card headings." },
+      "body": { "displayName": "Body", "fontSource": ".typography(.body) or .font(.body)", "dynamicType": true, "purpose": "Reading text." },
+      "label": { "displayName": "Label", "fontSource": ".typography(.label)", "dynamicType": true, "purpose": "Form fields, controls, secondary lines." },
+      "caption": { "displayName": "Caption", "fontSource": ".typography(.caption) or .font(.caption)", "dynamicType": true, "purpose": "Metadata." },
+      "overline": { "displayName": "Overline", "fontSource": ".vigilOverline()", "dynamicType": true, "purpose": "Monospaced uppercase kicker on page and section headers." }
+    },
+    "materials": [
+      { "name": "card-surface", "api": "GlassCard { } over .appGlassEffect(.rect(cornerRadius:))", "usage": "Every card-shaped surface. Native .glassEffect on iOS 26, fill + hairline + shadow below it." },
+      { "name": "system-material", "api": ".thinMaterial / .regularMaterial / .ultraThinMaterial", "usage": "Floating circles, sheets and the tab bar capsule. Not cards, not page backgrounds." },
+      { "name": "page", "api": ".vigilScreenBackground() + .vigilListChrome()", "usage": "Flat VigilPageBackground canvas under themed screens and lists." }
+    ],
+    "shadows": [
+      { "name": "fallback-card", "value": ".shadow(color: .black.opacity(0.05), radius: 12, x: 0, y: 6) light; opacity 0.18, radius 16, y 10 dark", "purpose": "Pre-iOS 26 card fallback inside appGlassEffect. The only card shadow." },
+      { "name": "fallback-capsule", "value": ".shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 3) light; opacity 0.12 dark", "purpose": "Pre-iOS 26 capsule and circle fallback." }
+    ],
+    "motion": [
+      { "name": "press", "value": "AppMotion.press = .easeOut(duration: 0.15)", "purpose": "Press feedback on buttons, cards and rows." },
+      { "name": "state", "value": "AppMotion.state = .snappy(duration: 0.2)", "purpose": "Selection, toggles, loading crossfades, value updates." },
+      { "name": "structural", "value": "AppMotion.structural = .spring(response: 0.32, dampingFraction: 1)", "purpose": "Step changes, banners, row insertion and removal." },
+      { "name": "tab-bar", "value": "AppMotion.tabBar = .spring(response: 0.28, dampingFraction: 0.82)", "purpose": "Floating tab bar pill morph." },
+      { "name": "data-reveal", "value": "AppMotion.dataReveal = .easeOut(duration: 0.24)", "purpose": "One-shot chart draw-in. No overshoot." },
+      { "name": "reduced", "value": "AppMotion.reduced = .easeOut(duration: 0.15)", "purpose": "Opacity-only fallback under Reduce Motion, applied by .appAnimation." }
+    ],
+    "sfSymbols": {
+      "renderingMode": "monochrome",
+      "weightTracking": "matches surrounding text weight via .font()",
+      "inventory": {
+        "navigation": ["building.columns", "point.3.connected.trianglepath.dotted", "key.fill"],
+        "actions": ["doc.viewfinder"],
+        "status": ["lock.fill", "wifi.exclamationmark"]
+      }
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "swiftAPI": "Button(\"Continue\") { }.buttonStyle(GlowingButtonStyle())",
+      "description": "Gold fill with ink label. The single primary action on a screen.",
+      "html": "<button class=\"ds-btn-primary\">Continue</button>",
+      "css": ".ds-btn-primary { --tint: #80612A; --on-tint: #FFFFFF; background: var(--tint); color: var(--on-tint); width: 100%; padding: 15px 0; font-weight: 700; font-size: 17px; border: none; border-radius: 16px; transition: opacity 0.15s, transform 0.15s; } .ds-btn-primary:hover { opacity: 0.95; } .ds-btn-primary:active { transform: scale(0.98); opacity: 0.9; } @media (prefers-color-scheme: dark) { .ds-btn-primary { --tint: #D8B477; --on-tint: #0A101A; } }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "swiftAPI": "GlassCard { content }",
+      "description": "The one card surface: flat fill, 1pt hairline, no glow.",
+      "html": "<div class=\"ds-card\"><strong>Allocation</strong><p>Cost basis by holding.</p></div>",
+      "css": ".ds-card { --card: #FFFFFF; --text: #111B2B; --line: #E2DCD0; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 20px; padding: 16px; font-size: 17px; } .ds-card p { margin: 4px 0 0; font-size: 15px; opacity: 0.75; } @media (prefers-color-scheme: dark) { .ds-card { --card: #111B2B; --text: #E9E9E5; --line: #344258; } }"
+    },
+    {
+      "name": "Form Field",
+      "kind": "input",
+      "refersTo": "input",
+      "swiftAPI": "FormTextField(icon: \"number\", placeholder: \"Shares\", text: $shares)",
+      "description": "Borderless field inside a FormCard. Focus shows a gold wash.",
+      "html": "<input class=\"ds-input\" placeholder=\"Shares\" />",
+      "css": ".ds-input { --text: #111B2B; --wash: rgba(128,97,42,0.10); color: var(--text); background: transparent; border: none; border-radius: 8px; padding: 13px 16px; font-size: 15px; width: 100%; outline: none; transition: background 0.15s; } .ds-input:focus { background: var(--wash); } @media (prefers-color-scheme: dark) { .ds-input { --text: #E9E9E5; --wash: rgba(216,180,119,0.12); } }"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "swiftAPI": "Text(\"Connected\").font(.caption2.weight(.semibold)).padding(.horizontal, AppTheme.Spacing.sm).padding(.vertical, AppTheme.Spacing.xs).background(AppTheme.Colors.success.opacity(0.12)).foregroundStyle(AppTheme.Colors.success).clipShape(Capsule())",
+      "description": "Semantic color as text on a 12% fill of itself.",
+      "html": "<span class=\"ds-chip\">Connected</span>",
+      "css": ".ds-chip { --c: 27,110,81; color: rgb(var(--c)); background: rgba(var(--c),0.12); padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; } @media (prefers-color-scheme: dark) { .ds-chip { --c: 66,184,148; } }"
+    },
+    {
+      "name": "Overline",
+      "kind": "label",
+      "refersTo": "overline",
+      "swiftAPI": "Text(\"Wealth & Spending\").vigilOverline()",
+      "description": "Monospaced uppercase kicker. The only uppercase in the product.",
+      "html": "<span class=\"ds-overline\">Wealth &amp; Spending</span>",
+      "css": ".ds-overline { color: #A07C3E; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; } @media (prefers-color-scheme: dark) { .ds-overline { color: #F0CA8A; } }"
+    },
+    {
+      "name": "Pro Gate",
+      "kind": "container",
+      "refersTo": "card",
+      "swiftAPI": "ProGateView(billingManager: billingManager) { gatedContent }",
+      "description": "Blurs gated content and shows one upgrade prompt for the whole group.",
+      "html": "<div class=\"ds-gate\"><div class=\"ds-gate-card\"><strong>Upgrade to Pro</strong><p>Subscribe to unlock this view.</p><button>Unlock Pro</button></div></div>",
+      "css": ".ds-gate { --card: #FFFFFF; --text: #111B2B; --line: #E2DCD0; --tint: #80612A; --on: #FFFFFF; padding: 16px; display: flex; justify-content: center; } .ds-gate-card { background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 20px; padding: 32px; text-align: center; } .ds-gate-card strong { font-size: 24px; } .ds-gate-card p { font-size: 17px; opacity: 0.7; margin: 12px 0 16px; } .ds-gate-card button { background: var(--tint); color: var(--on); border: none; border-radius: 999px; padding: 8px 16px; font-size: 17px; } @media (prefers-color-scheme: dark) { .ds-gate { --card: #111B2B; --text: #E9E9E5; --line: #344258; --tint: #D8B477; --on: #0A101A; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Precision Instrument",
+    "overview": "Norviq is an instrument for reading your own money, not a feed. The identity is Precision Intelligence: obsidian and midnight navy in dark, warm paper in light, with one metal, gold, used sparingly. The interface represents discipline and the data represents reality, so nothing decorative is allowed to compete with a number.",
+    "keyCharacteristics": [
+      "Flat, bordered surfaces; depth comes from three tonal steps, not shadow.",
+      "One accent metal on about 10% of a screen.",
+      "Financial color is a separate vocabulary from brand color.",
+      "System controls and SF type; Dynamic Type everywhere.",
+      "Legible and correct with motion and effects off."
+    ],
+    "rules": [
+      { "name": "The Gold Is Not Money Rule", "body": "Gold never means profit. It marks the primary action, selection and focus, on about 10% of a screen. Not every card, not every border.", "section": "colors" },
+      { "name": "The Never Color Alone Rule", "body": "Gain and loss always travel with a sign, an arrow or a spoken label. Raw .green and .red are forbidden; make check-pnl-colors fails the build on them.", "section": "colors" },
+      { "name": "The Twelve Percent Chip Rule", "body": "A status or direction chip is the semantic color as text on a 12% fill of itself. That is the pair the identity spec measured at 4.5:1 or better.", "section": "colors" },
+      { "name": "The Tabular Rule", "body": "Any number that can sit next to another number uses tabular digits: .monospacedDigit() or a numeric Typography role.", "section": "typography" },
+      { "name": "The Steps You Can See Rule", "body": "The ladder is 17 / 15 / 13 / 12 / 11. Do not add a size between two steps; a 1pt difference is not hierarchy.", "section": "typography" },
+      { "name": "The One Card Rule", "body": "Card-shaped surfaces go through GlassCard. Feature code does not call .appGlassEffect(), stack its own material, or add a shadow.", "section": "elevation" },
+      { "name": "The No Glow Rule", "body": "No glow, no colored shadow, no gradient wash, no rim highlight.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do take every color from AppTheme.Colors, which resolves the Vigil* Color Sets.",
+      "Do use AppTheme.Spacing (4, 8, 12, 16, 24, 32) and AppTheme.Radius (12, 16, 20).",
+      "Do use AppMotion tokens with .appAnimation(_:value:) and AppTransition.",
+      "Do put numbers in tabular digits and pair every gain or loss with a sign, arrow or label.",
+      "Do route user-facing text through the String Catalog.",
+      "Do say plainly what the app does with money and data."
+    ],
+    "donts": [
+      "Don't use gold as profit, or green and red as decoration.",
+      "Don't add glow, mesh gradients, neon, decorative circuitry or \"AI\" sparkle.",
+      "Don't gamify trading: no confetti on a buy, no streaks, no green fireworks, no urgency.",
+      "Don't build the default SwiftUI tutorial stack: identical shadowed cards, or a hero metric with a gradient accent.",
+      "Don't show invented prices, balances or tickers anywhere, including illustrations.",
+      "Don't use Color(red:green:blue:), hex literals, raw .green / .red, or Color.white / Color.black for surfaces.",
+      "Don't use em dashes or exclamation marks in copy, and don't promise returns.",
+      "Don't animate a changing value in a table.",
+      "Don't place Vig next to a gain or a loss, or have Vig react to a trade.",
+      "Don't call .appGlassEffect() or .ultraThinMaterial from feature code for a card, and never use a material as a page background."
+    ]
+  }
+}
