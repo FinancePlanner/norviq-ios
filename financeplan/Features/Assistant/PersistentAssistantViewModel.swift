@@ -548,7 +548,8 @@ final class PersistentAssistantViewModel {
 
     /// Saves the card's ticked rows as they stand. A 422 keeps the card with
     /// its collision and row errors, unless the save failed after the backend
-    /// claimed the action, which settles it. A 409 means it expired. A 402 or
+    /// claimed the action, which settles it. A 409, a 404 and a lost answer
+    /// follow the trades card's rules (`confirmTrades`). A 402 or
     /// 403 is the Pro limit. Success settles the card with the backend's
     /// message, which names what was saved and, on a partial save, what was not.
     func confirmHoldings(_ action: AIPendingActionResponse) async {
@@ -578,14 +579,18 @@ final class PersistentAssistantViewModel {
                 review.refuse(reason ?? AssistantHoldingsReview.retryCopy, rowErrors: [])
             }
         } catch PersistentAssistantHTTPClient.Error.conflict {
-            review.closedMessage = triedBefore ? AssistantHoldingsReview.maybeSavedCopy : AssistantHoldingsReview.expiredCopy
+            review.closedMessage = mayHaveBeenSaved(triedBefore: triedBefore, expiresAt: action.expiresAt)
+                ? AssistantHoldingsReview.maybeSavedCopy : AssistantHoldingsReview.expiredCopy
+        } catch PersistentAssistantHTTPClient.Error.invalidStatus(404) {
+            review.closedMessage = mayHaveBeenSaved(triedBefore: triedBefore, expiresAt: action.expiresAt)
+                ? AssistantHoldingsReview.maybeSavedCopy : AssistantHoldingsReview.expiredCopy
         } catch PersistentAssistantHTTPClient.Error.upgradeRequired {
             review.refuse(AssistantHoldingsReview.upgradeCopy, rowErrors: [])
         } catch {
-            if !Self.isClientRefusal(error), await isStillPending(action.id) == false {
-                review.closedMessage = AssistantHoldingsReview.maybeSavedCopy
-            } else {
-                review.refuse(AssistantHoldingsReview.retryCopy, rowErrors: [])
+            switch await lostAnswer(error, actionID: action.id) {
+            case .refused: review.refuse(AssistantHoldingsReview.retryCopy, rowErrors: [])
+            case .gone: review.closedMessage = AssistantHoldingsReview.maybeSavedCopy
+            case .stillPending: review.refuse(AssistantHoldingsReview.unconfirmedCopy, rowErrors: [])
             }
         }
         holdingsReviews[action.id] = review
@@ -637,32 +642,41 @@ final class PersistentAssistantViewModel {
                 review.refuse(reason ?? AssistantTradesReview.retryCopy, rowErrors: rowErrors)
             }
         } catch PersistentAssistantHTTPClient.Error.conflict {
-            review.closedMessage = goneCopy(triedBefore: triedBefore, expiresAt: action.expiresAt)
+            review.closedMessage = mayHaveBeenSaved(triedBefore: triedBefore, expiresAt: action.expiresAt)
+                ? AssistantTradesReview.maybeSavedCopy : AssistantTradesReview.expiredCopy
         } catch PersistentAssistantHTTPClient.Error.invalidStatus(404) {
             // The backend's NotFound for this action, with no body.
-            review.closedMessage = goneCopy(triedBefore: triedBefore, expiresAt: action.expiresAt)
+            review.closedMessage = mayHaveBeenSaved(triedBefore: triedBefore, expiresAt: action.expiresAt)
+                ? AssistantTradesReview.maybeSavedCopy : AssistantTradesReview.expiredCopy
         } catch PersistentAssistantHTTPClient.Error.upgradeRequired {
             review.refuse(AssistantTradesReview.upgradeCopy, rowErrors: [])
         } catch {
-            if Self.isClientRefusal(error) {
-                review.refuse(AssistantTradesReview.retryCopy, rowErrors: [])
-            } else if await isStillPending(action.id) == false {
-                review.closedMessage = AssistantTradesReview.maybeSavedCopy
-            } else {
-                review.refuse(AssistantTradesReview.unconfirmedCopy, rowErrors: [])
+            switch await lostAnswer(error, actionID: action.id) {
+            case .refused: review.refuse(AssistantTradesReview.retryCopy, rowErrors: [])
+            case .gone: review.closedMessage = AssistantTradesReview.maybeSavedCopy
+            case .stillPending: review.refuse(AssistantTradesReview.unconfirmedCopy, rowErrors: [])
             }
         }
         tradesReviews[action.id] = review
     }
 
-    /// The action can no longer be confirmed. Before its expiry something
-    /// claimed it, perhaps this card's own save whose answer was lost.
-    private func goneCopy(triedBefore: Bool, expiresAt: String) -> String {
-        if triedBefore { return AssistantTradesReview.maybeSavedCopy }
-        if let expiry = AssistantTradesReview.expiryDate(expiresAt), expiry > now() {
-            return AssistantTradesReview.maybeSavedCopy
-        }
-        return AssistantTradesReview.expiredCopy
+    /// For a 409 or a 404: the action can no longer be confirmed. Before its
+    /// expiry something claimed it, perhaps this card's own save whose answer
+    /// was lost; so may a card that already tried.
+    private func mayHaveBeenSaved(triedBefore: Bool, expiresAt: String) -> Bool {
+        if triedBefore { return true }
+        guard let expiry = AssistantTradesReview.expiryDate(expiresAt) else { return false }
+        return expiry > now()
+    }
+
+    private enum LostAnswer { case refused, gone, stillPending }
+
+    /// What a failed confirm with no usable answer means. A 4xx saved nothing;
+    /// otherwise the action is fetched again (R30): gone may mean saved, and
+    /// still waiting (or a failed refetch) means the save is unconfirmed.
+    private func lostAnswer(_ error: any Error, actionID: String) async -> LostAnswer {
+        if Self.isClientRefusal(error) { return .refused }
+        return await isStillPending(actionID) == false ? .gone : .stillPending
     }
 
     /// A 4xx the backend answered, which means it saved nothing. Anything else

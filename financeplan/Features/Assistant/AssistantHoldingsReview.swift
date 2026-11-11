@@ -86,6 +86,9 @@ struct AssistantHoldingsReview: Equatable {
     /// The answer to a save was lost, and the action is gone.
     static let maybeSavedCopy = String(localized: "This may have been saved. Check your portfolio before sending the file again.")
     static let closedCopy = String(localized: "Those holdings were not saved and this card is closed. Send the file again.")
+    /// The answer to a save was lost and the action still waits. The trades
+    /// card's wording, which names neither trades nor holdings.
+    static let unconfirmedCopy = AssistantTradesReview.unconfirmedCopy
 
     /// A confirm the backend refused, placed on the rows that were sent.
     struct Refusal: Equatable {

@@ -34,7 +34,12 @@ private func holdingsAction(id: String = "a1") -> AIPendingActionResponse {
 private final class HoldingsService: PersistentAssistantServicing, @unchecked Sendable {
     struct Unused: Error {}
 
+    struct Offline: Error {}
+
     var actions: [AIPendingActionResponse] = [holdingsAction()]
+    /// Set to make `pendingActions()` fail, as a refetch after a lost answer can.
+    var actionsError: Error?
+    private(set) var pendingActionsCalls = 0
     /// Answers to successive confirms; the last one repeats.
     var confirmResults: [Result<AIConfirmedActionResponse, Error>] = []
     private(set) var confirmed: [(id: String, body: AIReviewedHoldings)] = []
@@ -48,7 +53,11 @@ private final class HoldingsService: PersistentAssistantServicing, @unchecked Se
         return try confirmResults[min(confirmed.count - 1, confirmResults.count - 1)].get()
     }
 
-    func pendingActions() async throws -> [AIPendingActionResponse] { actions }
+    func pendingActions() async throws -> [AIPendingActionResponse] {
+        pendingActionsCalls += 1
+        if let actionsError { throw actionsError }
+        return actions
+    }
     func preferences() async throws -> AIAssistantPreferencesResponse {
         AIAssistantPreferencesResponse(proactiveTipsEnabled: false, pushEnabled: false, timezone: "UTC", imagesEnabled: true)
     }
@@ -80,8 +89,8 @@ private final class HoldingsService: PersistentAssistantServicing, @unchecked Se
 
 @MainActor
 final class AssistantHoldingsCardTests: XCTestCase {
-    private func loadedViewModel(_ service: HoldingsService) async -> PersistentAssistantViewModel {
-        let viewModel = PersistentAssistantViewModel(service: service, sleep: { _ in })
+    private func loadedViewModel(_ service: HoldingsService, now: Date? = nil) async -> PersistentAssistantViewModel {
+        let viewModel = PersistentAssistantViewModel(service: service, sleep: { _ in }, now: { now ?? Date() })
         await viewModel.load()
         return viewModel
     }
@@ -254,7 +263,7 @@ final class AssistantHoldingsCardTests: XCTestCase {
     func testExpiredShowsResendCopy() async throws {
         let service = HoldingsService()
         service.confirmResults = [.failure(PersistentAssistantHTTPClient.Error.conflict("Action is no longer available for confirmation."))]
-        let viewModel = await loadedViewModel(service)
+        let viewModel = await loadedViewModel(service, now: afterExpiry)
         var review = try XCTUnwrap(viewModel.holdingsReviews["a1"])
         review.rows[1].avgPrice = "9"
         viewModel.updateHoldingsReview(review)
@@ -342,9 +351,87 @@ final class AssistantHoldingsCardTests: XCTestCase {
         review.rows[1].avgPrice = "9"
         viewModel.updateHoldingsReview(review)
         await viewModel.confirmHoldings(holdingsAction())
-        XCTAssertEqual(viewModel.holdingsReviews["a1"]?.refusal?.message, "That did not go through. Try again.")
+        XCTAssertEqual(viewModel.holdingsReviews["a1"]?.refusal?.message, AssistantHoldingsReview.unconfirmedCopy)
         await viewModel.confirmHoldings(holdingsAction())
         XCTAssertEqual(viewModel.holdingsReviews["a1"]?.closedMessage, AssistantHoldingsReview.maybeSavedCopy)
+    }
+
+    // MARK: - Confirm failures (same rules as the trades card)
+
+    /// `holdingsAction()` expires at 2026-11-05T12:15:00Z.
+    private let beforeExpiry = ISO8601DateFormatter().date(from: "2026-11-05T12:10:00Z")!
+    private let afterExpiry = ISO8601DateFormatter().date(from: "2026-11-05T12:20:00Z")!
+    private let timedOut = PersistentAssistantHTTPClient.Error.makeTransport(URLError(.timedOut))
+
+    /// A card whose ticked rows can be saved: MSFT gets the cost it lacks.
+    private func savableViewModel(_ service: HoldingsService, now: Date? = nil) async throws -> PersistentAssistantViewModel {
+        let viewModel = await loadedViewModel(service, now: now)
+        var review = try XCTUnwrap(viewModel.holdingsReviews["a1"])
+        review.rows[1].avgPrice = "9"
+        viewModel.updateHoldingsReview(review)
+        return viewModel
+    }
+
+    func test409BeforeTheExpirySaysItMayHaveBeenSaved() async throws {
+        let service = HoldingsService()
+        service.confirmResults = [.failure(PersistentAssistantHTTPClient.Error.conflict("Action is no longer available for confirmation."))]
+        let viewModel = try await savableViewModel(service, now: beforeExpiry)
+        await viewModel.confirmHoldings(holdingsAction())
+        XCTAssertEqual(viewModel.holdingsReviews["a1"]?.closedMessage, AssistantHoldingsReview.maybeSavedCopy)
+    }
+
+    /// The backend's NotFound has no body, so it arrives as a bare 404.
+    func test404WithAnEmptyBodyClosesTheCard() async throws {
+        for (now, copy) in [(afterExpiry, AssistantHoldingsReview.expiredCopy), (beforeExpiry, AssistantHoldingsReview.maybeSavedCopy)] {
+            let service = HoldingsService()
+            service.confirmResults = [.failure(PersistentAssistantHTTPClient.Error.invalidStatus(404))]
+            let viewModel = try await savableViewModel(service, now: now)
+            let calls = service.pendingActionsCalls
+            await viewModel.confirmHoldings(holdingsAction())
+            let card = try XCTUnwrap(viewModel.holdingsReviews["a1"])
+            XCTAssertEqual(card.closedMessage, copy)
+            XCTAssertFalse(card.canSave)
+            XCTAssertEqual(service.pendingActionsCalls, calls, "a 404 is an answer; nothing to refetch")
+        }
+    }
+
+    func testLostAnswerWithTheActionStillPendingSaysItCouldNotConfirm() async throws {
+        XCTAssertEqual(AssistantHoldingsReview.unconfirmedCopy, "We couldn't confirm this save. Try again; if it went through, this card will say so.")
+        for failure in [timedOut, PersistentAssistantHTTPClient.Error.invalidStatus(503), .api("Internal error")] {
+            for refetchFails in [false, true] {
+                let service = HoldingsService()
+                service.confirmResults = [.failure(failure)]
+                let viewModel = try await savableViewModel(service)
+                let calls = service.pendingActionsCalls
+                if refetchFails { service.actionsError = HoldingsService.Offline() }
+                await viewModel.confirmHoldings(holdingsAction())
+                XCTAssertEqual(service.pendingActionsCalls, calls + 1, "\(failure)")
+                let card = try XCTUnwrap(viewModel.holdingsReviews["a1"])
+                XCTAssertNil(card.closedMessage, "\(failure)")
+                XCTAssertEqual(card.refusal?.message, AssistantHoldingsReview.unconfirmedCopy, "\(failure)")
+                XCTAssertTrue(card.canSave, "the card can be saved again")
+            }
+        }
+    }
+
+    func testLostAnswerWithTheActionGoneSaysItMayHaveBeenSaved() async throws {
+        let service = HoldingsService()
+        service.confirmResults = [.failure(timedOut)]
+        let viewModel = try await savableViewModel(service)
+        service.actions = []
+        await viewModel.confirmHoldings(holdingsAction())
+        XCTAssertEqual(viewModel.holdingsReviews["a1"]?.closedMessage, AssistantHoldingsReview.maybeSavedCopy)
+    }
+
+    func testA4xxRefusalSavedNothingAndIsNotRefetched() async throws {
+        let service = HoldingsService()
+        service.confirmResults = [.failure(PersistentAssistantHTTPClient.Error.invalidStatus(400))]
+        let viewModel = try await savableViewModel(service)
+        let calls = service.pendingActionsCalls
+        await viewModel.confirmHoldings(holdingsAction())
+        XCTAssertEqual(service.pendingActionsCalls, calls)
+        XCTAssertNil(viewModel.holdingsReviews["a1"]?.closedMessage)
+        XCTAssertEqual(viewModel.holdingsReviews["a1"]?.refusal?.message, "That did not go through. Try again.")
     }
 
     func testNewBadgeIsLocalisedKey() throws {
