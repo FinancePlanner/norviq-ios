@@ -154,7 +154,7 @@ private struct AssistantHoldingRowEditor: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label).font(.caption2).foregroundStyle(AppTheme.Colors.secondaryText)
             TextField(label, text: text)
-                .keyboardType(.decimalPad)
+                .keyboardType(AssistantTradesCard.numberKeyboard)
                 .focused($focus, equals: field)
             if let hint = TradeNumber.hint(for: text.wrappedValue, stored: stored) {
                 Text(verbatim: hint.text)

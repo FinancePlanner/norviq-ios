@@ -251,7 +251,12 @@ final class QuickAssistantViewModelTests: XCTestCase {
         let image = jpeg()
         let gate = Gate()
         let pick = Task { await viewModel.addAttachments([{ await gate.wait(); return image }]) }
-        while viewModel.preparingAttachmentCount == 0 { await Task.yield() }
+        var spins = 0
+        while viewModel.preparingAttachmentCount == 0 {
+            spins += 1
+            guard spins <= 1_000 else { return XCTFail("the pick never started preparing") }
+            await Task.yield()
+        }
         viewModel.reset()
         XCTAssertEqual(viewModel.preparingAttachmentCount, 0)
         await gate.release()
