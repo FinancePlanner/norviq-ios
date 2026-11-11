@@ -71,14 +71,19 @@ final class PersistentAssistantViewModel {
 
     private let service: any PersistentAssistantServicing
     private let sleep: @Sendable (Duration) async throws -> Void
+    private let now: @Sendable () -> Date
+    /// Bumped when the conversation changes, so a pick still loading is dropped.
+    private var attachmentEpoch = 0
     private var celebrationTask: Task<Void, Never>?
 
     init(
         service: any PersistentAssistantServicing,
-        sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+        sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
+        now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.service = service
         self.sleep = sleep
+        self.now = now
     }
     convenience init() { self.init(service: Container.shared.persistentAssistantService()) }
 
@@ -139,6 +144,7 @@ final class PersistentAssistantViewModel {
     func createConversation() async throws {
         let created = try await service.createConversation(title: "New conversation")
         memoCards = [:]
+        dropAttachments()
         activeConversation = created
         await refreshConversations()
     }
@@ -150,8 +156,17 @@ final class PersistentAssistantViewModel {
 
     func selectConversation(id: String) async throws {
         let conversation = try await service.conversation(id: id)
+        if activeConversation?.id != conversation.id { dropAttachments() }
         activeConversation = conversation
         await attachMemoCards(to: conversation)
+    }
+
+    /// A pick belongs to the conversation it was made in; one still loading is dropped too.
+    private func dropAttachments() {
+        attachments = []
+        attachmentNotice = nil
+        preparingAttachmentCount = 0
+        attachmentEpoch += 1
     }
 
     /// The stored assistant message only says "Memo on X is ready.", so cards
@@ -245,11 +260,14 @@ final class PersistentAssistantViewModel {
         let taken = sources.prefix(room)
         preparingAttachmentCount += taken.count
         let cap = Self.maxAttachmentBytes
+        let epoch = attachmentEpoch
         for source in taken {
             let prepared = await Task.detached(priority: .userInitiated) { () -> ScreenshotUploadImage? in
                 guard let data = await source() else { return nil }
                 return UploadImagePreparer.prepare(data, maxBytes: cap)
             }.value
+            // The conversation changed meanwhile and the count was zeroed.
+            guard epoch == attachmentEpoch else { return }
             preparingAttachmentCount -= 1
             if let prepared {
                 attachments.append(.image(prepared))
@@ -266,6 +284,7 @@ final class PersistentAssistantViewModel {
         guard !isSending else { return }
         attachmentNotice = nil
         let cap = Self.maxAttachmentBytes
+        let epoch = attachmentEpoch
         for url in urls {
             // Counted per file, so a second pick during this one sees the room it takes.
             guard attachmentRoom > 0 else {
@@ -276,6 +295,7 @@ final class PersistentAssistantViewModel {
             let result = await Task.detached(priority: .userInitiated) {
                 AssistantAttachmentChecker.load(url: url, maxImageBytes: cap)
             }.value
+            guard epoch == attachmentEpoch else { return }
             preparingAttachmentCount -= 1
             // Send may have started while the file was read; the rest of the pick would go with the next message, so stop.
             guard !isSending else { return }
@@ -528,7 +548,8 @@ final class PersistentAssistantViewModel {
 
     /// Saves the card's ticked rows as they stand. A 422 keeps the card with
     /// its collision and row errors, unless the save failed after the backend
-    /// claimed the action, which settles it. A 409 means it expired. A 402 or
+    /// claimed the action, which settles it. A 409, a 404 and a lost answer
+    /// follow the trades card's rules (`confirmTrades`). A 402 or
     /// 403 is the Pro limit. Success settles the card with the backend's
     /// message, which names what was saved and, on a partial save, what was not.
     func confirmHoldings(_ action: AIPendingActionResponse) async {
@@ -558,14 +579,18 @@ final class PersistentAssistantViewModel {
                 review.refuse(reason ?? AssistantHoldingsReview.retryCopy, rowErrors: [])
             }
         } catch PersistentAssistantHTTPClient.Error.conflict {
-            review.closedMessage = triedBefore ? AssistantHoldingsReview.maybeSavedCopy : AssistantHoldingsReview.expiredCopy
+            review.closedMessage = mayHaveBeenSaved(triedBefore: triedBefore, expiresAt: action.expiresAt)
+                ? AssistantHoldingsReview.maybeSavedCopy : AssistantHoldingsReview.expiredCopy
+        } catch PersistentAssistantHTTPClient.Error.invalidStatus(404) {
+            review.closedMessage = mayHaveBeenSaved(triedBefore: triedBefore, expiresAt: action.expiresAt)
+                ? AssistantHoldingsReview.maybeSavedCopy : AssistantHoldingsReview.expiredCopy
         } catch PersistentAssistantHTTPClient.Error.upgradeRequired {
             review.refuse(AssistantHoldingsReview.upgradeCopy, rowErrors: [])
         } catch {
-            if !Self.isClientRefusal(error), await isStillPending(action.id) == false {
-                review.closedMessage = AssistantHoldingsReview.maybeSavedCopy
-            } else {
-                review.refuse(AssistantHoldingsReview.retryCopy, rowErrors: [])
+            switch await lostAnswer(error, actionID: action.id) {
+            case .refused: review.refuse(AssistantHoldingsReview.retryCopy, rowErrors: [])
+            case .gone: review.closedMessage = AssistantHoldingsReview.maybeSavedCopy
+            case .stillPending: review.refuse(AssistantHoldingsReview.unconfirmedCopy, rowErrors: [])
             }
         }
         holdingsReviews[action.id] = review
@@ -592,8 +617,10 @@ final class PersistentAssistantViewModel {
     /// The backend finishes a claimed save even when the client has gone, so
     /// a lost answer (a timeout, a dropped connection, a 5xx) may hide a save
     /// (R30). The action is fetched again: gone means it may have been saved,
-    /// and the card says to check before sending the screenshot again. So does
-    /// a 409 once this card has tried to save.
+    /// and the card says to check before sending the screenshot again; still
+    /// waiting means the save could not be confirmed either way. A 409 or a
+    /// 404 closes the card: as "may have been saved" once this card has tried
+    /// or while the review has not expired, as expired otherwise.
     func confirmTrades(_ action: AIPendingActionResponse) async {
         guard activeActionID == nil, var review = tradesReviews[action.id], review.canSave else { return }
         activeActionID = action.id
@@ -615,17 +642,41 @@ final class PersistentAssistantViewModel {
                 review.refuse(reason ?? AssistantTradesReview.retryCopy, rowErrors: rowErrors)
             }
         } catch PersistentAssistantHTTPClient.Error.conflict {
-            review.closedMessage = triedBefore ? AssistantTradesReview.maybeSavedCopy : AssistantTradesReview.expiredCopy
+            review.closedMessage = mayHaveBeenSaved(triedBefore: triedBefore, expiresAt: action.expiresAt)
+                ? AssistantTradesReview.maybeSavedCopy : AssistantTradesReview.expiredCopy
+        } catch PersistentAssistantHTTPClient.Error.invalidStatus(404) {
+            // The backend's NotFound for this action, with no body.
+            review.closedMessage = mayHaveBeenSaved(triedBefore: triedBefore, expiresAt: action.expiresAt)
+                ? AssistantTradesReview.maybeSavedCopy : AssistantTradesReview.expiredCopy
         } catch PersistentAssistantHTTPClient.Error.upgradeRequired {
             review.refuse(AssistantTradesReview.upgradeCopy, rowErrors: [])
         } catch {
-            if !Self.isClientRefusal(error), await isStillPending(action.id) == false {
-                review.closedMessage = AssistantTradesReview.maybeSavedCopy
-            } else {
-                review.refuse(AssistantTradesReview.retryCopy, rowErrors: [])
+            switch await lostAnswer(error, actionID: action.id) {
+            case .refused: review.refuse(AssistantTradesReview.retryCopy, rowErrors: [])
+            case .gone: review.closedMessage = AssistantTradesReview.maybeSavedCopy
+            case .stillPending: review.refuse(AssistantTradesReview.unconfirmedCopy, rowErrors: [])
             }
         }
         tradesReviews[action.id] = review
+    }
+
+    /// For a 409 or a 404: the action can no longer be confirmed. Before its
+    /// expiry something claimed it, perhaps this card's own save whose answer
+    /// was lost; so may a card that already tried.
+    private func mayHaveBeenSaved(triedBefore: Bool, expiresAt: String) -> Bool {
+        if triedBefore { return true }
+        guard let expiry = AssistantTradesReview.expiryDate(expiresAt) else { return false }
+        return expiry > now()
+    }
+
+    private enum LostAnswer { case refused, gone, stillPending }
+
+    /// What a failed confirm with no usable answer means. A 4xx saved nothing;
+    /// otherwise the action is fetched again (R30): gone may mean saved, and
+    /// still waiting (or a failed refetch) means the save is unconfirmed.
+    private func lostAnswer(_ error: any Error, actionID: String) async -> LostAnswer {
+        if Self.isClientRefusal(error) { return .refused }
+        return await isStillPending(actionID) == false ? .gone : .stillPending
     }
 
     /// A 4xx the backend answered, which means it saved nothing. Anything else

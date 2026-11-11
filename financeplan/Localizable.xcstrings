@@ -22281,6 +22281,16 @@
         }
       }
     },
+    "We couldn't confirm this save. Try again; if it went through, this card will say so." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não conseguimos confirmar se isto foi guardado. Tente novamente; se tiver sido guardado, este cartão vai indicá-lo."
+          }
+        }
+      }
+    },
     "We typically respond within one business day." : {
       "comment" : "A description of the response time for customer support.",
       "extractionState" : "stale",

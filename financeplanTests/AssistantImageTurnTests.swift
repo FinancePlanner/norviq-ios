@@ -91,7 +91,9 @@ private final class ImageTurnService: PersistentAssistantServicing, @unchecked S
     func tips() async throws -> [AITipResponse] { [] }
     func pendingActions() async throws -> [AIPendingActionResponse] { [] }
 
-    func conversation(id _: String) async throws -> AIConversationResponse { throw Unused() }
+    func conversation(id: String) async throws -> AIConversationResponse {
+        AIConversationResponse(id: id, title: "", messages: [], createdAt: "2026-11-05T00:00:00Z", updatedAt: "2026-11-05T00:00:00Z")
+    }
     func deleteConversation(id _: String) async throws { throw Unused() }
     func turn(conversationID _: String, content _: String) async throws -> AIAssistantTurnResponse { throw Unused() }
     func updatePreferences(_: AIAssistantPreferencesResponse) async throws -> AIAssistantPreferencesResponse { throw Unused() }
@@ -231,6 +233,22 @@ final class AssistantImageTurnTests: XCTestCase {
             return nil
         } catch {
             return error as? AssistantStreamClient.Failure
+        }
+    }
+
+    struct PickNeverStarted: Error {}
+
+    /// Waits for a pick to start preparing; gives up after 1,000 turns of the
+    /// run loop instead of hanging the suite.
+    private func waitUntilPreparing(_ viewModel: PersistentAssistantViewModel) async throws {
+        var spins = 0
+        while viewModel.preparingAttachmentCount == 0 {
+            spins += 1
+            guard spins <= 1_000 else {
+                XCTFail("the pick never started preparing")
+                throw PickNeverStarted()
+            }
+            await Task.yield()
         }
     }
 
@@ -441,7 +459,7 @@ final class AssistantImageTurnTests: XCTestCase {
         XCTAssertEqual(viewModel.attachmentNotice, "This image could not be attached. Try another one.")
     }
 
-    func testCannotSendWhileAnImageIsBeingPrepared() async {
+    func testCannotSendWhileAnImageIsBeingPrepared() async throws {
         let service = ImageTurnService()
         let viewModel = await loadedViewModel(service)
         viewModel.draft = "Hi"
@@ -453,7 +471,7 @@ final class AssistantImageTurnTests: XCTestCase {
                 return await iterator.next()
             }])
         }
-        while viewModel.preparingAttachmentCount == 0 { await Task.yield() }
+        try await waitUntilPreparing(viewModel)
 
         XCTAssertFalse(viewModel.canSend)
         XCTAssertEqual(viewModel.attachmentRoom, 2)
@@ -478,6 +496,57 @@ final class AssistantImageTurnTests: XCTestCase {
         XCTAssertTrue(service.sent.isEmpty)
         XCTAssertEqual(viewModel.attachments.count, 1)
         XCTAssertEqual(viewModel.activeConversation?.messages.first?.content, "/help")
+    }
+
+    // MARK: Changing conversation
+
+    /// An image picked in one conversation must not go with a message in the next.
+    func testNewConversationClearsAttachments() async {
+        let service = ImageTurnService()
+        let viewModel = await loadedViewModel(service)
+        await viewModel.addAttachments(sources(2))
+        await viewModel.addAttachments(sources(2))
+        XCTAssertEqual(viewModel.attachments.count, 3)
+        XCTAssertNotNil(viewModel.attachmentNotice)
+
+        await viewModel.newConversation()
+
+        XCTAssertTrue(viewModel.attachments.isEmpty)
+        XCTAssertNil(viewModel.attachmentNotice)
+    }
+
+    func testOpeningAnotherConversationClearsAttachments() async {
+        let service = ImageTurnService()
+        let viewModel = await loadedViewModel(service)
+        await viewModel.addAttachments(sources(1))
+
+        await viewModel.select(id: "c1")
+        XCTAssertEqual(viewModel.attachments.count, 1, "reopening the same conversation keeps the pick")
+
+        await viewModel.select(id: "c2")
+        XCTAssertEqual(viewModel.activeConversation?.id, "c2")
+        XCTAssertTrue(viewModel.attachments.isEmpty)
+    }
+
+    func testNewConversationDropsAPickStillPreparing() async throws {
+        let service = ImageTurnService()
+        let viewModel = await loadedViewModel(service)
+        let (gate, open) = AsyncStream.makeStream(of: Data.self)
+        let adding = Task {
+            await viewModel.addAttachments([{
+                var iterator = gate.makeAsyncIterator()
+                return await iterator.next()
+            }])
+        }
+        try await waitUntilPreparing(viewModel)
+
+        await viewModel.newConversation()
+        XCTAssertEqual(viewModel.preparingAttachmentCount, 0)
+
+        open.yield(jpeg())
+        await adding.value
+        XCTAssertTrue(viewModel.attachments.isEmpty, "the old pick must not land in the new conversation")
+        XCTAssertEqual(viewModel.preparingAttachmentCount, 0, "never negative")
     }
 
     // MARK: Restoring the composer

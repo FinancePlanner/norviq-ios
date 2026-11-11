@@ -144,6 +144,8 @@ struct PersistentAssistantView: View {
                 }
                 .padding(.vertical, 16)
             }
+            // The review cards' number pads have no return key.
+            .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .top, spacing: 0) {
                 MuseChatHeader(
                     status: viewModel.agentState.status,

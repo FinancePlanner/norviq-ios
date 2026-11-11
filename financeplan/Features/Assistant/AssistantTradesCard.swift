@@ -172,6 +172,21 @@ nonisolated enum TradeDate {
         let parts = calendar.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
+
+    /// The picker shows and picks days in the device's time zone. Noon there
+    /// is on the row's day in every zone, so the day survives the round trip.
+    static func localNoon(from raw: String, calendar local: Calendar = .current) -> Date? {
+        guard let day = date(from: raw) else { return nil }
+        var parts = calendar.dateComponents([.year, .month, .day], from: day)
+        parts.hour = 12
+        return local.date(from: parts)
+    }
+
+    /// The `YYYY-MM-DD` of a day picked in the device's time zone.
+    static func string(fromLocal date: Date, calendar local: Calendar = .current) -> String {
+        let parts = local.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
 }
 
 // MARK: - Model
@@ -279,6 +294,23 @@ struct AssistantTradesReview: Equatable {
     static let upgradeCopy = String(localized: "Saving trades from a screenshot is part of Pro.")
     /// The answer to a save was lost, and the action is gone (R30).
     static let maybeSavedCopy = String(localized: "This may have been saved. Check your portfolio before sending the screenshot again.")
+    /// The answer to a save was lost and the action still waits: the save may
+    /// yet finish, so this does not say it failed. A retry that finds it done
+    /// gets a 409 and says so.
+    static let unconfirmedCopy = String(localized: "We couldn't confirm this save. Try again; if it went through, this card will say so.")
+
+    private static let summaryPattern = /Record .+? in (.+)\./
+    private static let fractionalISO: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    private static let plainISO = ISO8601DateFormatter()
+
+    /// The backend's ISO 8601 expiry, with or without fractional seconds.
+    static func expiryDate(_ raw: String) -> Date? {
+        fractionalISO.date(from: raw) ?? plainISO.date(from: raw)
+    }
 
     struct ListOption: Equatable, Identifiable, Hashable {
         let id: String
@@ -368,7 +400,7 @@ struct AssistantTradesReview: Equatable {
     /// Empty when it does not fit.
     static func listName(fromSummary summary: String) -> String {
         let text = summary.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let match = text.wholeMatch(of: /Record .+? in (.+)\./) else { return "" }
+        guard let match = text.wholeMatch(of: summaryPattern) else { return "" }
         return String(match.output.1)
     }
 
@@ -514,11 +546,13 @@ struct AssistantTradesCard: View {
         }
     }
 
+    /// For both review cards. `.decimalPad` has no minus sign, and on some
+    /// locales no dot, so "1.5" typed from a screenshot could not be entered.
+    static let numberKeyboard: UIKeyboardType = .numbersAndPunctuation
+
     /// The expiry as a local time; the backend sends ISO 8601.
     static func expiry(_ raw: String) -> String? {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = formatter.date(from: raw) ?? ISO8601DateFormatter().date(from: raw) else { return nil }
+        guard let date = AssistantTradesReview.expiryDate(raw) else { return nil }
         return date.formatted(date: .omitted, time: .shortened)
     }
 }
@@ -568,7 +602,6 @@ private struct AssistantTradeRowEditor: View {
                         Text("Date").font(.caption2).foregroundStyle(AppTheme.Colors.secondaryText)
                         DatePicker("Date", selection: dateBinding, displayedComponents: .date)
                             .labelsHidden()
-                            .environment(\.timeZone, TradeDate.calendar.timeZone)
                     }
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 2) {
@@ -605,7 +638,7 @@ private struct AssistantTradeRowEditor: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label).font(.caption2).foregroundStyle(AppTheme.Colors.secondaryText)
             TextField(label, text: text)
-                .keyboardType(.decimalPad)
+                .keyboardType(AssistantTradesCard.numberKeyboard)
                 .focused($focus, equals: field)
             if let hint = TradeNumber.hint(for: text.wrappedValue, stored: stored) {
                 Text(verbatim: hint.text)
@@ -635,11 +668,12 @@ private struct AssistantTradeRowEditor: View {
     }
 
     /// A date the model read that is not a real date shows today until changed;
-    /// the row says "Enter the date." meanwhile.
+    /// the row says "Enter the date." meanwhile. The picker runs in the device's
+    /// time zone, so the day goes through local noon both ways.
     private var dateBinding: Binding<Date> {
         Binding(
-            get: { TradeDate.date(from: row.tradeDate) ?? .now },
-            set: { row.tradeDate = TradeDate.string(from: $0) }
+            get: { TradeDate.localNoon(from: row.tradeDate) ?? .now },
+            set: { row.tradeDate = TradeDate.string(fromLocal: $0) }
         )
     }
 

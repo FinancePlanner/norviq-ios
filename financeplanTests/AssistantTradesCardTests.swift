@@ -1,5 +1,6 @@
 import Foundation
 import StockPlanShared
+import UIKit
 import XCTest
 @testable import financeplan
 
@@ -127,8 +128,8 @@ private let confirmedJSON = #"{"actionId":"a1","status":"completed","message":"T
 
 @MainActor
 final class AssistantTradesCardTests: XCTestCase {
-    private func loadedViewModel(_ service: TradesService) async -> PersistentAssistantViewModel {
-        let viewModel = PersistentAssistantViewModel(service: service, sleep: { _ in })
+    private func loadedViewModel(_ service: TradesService, now: Date? = nil) async -> PersistentAssistantViewModel {
+        let viewModel = PersistentAssistantViewModel(service: service, sleep: { _ in }, now: { now ?? Date() })
         await viewModel.load()
         return viewModel
     }
@@ -261,7 +262,7 @@ final class AssistantTradesCardTests: XCTestCase {
         let service = TradesService()
         service.actionLists = [.success([tradesAction()])]
         service.confirmResult = .failure(PersistentAssistantHTTPClient.Error.conflict("Action is no longer available for confirmation."))
-        let viewModel = await loadedViewModel(service)
+        let viewModel = await loadedViewModel(service, now: afterExpiry)
         await viewModel.confirmTrades(tradesAction())
 
         XCTAssertEqual(viewModel.tradesReviews["a1"]?.closedMessage, "This review expired. Send the screenshot again.")
@@ -293,6 +294,35 @@ final class AssistantTradesCardTests: XCTestCase {
         card.rows[0].quantity = "1,5"
         XCTAssertEqual(card.problem(at: 0), "")
         XCTAssertEqual(card.confirmTrades.first?.quantity, 1.5)
+    }
+
+    // MARK: - Fields
+
+    /// `.decimalPad` has no minus sign and, on some locales, no dot: a typed
+    /// "1.5" or a pasted "-2" could not be entered. Both cards use this one.
+    func testNumberFieldsUseTheKeyboardWithPunctuation() {
+        XCTAssertEqual(AssistantTradesCard.numberKeyboard, .numbersAndPunctuation)
+    }
+
+    /// The picker works in the device's time zone. Its day must be the row's
+    /// day both ways, behind UTC and ahead of it.
+    func testPickerDateRoundTripsBehindAndAheadOfUTC() throws {
+        for zone in ["America/Los_Angeles", "Pacific/Auckland", "UTC"] {
+            var local = Calendar(identifier: .gregorian)
+            local.timeZone = try XCTUnwrap(TimeZone(identifier: zone))
+            for raw in ["2024-03-10", "2024-01-01", "2024-12-31", "2024-02-29"] {
+                let shown = try XCTUnwrap(TradeDate.localNoon(from: raw, calendar: local), "\(zone) \(raw)")
+                XCTAssertEqual(local.component(.hour, from: shown), 12, "\(zone) \(raw)")
+                XCTAssertEqual(TradeDate.string(fromLocal: shown, calendar: local), raw, "\(zone) \(raw)")
+            }
+            // A pick just after local midnight, which is the day before in UTC
+            // ahead of it, and just before, which is the day after behind it.
+            for hour in [0, 23] {
+                let picked = try XCTUnwrap(local.date(from: DateComponents(year: 2024, month: 3, day: 10, hour: hour, minute: 30)))
+                XCTAssertEqual(TradeDate.string(fromLocal: picked, calendar: local), "2024-03-10", "\(zone) \(hour):30")
+            }
+        }
+        XCTAssertNil(TradeDate.localNoon(from: "2024-02-30"))
     }
 
     // MARK: - Numbers (R16, R18, R20, R21)
@@ -467,6 +497,54 @@ final class AssistantTradesCardTests: XCTestCase {
         XCTAssertEqual(card.refusal?.message, "That did not go through. Try again.")
     }
 
+    /// `tradesAction()` expires at 2026-11-05T12:15:00Z.
+    private let beforeExpiry = ISO8601DateFormatter().date(from: "2026-11-05T12:10:00Z")!
+    private let afterExpiry = ISO8601DateFormatter().date(from: "2026-11-05T12:20:00Z")!
+
+    /// A 409 while the review has not expired means the action was claimed
+    /// elsewhere: a save this card never heard back from, or another device.
+    func test409BeforeTheExpirySaysItMayHaveBeenSaved() async throws {
+        let service = TradesService()
+        service.actionLists = [.success([tradesAction()])]
+        service.confirmResult = .failure(PersistentAssistantHTTPClient.Error.conflict("Action is no longer available for confirmation."))
+        let viewModel = await loadedViewModel(service, now: beforeExpiry)
+        await viewModel.confirmTrades(tradesAction())
+        XCTAssertEqual(viewModel.tradesReviews["a1"]?.closedMessage, maybeSaved)
+    }
+
+    func test409AfterTheExpirySaysItExpired() async throws {
+        let service = TradesService()
+        service.actionLists = [.success([tradesAction()])]
+        service.confirmResult = .failure(PersistentAssistantHTTPClient.Error.conflict("Action is no longer available for confirmation."))
+        let viewModel = await loadedViewModel(service, now: afterExpiry)
+        await viewModel.confirmTrades(tradesAction())
+        XCTAssertEqual(viewModel.tradesReviews["a1"]?.closedMessage, "This review expired. Send the screenshot again.")
+    }
+
+    /// The backend answers a confirm for an action it cannot find with a 404
+    /// and no body; the card closes like a 409 instead of offering a retry.
+    func test404WithAnEmptyBodyClosesTheCard() async throws {
+        let session = StubSession(status: 404, body: "")
+        do {
+            _ = try await client(session).confirmTrades(id: "a1", portfolioListID: storedListID, trades: kept)
+            XCTFail("expected a 404")
+        } catch let error as PersistentAssistantHTTPClient.Error {
+            XCTAssertEqual(error, .invalidStatus(404))
+        }
+
+        for (now, copy) in [(afterExpiry, "This review expired. Send the screenshot again."), (beforeExpiry, maybeSaved)] {
+            let service = TradesService()
+            service.actionLists = [.success([tradesAction()])]
+            service.confirmResult = .failure(PersistentAssistantHTTPClient.Error.invalidStatus(404))
+            let viewModel = await loadedViewModel(service, now: now)
+            await viewModel.confirmTrades(tradesAction())
+            let card = try XCTUnwrap(viewModel.tradesReviews["a1"])
+            XCTAssertEqual(card.closedMessage, copy)
+            XCTAssertFalse(card.canSave)
+            XCTAssertEqual(service.pendingActionsCalls, 1, "a 404 is an answer; nothing to refetch")
+        }
+    }
+
     // MARK: - Lost answers (R30)
 
     private let maybeSaved = "This may have been saved. Check your portfolio before sending the screenshot again."
@@ -493,18 +571,23 @@ final class AssistantTradesCardTests: XCTestCase {
         XCTAssertEqual(viewModel.tradesReviews["a1"]?.closedMessage, maybeSaved)
     }
 
-    func testLostAnswerWithTheActionStillPendingSaysTryAgain() async throws {
+    /// The save may still finish on the server, so the copy does not claim it failed.
+    func testLostAnswerWithTheActionStillPendingSaysItCouldNotConfirm() async throws {
+        let unconfirmed = "We couldn't confirm this save. Try again; if it went through, this card will say so."
+        XCTAssertEqual(AssistantTradesReview.unconfirmedCopy, unconfirmed)
         for failure in [timedOut, PersistentAssistantHTTPClient.Error.invalidStatus(503), .api("Internal error")] {
-            let service = TradesService()
-            service.actionLists = [.success([tradesAction()])]
-            service.confirmResult = .failure(failure)
-            let viewModel = await loadedViewModel(service)
-            await viewModel.confirmTrades(tradesAction())
-            XCTAssertEqual(service.pendingActionsCalls, 2, "\(failure)")
-            let card = try XCTUnwrap(viewModel.tradesReviews["a1"])
-            XCTAssertNil(card.closedMessage, "\(failure)")
-            XCTAssertEqual(card.refusal?.message, "That did not go through. Try again.", "\(failure)")
-            XCTAssertTrue(card.canSave, "the card can be saved again")
+            for pending: Result<[AIPendingActionResponse], Error> in [.success([tradesAction()]), .failure(TradesService.Offline())] {
+                let service = TradesService()
+                service.actionLists = [.success([tradesAction()]), pending]
+                service.confirmResult = .failure(failure)
+                let viewModel = await loadedViewModel(service)
+                await viewModel.confirmTrades(tradesAction())
+                XCTAssertEqual(service.pendingActionsCalls, 2, "\(failure)")
+                let card = try XCTUnwrap(viewModel.tradesReviews["a1"])
+                XCTAssertNil(card.closedMessage, "\(failure)")
+                XCTAssertEqual(card.refusal?.message, unconfirmed, "\(failure)")
+                XCTAssertTrue(card.canSave, "the card can be saved again")
+            }
         }
     }
 
@@ -512,9 +595,9 @@ final class AssistantTradesCardTests: XCTestCase {
         let service = TradesService()
         service.actionLists = [.success([tradesAction()])]
         service.confirmResult = .failure(PersistentAssistantHTTPClient.Error.invalidStatus(500))
-        let viewModel = await loadedViewModel(service)
+        let viewModel = await loadedViewModel(service, now: afterExpiry)
         await viewModel.confirmTrades(tradesAction())
-        XCTAssertEqual(viewModel.tradesReviews["a1"]?.refusal?.message, "That did not go through. Try again.")
+        XCTAssertEqual(viewModel.tradesReviews["a1"]?.refusal?.message, AssistantTradesReview.unconfirmedCopy)
 
         // The first save finished on the server after all.
         service.confirmResult = .failure(PersistentAssistantHTTPClient.Error.conflict("Action is no longer available for confirmation."))
@@ -581,7 +664,7 @@ final class AssistantTradesCardTests: XCTestCase {
         card.rows[0].price = "101"
         viewModel.updateTradesReview(card)
         await viewModel.confirmTrades(tradesAction())
-        XCTAssertEqual(viewModel.tradesReviews["a1"]?.refusal?.message, "That did not go through. Try again.")
+        XCTAssertEqual(viewModel.tradesReviews["a1"]?.refusal?.message, AssistantTradesReview.unconfirmedCopy)
         XCTAssertEqual(viewModel.tradesReviews["a1"]?.rows[0].price, "101")
         XCTAssertNil(viewModel.activeActionID)
     }
@@ -632,6 +715,7 @@ final class AssistantTradesCardTests: XCTestCase {
             "the proposed portfolio",
             "This may have been saved. Check your portfolio before sending the screenshot again.",
             "Load your portfolios",
+            "We couldn't confirm this save. Try again; if it went through, this card will say so.",
         ]
         let path = try XCTUnwrap(Bundle.main.path(forResource: "pt-PT", ofType: "lproj"))
         let portuguese = try XCTUnwrap(Bundle(path: path))
