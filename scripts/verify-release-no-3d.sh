@@ -7,7 +7,8 @@
 #                                              run scripts/fetch-vig-model.sh first
 #
 # Builds for the simulator without signing, into its own DerivedData ($VERIFY_DERIVED_DATA, or a
-# temp dir).
+# temp dir). arm64 only: the excluded files are per configuration, not per architecture, and a
+# generic simulator Release build of both architectures ran past CI's time limit.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -17,7 +18,8 @@ case "$config" in Release | Beta) ;; *) echo "usage: $0 [Release|Beta]" >&2; exi
 dd="${VERIFY_DERIVED_DATA:-$(mktemp -d)}"
 xcodebuild -project financeplan.xcodeproj -scheme financeplan -configuration "$config" \
   -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath "$dd" CODE_SIGNING_ALLOWED=NO build -quiet
+  -derivedDataPath "$dd" CODE_SIGNING_ALLOWED=NO ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
+  COMPILER_INDEX_STORE_ENABLE=NO build -quiet
 
 app="$(find "$dd/Build/Products/$config-iphonesimulator" -maxdepth 1 -name '*.app' | head -1)"
 [[ -n "$app" ]] || { echo "verify-no-3d: no .app under $dd" >&2; exit 1; }

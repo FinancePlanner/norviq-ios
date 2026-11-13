@@ -60,7 +60,7 @@ jobs:
   release-no-3d:
     name: Release carries no 3D Vig
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
