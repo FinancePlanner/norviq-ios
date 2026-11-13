@@ -36,6 +36,44 @@ jobs:
       - name: Run SwiftLint
         run: ./scripts/format.sh --skip-install --lint-only --reporter github-actions-logging
 
+  # The 3D Vig motion data (BRD-001) is canonical in norviq-web-v2/design/. This repo carries byte
+  # copies; a copy that differs from web main would make the iOS and web Vig move apart.
+  # Merge order for a motion change: the web PR first, then this repo's copy.
+  vig-motion-drift:
+    name: Vig motion drift guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compare with norviq-web-v2 main
+        env:
+          # Fine-grained, read-only "Contents" on FinancePlanner/norviq-web-v2.
+          GH_TOKEN: ${{ secrets.BRAND_GUARD_TOKEN }}
+        run: ./scripts/check-vig-motion-drift.sh
+
+  # The 3D Vig (BRD-001) is Debug and Beta only. This builds Release with the model fetched into
+  # the source folder, so the exclusion is tested against files that are really there, and fails
+  # if the app carries the model, its JSON or the 3D code. Needs cdn.norviq.org to serve the
+  # pinned version (scripts/fetch-vig-model.sh).
+  release-no-3d:
+    name: Release carries no 3D Vig
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+
+      - name: Fetch the 3D Vig model
+        run: ./scripts/fetch-vig-model.sh
+
+      - name: Build Release and check the bundle
+        run: ./scripts/verify-release-no-3d.sh Release
+
   # StockPlanShared (the DTOs shared with the API) lives in Packages/ since it
   # was vendored from norviq-shared. Its own swift-testing suite runs here on
   # the macOS host — it is not in the app's test plan.
@@ -168,6 +206,7 @@ jobs:
             -only-testing:financeplanTests/AssistantPushViewModelTests \
             -only-testing:financeplanTests/AssistantTradesCardTests \
             -only-testing:financeplanTests/PortfolioCSVImportViewModelTests \
+            -only-testing:financeplanTests/VigMotionTests \
             -parallel-testing-enabled NO \
             -quiet
 

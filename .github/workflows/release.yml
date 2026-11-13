@@ -76,6 +76,11 @@ jobs:
         env:
           SECRETS_XCCONFIG: ${{ secrets.SECRETS_XCCONFIG }}
 
+      # The 3D Vig (BRD-001) on the Welcome screen. Its model is built output, kept out of git. If
+      # the CDN cannot serve it, the build goes on and Welcome shows the flat Vig: warned, not failed.
+      - name: Fetch the 3D Vig model
+        run: ./scripts/fetch-vig-model.sh || echo "::warning::3D Vig model not fetched; this TestFlight build shows the flat Vig"
+
       - name: Fastlane beta
         run: bundle exec fastlane beta
         env:
