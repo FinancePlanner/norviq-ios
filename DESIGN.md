@@ -311,6 +311,14 @@ and one soft shadow. That fallback is the only card shadow in the app.
 
 - **Empty:** `ContentUnavailableView`, or `EmptyStateView` where Vig appears. Vig belongs in empty
   states, onboarding and the assistant, never in a data view.
+- **3D Vig (beta-only experiment, BRD-001):** in Debug and Beta builds only, the Welcome screen may
+  show Vig as a real-time 3D bust: a non-AR `RealityView` with a virtual camera, transparent over
+  SwiftUI. The flat bust (`vig-poster.png`, fetched with the model; `VigFull` without it) shows
+  until the first frame, and stays under Reduce Motion and Low Power Mode. Motion comes only from `vig-motion.json` (entrance, ±4° sway, drag tilt), with no
+  blink and no glow, and lights use `AppTheme.Colors`. The Release build excludes the model and the
+  code (`EXCLUDED_SOURCE_FILE_NAMES`), and `scripts/verify-release-no-3d.sh` proves it. Canonical
+  rule: `../../docs/precision-identity.md`. Backlog and architecture: `norviq-web-v2/docs/BACKLOG.md`
+  BRD-001, `norviq-web-v2/docs/vig-3d.md`.
 - **Loading:** inline `ProgressView` at the action, or `LoadingEmblem` (a four-point star, static
   under Reduce Motion). Make no claim about state until the first load answers.
 - **Pro gate:** `ProGateView` blurs its content and shows one upgrade prompt for the whole gated

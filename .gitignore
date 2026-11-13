@@ -85,3 +85,8 @@ fastlane/test_output/
 fastlane/ui_test_output/
 fastlane/report.xml
 fastlane/README.md
+
+# 3D Vig (BRD-001): built output, fetched by scripts/fetch-vig-model.sh
+financeplan/Design/Vig.usdz
+financeplan/Design/vig-model.json
+financeplan/Design/vig-poster.png

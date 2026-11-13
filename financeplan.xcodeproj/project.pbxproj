@@ -605,6 +605,7 @@
 				FACEBOOK_APP_ID = "";
 				FACEBOOK_CLIENT_TOKEN = "";
 				FACEBOOK_URL_SCHEME = "fb$(FACEBOOK_APP_ID:default=-unset-norviq)";
+				EXCLUDED_SOURCE_FILE_NAMES = "Vig3DView.swift VigMotion.swift Vig.usdz vig-motion.json vig-model.json vig-poster.png";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Norviq;
@@ -666,6 +667,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_TEAM = 84X9WYBF36;
+				EXCLUDED_SOURCE_FILE_NAMES = "VigMotionTests.swift vig-motion.fixtures.json";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0.2;
@@ -793,6 +795,7 @@
 				MTL_FAST_MATH = YES;
 				NORVIQ_API_ENVIRONMENT = production;
 				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "BETA $(inherited)";
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				VALIDATE_PRODUCT = YES;
