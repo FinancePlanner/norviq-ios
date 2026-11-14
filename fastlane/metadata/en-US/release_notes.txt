@@ -1,14 +1,7 @@
-New: Quick Q
-
-• Ask Q from any screen with the floating Q button, by typing or by voice
-• Attach a screenshot, PDF or CSV and Q reads it for you, from a news article to a broker statement
-• Update your portfolio from a holdings screenshot or broker CSV: Q shows the rows, you check them and confirm
-• Log trades from a screenshot of your fills
-
-New: Tools
-
-• All of Norviq's tools in one place, one tap from Home and Portfolio
-
+• Interactive Brokers: a step-by-step guide to connect your account read-only, from Integrations
+• Q's holdings and trades cards: an easier keypad, clearer dates and plainer messages when something goes wrong
+• Pro features ask once per group instead of on every screen
+• Integrations now in Portuguese (Portugal)
 • Bug fixes
 
 Norviq is a planning and organization tool. Not financial advice.
