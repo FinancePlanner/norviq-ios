@@ -354,12 +354,20 @@ struct PillarPicker: View {
 
   var body: some View {
     FormRow(icon: icon, iconColor: iconColor, label: label) {
-      HStack(spacing: 10) {
+      // The chip is the menu's label, so tapping it opens the picker. (It used to sit beside a
+      // zero-width, transparent Picker that could not be tapped, so the pillar could not change.)
+      Menu {
+        Picker(label, selection: $selectedPillar) {
+          ForEach(BudgetPillar.allCases, id: \.self) { pillar in
+            Text(pillar.title).tag(pillar)
+          }
+        }
+      } label: {
         HStack(spacing: 6) {
           Circle()
             .fill(selectedPillar.color(for: colorScheme))
             .frame(width: 10, height: 10)
-          
+
           Text(selectedPillar.title)
             .typography(.label)
         }
@@ -369,22 +377,10 @@ struct PillarPicker: View {
           RoundedRectangle(cornerRadius: 6)
             .fill(selectedPillar.color(for: colorScheme).opacity(0.1))
         )
-        
-        Picker("Pillar", selection: $selectedPillar) {
-          ForEach(BudgetPillar.allCases, id: \.self) { pillar in
-            HStack(spacing: 6) {
-              Circle()
-                .fill(pillar.color(for: colorScheme))
-                .frame(width: 6, height: 6)
-              Text(pillar.title)
-            }
-            .tag(pillar)
-          }
-        }
-        .labelsHidden()
-        .frame(width: 0)
-        .opacity(0)
       }
+      .buttonStyle(.plain)
+      .accessibilityLabel(label)
+      .accessibilityValue(selectedPillar.title)
     }
   }
 }
