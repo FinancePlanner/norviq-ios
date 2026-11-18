@@ -59,7 +59,7 @@ struct ProgressBar: View {
   }
 }
 
-private struct DiagonalStripes: Shape {
+nonisolated private struct DiagonalStripes: Shape {
   func path(in rect: CGRect) -> Path {
     var path = Path()
     let spacing: CGFloat = 4
