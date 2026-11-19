@@ -84,7 +84,7 @@ struct OnboardingHeroDashboardMock: View {
 }
 
 /// Tiny line-chart shape used by the hero mock and demo ticker cards.
-struct SparklinePath: Shape {
+nonisolated struct SparklinePath: Shape {
   let values: [Double]
 
   func path(in rect: CGRect) -> Path {

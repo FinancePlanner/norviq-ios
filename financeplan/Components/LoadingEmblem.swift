@@ -25,7 +25,7 @@ struct LoadingEmblem: View {
 }
 
 /// A four-point star with concave sides, matching the star inside the logo ring.
-struct FourPointStar: Shape {
+nonisolated struct FourPointStar: Shape {
   /// Waist of the star as a fraction of its radius: smaller is sharper.
   var waist: CGFloat = 0.16
 

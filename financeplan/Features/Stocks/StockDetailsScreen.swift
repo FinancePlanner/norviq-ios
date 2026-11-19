@@ -10,6 +10,7 @@ import Factory
 import PostHog
 import SwiftUI
 import StockPlanShared
+import SwiftData
 
 struct StockDetailScreen: View {
     let stockId: String

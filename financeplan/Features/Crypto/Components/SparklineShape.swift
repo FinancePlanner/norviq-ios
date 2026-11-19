@@ -1,7 +1,7 @@
 import Algorithms
 import SwiftUI
 
-struct SparklineShape: Shape {
+nonisolated struct SparklineShape: Shape {
     let values: [CGFloat]
 
     func path(in rect: CGRect) -> Path {
@@ -25,7 +25,7 @@ struct SparklineShape: Shape {
     }
 }
 
-struct SparklineAreaShape: Shape {
+nonisolated struct SparklineAreaShape: Shape {
     let values: [CGFloat]
 
     func path(in rect: CGRect) -> Path {
