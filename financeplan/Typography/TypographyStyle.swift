@@ -83,18 +83,14 @@ public struct TypographyStyle {
     return isMonospaced ? .monospaced : .default
   }
 
-  /// PostScript names of the bundled display face (financeplan/Resources/Fonts,
-  /// registered through `UIAppFonts`). Two static weights: semibold and up get
-  /// SemiBold, the rest Regular. There is no italic; `isItalic` is ignored.
-  static let displayFontRegular = "Brygada1918-Regular"
+  /// PostScript name of the bundled display face (financeplan/Resources/Fonts,
+  /// registered through `UIAppFonts`). One static weight ships, SemiBold, because
+  /// no role sets the display face lighter; any `weight` resolves to it. There is
+  /// no italic; `isItalic` is ignored. If it fails to register, the role falls
+  /// back to the system serif.
   static let displayFontSemiBold = "Brygada1918-SemiBold"
 
-  var displayFontName: String {
-    switch weight {
-    case .semibold, .bold, .extraBold, .black: Self.displayFontSemiBold
-    default: Self.displayFontRegular
-    }
-  }
+  var displayFontName: String { Self.displayFontSemiBold }
 
   public var usesTabularNumbers: Bool {
     switch type {

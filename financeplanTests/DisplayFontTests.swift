@@ -13,7 +13,17 @@ final class DisplayFontTests: XCTestCase {
   func testBrygadaIsRegisteredInTheApp() {
     // UIAppFonts in Info.plist; the test host is the app.
     XCTAssertNotNil(UIFont(name: "Brygada1918-SemiBold", size: 17), "Brygada1918-SemiBold.ttf is not registered")
-    XCTAssertNotNil(UIFont(name: "Brygada1918-Regular", size: 17), "Brygada1918-Regular.ttf is not registered")
+  }
+
+  /// No role sets the display face below semibold, so only SemiBold ships
+  /// (225 KB). A lighter weight asks for the same face, not a missing one.
+  func testOnlyTheSemiBoldFaceShips() {
+    XCTAssertNil(
+      Bundle.main.url(forResource: "Brygada1918-Regular", withExtension: "ttf"),
+      "no role uses Brygada Regular; do not ship it"
+    )
+    let regular = TypographyStyle(.displayTitle, weight: .regular).uiFont(compatibleWith: Self.traits(.large))
+    XCTAssertEqual(regular.fontName, "Brygada1918-SemiBold")
   }
 
   func testDisplayTitleIsTwentyEightPointSemiboldRelativeToTitle() {
