@@ -583,7 +583,7 @@ private struct DashboardHeroCard: View {
         InteractiveLineChart(
           data: currentPoints,
           color: currentColor,
-          currencyCode: showingPortfolio ? portfolio?.currencyCode : spendingCurrencyCode
+          currencyCode: showingPortfolio ? portfolio?.seriesCurrencyCode : spendingCurrencyCode
         )
       }
 

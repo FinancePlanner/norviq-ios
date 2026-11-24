@@ -34,8 +34,11 @@ struct PortfolioHeroModel: Equatable {
   let historyCaption: String?
   /// The series to draw: empty when stale or shorter than three points.
   let points: [ChartDataPoint]
-  /// The currency of `valueText` and `points`, for axis labels and pills.
+  /// The currency of `valueText`.
   let currencyCode: String?
+  /// The currency of `points`: the series' base currency, for the chart's
+  /// axis and tooltip. Not always the headline's.
+  let seriesCurrencyCode: String?
   /// "Excludes 1 unpriced holding": the total leaves out holdings with no price.
   let unpricedCaption: String?
 
@@ -99,11 +102,13 @@ struct PortfolioHeroModel: Equatable {
       currencyCode = baseCurrency
     }
 
-    // Change across the fetched range.
+    // Change across the fetched range. It is in the series' base currency,
+    // so it only sits under a headline in that same currency.
+    let changeMatchesHeadline = currencyCode == baseCurrency
     var deltaText: String?
     var basisText: String?
     var direction = Direction.flat
-    if hasTrend, let first = series.first, let last = series.last {
+    if hasTrend, changeMatchesHeadline, let first = series.first, let last = series.last {
       let change = last.value - first.value
       direction = change > 0 ? .up : (change < 0 ? .down : .flat)
       let amount = MoneyFormatter.signed(change, currencyCode: baseCurrency, locale: locale)
@@ -144,6 +149,7 @@ struct PortfolioHeroModel: Equatable {
       historyCaption: historyCaption,
       points: hasTrend ? series.map { ChartDataPoint(date: $0.date, value: $0.value) } : [],
       currencyCode: currencyCode,
+      seriesCurrencyCode: baseCurrency,
       unpricedCaption: unpricedCount > 0 && (valueText != nil || !subtotalTexts.isEmpty)
         ? String(localized: "Excludes \(unpricedCount) unpriced holdings")
         : nil

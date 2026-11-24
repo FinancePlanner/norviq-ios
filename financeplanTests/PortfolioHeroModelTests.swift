@@ -165,6 +165,41 @@ final class PortfolioHeroModelTests: XCTestCase {
 
   /// The hero values holdings exactly as the rows do (`HoldingRowModel`):
   /// the P/L when priced, else the live quote, in the instrument currency.
+  /// The series is in the portfolio base currency. A headline in another
+  /// currency cannot carry a change computed in the base: hide it, keep
+  /// the line with its own axis currency.
+  func testHeadlineInAnotherCurrencyHidesTheSeriesChange() {
+    let model = PortfolioHeroModel.make(
+      performance: freshMonth,
+      holdingsByCurrency: ["EUR": 1000],
+      range: .month,
+      now: now,
+      locale: unitedStates,
+      liveTotal: 1000,
+      preferLiveTotal: true
+    )
+    XCTAssertEqual(model.valueText, "€1,000.00")
+    XCTAssertEqual(model.currencyCode, "EUR")
+    XCTAssertEqual(model.seriesCurrencyCode, "USD")
+    XCTAssertNil(model.deltaText)
+    XCTAssertNil(model.basisText)
+    XCTAssertEqual(model.points.count, 3)
+  }
+
+  func testHeadlineInTheBaseCurrencyKeepsTheChange() {
+    let model = PortfolioHeroModel.make(
+      performance: freshMonth,
+      holdingsByCurrency: ["USD": 48432.05],
+      range: .month,
+      now: now,
+      locale: unitedStates,
+      liveTotal: 48432.05,
+      preferLiveTotal: true
+    )
+    XCTAssertEqual(model.seriesCurrencyCode, "USD")
+    XCTAssertNotNil(model.deltaText)
+  }
+
   func testValuationMatchesTheRows() {
     let holdings = [
       PortfolioHeroModel.Holding(symbol: "ABCL", shares: 255.05, costBasis: 965.54),

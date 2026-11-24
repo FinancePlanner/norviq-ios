@@ -81,7 +81,7 @@ struct PortfolioHeroCard: View {
           InteractiveLineChart(
             data: model.points,
             color: directionColor,
-            currencyCode: model.currencyCode
+            currencyCode: model.seriesCurrencyCode
           )
           .frame(minHeight: 160, maxHeight: .infinity)
           .padding(.horizontal, -12)
