@@ -79,7 +79,39 @@ struct UnifiedActivityFeed: View {
   let financialHealth: DashboardFinancialHealthDTO?
   let isFinancialHealthLoading: Bool
   let financialHealthUnavailable: Bool
+  /// The portfolio's base currency, for holding activity.
+  var portfolioCurrencyCode: String? = nil
+  /// The budget's currency, for expense activity and recent spend.
+  var spendingCurrencyCode: String? = nil
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  /// An activity's amount in the currency its kind of data is kept in:
+  /// expenses in the budget's, holdings in the portfolio's base. The feed
+  /// carries no currency of its own, so an unknown one prints " —".
+  static func amountText(
+    for activity: UserActivityResponse,
+    portfolioCurrencyCode: String?,
+    spendingCurrencyCode: String?,
+    locale: Locale = MoneyFormatter.defaultLocale
+  ) -> String? {
+    guard let amount = activity.amount else { return nil }
+    let code: String?
+    switch activity.type {
+    case .expenseRecorded, .expenseUpdated: code = spendingCurrencyCode
+    case .stockAdded, .stockUpdated, .newsViewed: code = portfolioCurrencyCode
+    }
+    return MoneyFormatter.signed(amount, currencyCode: code, locale: locale)
+  }
+
+  private static func dateTimeText(_ date: Date) -> String {
+    date.formatted(
+      Date.FormatStyle(date: .abbreviated, time: .shortened).locale(MoneyFormatter.defaultLocale)
+    )
+  }
+
+  private static func dayText(_ date: Date) -> String {
+    date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(MoneyFormatter.defaultLocale))
+  }
 
   private var financialHealthCardState: FinancialHealthCardState {
     FinancialHealthCardState(
@@ -142,12 +174,16 @@ struct UnifiedActivityFeed: View {
               Spacer()
 
               VStack(alignment: .trailing, spacing: 4) {
-                if let amount = activity.amount {
-                  Text(amount > 0 ? "+\(amount.currency)" : "-\(abs(amount).currency)")
+                if let amountText = Self.amountText(
+                  for: activity,
+                  portfolioCurrencyCode: portfolioCurrencyCode,
+                  spendingCurrencyCode: spendingCurrencyCode
+                ) {
+                  Text(verbatim: amountText)
                     .font(.headline)
                     .foregroundStyle(activity.isGrowth ? AppTheme.Colors.gain : AppTheme.Colors.loss)
                 }
-                Text(activity.createdAt.formatted(date: .abbreviated, time: .shortened))
+                Text(verbatim: Self.dateTimeText(activity.createdAt))
                   .font(.caption)
                   .foregroundStyle(.secondary)
               }
@@ -175,12 +211,12 @@ struct UnifiedActivityFeed: View {
               VStack(alignment: .leading, spacing: 2) {
                 Text(activity.title)
                   .font(.subheadline.weight(.semibold))
-                Text(activity.occurredOn.formatted(date: .abbreviated, time: .omitted))
+                Text(verbatim: Self.dayText(activity.occurredOn))
                   .font(.caption)
                   .foregroundStyle(.secondary)
               }
               Spacer()
-              Text("-\(activity.amount.currency)")
+              Text(verbatim: MoneyFormatter.signed(-abs(activity.amount), currencyCode: spendingCurrencyCode))
                 .font(.subheadline.weight(.semibold))
             }
             if activity.id != recentExpenses.prefix(3).last?.id {

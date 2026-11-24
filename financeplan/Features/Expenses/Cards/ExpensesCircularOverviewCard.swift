@@ -3,6 +3,8 @@ import SwiftUI
 struct ExpensesCircularOverviewCard: View {
   let leftAmount: Double
   let totalAmount: Double
+  /// The budget's currency; nil prints " —" (see `MoneyFormatter`).
+  let currencyCode: String?
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var progress: Double = 0
@@ -33,7 +35,7 @@ struct ExpensesCircularOverviewCard: View {
             .typography(.small)
             .foregroundStyle(.secondary)
 
-          Text(leftAmount.currency)
+          Text(verbatim: MoneyFormatter.string(leftAmount, currencyCode: currencyCode))
             .font(.largeTitle.weight(.semibold))
             .monospacedDigit()
 
@@ -41,7 +43,7 @@ struct ExpensesCircularOverviewCard: View {
             .typography(.small, weight: .semibold)
             .foregroundStyle(statusColor)
 
-          Text("\(targetProgress.formatted(.percent.precision(.fractionLength(0)))) of \(totalAmount.currency)")
+          Text("\(targetProgress.formatted(.percent.precision(.fractionLength(0)).locale(MoneyFormatter.defaultLocale))) of \(MoneyFormatter.string(totalAmount, currencyCode: currencyCode))")
             .typography(.small)
             .foregroundStyle(.secondary)
         }

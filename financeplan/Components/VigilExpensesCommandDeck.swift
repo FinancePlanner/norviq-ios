@@ -7,8 +7,10 @@ import StockPlanShared
 struct VigilExpensesCommandDeck: View {
   @Environment(\.colorScheme) private var scheme
 
+  /// The selected month's expenses only (`commandDeckActivities`).
   let activities: [BudgetActivity]
-  let currencyCode: String
+  /// The budget's currency; nil prints " —" rather than guessing one.
+  let currencyCode: String?
 
   var body: some View {
     activityPanel
@@ -26,7 +28,7 @@ struct VigilExpensesCommandDeck: View {
         } else {
           ForEach(activities.prefix(6)) { item in
             HStack(alignment: .top) {
-              Text(item.dateLabel)
+              Text(verbatim: Self.dateText(item.occurredOn))
                 .font(.caption2.monospaced())
                 .foregroundStyle(.secondary)
                 .frame(width: 52, alignment: .leading)
@@ -34,12 +36,15 @@ struct VigilExpensesCommandDeck: View {
                 Text(item.title)
                   .font(.caption.weight(.medium))
                   .lineLimit(1)
-                Text(aiTag(for: item.pillar))
-                  .font(.caption2.weight(.bold).monospaced())
-                  .foregroundStyle(tagColor(for: item.pillar))
+                Text(verbatim: Self.tagLabel(for: item.pillar))
+                  .font(.caption2.weight(.semibold))
+                  .foregroundStyle(.secondary)
+                  .padding(.horizontal, 6)
+                  .padding(.vertical, 2)
+                  .background(AppTheme.Colors.tertiaryFill, in: Capsule())
               }
               Spacer(minLength: 4)
-              Text(item.amount, format: .currency(code: currencyCode))
+              Text(verbatim: MoneyFormatter.string(item.amount, currencyCode: currencyCode))
                 .font(.caption.weight(.semibold).monospacedDigit())
                 .foregroundStyle(AppTheme.Colors.dangerText(for: scheme))
             }
@@ -49,27 +54,29 @@ struct VigilExpensesCommandDeck: View {
     }
   }
 
-  private func aiTag(for pillar: BudgetPillar) -> String {
+  /// A plain word for the kind of spending: no brackets, no code-style
+  /// casing, no colour per pillar.
+  static func tagLabel(for pillar: BudgetPillar) -> String {
     switch pillar {
-    case .fundamentals: "[FIXED: \(pillar.title)]"
-    case .fun: "[LEISURE: \(pillar.title)]"
-    default: "[VARIABLE: \(pillar.title)]"
+    case .fundamentals: String(localized: "Fixed")
+    case .fun: String(localized: "Leisure")
+    default: String(localized: "Variable")
     }
   }
 
-  private func tagColor(for pillar: BudgetPillar) -> Color {
-    switch pillar {
-    case .fundamentals: AppTheme.Colors.tint(for: scheme)
-    case .fun: AppTheme.Colors.warningText(for: scheme)
-    default: AppTheme.Colors.secondaryTint(for: scheme)
-    }
-  }
-}
+  /// One `DateFormatter` per locale, built on first use: a formatter per
+  /// row per render was the old cost, and one fixed at launch kept the old
+  /// language after the app language changed.
+  private static var dateFormatters: [String: DateFormatter] = [:]
 
-private extension BudgetActivity {
-  var dateLabel: String {
+  static func dateText(_ date: Date, locale: Locale = MoneyFormatter.defaultLocale) -> String {
+    if let formatter = dateFormatters[locale.identifier] {
+      return formatter.string(from: date)
+    }
     let formatter = DateFormatter()
-    formatter.dateFormat = "MMM d"
-    return formatter.string(from: occurredOn)
+    formatter.locale = locale
+    formatter.setLocalizedDateFormatFromTemplate("MMMd")
+    dateFormatters[locale.identifier] = formatter
+    return formatter.string(from: date)
   }
 }

@@ -494,6 +494,37 @@ final class PortfolioViewModelTests: XCTestCase {
       from: data
     )
   }
+
+  /// A range the user has left must not touch the range on screen: a late
+  /// failure of the old request used to clear the new series.
+  func testLateFailureOfAnOlderRangeKeepsTheNewerSeries() async {
+    let service = MockStockService()
+    let pending = PendingPerformance()
+    service.performanceHandler = { range in
+      if range == "1W" {
+        return try await withCheckedThrowingContinuation { pending.continuation = $0 }
+      }
+      return PortfolioPerformanceResponse(
+        baseCurrency: "USD",
+        points: [PerformancePoint(date: "2026-11-23", value: 1)]
+      )
+    }
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
+    let week = PortfolioViewModel.PerformanceKey(portfolioListId: nil, range: "1W")
+    let month = PortfolioViewModel.PerformanceKey(portfolioListId: nil, range: "1M")
+
+    let older = Task { await viewModel.loadPerformance(week) }
+    // Wait until the week request is in flight before asking for the month.
+    while pending.continuation == nil { await Task.yield() }
+    await viewModel.loadPerformance(month)
+    XCTAssertNotNil(viewModel.performance(for: month))
+
+    pending.continuation?.resume(throwing: URLError(.timedOut))
+    await older.value
+
+    XCTAssertEqual(service.performanceRequests, ["1W", "1M"])
+    XCTAssertNotNil(viewModel.performance(for: month))
+  }
 }
 
 extension MarketDataServicing {
@@ -650,6 +681,10 @@ private final class MockPortfolioLocalStore: PortfolioLocalPersisting {
 }
 
 @MainActor
+private final class PendingPerformance: @unchecked Sendable {
+  var continuation: CheckedContinuation<PortfolioPerformanceResponse, Error>?
+}
+
 private final class MockStockService: StockServicing {
   var fetchPortfolioCalls = 0
   var fetchPortfolioCursors: [String?] = []
@@ -746,6 +781,18 @@ private final class MockStockService: StockServicing {
 
   func fetchPortfolioPerformance(portfolioListId _: String?) async throws -> PortfolioPerformanceResponse {
     throw MockError("Not configured.")
+  }
+
+  /// Ranges requested, in order; `performanceHandler` answers each one.
+  var performanceRequests: [String?] = []
+  var performanceHandler: ((String?) async throws -> PortfolioPerformanceResponse)?
+
+  func fetchPortfolioPerformance(portfolioListId: String?, range: String?) async throws -> PortfolioPerformanceResponse {
+    performanceRequests.append(range)
+    if let performanceHandler {
+      return try await performanceHandler(range)
+    }
+    return try await fetchPortfolioPerformance(portfolioListId: portfolioListId)
   }
 
   func fetchStockDetails(stockId _: String) async throws -> StockDetails {

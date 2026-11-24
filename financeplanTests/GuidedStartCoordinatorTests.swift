@@ -3,7 +3,8 @@ import StockPlanShared
 import Testing
 @testable import financeplan
 
-actor FakeOnboardingClient: OnboardingClientProtocol {
+@MainActor
+final class FakeOnboardingClient: OnboardingClientProtocol {
   var state: OnboardingStateDTO
   var failPatch = false
   private(set) var getCount = 0

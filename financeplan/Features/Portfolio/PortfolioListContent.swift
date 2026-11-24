@@ -137,52 +137,15 @@ struct PortfolioRow: View {
   let pnl: PnlBySymbol?
   var sentiment: SymbolSentiment?
 
-  private var displayPrice: Double? {
-    pnl?.currentPrice ?? liveQuote?.currentPrice
-  }
-
-  private var hasLiveMark: Bool {
-    displayPrice != nil
-  }
-
-  private var costBasis: Double {
-    pnl?.costBasis ?? (stock.shares * stock.buyPrice)
-  }
-
-  private var marketValue: Double {
-    if let value = pnl?.marketValue, hasLiveMark {
-      return value
-    }
-    if let price = displayPrice {
-      return stock.shares * price
-    }
-    return costBasis
-  }
-
-  private var todayChange: Double? {
-    pnl?.dayChange ?? liveQuote?.change.map { $0 * stock.shares }
-  }
-
-  private var todayChangePercent: Double? {
-    pnl?.dayChangePercent ?? liveQuote?.percentChange
-  }
-
-  /// Total G/L needs a live price; cost-basis fallback would report a meaningless 0.
-  private var totalGainLoss: Double? {
-    guard hasLiveMark else { return nil }
-    if let pnl {
-      return pnl.unrealizedPnl
-    }
-    return marketValue - costBasis
-  }
-
-  private var totalGainLossPercent: Double? {
-    guard hasLiveMark else { return nil }
-    if let pct = pnl?.unrealizedPnlPercent {
-      return pct
-    }
-    guard costBasis > 0 else { return nil }
-    return ((marketValue - costBasis) / costBasis) * 100
+  /// Every amount on the row, in the holding's currency (spec § 2.0 A3, A6).
+  private var model: HoldingRowModel {
+    HoldingRowModel.make(
+      pnl: pnl,
+      quote: liveQuote,
+      shares: stock.shares,
+      costBasis: stock.shares * stock.buyPrice,
+      locale: MoneyFormatter.defaultLocale
+    )
   }
 
   private var rowSubtitle: String? {
@@ -192,26 +155,31 @@ struct PortfolioRow: View {
     )
   }
 
-  private var valueCaption: String {
-    hasLiveMark ? "Market value" : "Cost basis"
+  private var priceUnavailableText: String {
+    String(localized: "Price unavailable")
   }
 
-  private var accessibilitySummary: String {
-    var parts = ["\(stock.symbol), \(marketValue.currency)"]
-    if let todayChange, let todayChangePercent {
-      parts.append(
-        "day \(StockMetricFormatter.signedCurrencyText(todayChange)) \(String(format: "%+.2f%%", todayChangePercent))"
-      )
+  private func accessibilitySummary(_ model: HoldingRowModel) -> String {
+    var parts = [stock.symbol]
+    if let marketValueText = model.marketValueText {
+      parts.append(marketValueText)
+    } else if model.priceUnavailable {
+      parts.append(priceUnavailableText)
     }
-    if let totalGainLoss {
-      parts.append("total gain loss \(StockMetricFormatter.signedCurrencyText(totalGainLoss))")
+    if let dayChangeText = model.dayChangeText {
+      parts.append(String(localized: "today \(dayChangeText)"))
     }
-    parts.append("\(stock.shares.formatted(.number.precision(.fractionLength(0...2)))) shares")
+    if let glText = model.glText {
+      parts.append(String(localized: "total gain or loss \(glText)"))
+    }
+    parts.append(String(localized: "cost \(model.costText)"))
+    parts.append(sharesLine)
     return parts.joined(separator: ", ")
   }
 
   var body: some View {
-    GlassCard(cornerRadius: AppTheme.Radius.hero) {
+    let model = model
+    return GlassCard(cornerRadius: AppTheme.Radius.hero) {
       VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
         HStack(alignment: .top, spacing: AppTheme.Spacing.md) {
           VStack(alignment: .leading, spacing: 4) {
@@ -234,7 +202,10 @@ struct PortfolioRow: View {
             }
 
             if let targetAlert {
-              Label(targetAlert.targetPrice.currency, systemImage: "bell.fill")
+              Label(
+                MoneyFormatter.string(targetAlert.targetPrice, currencyCode: model.currencyCode),
+                systemImage: "bell.fill"
+              )
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.orange)
                 .lineLimit(1)
@@ -244,41 +215,59 @@ struct PortfolioRow: View {
           Spacer(minLength: 8)
 
           VStack(alignment: .trailing, spacing: 4) {
-            Text(marketValue.currency)
-              .font(.headline)
-              .foregroundStyle(.primary)
-              .contentTransition(.numericText())
-              .monospacedDigit()
+            if let marketValueText = model.marketValueText {
+              // Not animated: a changing value in a list is never animated.
+              Text(verbatim: marketValueText)
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .monospacedDigit()
 
-            Text(valueCaption)
-              .font(.caption2)
-              .foregroundStyle(.tertiary)
+              Text("Market value")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
 
-            QuoteChangeLabel(
-              absoluteChange: todayChange,
-              percentChange: todayChangePercent,
-              style: .compact
-            )
+              if let dayChangeText = model.dayChangeText {
+                Text(verbatim: dayChangeText)
+                  .font(.caption.weight(.semibold))
+                  .monospacedDigit()
+                  .foregroundStyle(Self.tone(model.dayDirection))
+              }
+            } else if model.priceUnavailable {
+              // A missing price is not a loss: say so, and show no value.
+              Text(verbatim: priceUnavailableText)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            }
           }
         }
 
         HoldingMetricsStrip(
-          lastPrice: displayPrice,
-          costBasis: costBasis,
-          totalGainLoss: totalGainLoss,
-          totalGainLossPercent: totalGainLossPercent,
-          weightPercent: pnl?.weightPercent
+          priceText: model.priceText,
+          costText: model.costText,
+          glText: model.glText,
+          glTone: Self.tone(model.glDirection),
+          weightPercent: model.priceUnavailable ? nil : pnl?.weightPercent
         )
       }
       .padding(.vertical, 4)
     }
     .accessibilityElement(children: .combine)
-    .accessibilityLabel(accessibilitySummary)
+    .accessibilityLabel(accessibilitySummary(model))
+  }
+
+  /// Gain and loss colours speak only about money direction; zero is flat.
+  static func tone(_ direction: Double?) -> Color {
+    guard let direction else { return .secondary }
+    if direction > 0 { return AppTheme.Colors.gain }
+    if direction < 0 { return AppTheme.Colors.loss }
+    return AppTheme.Colors.flat
   }
 
   private var sharesLine: String {
-    let shares = stock.shares.formatted(.number.precision(.fractionLength(0...2)))
-    return "\(shares) shares"
+    let shares = stock.shares.formatted(
+      .number.precision(.fractionLength(0...2)).locale(MoneyFormatter.defaultLocale)
+    )
+    return String(localized: "\(shares) shares")
   }
 }
 
@@ -303,83 +292,34 @@ enum HoldingRowPresentation {
   }
 }
 
-// MARK: - Quote change label
-
-struct QuoteChangeLabel: View {
-  enum Style {
-    case compact
-    case detailed
-  }
-
-  let absoluteChange: Double?
-  let percentChange: Double?
-  /// When true, `percentChange` is already 0–100 point scale (backend PnL / some quote fields).
-  var percentIsPointScale: Bool = true
-  var style: Style = .compact
-
-  private var tone: Color {
-    guard let absoluteChange else { return .secondary }
-    if absoluteChange > 0 { return AppTheme.Colors.success }
-    if absoluteChange < 0 { return AppTheme.Colors.danger }
-    return .secondary
-  }
-
-  var body: some View {
-    if absoluteChange == nil && percentChange == nil {
-      EmptyView()
-    } else {
-      Text(labelText)
-        .font(style == .compact ? .caption.weight(.semibold) : .subheadline.weight(.medium))
-        .foregroundStyle(tone)
-        .monospacedDigit()
-        .contentTransition(.numericText())
-    }
-  }
-
-  private var labelText: String {
-    var parts: [String] = []
-    if let absoluteChange {
-      parts.append(StockMetricFormatter.signedCurrencyText(absoluteChange))
-    }
-    if let percentChange {
-      let display = percentIsPointScale ? percentChange : percentChange * 100
-      parts.append(String(format: "(%+.2f%%)", display))
-    }
-    return parts.joined(separator: " ")
-  }
-}
-
 // MARK: - Shared metrics strip
 
 struct HoldingMetricsStrip: View {
-  let lastPrice: Double?
-  let costBasis: Double?
-  let totalGainLoss: Double?
-  let totalGainLossPercent: Double?
+  let priceText: String?
+  let costText: String?
+  let glText: String?
+  let glTone: Color
   let weightPercent: Double?
 
   private var items: [MetricItem] {
     var result: [MetricItem] = []
-    if let lastPrice {
-      result.append(MetricItem(title: "Last", value: lastPrice.currency, color: .primary))
+    if let priceText {
+      result.append(MetricItem(title: String(localized: "Last"), value: priceText, color: .primary))
     }
-    if let costBasis {
-      result.append(MetricItem(title: "Cost", value: costBasis.currency, color: .primary))
+    if let costText {
+      result.append(MetricItem(title: String(localized: "Cost"), value: costText, color: .primary))
     }
-    if let totalGainLoss {
-      result.append(
-        MetricItem(
-          title: "Total G/L",
-          value: totalText(totalGainLoss, percent: totalGainLossPercent),
-          color: totalGainLoss >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger
-        )
-      )
+    if let glText {
+      result.append(MetricItem(title: String(localized: "Total G/L"), value: glText, color: glTone))
     }
     if let weightPercent, weightPercent > 0 {
       result.append(
         MetricItem(
-          title: "% Acct",
-          value: String(format: "%.1f%%", weightPercent),
+          title: String(localized: "% Acct"),
+          // Points from the backend; the percent formatter takes a fraction.
+          value: (weightPercent / 100).formatted(
+            .percent.precision(.fractionLength(1)).locale(MoneyFormatter.defaultLocale)
+          ),
           color: .primary
         )
       )
@@ -401,7 +341,6 @@ struct HoldingMetricsStrip: View {
               .font(.caption.weight(.semibold))
               .monospacedDigit()
               .foregroundStyle(item.color)
-              .contentTransition(.numericText())
               .lineLimit(1)
               .minimumScaleFactor(0.75)
           }
@@ -411,14 +350,6 @@ struct HoldingMetricsStrip: View {
       .padding(.top, 2)
       .accessibilityElement(children: .combine)
     }
-  }
-
-  private func totalText(_ gainLoss: Double, percent: Double?) -> String {
-    var text = StockMetricFormatter.signedCurrencyText(gainLoss)
-    if let percent {
-      text += " (\(String(format: "%+.1f%%", percent)))"
-    }
-    return text
   }
 
   private struct MetricItem: Identifiable {

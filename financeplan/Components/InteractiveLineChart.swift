@@ -11,7 +11,10 @@ struct ChartDataPoint: Identifiable, Equatable {
 struct InteractiveLineChart: View {
     let data: [ChartDataPoint]
     let color: Color
-    var currencyCode = "USD"
+    /// The currency the values are in. Nil prints the number with " —"
+    /// (see `MoneyFormatter`). Callers outside the P1 screens still pass
+    /// nothing and get the historical USD default until P2 moves them.
+    var currencyCode: String? = "USD"
 
     @State private var selectedDataPoint: ChartDataPoint?
     @State private var selectionFeedbackTrigger = 0
@@ -30,15 +33,15 @@ struct InteractiveLineChart: View {
             // Axis labels for Y axis
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .trailing, spacing: 0) {
-                    Text(bounds.max.formatted(.currency(code: "USD")))
+                    Text(verbatim: MoneyFormatter.string(bounds.max, currencyCode: currencyCode))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text((bounds.min + (bounds.max - bounds.min) / 2).formatted(.currency(code: "USD")))
+                    Text(verbatim: MoneyFormatter.string(bounds.min + (bounds.max - bounds.min) / 2, currencyCode: currencyCode))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text(bounds.min.formatted(.currency(code: "USD")))
+                    Text(verbatim: MoneyFormatter.string(bounds.min, currencyCode: currencyCode))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -119,10 +122,10 @@ struct InteractiveLineChart: View {
                                 )
 
                             VStack(alignment: .center, spacing: 2) {
-                                Text(selected.date.formatted(.dateTime.month().day()))
+                                Text(verbatim: Self.dayLabel(selected.date))
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
-                                Text(selected.value.formatted(.currency(code: "USD")))
+                                Text(verbatim: MoneyFormatter.string(selected.value, currencyCode: currencyCode))
                                     .font(.caption.bold())
                                     .foregroundStyle(.primary)
                             }
@@ -154,17 +157,26 @@ struct InteractiveLineChart: View {
             
             // X axis labels
             HStack(spacing: 0) {
-                Text(minDate.formatted(.dateTime.month().day()))
+                Text(verbatim: Self.dayLabel(minDate))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text(maxDate.formatted(.dateTime.month().day()))
+                Text(verbatim: Self.dayLabel(maxDate))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
             .padding(.leading, 50)
         }
         .sensoryFeedback(.selection, trigger: selectionFeedbackTrigger)
+    }
+
+    /// "Nov 1": the series' dates are UTC days (both callers parse them at
+    /// UTC), shown in the app's language rather than the device region.
+    static func dayLabel(_ date: Date, locale: Locale = MoneyFormatter.defaultLocale) -> String {
+        let style = Date.FormatStyle(locale: locale, timeZone: TimeZone(identifier: "UTC") ?? .gmt)
+            .month()
+            .day()
+        return date.formatted(style)
     }
 
     private func updateSelectedPoint(at x: CGFloat, in width: CGFloat) {

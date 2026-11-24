@@ -4,7 +4,7 @@ import XCTest
 
 @MainActor
 final class AppLockManagerTests: XCTestCase {
-  private final class SecureStoreStub: SecureStringStoring, @unchecked Sendable {
+  nonisolated private final class SecureStoreStub: SecureStringStoring, @unchecked Sendable {
     var values: [String: String] = [:]
     var writeError: Error?
 

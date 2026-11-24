@@ -88,8 +88,8 @@ struct ExpensesPlannerScreen: View {
               .padding(.top, 4)
 
               VigilExpensesCommandDeck(
-                activities: viewModel.activities,
-                currencyCode: "USD"
+                activities: viewModel.commandDeckActivities,
+                currencyCode: viewModel.budgetCurrencyCode
               )
               .padding(.horizontal, 16)
 
@@ -102,7 +102,8 @@ struct ExpensesPlannerScreen: View {
           
               ExpensesCircularOverviewCard(
                 leftAmount: viewModel.selectedMonthLeftAfterSpending,
-                totalAmount: viewModel.selectedMonthSnapshot?.netSalary ?? 0
+                totalAmount: viewModel.selectedMonthSnapshot?.netSalary ?? 0,
+                currencyCode: viewModel.budgetCurrencyCode
               )
               .padding(.top, 10)
 
@@ -126,6 +127,7 @@ struct ExpensesPlannerScreen: View {
             
                 MonthlyPlanItemsCard(
                   monthTitle: viewModel.selectedMonthDisplayTitle,
+                  currencyCode: viewModel.budgetCurrencyCode,
                   items: (viewModel.selectedMonthSnapshot?.items ?? []).sorted(by: planItemSortOrder),
                   recurringTemplates: viewModel.recurringTemplates,
                   onAdd: { presentNewPlanItemDraft(pillar: .fundamentals) },
@@ -781,6 +783,8 @@ private struct PillarMetricItem: View {
 
 private struct MonthlyPlanItemsCard: View {
   let monthTitle: String
+  /// The budget's currency; nil prints " —" (see `MoneyFormatter`).
+  let currencyCode: String?
   let items: [BudgetPlanItem]
   let recurringTemplates: [RecurringTemplateResponse]
   let onAdd: () -> Void
@@ -846,7 +850,7 @@ private struct MonthlyPlanItemsCard: View {
                 Spacer()
                 
                 let total = pillarItems.reduce(0) { $0 + $1.plannedAmount }
-                Text(total.currency)
+                Text(verbatim: MoneyFormatter.string(total, currencyCode: currencyCode))
                   .typography(.nano, weight: .bold)
                   .foregroundStyle(.primary)
               }
@@ -886,10 +890,8 @@ private struct MonthlyPlanItemsCard: View {
                               startInlineEdit(item)
                             }
                           } label: {
-                            Text(item.plannedAmount.currency)
+                            Text(verbatim: MoneyFormatter.string(item.plannedAmount, currencyCode: currencyCode))
                               .font(.subheadline.weight(.semibold))
-                              .contentTransition(.numericText(value: item.plannedAmount))
-                              .appAnimation(AppMotion.state, value: item.plannedAmount)
                           }
                           .buttonStyle(.bordered)
                           
@@ -988,7 +990,7 @@ private struct MonthlyPlanItemsCard: View {
 
               Spacer()
 
-              Text(template.amount.currency)
+              Text(verbatim: MoneyFormatter.string(template.amount, currencyCode: currencyCode))
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
 

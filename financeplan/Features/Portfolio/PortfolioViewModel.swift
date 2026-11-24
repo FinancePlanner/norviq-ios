@@ -85,6 +85,17 @@ final class PortfolioViewModel {
   private(set) var sentimentBySymbol: [String: SymbolSentiment] = [:]
   private(set) var portfolioSentiment: PortfolioSentimentResponse?
   private(set) var pnlBySymbol: [String: PnlBySymbol] = [:]
+  /// The stored value series behind the hero, and the list and range it was
+  /// fetched for. The hero only draws a series under the range it asked for.
+  private(set) var performance: PortfolioPerformanceResponse?
+  private(set) var performanceKey: PerformanceKey?
+  /// The range and list asked for last. Only its answer may land.
+  @ObservationIgnored private var latestRequestedPerformanceKey: PerformanceKey?
+
+  struct PerformanceKey: Hashable {
+    let portfolioListId: String?
+    let range: String
+  }
 
   private let service: StockServicing
   private let marketDataService: MarketDataServicing
@@ -113,6 +124,36 @@ final class PortfolioViewModel {
 
   convenience init(service: StockServicing, localStore: (any PortfolioLocalPersisting)? = nil) {
     self.init(service: service, marketDataService: Container.shared.marketDataService(), localStore: localStore)
+  }
+
+  /// The performance series for `key`, or nil when it has not loaded (or failed).
+  func performance(for key: PerformanceKey) -> PortfolioPerformanceResponse? {
+    performanceKey == key ? performance : nil
+  }
+
+  /// Fetches the series for one list and range. A failure leaves no series,
+  /// so the hero falls back to the live total and shows no change.
+  func loadPerformance(_ key: PerformanceKey) async {
+    latestRequestedPerformanceKey = key
+    do {
+      let response = try await service.fetchPortfolioPerformance(
+        portfolioListId: key.portfolioListId,
+        range: key.range
+      )
+      // Superseded by a newer range or list: leave the newer result alone.
+      guard !Task.isCancelled, latestRequestedPerformanceKey == key else { return }
+      performance = response
+      performanceKey = key
+    } catch {
+      // Cancellation can surface as URLError.cancelled, not CancellationError.
+      // A late failure of an older request must not clear the newer series.
+      guard !Task.isCancelled, latestRequestedPerformanceKey == key else { return }
+      portfolioViewModelLogger.warning(
+        "Portfolio performance load failed: \(error.localizedDescription, privacy: .public)"
+      )
+      performance = nil
+      performanceKey = nil
+    }
   }
 
   func setModelContext(_ context: ModelContext) {

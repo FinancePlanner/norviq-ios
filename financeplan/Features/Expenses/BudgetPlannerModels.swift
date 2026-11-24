@@ -61,19 +61,24 @@ struct MonthlyBudgetSnapshot: Identifiable, Equatable {
   var netSalary: Double
   var targetShares: [BudgetPillar: Double]
   var items: [BudgetPlanItem]
+  /// The budget's currency as the server stores it. Nil for a month built
+  /// on the device that has not been saved yet.
+  var currencyCode: String?
 
   init(
     id: UUID = UUID(),
     monthStart: Date,
     netSalary: Double,
     targetShares: [BudgetPillar: Double] = BudgetPillar.defaultShares,
-    items: [BudgetPlanItem]
+    items: [BudgetPlanItem],
+    currencyCode: String? = nil
   ) {
     self.id = id
     self.monthStart = monthStart
     self.netSalary = netSalary
     self.targetShares = targetShares
     self.items = items
+    self.currencyCode = currencyCode
   }
 }
 
