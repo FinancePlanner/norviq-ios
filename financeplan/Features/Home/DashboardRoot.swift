@@ -440,7 +440,9 @@ private struct DashboardContentSection: View {
         recentExpenses: recentExpenses,
         financialHealth: financialHealth,
         isFinancialHealthLoading: isFinancialHealthLoading,
-        financialHealthUnavailable: financialHealthUnavailable
+        financialHealthUnavailable: financialHealthUnavailable,
+        portfolioCurrencyCode: portfolioHero?.seriesCurrencyCode,
+        spendingCurrencyCode: spendingCurrencyCode
       )
 
       MacroTeaserCard()
