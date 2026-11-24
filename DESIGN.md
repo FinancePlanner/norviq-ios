@@ -29,6 +29,12 @@ typography:
     fontWeight: 600
     lineHeight: 1.1
     letterSpacing: "normal"
+  display-title:
+    fontFamily: "Brygada 1918"
+    fontSize: "28"
+    fontWeight: 600
+    lineHeight: 1.2
+    letterSpacing: "normal"
   hero:
     fontFamily: "SF Pro"
     fontSize: "32"
@@ -122,8 +128,9 @@ components:
 Norviq is an instrument for reading your own money, not a feed. The identity is Precision
 Intelligence: obsidian and midnight navy in dark, warm paper in light, with one metal, gold, used
 sparingly. The interface represents discipline and the data represents reality, so nothing
-decorative is allowed to compete with a number. Surfaces are flat and quiet, type is system SF, and
-every figure sits in tabular digits with measured contrast.
+decorative is allowed to compete with a number. Surfaces are flat and quiet, type is system SF (with
+Brygada 1918 for page titles and the Home greeting only), and every figure sits in tabular digits
+with measured contrast.
 
 Density is deliberate: these are disciplined investors checking a position or a plan in a short
 session. Screens favor system structure (`NavigationStack`, inset grouped `List`, `Form`, sheets with
@@ -144,11 +151,23 @@ SwiftUI's own `ShapeStyle` members.
 - One accent metal on about 10% of a screen.
 - Financial color is a separate vocabulary from brand color.
 - System controls and SF type; Dynamic Type everywhere.
+- One display serif, Brygada 1918, for page titles and the greeting. Never for a number.
+
+`DESIGN.json` at the repo root is historical and not read by code. This file, `Design/tokens.json`
+and the code are the current sources.
 - Legible and correct with motion and effects off.
 
 ## 2. Colors
 
 Tinted neutrals carry the screen; gold marks intent; green and red speak only about money.
+
+**Source.** Every `Theme/*.colorset` is generated from `financeplan/Design/tokens.json` by
+`scripts/tokens/generate_colorsets.py` (`make tokens`). Never edit a colour set by hand. Edit the web
+master `norviq-web-v2/design/tokens.json`, copy it here byte for byte, then run `make tokens`.
+`make tokens-check` (CI) fails on a stale or hand-edited set, and `VigilDesignSystemTests` asserts
+every set equals its token exactly, light and dark, alpha included. Each set's token is the one whose
+`$extensions.norviq.ios` names it. `AccentColor` and `LaunchBackground` sit outside `Theme/` and are
+not generated.
 
 ### Primary / Accent
 
@@ -201,11 +220,18 @@ fill of itself. That is the pair the identity spec measured at 4.5:1 or better.
 
 ## 3. Typography
 
-**Display Font:** SF Pro (system)
+**Display Font:** Brygada 1918 (OFL), page titles and the Home greeting only
 **Body Font:** SF Pro (system, scaled through `UIFontMetrics`)
 
-**Character:** One family, no display pairing. Hierarchy comes from the size ladder and weight, and
-the only typographic signature is the monospaced overline and tabular numerals.
+**Character:** SF carries the product. Hierarchy comes from the size ladder and weight, with the
+monospaced overline and tabular numerals as its signature. One editorial serif, Brygada 1918, sets
+the page title in `VigilPageHeader` and the Home greeting, and nothing else (DS 2.0 § 9.0 Q2).
+
+**Display face files.** `financeplan/Resources/Fonts/Brygada1918-Regular.ttf` and
+`Brygada1918-SemiBold.ttf` (static TTFs, the same files the brief export embeds) with `OFL.txt`,
+registered through `UIAppFonts` in `Info.plist`. PostScript names `Brygada1918-Regular` and
+`Brygada1918-SemiBold`. If they fail to register, `.displayTitle` falls back to the system serif
+(New York) at the same size, never to nothing.
 
 Two routes exist and both honor Dynamic Type: SwiftUI semantic styles (`.headline`, `.subheadline`,
 `.caption`) on system `List` and `Form` screens, and the `Typography` ladder via `.typography(_:)`
@@ -214,6 +240,9 @@ on designed surfaces. The ladder uses fixed design sizes that scale relative to 
 ### Hierarchy
 
 - **Display number** (semibold, 40pt scaled as largeTitle, tabular): the one large figure on a screen.
+- **Display title** (Brygada 1918 SemiBold, 28pt scaled as title, `.typography(.displayTitle)`): the
+  page title in `VigilPageHeader` and the Home greeting (iOS 26 large-title slot; iOS 18 keeps the
+  system title). Wraps, never truncates.
 - **Hero** (bold, 32pt scaled as title): a screen's lead statement.
 - **Title** (bold, 24pt scaled as title2): section and card titles. `metricNumber` shares the size,
   semibold and tabular.
@@ -231,6 +260,22 @@ on designed surfaces. The ladder uses fixed design sizes that scale relative to 
 
 **The Steps You Can See Rule.** The ladder is 17 / 15 / 13 / 12 / 11. Do not add a size between two
 steps; a 1pt difference is not hierarchy.
+
+**The Display Face Rule.** Brygada 1918 sets page titles and the greeting. Never a number, a table,
+a control or body text. Figures stay SF tabular; `DisplayFontTests` fails if a numeric role resolves
+to the serif.
+
+### Money
+
+`MoneyFormatter` (`financeplan/Utilities/MoneyFormatter.swift`) is the one way to print money
+(spec § 5.4). The currency comes from the data and is never defaulted to USD: a missing or blank
+code prints the number followed by " —". The locale follows the app language (en → en_US,
+pt-PT → pt_PT), not the phone's region. Call sites pass the finished string to `Text`; they do not
+use `Text(_, format:)` or `.formatted()` for money.
+
+Output is normalised to the shared golden fixtures, `docs/design-system-fixtures/money.json`, which
+web and Android run too. `financeplanTests/Fixtures/money.json` is a byte copy (never edit it here),
+and `MoneyFormatterTests.testFixtures` proves every iOS case against it.
 
 ## 4. Elevation
 
