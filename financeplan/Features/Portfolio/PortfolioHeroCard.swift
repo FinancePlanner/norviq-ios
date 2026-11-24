@@ -1,17 +1,34 @@
 import StockPlanShared
 import SwiftUI
 
+/// The portfolio hero. Every figure comes finished from `PortfolioHeroModel`:
+/// real data in the currency the data names, or a plain caption saying why
+/// there is no change or line to show.
 struct PortfolioHeroCard: View {
-  let colorScheme: ColorScheme
   let heroLabel: String
-  let totalValue: Double
   let heroSubtitle: String
-  let chartData: [ChartDataPoint]
+  let model: PortfolioHeroModel
   let selectedTimeRange: PortfolioScreen.TimeRange
-  let totalShares: Double
-  let averagePositionValue: Double
-  let cashBalance: Double
+  let positionCount: Int
+  let averagePositionText: String
+  let cashText: String
   let onSelectTimeRange: (PortfolioScreen.TimeRange) -> Void
+
+  private var directionColor: Color {
+    switch model.direction {
+    case .up: AppTheme.Colors.gain
+    case .down: AppTheme.Colors.loss
+    case .flat: AppTheme.Colors.foreground
+    }
+  }
+
+  private var directionSymbol: String {
+    switch model.direction {
+    case .up: "arrow.up.right"
+    case .down: "arrow.down.right"
+    case .flat: "arrow.right"
+    }
+  }
 
   var body: some View {
     GlassCard(cornerRadius: AppTheme.Radius.hero) {
@@ -21,36 +38,56 @@ struct PortfolioHeroCard: View {
             .typography(.small, weight: .semibold)
             .foregroundStyle(.secondary)
 
-          HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(totalValue.currency)
-              .typography(.displayNumber)
-              .contentTransition(.numericText(value: totalValue))
-              .appAnimation(AppMotion.state, value: totalValue)
-            Text(heroSubtitle)
-              .typography(.small)
-              .foregroundStyle(.secondary)
+          valueBlock
+
+          if let deltaText = model.deltaText {
+            HStack(spacing: 4) {
+              Image(systemName: directionSymbol)
+                .accessibilityHidden(true)
+              Text(verbatim: deltaText)
+                .monospacedDigit()
+              if let basisText = model.basisText {
+                Text(verbatim: basisText)
+                  .foregroundStyle(.secondary)
+              }
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(directionColor)
+            .accessibilityElement(children: .combine)
           }
 
-          HStack(spacing: 4) {
-            Image(systemName: "minus")
-            Text("No portfolio trend yet")
+          if let asOfText = model.asOfText {
+            Text(verbatim: asOfText)
+              .typography(.caption)
+              .foregroundStyle(.secondary)
           }
-          .font(.subheadline.weight(.semibold))
-          .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 4)
 
-        InteractiveLineChart(data: chartData, color: AppTheme.Colors.success)
+        if model.points.isEmpty {
+          if let historyCaption = model.historyCaption {
+            Text(verbatim: historyCaption)
+              .typography(.caption)
+              .foregroundStyle(.secondary)
+              .padding(.horizontal, 4)
+          }
+        } else {
+          InteractiveLineChart(
+            data: model.points,
+            color: directionColor,
+            currencyCode: model.currencyCode
+          )
           .frame(minHeight: 160, maxHeight: .infinity)
           .padding(.horizontal, -12)
+        }
 
         GlassEffectContainer(spacing: 8) {
           HStack(spacing: 8) {
-            ForEach(Array(PortfolioScreen.TimeRange.allCases), id: \.self) { range in
+            ForEach(PortfolioScreen.TimeRange.heroRanges) { range in
               PortfolioRangeButton(
                 title: range.rawValue,
                 isSelected: selectedTimeRange == range,
-                tint: AppTheme.Colors.tint(for: colorScheme),
+                tint: AppTheme.Colors.tint,
                 action: { onSelectTimeRange(range) }
               )
             }
@@ -59,23 +96,54 @@ struct PortfolioHeroCard: View {
 
         HStack {
           PortfolioMetricPill(
-            title: "Shares",
-            value: totalShares.formatted(.number.precision(.fractionLength(0...2))),
-            tint: AppTheme.Colors.secondaryTint(for: colorScheme)
+            title: String(localized: "Positions"),
+            value: positionCount.formatted(.number.locale(MoneyFormatter.defaultLocale)),
+            tint: AppTheme.Colors.secondaryTint
           )
           PortfolioMetricPill(
-            title: "Avg / position",
-            value: averagePositionValue.currency,
-            tint: AppTheme.Colors.tint(for: colorScheme)
+            title: String(localized: "Avg / position"),
+            value: averagePositionText,
+            tint: AppTheme.Colors.tint
           )
           PortfolioMetricPill(
-            title: "Cash",
-            value: cashBalance.currency,
+            title: String(localized: "Cash"),
+            value: cashText,
             tint: .mint
           )
         }
       }
     }
     .foregroundStyle(.primary)
+  }
+
+  @ViewBuilder
+  private var valueBlock: some View {
+    if let valueText = model.valueText {
+      HStack(alignment: .firstTextBaseline, spacing: 8) {
+        Text(verbatim: valueText)
+          .typography(.displayNumber)
+          .lineLimit(1)
+          .minimumScaleFactor(0.6)
+        Text(heroSubtitle)
+          .typography(.small)
+          .foregroundStyle(.secondary)
+      }
+    } else if !model.subtotalTexts.isEmpty {
+      // Holdings in several currencies: no rate to add them with, so each
+      // currency keeps its own subtotal.
+      VStack(alignment: .leading, spacing: 2) {
+        Text(verbatim: model.subtotalTexts.joined(separator: " + "))
+          .typography(.metricNumber)
+          .lineLimit(2)
+          .minimumScaleFactor(0.6)
+        Text(heroSubtitle)
+          .typography(.small)
+          .foregroundStyle(.secondary)
+      }
+    } else {
+      Text(heroSubtitle)
+        .typography(.small)
+        .foregroundStyle(.secondary)
+    }
   }
 }

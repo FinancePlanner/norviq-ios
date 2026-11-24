@@ -32,7 +32,6 @@ struct PortfolioScreen: View {
   @State private var selectedTimeRange: TimeRange = .month
   @State private var selectedAssetFilter: AssetFilter = .all
   @State private var selectedHoldingsSort: HoldingsSort = .name
-  @State private var chartData: [ChartDataPoint] = []
   @State private var pushNavigationRoute: PushNavigationRoute?
   @State private var pushFallbackToast: ToastData?
   @State private var refreshErrorToast: ToastData?
@@ -41,7 +40,6 @@ struct PortfolioScreen: View {
   @State private var isEarningsCalendarPresented = false
   @State private var isSectorGainsPresented = false
   @State private var isThesisWatchPresented = false
-  @State private var selectedTradingSymbol: String?
 
   private let quoteRefreshTimer = Timer.publish(every: 20, on: .main, in: .common).autoconnect()
 
@@ -53,6 +51,10 @@ struct PortfolioScreen: View {
       case year = "1Y"
       case all = "ALL"
       var id: String { rawValue }
+
+      /// The ranges the portfolio series supports (spec § 5.5). There is no
+      /// intraday portfolio series, so 1D is not offered on the hero.
+      static let heroRanges: [TimeRange] = [.week, .month, .threeMonths, .year, .all]
   }
 
   enum AssetFilter: String, CaseIterable, Identifiable {
@@ -103,15 +105,12 @@ struct PortfolioScreen: View {
     let selectedListId: String?
     let assetFilter: AssetFilter
     let holdingsSort: HoldingsSort
-    let liveQuotes: [String: QuoteResponse]
     let pnlBySymbol: [String: PnlBySymbol]
   }
 
   private struct DerivedPortfolio {
     var scopedStocks: [SDPortfolioStock] = []
     var filteredStocks: [SDPortfolioStock] = []
-    var holdingsValue: Double = 0
-    var totalShares: Double = 0
   }
 
   @State private var derived: DerivedPortfolio?
@@ -138,7 +137,6 @@ struct PortfolioScreen: View {
       selectedListId: viewModel.selectedPortfolioListId,
       assetFilter: selectedAssetFilter,
       holdingsSort: selectedHoldingsSort,
-      liveQuotes: viewModel.liveQuotes,
       pnlBySymbol: viewModel.pnlBySymbol
     )
   }
@@ -156,14 +154,6 @@ struct PortfolioScreen: View {
       scoped = owned.filter { ($0.portfolioListId ?? "") == selectedListId }
     } else {
       scoped = owned
-    }
-
-    var holdingsValue = 0.0
-    var totalShares = 0.0
-    for stock in scoped {
-      let price = inputs.liveQuotes[stock.symbol.uppercased()]?.currentPrice ?? stock.buyPrice
-      holdingsValue += stock.shares * price
-      totalShares += stock.shares
     }
 
     let base: [SDPortfolioStock]
@@ -192,29 +182,72 @@ struct PortfolioScreen: View {
 
     return DerivedPortfolio(
       scopedStocks: scoped,
-      filteredStocks: filtered,
-      holdingsValue: holdingsValue,
-      totalShares: totalShares
+      filteredStocks: filtered
     )
   }
 
   private var scopedStocks: [SDPortfolioStock] { currentDerived.scopedStocks }
   private var filteredStocks: [SDPortfolioStock] { currentDerived.filteredStocks }
-  private var holdingsValue: Double { currentDerived.holdingsValue }
-  private var totalShares: Double { currentDerived.totalShares }
 
   private var cashBalance: Double {
     viewModel.cashBalance
   }
 
-  private var totalValue: Double {
-    holdingsValue + cashBalance
+  private var performanceKey: PortfolioViewModel.PerformanceKey {
+    PortfolioViewModel.PerformanceKey(
+      portfolioListId: viewModel.selectedPortfolioListId,
+      range: selectedTimeRange.rawValue
+    )
   }
 
-  private var averagePositionValue: Double {
-    let count = scopedStocks.count
-    guard count > 0 else { return 0 }
-    return holdingsValue / Double(count)
+  /// Market value per currency, from the backend P/L. Unpriced holdings are
+  /// left out; their value is unknown.
+  private var holdingsByCurrency: [String: Double] {
+    PortfolioHeroModel.holdingsByCurrency(Array(viewModel.pnlBySymbol.values))
+  }
+
+  /// The currency cash and the snapshot series are kept in.
+  private var baseCurrency: String? {
+    MoneyFormatter.resolvedCode(viewModel.summary?.baseCurrency)
+      ?? MoneyFormatter.resolvedCode(viewModel.performance(for: performanceKey)?.baseCurrency)
+  }
+
+  /// Holdings plus cash, when both are in one currency. Nil until the P/L
+  /// has loaded, so the hero never shows cash alone as the total.
+  private var liveTotal: Double? {
+    let holdings = holdingsByCurrency
+    if viewModel.pnlBySymbol.isEmpty, !scopedStocks.isEmpty { return nil }
+    guard holdings.count <= 1 else { return nil }
+    if let code = holdings.keys.first, let baseCurrency, code != baseCurrency {
+      return holdings[code]
+    }
+    return holdings.values.reduce(0, +) + cashBalance
+  }
+
+  private var heroModel: PortfolioHeroModel {
+    PortfolioHeroModel.make(
+      performance: viewModel.performance(for: performanceKey),
+      holdingsByCurrency: holdingsByCurrency,
+      range: selectedTimeRange,
+      now: Date(),
+      locale: MoneyFormatter.defaultLocale,
+      liveTotal: liveTotal
+    )
+  }
+
+  /// Average market value of the priced positions, in their one currency.
+  /// A mixed-currency portfolio has no meaningful average without a rate.
+  private var averagePositionText: String {
+    let holdings = holdingsByCurrency
+    let pricedCount = viewModel.pnlBySymbol.values.filter { ($0.currentPrice ?? 0) > 0 }.count
+    guard holdings.count == 1, let (code, total) = holdings.first.map({ ($0.key, $0.value) }), pricedCount > 0 else {
+      return "\u{2014}"
+    }
+    return MoneyFormatter.string(total / Double(pricedCount), currencyCode: code)
+  }
+
+  private var cashText: String {
+    MoneyFormatter.string(cashBalance, currencyCode: baseCurrency)
   }
 
   private var heroLabel: String {
@@ -253,14 +286,10 @@ struct PortfolioScreen: View {
     .onChange(of: derivationInputs, initial: true) { _, inputs in
       derived = Self.derive(stocks: stocks, inputs: inputs)
     }
-    .onChange(of: totalValue) { _, _ in
-      rebuildChartData()
-    }
-    .onChange(of: selectedTimeRange) { _, _ in
-      rebuildChartData()
-    }
-    .onChange(of: viewModel.selectedPortfolioListId) { _, _ in
-      rebuildChartData()
+    .task(id: performanceKey) {
+      // Refetched whenever the range or the list changes; the hero only
+      // draws a series fetched for the range it shows.
+      await viewModel.loadPerformance(performanceKey)
     }
     .onChange(of: scenePhase) { _, newPhase in
       if newPhase == .active {
@@ -269,6 +298,7 @@ struct PortfolioScreen: View {
     }
     .refreshable {
       await reloadPortfolio(force: true)
+      await viewModel.loadPerformance(performanceKey)
     }
     .onReceive(NotificationCenter.default.publisher(for: .portfolioDataDidChange)) { _ in
       Task { await reloadPortfolio(force: true) }
@@ -333,20 +363,6 @@ struct PortfolioScreen: View {
         MarketNewsScreen()
       }
     }
-    .sheet(
-      isPresented: Binding(
-        get: { selectedTradingSymbol != nil },
-        set: { isPresented in
-          if !isPresented {
-            selectedTradingSymbol = nil
-          }
-        }
-      )
-    ) {
-      if let selectedTradingSymbol {
-        TradingStockSheet(symbol: selectedTradingSymbol)
-      }
-    }
     .navigationDestination(item: $pushNavigationRoute) { route in
       StockDetailScreen(stockId: route.stockID, initialSymbol: route.symbol)
     }
@@ -369,10 +385,6 @@ struct PortfolioScreen: View {
       isThesisWatchPresented = true
     }
     .appSensoryFeedback(destructive: destructiveFeedbackTrigger)
-  }
-
-  private func rebuildChartData() {
-    chartData = Self.makeChartData(totalValue: totalValue, timeRange: selectedTimeRange)
   }
 
   private func makeEditableStock(from stock: SDPortfolioStock) -> StockResponse {
@@ -430,15 +442,13 @@ struct PortfolioScreen: View {
         )
 
         PortfolioHeroCard(
-          colorScheme: colorScheme,
           heroLabel: heroLabel,
-          totalValue: totalValue,
           heroSubtitle: heroSubtitle,
-          chartData: chartData,
+          model: heroModel,
           selectedTimeRange: selectedTimeRange,
-          totalShares: totalShares,
-          averagePositionValue: averagePositionValue,
-          cashBalance: cashBalance,
+          positionCount: scopedStocks.count,
+          averagePositionText: averagePositionText,
+          cashText: cashText,
           onSelectTimeRange: selectTimeRange
         )
 
@@ -635,12 +645,6 @@ struct PortfolioScreen: View {
       } label: {
         Label("One-page view", systemImage: "list.bullet.rectangle")
       }
-
-      Button {
-        selectedTradingSymbol = "AAPL" // Demo: opens polished trading sheet with candle chart
-      } label: {
-        Label("Quick Trade (Sheet)", systemImage: "chart.candlestick")
-      }
     } label: {
       Image(systemName: "plus")
     }
@@ -654,7 +658,6 @@ struct PortfolioScreen: View {
 
   private func prepareScreen() {
     viewModel.setModelContext(modelContext)
-    rebuildChartData()
     consumePendingOpenSymbolIfNeeded()
     consumePendingThesisWatchOpenIfNeeded()
     Task { await reloadPortfolio() }
@@ -856,46 +859,5 @@ struct PortfolioScreen: View {
 
   private func showPushFallbackMessage(_ message: String) {
     pushFallbackToast = .info(message)
-  }
-
-  private static func makeChartData(totalValue: Double, timeRange: TimeRange) -> [ChartDataPoint] {
-    let calendar = Calendar.current
-    let today = Date()
-    guard totalValue > 0 else {
-      return []
-    }
-    let baseValue = totalValue
-
-    let (count, component): (Int, Calendar.Component) = {
-      switch timeRange {
-      case .day:
-        return (24, .hour)
-      case .week:
-        return (7, .day)
-      case .month:
-        return (30, .day)
-      case .threeMonths:
-        return (90, .day)
-      case .year:
-        return (52, .weekOfYear)
-      case .all:
-        return (60, .month)
-      }
-    }()
-
-    return (0..<count).compactMap { i in
-      let offset = count - 1 - i
-      guard let date = calendar.date(byAdding: component, value: -offset, to: today) else {
-        return nil
-      }
-
-      let phase = Double(i)
-      let seasonal = sin(phase * 0.45) * baseValue * 0.018
-      let secondaryWave = cos(phase * 0.19) * baseValue * 0.007
-      let trend = phase * (baseValue * 0.0012)
-      let value = max(0, baseValue * 0.78 + seasonal + secondaryWave + trend)
-
-      return ChartDataPoint(date: date, value: value)
-    }
   }
 }

@@ -11,7 +11,10 @@ struct ChartDataPoint: Identifiable, Equatable {
 struct InteractiveLineChart: View {
     let data: [ChartDataPoint]
     let color: Color
-    var currencyCode = "USD"
+    /// The currency the values are in. Nil prints the number with " —"
+    /// (see `MoneyFormatter`). Callers outside the P1 screens still pass
+    /// nothing and get the historical USD default until P2 moves them.
+    var currencyCode: String? = "USD"
 
     @State private var selectedDataPoint: ChartDataPoint?
     @State private var selectionFeedbackTrigger = 0
@@ -30,15 +33,15 @@ struct InteractiveLineChart: View {
             // Axis labels for Y axis
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .trailing, spacing: 0) {
-                    Text(bounds.max.formatted(.currency(code: "USD")))
+                    Text(verbatim: MoneyFormatter.string(bounds.max, currencyCode: currencyCode))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text((bounds.min + (bounds.max - bounds.min) / 2).formatted(.currency(code: "USD")))
+                    Text(verbatim: MoneyFormatter.string(bounds.min + (bounds.max - bounds.min) / 2, currencyCode: currencyCode))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text(bounds.min.formatted(.currency(code: "USD")))
+                    Text(verbatim: MoneyFormatter.string(bounds.min, currencyCode: currencyCode))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -122,7 +125,7 @@ struct InteractiveLineChart: View {
                                 Text(selected.date.formatted(.dateTime.month().day()))
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
-                                Text(selected.value.formatted(.currency(code: "USD")))
+                                Text(verbatim: MoneyFormatter.string(selected.value, currencyCode: currencyCode))
                                     .font(.caption.bold())
                                     .foregroundStyle(.primary)
                             }

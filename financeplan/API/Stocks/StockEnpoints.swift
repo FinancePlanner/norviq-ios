@@ -151,6 +151,8 @@ nonisolated struct GetStockInsightsEndpoint: Endpoint {
 nonisolated struct GetPortfolioPerformanceEndpoint: Endpoint {
   typealias Response = PortfolioPerformanceResponse
   let portfolioListId: String?
+  /// "1W", "1M", "3M", "1Y" or "ALL". Nil lets the backend pick (1M).
+  var range: String? = nil
 
   var method: HTTPMethod { .get }
   var path: String { "/v1/portfolio/performance" }
@@ -160,6 +162,9 @@ nonisolated struct GetPortfolioPerformanceEndpoint: Endpoint {
     var params: Parameters = [:]
     if let portfolioListId, !portfolioListId.isEmpty {
       params["portfolioListId"] = portfolioListId
+    }
+    if let range, !range.isEmpty {
+      params["range"] = range
     }
     return params
   }

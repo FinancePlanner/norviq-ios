@@ -85,6 +85,15 @@ final class PortfolioViewModel {
   private(set) var sentimentBySymbol: [String: SymbolSentiment] = [:]
   private(set) var portfolioSentiment: PortfolioSentimentResponse?
   private(set) var pnlBySymbol: [String: PnlBySymbol] = [:]
+  /// The stored value series behind the hero, and the list and range it was
+  /// fetched for. The hero only draws a series under the range it asked for.
+  private(set) var performance: PortfolioPerformanceResponse?
+  private(set) var performanceKey: PerformanceKey?
+
+  struct PerformanceKey: Hashable {
+    let portfolioListId: String?
+    let range: String
+  }
 
   private let service: StockServicing
   private let marketDataService: MarketDataServicing
@@ -113,6 +122,32 @@ final class PortfolioViewModel {
 
   convenience init(service: StockServicing, localStore: (any PortfolioLocalPersisting)? = nil) {
     self.init(service: service, marketDataService: Container.shared.marketDataService(), localStore: localStore)
+  }
+
+  /// The performance series for `key`, or nil when it has not loaded (or failed).
+  func performance(for key: PerformanceKey) -> PortfolioPerformanceResponse? {
+    performanceKey == key ? performance : nil
+  }
+
+  /// Fetches the series for one list and range. A failure leaves no series,
+  /// so the hero falls back to the live total and shows no change.
+  func loadPerformance(_ key: PerformanceKey) async {
+    do {
+      let response = try await service.fetchPortfolioPerformance(
+        portfolioListId: key.portfolioListId,
+        range: key.range
+      )
+      performance = response
+      performanceKey = key
+    } catch is CancellationError {
+      return
+    } catch {
+      portfolioViewModelLogger.warning(
+        "Portfolio performance load failed: \(error.localizedDescription, privacy: .public)"
+      )
+      performance = nil
+      performanceKey = nil
+    }
   }
 
   func setModelContext(_ context: ModelContext) {

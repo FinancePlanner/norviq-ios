@@ -19,6 +19,8 @@ protocol StockServicing: Sendable {
   func fetchPortfolioPerformance() async throws -> PortfolioPerformanceResponse
   func fetchPortfolioSummary() async throws -> PortfolioSummaryResponse
   func fetchPortfolioPerformance(portfolioListId: String?) async throws -> PortfolioPerformanceResponse
+  /// The stored value series for one range ("1W", "1M", "3M", "1Y", "ALL").
+  func fetchPortfolioPerformance(portfolioListId: String?, range: String?) async throws -> PortfolioPerformanceResponse
   func fetchPortfolioSummary(portfolioListId: String?) async throws -> PortfolioSummaryResponse
   func fetchPnl(portfolioListId: String?) async throws -> PnlResponse
   func fetchPortfolioSectorExposure(portfolioListId: String?) async throws -> PortfolioSectorExposureResponse
@@ -93,6 +95,12 @@ protocol StockServicing: Sendable {
 }
 
 extension StockServicing {
+  /// Conformers that predate the range parameter (test doubles) answer with
+  /// their unranged series. `StockService` sends the range.
+  func fetchPortfolioPerformance(portfolioListId: String?, range _: String?) async throws -> PortfolioPerformanceResponse {
+    try await fetchPortfolioPerformance(portfolioListId: portfolioListId)
+  }
+
   // Defaults keep test doubles compiling; StockService overrides all three.
   func fetchShareLink(scope _: String) async throws -> PortfolioShareLinkResponse? { nil }
   func fetchShareLinks() async throws -> [PortfolioShareLinkResponse] { [] }
@@ -284,8 +292,12 @@ final class StockService: StockServicing {
   }
 
   func fetchPortfolioPerformance(portfolioListId: String? = nil) async throws -> PortfolioPerformanceResponse {
+    try await fetchPortfolioPerformance(portfolioListId: portfolioListId, range: nil)
+  }
+
+  func fetchPortfolioPerformance(portfolioListId: String?, range: String?) async throws -> PortfolioPerformanceResponse {
     try await performAuthenticated { client in
-      return try await client.call(GetPortfolioPerformanceEndpoint(portfolioListId: portfolioListId))
+      return try await client.call(GetPortfolioPerformanceEndpoint(portfolioListId: portfolioListId, range: range))
     }
   }
 
