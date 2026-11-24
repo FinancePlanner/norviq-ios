@@ -152,10 +152,10 @@ SwiftUI's own `ShapeStyle` members.
 - Financial color is a separate vocabulary from brand color.
 - System controls and SF type; Dynamic Type everywhere.
 - One display serif, Brygada 1918, for page titles and the greeting. Never for a number.
+- Legible and correct with motion and effects off.
 
 `DESIGN.json` at the repo root is historical and not read by code. This file, `Design/tokens.json`
 and the code are the current sources.
-- Legible and correct with motion and effects off.
 
 ## 2. Colors
 
@@ -227,11 +227,13 @@ fill of itself. That is the pair the identity spec measured at 4.5:1 or better.
 monospaced overline and tabular numerals as its signature. One editorial serif, Brygada 1918, sets
 the page title in `VigilPageHeader` and the Home greeting, and nothing else (DS 2.0 § 9.0 Q2).
 
-**Display face files.** `financeplan/Resources/Fonts/Brygada1918-Regular.ttf` and
-`Brygada1918-SemiBold.ttf` (static TTFs, the same files the brief export embeds) with `OFL.txt`,
-registered through `UIAppFonts` in `Info.plist`. PostScript names `Brygada1918-Regular` and
-`Brygada1918-SemiBold`. If they fail to register, `.displayTitle` falls back to the system serif
-(New York) at the same size, never to nothing.
+**Display face files.** `financeplan/Resources/Fonts/Brygada1918-SemiBold.ttf` (a static TTF, the
+same file the brief export embeds) with `OFL.txt`, which ships with it, registered through
+`UIAppFonts` in `Info.plist`. PostScript name `Brygada1918-SemiBold`. Only SemiBold ships because no
+role sets the display face lighter; any weight on `.displayTitle` resolves to it. If it fails to
+register, `.displayTitle` falls back to the system serif (New York) at the same size, never to
+nothing. `Design/tokens.json` is excluded from the Release bundle; it is read by tests and scripts,
+not by the app.
 
 Two routes exist and both honor Dynamic Type: SwiftUI semantic styles (`.headline`, `.subheadline`,
 `.caption`) on system `List` and `Form` screens, and the `Typography` ladder via `.typography(_:)`
@@ -242,7 +244,8 @@ on designed surfaces. The ladder uses fixed design sizes that scale relative to 
 - **Display number** (semibold, 40pt scaled as largeTitle, tabular): the one large figure on a screen.
 - **Display title** (Brygada 1918 SemiBold, 28pt scaled as title, `.typography(.displayTitle)`): the
   page title in `VigilPageHeader` and the Home greeting (iOS 26 large-title slot; iOS 18 keeps the
-  system title). Wraps, never truncates.
+  system title). Wraps, never truncates: the greeting takes up to two lines, then shrinks to 80%. A
+  ticker title (stock and crypto detail) passes `titleStyle: .title` and stays SF.
 - **Hero** (bold, 32pt scaled as title): a screen's lead statement.
 - **Title** (bold, 24pt scaled as title2): section and card titles. `metricNumber` shares the size,
   semibold and tabular.
@@ -261,8 +264,8 @@ on designed surfaces. The ladder uses fixed design sizes that scale relative to 
 **The Steps You Can See Rule.** The ladder is 17 / 15 / 13 / 12 / 11. Do not add a size between two
 steps; a 1pt difference is not hierarchy.
 
-**The Display Face Rule.** Brygada 1918 sets page titles and the greeting. Never a number, a table,
-a control or body text. Figures stay SF tabular; `DisplayFontTests` fails if a numeric role resolves
+**The Display Face Rule.** Brygada 1918 sets page titles and the greeting. Never a number, a ticker,
+a table, a control or body text. Figures stay SF tabular; `DisplayFontTests` fails if a numeric role resolves
 to the serif.
 
 ### Money
