@@ -1,0 +1,305 @@
+{
+  "version": "2026-11-24",
+  "source": "docs/superpowers/specs/2026-11-24-norviq-design-system-2-design.md §5.4",
+  "normalisation": "Platform-native formatter output, then: U+202F and U+2009 become U+00A0; every hyphen-minus becomes U+2212 (minus sign).",
+  "cases": [
+    {
+      "kind": "money",
+      "style": "standard",
+      "value": 124580.42,
+      "currency": "EUR",
+      "locale": "en-US",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "€124,580.42"
+    },
+    {
+      "kind": "money",
+      "style": "standard",
+      "value": 124580.42,
+      "currency": "EUR",
+      "locale": "pt-PT",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "124 580,42 €"
+    },
+    {
+      "kind": "money",
+      "style": "standard",
+      "value": 48432.05,
+      "currency": "USD",
+      "locale": "en-US",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "$48,432.05"
+    },
+    {
+      "kind": "money",
+      "style": "standard",
+      "value": 48432.05,
+      "currency": "USD",
+      "locale": "pt-PT",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "48 432,05 US$"
+    },
+    {
+      "kind": "money",
+      "style": "standard",
+      "value": 0,
+      "currency": "USD",
+      "locale": "en-US",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "$0.00"
+    },
+    {
+      "kind": "money",
+      "style": "standard",
+      "value": 0,
+      "currency": "USD",
+      "locale": "pt-PT",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "0,00 US$"
+    },
+    {
+      "kind": "money",
+      "style": "standard",
+      "value": 15000,
+      "currency": "JPY",
+      "locale": "en-US",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "¥15,000"
+    },
+    {
+      "kind": "money",
+      "style": "standard",
+      "value": 15000,
+      "currency": "JPY",
+      "locale": "pt-PT",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "15 000 JP¥"
+    },
+    {
+      "kind": "money",
+      "style": "signed",
+      "value": -168.78,
+      "currency": "USD",
+      "locale": "en-US",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "−$168.78"
+    },
+    {
+      "kind": "money",
+      "style": "signed",
+      "value": -168.78,
+      "currency": "USD",
+      "locale": "pt-PT",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "−168,78 US$"
+    },
+    {
+      "kind": "money",
+      "style": "signed",
+      "value": 13480.1,
+      "currency": "EUR",
+      "locale": "en-US",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "+€13,480.10"
+    },
+    {
+      "kind": "money",
+      "style": "signed",
+      "value": 13480.1,
+      "currency": "EUR",
+      "locale": "pt-PT",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "+13 480,10 €"
+    },
+    {
+      "kind": "money",
+      "style": "signed",
+      "value": 0,
+      "currency": "EUR",
+      "locale": "en-US",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "€0.00"
+    },
+    {
+      "kind": "money",
+      "style": "signed",
+      "value": 0,
+      "currency": "EUR",
+      "locale": "pt-PT",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "0,00 €"
+    },
+    {
+      "kind": "money",
+      "style": "compact",
+      "value": 1240000,
+      "currency": "EUR",
+      "locale": "en-US",
+      "platforms": [
+        "web"
+      ],
+      "expected": "€1.24M"
+    },
+    {
+      "kind": "money",
+      "style": "compact",
+      "value": 1240000,
+      "currency": "EUR",
+      "locale": "pt-PT",
+      "platforms": [
+        "web"
+      ],
+      "expected": "1,24 M €"
+    },
+    {
+      "kind": "money",
+      "style": "compact",
+      "value": 48432.05,
+      "currency": "USD",
+      "locale": "en-US",
+      "platforms": [
+        "web"
+      ],
+      "expected": "$48.43K"
+    },
+    {
+      "kind": "money",
+      "style": "compact",
+      "value": 48432.05,
+      "currency": "USD",
+      "locale": "pt-PT",
+      "platforms": [
+        "web"
+      ],
+      "expected": "48,43 mil US$"
+    },
+    {
+      "kind": "percent",
+      "style": "signed1",
+      "value": 0.0321,
+      "locale": "en-US",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "+3.2%"
+    },
+    {
+      "kind": "percent",
+      "style": "signed1",
+      "value": 0.0321,
+      "locale": "pt-PT",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "+3,2%"
+    },
+    {
+      "kind": "percent",
+      "style": "signed1",
+      "value": -0.0291,
+      "locale": "en-US",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "−2.9%"
+    },
+    {
+      "kind": "percent",
+      "style": "signed1",
+      "value": -0.0291,
+      "locale": "pt-PT",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "−2,9%"
+    },
+    {
+      "kind": "percent",
+      "style": "signed1",
+      "value": 0,
+      "locale": "en-US",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "0.0%"
+    },
+    {
+      "kind": "percent",
+      "style": "signed1",
+      "value": 0,
+      "locale": "pt-PT",
+      "platforms": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "expected": "0,0%"
+    }
+  ]
+}
