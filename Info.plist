@@ -117,6 +117,13 @@
 	     the build. An empty dict here rendered plain systemBackground; naming a
 	     colorset matches the app's own page background instead, so launching in
 	     dark mode no longer flashes a lighter panel before #050505. -->
+	<!-- Brygada 1918 (OFL, financeplan/Resources/Fonts): the display face for
+	     page titles and the Home greeting only (TypographyStyle .displayTitle). -->
+	<key>UIAppFonts</key>
+	<array>
+		<string>Brygada1918-Regular.ttf</string>
+		<string>Brygada1918-SemiBold.ttf</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

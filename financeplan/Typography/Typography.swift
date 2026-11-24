@@ -7,6 +7,8 @@ public enum Typography {
   case hero
   case title
   case headline
+  /// Brygada 1918: page titles and the Home greeting only.
+  case displayTitle
 
   // Financial data
   case displayNumber
@@ -38,7 +40,7 @@ extension Typography {
     switch self {
     case .button, .display, .heading, .hero, .title:
       .bold
-    case .displayNumber, .headline, .metricNumber:
+    case .displayNumber, .displayTitle, .headline, .metricNumber:
       .semibold
     default:
       .regular

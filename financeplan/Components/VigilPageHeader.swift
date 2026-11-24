@@ -53,7 +53,9 @@ struct VigilPageHeader<Trailing: View>: View {
           // it introduces. It is a label, so it reads as one.
           .foregroundStyle(.secondary)
         title
-          .font(.title2.bold())
+          // Brygada 1918, the display face (DS 2.0 § 9.0 Q2): page titles and
+          // the Home greeting only. Wraps rather than truncates (fixedSize below).
+          .typography(.displayTitle)
           .foregroundStyle(AppTheme.Colors.foreground(for: scheme))
           .fixedSize(horizontal: false, vertical: true)
         if let subtitle {

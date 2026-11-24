@@ -23,6 +23,7 @@ public struct TypographyStyle {
     case .heading: 48
     case .displayNumber: 40
     case .hero: 32
+    case .displayTitle: 28
     case .metricNumber, .title: 24
     case .headline: 20
     case .body, .numeric: 17
@@ -48,7 +49,7 @@ public struct TypographyStyle {
       .largeTitle
     case .displayNumber:
       .largeTitle
-    case .hero:
+    case .displayTitle, .hero:
       .title
     case .metricNumber, .title:
       .title2
@@ -73,11 +74,26 @@ public struct TypographyStyle {
     type == .code
   }
 
-  /// Font *design* axis per role. One SF default design for both brands —
-  /// no serif accent. Numeric/code roles keep their monospaced treatment as
-  /// Vigil's one remaining typographic signature.
+  /// Font *design* axis per role. SF default everywhere, monospaced for code.
+  /// `.displayTitle` is set in Brygada 1918; `.serif` (New York) is only its
+  /// fallback when the bundled font fails to register. Numeric roles are never
+  /// serif: figures stay SF tabular.
   public var fontDesign: UIFontDescriptor.SystemDesign {
-    isMonospaced ? .monospaced : .default
+    if type == .displayTitle { return .serif }
+    return isMonospaced ? .monospaced : .default
+  }
+
+  /// PostScript names of the bundled display face (financeplan/Resources/Fonts,
+  /// registered through `UIAppFonts`). Two static weights: semibold and up get
+  /// SemiBold, the rest Regular. There is no italic; `isItalic` is ignored.
+  static let displayFontRegular = "Brygada1918-Regular"
+  static let displayFontSemiBold = "Brygada1918-SemiBold"
+
+  var displayFontName: String {
+    switch weight {
+    case .semibold, .bold, .extraBold, .black: Self.displayFontSemiBold
+    default: Self.displayFontRegular
+    }
   }
 
   public var usesTabularNumbers: Bool {
@@ -100,6 +116,24 @@ public struct TypographyStyle {
 
   /// Builds the font from scratch. Only `TypographyFontCache` should call this.
   fileprivate var uncachedFont: Font {
+    Font(uiFont())
+  }
+
+  /// The scaled `UIFont` behind `font`; `traits` defaults to the current ones.
+  /// `displayFontName` overrides the display face (tests use a missing name to
+  /// prove the serif fallback).
+  func uiFont(compatibleWith traits: UITraitCollection? = nil, displayFontName: String? = nil) -> UIFont {
+    let metrics = UIFontMetrics(forTextStyle: relativeTextStyle.uiTextStyle)
+    // No traits: exactly the call `font` always made, against the current setting.
+    func scaled(_ base: UIFont) -> UIFont {
+      traits.map { metrics.scaledFont(for: base, compatibleWith: $0) } ?? metrics.scaledFont(for: base)
+    }
+
+    if type == .displayTitle,
+       let display = UIFont(name: displayFontName ?? self.displayFontName, size: size) {
+      return scaled(display)
+    }
+
     let uiWeight: UIFont.Weight = isMonospaced ? .regular : weight.uiFontWeight
     let design: UIFontDescriptor.SystemDesign = fontDesign
 
@@ -115,8 +149,7 @@ public struct TypographyStyle {
     }
 
     let baseFont = UIFont(descriptor: descriptor, size: size)
-    let scaled = UIFontMetrics(forTextStyle: relativeTextStyle.uiTextStyle).scaledFont(for: baseFont)
-    return Font(scaled)
+    return scaled(baseFont)
   }
 }
 

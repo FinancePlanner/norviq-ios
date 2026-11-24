@@ -167,6 +167,17 @@ struct DashboardRoot: View {
         handleHomeDataDidChange()
       }
       .toolbar {
+        // The greeting in the display face (DS 2.0 § 9.0 Q2), in the large-title
+        // slot so it stays system chrome. navigationTitle above still supplies the
+        // collapsed inline title, the back-button label and iOS 18's large title.
+        if #available(iOS 26.0, *) {
+          ToolbarItem(placement: .largeTitle) {
+            Text(greetingText)
+              .typography(.displayTitle)
+              .foregroundStyle(AppTheme.Colors.foreground)
+              .accessibilityAddTraits(.isHeader)
+          }
+        }
         ToolbarItem(placement: .primaryAction) {
           Button("Capture expense", systemImage: "plus") {
             isCapturePresented = true
