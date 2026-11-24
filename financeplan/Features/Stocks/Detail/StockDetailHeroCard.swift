@@ -95,7 +95,7 @@ struct StockDetailHeroCard: View {
                         }
 
                         if let details {
-                            Text("Purchased \(details.buyDate) • \(details.shares.formatted(.number.precision(.fractionLength(0...2)))) shares")
+                            Text("Purchased \(details.buyDate) • \(details.shares.formatted(.number.precision(.fractionLength(0...2)).locale(MoneyFormatter.defaultLocale))) shares")
                                 .typography(.nano)
                                 .foregroundStyle(.secondary)
                         }

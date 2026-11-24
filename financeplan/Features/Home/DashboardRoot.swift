@@ -553,10 +553,9 @@ private struct DashboardHeroCard: View {
     }
     // Spending compares the last two monthly budget totals, which are real and
     // evenly spaced, so the window is known here without the server saying so.
-    let sign = spendingDeltaPercent >= 0 ? "+" : ""
-    let percent = (spendingDeltaPercent * 100).formatted(.number.precision(.fractionLength(1)))
+    let percent = MoneyFormatter.percentSigned(spendingDeltaPercent)
     let vsLastMonth = String(localized: "vs last month")
-    return "\(sign)\(percent)% \(vsLastMonth)"
+    return "\(percent) \(vsLastMonth)"
   }
 
   var body: some View {

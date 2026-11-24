@@ -316,7 +316,7 @@ struct BudgetReallocationSimulatorSheet: View {
           } else {
             ForEach(viewModel.eligibleCategories) { category in
               VStack(alignment: .leading, spacing: 10) {
-                HStack { Text(category.title); Spacer(); Text(viewModel.adjustments[category.id, default: 0], format: .currency(code: viewModel.dashboard?.currencyCode ?? "USD")).monospacedDigit() }
+                HStack { Text(category.title); Spacer(); Text(verbatim: MoneyFormatter.string(viewModel.adjustments[category.id, default: 0], currencyCode: viewModel.dashboard?.currencyCode)).monospacedDigit() }
                 Slider(value: adjustmentBinding(category), in: 0 ... max(viewModel.maximum(for: category), 0.01), step: 1)
                   .accessibilityLabel("Reduce \(category.title) next month")
               }
@@ -326,8 +326,8 @@ struct BudgetReallocationSimulatorSheet: View {
           footer: { Text("These changes update budget targets and forecasts only. Norviq never transfers money or places trades.") }
 
         Section("Impact") {
-          LabeledContent("Added monthly investment", value: viewModel.selectedTotal.formatted(.currency(code: viewModel.dashboard?.currencyCode ?? "USD")))
-          LabeledContent("Estimated annual runway", value: viewModel.annualImpact.formatted(.currency(code: viewModel.dashboard?.currencyCode ?? "USD")))
+          LabeledContent("Added monthly investment", value: MoneyFormatter.string(viewModel.selectedTotal, currencyCode: viewModel.dashboard?.currencyCode))
+          LabeledContent("Estimated annual runway", value: MoneyFormatter.string(viewModel.annualImpact, currencyCode: viewModel.dashboard?.currencyCode))
           if let preview = viewModel.preview {
             LabeledContent("Effective month", value: preview.effectiveMonth)
             ForEach(preview.warnings, id: \.self) { Label($0, systemImage: "exclamationmark.triangle") }
