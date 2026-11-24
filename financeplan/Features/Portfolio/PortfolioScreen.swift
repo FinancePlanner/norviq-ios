@@ -206,7 +206,7 @@ struct PortfolioScreen: View {
   /// Market value per currency, from the backend P/L. Unpriced holdings are
   /// left out; their value is unknown.
   private var holdingsByCurrency: [String: Double] {
-    PortfolioHeroModel.holdingsByCurrency(Array(viewModel.pnlBySymbol.values))
+    PortfolioHeroModel.holdingsByCurrency(Array(viewModel.pnlBySymbol.values), quotes: viewModel.liveQuotes)
   }
 
   /// The currency cash and the snapshot series are kept in.
@@ -424,7 +424,12 @@ struct PortfolioScreen: View {
     return NavigationLink {
       StockDetailScreen(stockId: stock.id, initialSymbol: stock.symbol)
     } label: {
-      PortfolioRow(stock: stock, targetAlert: targetAlert, liveQuote: nil, pnl: viewModel.pnl(for: stock.symbol))
+      PortfolioRow(
+        stock: stock,
+        targetAlert: targetAlert,
+        liveQuote: viewModel.liveQuotes[stock.symbol.uppercased()],
+        pnl: viewModel.pnl(for: stock.symbol)
+      )
         .accessibilityIdentifier("portfolio.stockRow.\(stock.symbol)")
     }
     .buttonStyle(PressableStyle())

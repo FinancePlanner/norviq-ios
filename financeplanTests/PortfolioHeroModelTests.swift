@@ -170,6 +170,32 @@ final class PortfolioHeroModelTests: XCTestCase {
 
   // MARK: - Home (C3)
 
+  func testHoldingsTakeTheInstrumentCurrencyFromTheQuote() {
+    // Both P/L rows say "USD" (the portfolio base); SAP is quoted in euros.
+    let pnls = [
+      PnlBySymbol(symbol: "SAP", currency: "USD", realizedPnl: 0, unrealizedPnl: 0, currentPrice: 200, marketValue: 400),
+      PnlBySymbol(symbol: "AAPL", currency: "USD", realizedPnl: 0, unrealizedPnl: 0, currentPrice: 100, marketValue: 1000),
+    ]
+    let quotes = [
+      "SAP": QuoteResponse(
+        symbol: "SAP", currency: "EUR", currentPrice: 200, change: nil, percentChange: nil,
+        high: nil, low: nil, open: nil, previousClose: nil, timestamp: 0
+      ),
+    ]
+    let totals = PortfolioHeroModel.holdingsByCurrency(pnls, quotes: quotes)
+    XCTAssertEqual(totals, ["EUR": 400, "USD": 1000])
+
+    let model = PortfolioHeroModel.make(
+      performance: freshMonth,
+      holdingsByCurrency: totals,
+      range: .month,
+      now: now,
+      locale: unitedStates
+    )
+    XCTAssertNil(model.valueText)
+    XCTAssertEqual(model.subtotalTexts, ["€400.00", "$1,000.00"])
+  }
+
   func testHomeStaleSeriesFallsBackToLiveTotalWithoutDelta() {
     let model = PortfolioHeroModel.forHome(
       performance: performance([("2026-11-05", 810.19), ("2026-11-07", 850), ("2026-11-11", 919.06)]),

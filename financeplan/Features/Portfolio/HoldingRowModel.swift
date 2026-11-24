@@ -3,8 +3,10 @@ import StockPlanShared
 
 /// The figures on one holding row, finished (spec § 2.0 A3, A6).
 ///
-/// - Every amount is in the holding's currency: the backend P/L's, else the
-///   quote's, else none, which prints the number with " —" and never "$".
+/// - Every amount is in the instrument's currency: the quote's, else the
+///   P/L's label, else none, which prints the number with " —" and never "$".
+///   The backend labels every P/L with the portfolio's base currency but
+///   does not convert, so its figures are in the instrument's currency.
 /// - A price of nil or 0 is "unavailable": no last price, no market value and
 ///   no gain or loss, because a missing price is not a total loss. The cost
 ///   is still known, so it is still shown.
@@ -31,7 +33,7 @@ struct HoldingRowModel: Equatable {
     costBasis: Double,
     locale: Locale
   ) -> HoldingRowModel {
-    let currency = MoneyFormatter.resolvedCode(pnl?.currency) ?? MoneyFormatter.resolvedCode(quote?.currency)
+    let currency = instrumentCurrency(pnl: pnl, quote: quote)
     let cost = pnl?.costBasis ?? costBasis
     let costText = MoneyFormatter.string(cost, currencyCode: currency, locale: locale)
 
@@ -81,6 +83,12 @@ struct HoldingRowModel: Equatable {
       dayDirection: dayChange,
       currencyCode: currency
     )
+  }
+
+  /// The quote names the instrument's listing currency; the P/L's label is
+  /// the portfolio base and only a fallback.
+  static func instrumentCurrency(pnl: PnlBySymbol?, quote: QuoteResponse?) -> String? {
+    MoneyFormatter.resolvedCode(quote?.currency) ?? MoneyFormatter.resolvedCode(pnl?.currency)
   }
 
   private static func withPercent(_ amount: String, _ fraction: Double?, _ locale: Locale) -> String {

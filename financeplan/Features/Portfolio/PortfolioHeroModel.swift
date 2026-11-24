@@ -168,12 +168,15 @@ struct PortfolioHeroModel: Equatable {
     )
   }
 
-  /// Market value per currency, from the backend's per-symbol P/L. Holdings
-  /// with no price (nil or 0) are left out: their value is unknown, not zero.
-  static func holdingsByCurrency(_ pnls: [PnlBySymbol]) -> [String: Double] {
+  /// Market value per instrument currency, from the backend's per-symbol
+  /// P/L, with the currency from the live quote (see `HoldingRowModel`).
+  /// Holdings with no price (nil or 0) are left out: their value is unknown,
+  /// not zero.
+  static func holdingsByCurrency(_ pnls: [PnlBySymbol], quotes: [String: QuoteResponse] = [:]) -> [String: Double] {
     pnls.reduce(into: [String: Double]()) { result, pnl in
+      let quote = quotes[pnl.symbol.uppercased()]
       guard let price = pnl.currentPrice, price > 0,
-            let code = MoneyFormatter.resolvedCode(pnl.currency) else { return }
+            let code = HoldingRowModel.instrumentCurrency(pnl: pnl, quote: quote) else { return }
       let shares = pnl.shares ?? 0
       let value = pnl.marketValue ?? (shares * price)
       result[code, default: 0] += value

@@ -113,7 +113,28 @@ final class HoldingRowModelTests: XCTestCase {
     XCTAssertEqual(model.glText, "+1783,93\u{00A0}US$ (+184,8%)")
   }
 
-  func testQuoteCurrencyIsTheFallback() {
+  /// The backend labels every P/L with the portfolio's base currency and
+  /// does not convert, so its figures are in the instrument's currency: the
+  /// quote names that currency (spec § 2.0 A3).
+  func testInstrumentCurrencyFromTheQuoteBeatsThePnlLabel() {
+    let quote = QuoteResponse(
+      symbol: "SAP", currency: "EUR", currentPrice: 200, change: nil, percentChange: nil,
+      high: nil, low: nil, open: nil, previousClose: nil, timestamp: 0
+    )
+    let model = HoldingRowModel.make(
+      pnl: pnl(currency: "USD", currentPrice: 200, marketValue: 400, costBasis: 300, unrealizedPnl: 100),
+      quote: quote,
+      shares: 2,
+      costBasis: 300,
+      locale: unitedStates
+    )
+    XCTAssertEqual(model.currencyCode, "EUR")
+    XCTAssertEqual(model.priceText, "€200.00")
+    XCTAssertEqual(model.marketValueText, "€400.00")
+    XCTAssertEqual(model.costText, "€300.00")
+  }
+
+  func testQuoteCurrencyWithoutPnl() {
     let quote = QuoteResponse(
       symbol: "SAP", currency: "EUR", currentPrice: 200, change: nil, percentChange: nil,
       high: nil, low: nil, open: nil, previousClose: nil, timestamp: 0
