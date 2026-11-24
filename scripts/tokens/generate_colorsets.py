@@ -12,7 +12,8 @@ Every colour token whose $extensions.norviq has an `ios` name becomes
 Assets.xcassets/Theme/<ios>.colorset/Contents.json: `$value` is the light
 (universal) colour, `dark` the dark-appearance one. Alpha is the last hex byte,
 round(alpha * 255); it is written back as round(byte / 255, 2), so 0x1A is
-"0.100" and 0x0D is "0.050".
+"0.100" and 0x0D is "0.050". A byte that does not survive that round trip
+(0x19 would come back as 0x1A) is an error.
 
 --check also fails when a Theme colour set has no token, or a token names a
 colour set twice, so a set cannot quietly fall out of the generated range.
@@ -42,8 +43,17 @@ def parse_hex(value, where):
 
 def components(value, where):
     red, green, blue, alpha = parse_hex(value, where)
+    # A colour set stores alpha to two decimals. A byte that does not survive
+    # that round trip (0x19 -> 0.10 -> 0x1A) would ship a different colour than
+    # the token, so it is an error, not a silent rounding.
+    stored = round(alpha / 255.0, 2)
+    if int(stored * 255 + 0.5) != alpha:
+        raise ValueError(
+            "%s: alpha byte 0x%02X does not round-trip through a two-decimal alpha (%.2f -> 0x%02X); "
+            "pick a byte that is round(alpha * 255) of a two-decimal alpha" % (where, alpha, stored, int(stored * 255 + 0.5))
+        )
     return {
-        "alpha": "%.3f" % round(alpha / 255.0, 2),
+        "alpha": "%.3f" % stored,
         "blue": "0x%02X" % blue,
         "green": "0x%02X" % green,
         "red": "0x%02X" % red,
