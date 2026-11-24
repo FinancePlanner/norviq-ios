@@ -55,6 +55,27 @@ final class PortfolioHeroModelTests: XCTestCase {
     )
     XCTAssertNil(model.valueText)
     XCTAssertEqual(model.subtotalTexts, ["€61,210.40", "$37,630.22"])
+    // The series is in one base currency; a money change or an axis in it
+    // under per-currency subtotals would imply a summed total.
+    XCTAssertNil(model.deltaText)
+    XCTAssertNil(model.basisText)
+    XCTAssertTrue(model.points.isEmpty)
+    XCTAssertNotNil(model.historyCaption)
+  }
+
+  func testPortfolioHeadlinePrefersTheLiveTotal() {
+    let model = PortfolioHeroModel.make(
+      performance: freshMonth,
+      holdingsByCurrency: ["USD": 48000],
+      range: .month,
+      now: now,
+      locale: unitedStates,
+      liveTotal: 50000,
+      preferLiveTotal: true
+    )
+    // The headline matches the rows (live prices); the change is the series'.
+    XCTAssertEqual(model.valueText, "$50,000.00")
+    XCTAssertEqual(model.deltaText, "+$3,432.05 (+7.6%)")
   }
 
   func testStaleSeriesHidesDelta() {

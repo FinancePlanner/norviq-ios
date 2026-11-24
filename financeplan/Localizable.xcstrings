@@ -418,6 +418,16 @@
         }
       }
     },
+    "No combined trend across currencies." : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sem tendência combinada entre moedas."
+          }
+        }
+      }
+    },
     "No history yet. Your first snapshot is taken tonight." : {
       "localizations" : {
         "pt-PT" : {

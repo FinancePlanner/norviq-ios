@@ -137,11 +137,13 @@ final class PortfolioViewModel {
         portfolioListId: key.portfolioListId,
         range: key.range
       )
+      // Superseded by a newer range or list: leave its result alone.
+      guard !Task.isCancelled else { return }
       performance = response
       performanceKey = key
-    } catch is CancellationError {
-      return
     } catch {
+      // Cancellation can surface as URLError.cancelled, not CancellationError.
+      guard !Task.isCancelled else { return }
       portfolioViewModelLogger.warning(
         "Portfolio performance load failed: \(error.localizedDescription, privacy: .public)"
       )

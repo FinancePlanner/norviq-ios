@@ -32,6 +32,9 @@ struct PortfolioScreen: View {
   @State private var selectedTimeRange: TimeRange = .month
   @State private var selectedAssetFilter: AssetFilter = .all
   @State private var selectedHoldingsSort: HoldingsSort = .name
+  /// Rebuilt only when its inputs change, so a quote refresh does not
+  /// reset a chart selection mid-drag.
+  @State private var cachedHeroModel: PortfolioHeroModel?
   @State private var pushNavigationRoute: PushNavigationRoute?
   @State private var pushFallbackToast: ToastData?
   @State private var refreshErrorToast: ToastData?
@@ -224,15 +227,36 @@ struct PortfolioScreen: View {
     return holdings.values.reduce(0, +) + cashBalance
   }
 
-  private var heroModel: PortfolioHeroModel {
-    PortfolioHeroModel.make(
+  private struct HeroInputs: Equatable {
+    let performance: PortfolioPerformanceResponse?
+    let holdingsByCurrency: [String: Double]
+    let range: TimeRange
+    let liveTotal: Double?
+  }
+
+  private var heroInputs: HeroInputs {
+    HeroInputs(
       performance: viewModel.performance(for: performanceKey),
       holdingsByCurrency: holdingsByCurrency,
       range: selectedTimeRange,
-      now: Date(),
-      locale: MoneyFormatter.defaultLocale,
       liveTotal: liveTotal
     )
+  }
+
+  private static func makeHeroModel(_ inputs: HeroInputs) -> PortfolioHeroModel {
+    PortfolioHeroModel.make(
+      performance: inputs.performance,
+      holdingsByCurrency: inputs.holdingsByCurrency,
+      range: inputs.range,
+      now: Date(),
+      locale: MoneyFormatter.defaultLocale,
+      liveTotal: inputs.liveTotal,
+      preferLiveTotal: true
+    )
+  }
+
+  private var heroModel: PortfolioHeroModel {
+    cachedHeroModel ?? Self.makeHeroModel(heroInputs)
   }
 
   /// Average market value of the priced positions, in their one currency.
@@ -285,6 +309,9 @@ struct PortfolioScreen: View {
     .onAppear(perform: prepareScreen)
     .onChange(of: derivationInputs, initial: true) { _, inputs in
       derived = Self.derive(stocks: stocks, inputs: inputs)
+    }
+    .onChange(of: heroInputs, initial: true) { _, inputs in
+      cachedHeroModel = Self.makeHeroModel(inputs)
     }
     .task(id: performanceKey) {
       // Refetched whenever the range or the list changes; the hero only

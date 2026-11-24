@@ -48,7 +48,8 @@ struct PortfolioHeroModel: Equatable {
     range: PortfolioScreen.TimeRange,
     now: Date,
     locale: Locale,
-    liveTotal: Double? = nil
+    liveTotal: Double? = nil,
+    preferLiveTotal: Bool = false
   ) -> PortfolioHeroModel {
     let baseCurrency = MoneyFormatter.resolvedCode(performance?.baseCurrency)
     let series = parse(performance?.points ?? [])
@@ -59,17 +60,25 @@ struct PortfolioHeroModel: Equatable {
       }
 
     let isStale = series.last.map { isOlderThanStaleLimit($0.date, now: now) } ?? false
-    let hasTrend = !isStale && series.count >= minimumTrendPoints
+    // The series is in one base currency. Under per-currency subtotals a
+    // change or an axis in it would imply a summed total, so mixed holdings
+    // show neither.
+    let isMixed = holdings.count > 1
+    let hasTrend = !isStale && !isMixed && series.count >= minimumTrendPoints
 
     // Value and its currency.
     var valueText: String?
     var subtotalTexts: [String] = []
     var currencyCode: String?
-    if holdings.count > 1 {
+    if isMixed {
       subtotalTexts = holdings.keys.sorted().map { code in
         MoneyFormatter.string(holdings[code] ?? 0, currencyCode: code, locale: locale)
       }
       currencyCode = baseCurrency
+    } else if preferLiveTotal, let liveTotal {
+      // Portfolio: the headline agrees with the rows, which use live prices.
+      currencyCode = holdings.keys.first ?? baseCurrency
+      valueText = MoneyFormatter.string(liveTotal, currencyCode: currencyCode, locale: locale)
     } else if hasTrend, let last = series.last {
       currencyCode = baseCurrency
       valueText = MoneyFormatter.string(last.value, currencyCode: currencyCode, locale: locale)
@@ -109,7 +118,11 @@ struct PortfolioHeroModel: Equatable {
       : nil
 
     let historyCaption: String?
-    if isStale || hasTrend || performance == nil {
+    if isStale || hasTrend {
+      historyCaption = nil
+    } else if isMixed {
+      historyCaption = String(localized: "No combined trend across currencies.")
+    } else if performance == nil {
       // Nil performance means it has not loaded (or failed): say nothing yet.
       historyCaption = nil
     } else if series.isEmpty {
