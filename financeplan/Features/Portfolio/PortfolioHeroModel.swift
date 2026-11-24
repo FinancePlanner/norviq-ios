@@ -36,6 +36,8 @@ struct PortfolioHeroModel: Equatable {
   let points: [ChartDataPoint]
   /// The currency of `valueText` and `points`, for axis labels and pills.
   let currencyCode: String?
+  /// "Excludes 1 unpriced holding": the total leaves out holdings with no price.
+  let unpricedCaption: String?
 
   /// A series whose last point is older than this many calendar days is stale.
   static let staleAfterDays = 4
@@ -49,7 +51,8 @@ struct PortfolioHeroModel: Equatable {
     now: Date,
     locale: Locale,
     liveTotal: Double? = nil,
-    preferLiveTotal: Bool = false
+    preferLiveTotal: Bool = false,
+    unpricedCount: Int = 0
   ) -> PortfolioHeroModel {
     let baseCurrency = MoneyFormatter.resolvedCode(performance?.baseCurrency)
     let series = parse(performance?.points ?? [])
@@ -140,7 +143,10 @@ struct PortfolioHeroModel: Equatable {
       asOfText: asOfText,
       historyCaption: historyCaption,
       points: hasTrend ? series.map { ChartDataPoint(date: $0.date, value: $0.value) } : [],
-      currencyCode: currencyCode
+      currencyCode: currencyCode,
+      unpricedCaption: unpricedCount > 0 && (valueText != nil || !subtotalTexts.isEmpty)
+        ? String(localized: "Excludes \(unpricedCount) unpriced holdings")
+        : nil
     )
   }
 
@@ -168,19 +174,63 @@ struct PortfolioHeroModel: Equatable {
     )
   }
 
-  /// Market value per instrument currency, from the backend's per-symbol
-  /// P/L, with the currency from the live quote (see `HoldingRowModel`).
-  /// Holdings with no price (nil or 0) are left out: their value is unknown,
-  /// not zero.
-  static func holdingsByCurrency(_ pnls: [PnlBySymbol], quotes: [String: QuoteResponse] = [:]) -> [String: Double] {
-    pnls.reduce(into: [String: Double]()) { result, pnl in
-      let quote = quotes[pnl.symbol.uppercased()]
-      guard let price = pnl.currentPrice, price > 0,
-            let code = HoldingRowModel.instrumentCurrency(pnl: pnl, quote: quote) else { return }
-      let shares = pnl.shares ?? 0
-      let value = pnl.marketValue ?? (shares * price)
-      result[code, default: 0] += value
+  /// One holding as the rows know it.
+  struct Holding: Equatable {
+    let symbol: String
+    let shares: Double
+    let costBasis: Double
+  }
+
+  /// The holdings' value, worked out exactly as the rows do.
+  struct Valuation: Equatable {
+    /// Market value per instrument currency, priced holdings only.
+    var byCurrency: [String: Double] = [:]
+    var pricedCount = 0
+    /// Holdings left out of `byCurrency` because they have no price.
+    var unpricedCount = 0
+    /// False until any P/L or quote has arrived for these holdings.
+    var isLoaded = false
+  }
+
+  /// Values each symbol once through `HoldingRowModel`, so the headline
+  /// matches the rows and moves with the quote refresh. The P/L is per
+  /// symbol, so a symbol held in two lists is valued once, with its shares
+  /// summed for the quote fallback. A holding with no price is counted, not
+  /// valued at zero.
+  static func valuation(
+    _ holdings: [Holding],
+    pnlBySymbol: [String: PnlBySymbol],
+    quotes: [String: QuoteResponse]
+  ) -> Valuation {
+    var grouped: [String: (shares: Double, cost: Double)] = [:]
+    for holding in holdings {
+      let key = holding.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+      grouped[key, default: (0, 0)].shares += holding.shares
+      grouped[key, default: (0, 0)].cost += holding.costBasis
     }
+
+    var valuation = Valuation()
+    for (symbol, totals) in grouped {
+      let row = HoldingRowModel.make(
+        pnl: pnlBySymbol[symbol],
+        quote: quotes[symbol],
+        shares: totals.shares,
+        costBasis: totals.cost,
+        locale: MoneyFormatter.defaultLocale
+      )
+      valuation.isLoaded = valuation.isLoaded || row.isLoaded
+      if let value = row.marketValue, let code = row.currencyCode {
+        valuation.byCurrency[code, default: 0] += value
+        valuation.pricedCount += 1
+      } else {
+        valuation.unpricedCount += 1
+      }
+    }
+    if !valuation.isLoaded {
+      // Nothing has arrived yet: not known is not unpriced.
+      valuation.unpricedCount = 0
+    }
+    return valuation
   }
 
   /// The words after a range change. Matches web `rangeBasis` (B2).

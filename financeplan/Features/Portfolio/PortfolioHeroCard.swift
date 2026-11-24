@@ -56,6 +56,12 @@ struct PortfolioHeroCard: View {
             .accessibilityElement(children: .combine)
           }
 
+          if let unpricedCaption = model.unpricedCaption {
+            Text(verbatim: unpricedCaption)
+              .typography(.caption)
+              .foregroundStyle(.secondary)
+          }
+
           if let asOfText = model.asOfText {
             Text(verbatim: asOfText)
               .typography(.caption)

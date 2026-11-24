@@ -156,44 +156,85 @@ final class PortfolioHeroModelTests: XCTestCase {
     XCTAssertEqual(model.basisText, "1 week")
   }
 
-  func testHoldingsByCurrencySkipsUnpricedHoldings() {
-    let pnls = [
-      PnlBySymbol(symbol: "ABCL", currency: "USD", realizedPnl: 0, unrealizedPnl: 0, currentPrice: 10.78, marketValue: 2749.47),
-      PnlBySymbol(symbol: "A6I", currency: "EUR", realizedPnl: 0, unrealizedPnl: -1075.89, currentPrice: 0, marketValue: 0),
-      PnlBySymbol(symbol: "XYZ", currency: "EUR", realizedPnl: 0, unrealizedPnl: 0, currentPrice: nil, marketValue: nil),
-      PnlBySymbol(symbol: "VST", currency: "usd", realizedPnl: 0, unrealizedPnl: 0, currentPrice: 150, marketValue: 4236.07),
-    ]
-    let totals = PortfolioHeroModel.holdingsByCurrency(pnls)
-    XCTAssertEqual(totals.keys.sorted(), ["USD"])
-    XCTAssertEqual(totals["USD"] ?? 0, 6985.54, accuracy: 0.001)
+  private func quote(_ symbol: String, _ currency: String, _ price: Double) -> QuoteResponse {
+    QuoteResponse(
+      symbol: symbol, currency: currency, currentPrice: price, change: nil, percentChange: nil,
+      high: nil, low: nil, open: nil, previousClose: nil, timestamp: 0
+    )
   }
 
-  // MARK: - Home (C3)
-
-  func testHoldingsTakeTheInstrumentCurrencyFromTheQuote() {
-    // Both P/L rows say "USD" (the portfolio base); SAP is quoted in euros.
-    let pnls = [
-      PnlBySymbol(symbol: "SAP", currency: "USD", realizedPnl: 0, unrealizedPnl: 0, currentPrice: 200, marketValue: 400),
-      PnlBySymbol(symbol: "AAPL", currency: "USD", realizedPnl: 0, unrealizedPnl: 0, currentPrice: 100, marketValue: 1000),
+  /// The hero values holdings exactly as the rows do (`HoldingRowModel`):
+  /// the P/L when priced, else the live quote, in the instrument currency.
+  func testValuationMatchesTheRows() {
+    let holdings = [
+      PortfolioHeroModel.Holding(symbol: "ABCL", shares: 255.05, costBasis: 965.54),
+      PortfolioHeroModel.Holding(symbol: "A6I", shares: 100, costBasis: 1075.89),
+      PortfolioHeroModel.Holding(symbol: "SAP", shares: 2, costBasis: 300),
+      PortfolioHeroModel.Holding(symbol: "VST", shares: 10, costBasis: 1000),
     ]
-    let quotes = [
-      "SAP": QuoteResponse(
-        symbol: "SAP", currency: "EUR", currentPrice: 200, change: nil, percentChange: nil,
-        high: nil, low: nil, open: nil, previousClose: nil, timestamp: 0
-      ),
+    let pnl = [
+      "ABCL": PnlBySymbol(symbol: "ABCL", currency: "USD", realizedPnl: 0, unrealizedPnl: 0, currentPrice: 10.78, marketValue: 2749.47),
+      "A6I": PnlBySymbol(symbol: "A6I", currency: "USD", realizedPnl: 0, unrealizedPnl: -1075.89, currentPrice: 0, marketValue: 0),
+      // P/L price 0, live quote present: the quote prices it, as on the row.
+      "VST": PnlBySymbol(symbol: "VST", currency: "USD", realizedPnl: 0, unrealizedPnl: 0, currentPrice: 0, marketValue: 0),
     ]
-    let totals = PortfolioHeroModel.holdingsByCurrency(pnls, quotes: quotes)
-    XCTAssertEqual(totals, ["EUR": 400, "USD": 1000])
+    let quotes = ["SAP": quote("SAP", "EUR", 200), "VST": quote("VST", "USD", 150)]
 
+    let valuation = PortfolioHeroModel.valuation(holdings, pnlBySymbol: pnl, quotes: quotes)
+    XCTAssertEqual(valuation.byCurrency["USD"] ?? 0, 2749.47 + 1500, accuracy: 0.001)
+    XCTAssertEqual(valuation.byCurrency["EUR"] ?? 0, 400, accuracy: 0.001)
+    XCTAssertEqual(valuation.pricedCount, 3)
+    XCTAssertEqual(valuation.unpricedCount, 1)
+    XCTAssertTrue(valuation.isLoaded)
+
+    // A USD + EUR mix: per-currency subtotals, never one summed figure.
     let model = PortfolioHeroModel.make(
       performance: freshMonth,
-      holdingsByCurrency: totals,
+      holdingsByCurrency: valuation.byCurrency,
       range: .month,
       now: now,
       locale: unitedStates
     )
     XCTAssertNil(model.valueText)
-    XCTAssertEqual(model.subtotalTexts, ["€400.00", "$1,000.00"])
+    XCTAssertEqual(model.subtotalTexts, ["€400.00", "$4,249.47"])
+  }
+
+  func testValuationCountsASymbolOnce() {
+    // The same symbol in two lists: the P/L is per symbol, so not doubled.
+    let holdings = [
+      PortfolioHeroModel.Holding(symbol: "abcl", shares: 100, costBasis: 400),
+      PortfolioHeroModel.Holding(symbol: "ABCL", shares: 155.05, costBasis: 565.54),
+    ]
+    let pnl = ["ABCL": PnlBySymbol(symbol: "ABCL", currency: "USD", realizedPnl: 0, unrealizedPnl: 0, currentPrice: 10.78, marketValue: 2749.47)]
+    let valuation = PortfolioHeroModel.valuation(holdings, pnlBySymbol: pnl, quotes: [:])
+    XCTAssertEqual(valuation.byCurrency, ["USD": 2749.47])
+    XCTAssertEqual(valuation.pricedCount, 1)
+  }
+
+  func testValuationBeforeAnythingLoaded() {
+    let holdings = [PortfolioHeroModel.Holding(symbol: "ABCL", shares: 1, costBasis: 1)]
+    let valuation = PortfolioHeroModel.valuation(holdings, pnlBySymbol: [:], quotes: [:])
+    XCTAssertFalse(valuation.isLoaded)
+    XCTAssertEqual(valuation.unpricedCount, 0)
+  }
+
+  func testUnpricedHoldingsKeepTheTotalAndSaySo() {
+    let one = PortfolioHeroModel.make(
+      performance: freshMonth, holdingsByCurrency: ["USD": 2749.47], range: .month,
+      now: now, locale: unitedStates, liveTotal: 2749.47, preferLiveTotal: true, unpricedCount: 1
+    )
+    XCTAssertEqual(one.valueText, "$2,749.47")
+    XCTAssertEqual(one.unpricedCaption, "Excludes 1 unpriced holding")
+    let two = PortfolioHeroModel.make(
+      performance: freshMonth, holdingsByCurrency: ["USD": 2749.47], range: .month,
+      now: now, locale: unitedStates, liveTotal: 2749.47, preferLiveTotal: true, unpricedCount: 2
+    )
+    XCTAssertEqual(two.unpricedCaption, "Excludes 2 unpriced holdings")
+    let none = PortfolioHeroModel.make(
+      performance: freshMonth, holdingsByCurrency: ["USD": 2749.47], range: .month,
+      now: now, locale: unitedStates, liveTotal: 2749.47, preferLiveTotal: true
+    )
+    XCTAssertNil(none.unpricedCaption)
   }
 
   func testHomeStaleSeriesFallsBackToLiveTotalWithoutDelta() {

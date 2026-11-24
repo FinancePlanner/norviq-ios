@@ -203,10 +203,16 @@ struct PortfolioScreen: View {
     )
   }
 
-  /// Market value per currency, from the backend P/L. Unpriced holdings are
-  /// left out; their value is unknown.
-  private var holdingsByCurrency: [String: Double] {
-    PortfolioHeroModel.holdingsByCurrency(Array(viewModel.pnlBySymbol.values), quotes: viewModel.liveQuotes)
+  /// The holdings valued as the rows value them (P/L, else live quote, in
+  /// the instrument currency). Unpriced holdings are counted, not summed.
+  private var holdingValuation: PortfolioHeroModel.Valuation {
+    PortfolioHeroModel.valuation(
+      scopedStocks.map {
+        PortfolioHeroModel.Holding(symbol: $0.symbol, shares: $0.shares, costBasis: $0.shares * $0.buyPrice)
+      },
+      pnlBySymbol: viewModel.pnlBySymbol,
+      quotes: viewModel.liveQuotes
+    )
   }
 
   /// The currency cash and the snapshot series are kept in.
@@ -217,9 +223,9 @@ struct PortfolioScreen: View {
 
   /// Holdings plus cash, when both are in one currency. Nil until the P/L
   /// has loaded, so the hero never shows cash alone as the total.
-  private var liveTotal: Double? {
-    let holdings = holdingsByCurrency
-    if viewModel.pnlBySymbol.isEmpty, !scopedStocks.isEmpty { return nil }
+  private func liveTotal(_ valuation: PortfolioHeroModel.Valuation) -> Double? {
+    let holdings = valuation.byCurrency
+    if !valuation.isLoaded, !scopedStocks.isEmpty { return nil }
     guard holdings.count <= 1 else { return nil }
     if let code = holdings.keys.first, let baseCurrency, code != baseCurrency {
       return holdings[code]
@@ -232,14 +238,17 @@ struct PortfolioScreen: View {
     let holdingsByCurrency: [String: Double]
     let range: TimeRange
     let liveTotal: Double?
+    let unpricedCount: Int
   }
 
   private var heroInputs: HeroInputs {
-    HeroInputs(
+    let valuation = holdingValuation
+    return HeroInputs(
       performance: viewModel.performance(for: performanceKey),
-      holdingsByCurrency: holdingsByCurrency,
+      holdingsByCurrency: valuation.byCurrency,
       range: selectedTimeRange,
-      liveTotal: liveTotal
+      liveTotal: liveTotal(valuation),
+      unpricedCount: valuation.unpricedCount
     )
   }
 
@@ -251,7 +260,8 @@ struct PortfolioScreen: View {
       now: Date(),
       locale: MoneyFormatter.defaultLocale,
       liveTotal: inputs.liveTotal,
-      preferLiveTotal: true
+      preferLiveTotal: true,
+      unpricedCount: inputs.unpricedCount
     )
   }
 
@@ -262,12 +272,13 @@ struct PortfolioScreen: View {
   /// Average market value of the priced positions, in their one currency.
   /// A mixed-currency portfolio has no meaningful average without a rate.
   private var averagePositionText: String {
-    let holdings = holdingsByCurrency
-    let pricedCount = viewModel.pnlBySymbol.values.filter { ($0.currentPrice ?? 0) > 0 }.count
-    guard holdings.count == 1, let (code, total) = holdings.first.map({ ($0.key, $0.value) }), pricedCount > 0 else {
+    let valuation = holdingValuation
+    guard valuation.byCurrency.count == 1,
+          let (code, total) = valuation.byCurrency.first.map({ ($0.key, $0.value) }),
+          valuation.pricedCount > 0 else {
       return "\u{2014}"
     }
-    return MoneyFormatter.string(total / Double(pricedCount), currencyCode: code)
+    return MoneyFormatter.string(total / Double(valuation.pricedCount), currencyCode: code)
   }
 
   private var cashText: String {

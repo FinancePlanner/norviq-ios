@@ -12,6 +12,8 @@ import StockPlanShared
 ///   is still known, so it is still shown.
 struct HoldingRowModel: Equatable {
   let priceText: String?
+  /// The value behind `marketValueText`; the hero sums these.
+  let marketValue: Double?
   let marketValueText: String?
   /// "+1783,93 US$ (+184,8%)".
   let glText: String?
@@ -45,6 +47,7 @@ struct HoldingRowModel: Equatable {
     guard let price = pnlPrice ?? quotePrice else {
       return HoldingRowModel(
         priceText: nil,
+        marketValue: nil,
         marketValueText: nil,
         glText: nil,
         costText: costText,
@@ -71,6 +74,7 @@ struct HoldingRowModel: Equatable {
 
     return HoldingRowModel(
       priceText: MoneyFormatter.string(price, currencyCode: currency, locale: locale),
+      marketValue: marketValue,
       marketValueText: MoneyFormatter.string(marketValue, currencyCode: currency, locale: locale),
       glText: withPercent(MoneyFormatter.signed(gainLoss, currencyCode: currency, locale: locale), gainLossFraction, locale),
       costText: costText,

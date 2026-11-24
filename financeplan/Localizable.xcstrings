@@ -248,6 +248,46 @@
         }
       }
     },
+    "Excludes %lld unpriced holdings" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Excludes %lld unpriced holding"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Excludes %lld unpriced holdings"
+                }
+              }
+            }
+          }
+        },
+        "pt-PT" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Exclui %lld posição sem preço"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Exclui %lld posições sem preço"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Expires %@" : {
       "localizations" : {
         "pt-PT" : {
