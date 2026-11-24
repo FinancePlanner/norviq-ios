@@ -89,6 +89,8 @@ final class PortfolioViewModel {
   /// fetched for. The hero only draws a series under the range it asked for.
   private(set) var performance: PortfolioPerformanceResponse?
   private(set) var performanceKey: PerformanceKey?
+  /// The range and list asked for last. Only its answer may land.
+  @ObservationIgnored private var latestRequestedPerformanceKey: PerformanceKey?
 
   struct PerformanceKey: Hashable {
     let portfolioListId: String?
@@ -132,18 +134,20 @@ final class PortfolioViewModel {
   /// Fetches the series for one list and range. A failure leaves no series,
   /// so the hero falls back to the live total and shows no change.
   func loadPerformance(_ key: PerformanceKey) async {
+    latestRequestedPerformanceKey = key
     do {
       let response = try await service.fetchPortfolioPerformance(
         portfolioListId: key.portfolioListId,
         range: key.range
       )
-      // Superseded by a newer range or list: leave its result alone.
-      guard !Task.isCancelled else { return }
+      // Superseded by a newer range or list: leave the newer result alone.
+      guard !Task.isCancelled, latestRequestedPerformanceKey == key else { return }
       performance = response
       performanceKey = key
     } catch {
       // Cancellation can surface as URLError.cancelled, not CancellationError.
-      guard !Task.isCancelled else { return }
+      // A late failure of an older request must not clear the newer series.
+      guard !Task.isCancelled, latestRequestedPerformanceKey == key else { return }
       portfolioViewModelLogger.warning(
         "Portfolio performance load failed: \(error.localizedDescription, privacy: .public)"
       )
