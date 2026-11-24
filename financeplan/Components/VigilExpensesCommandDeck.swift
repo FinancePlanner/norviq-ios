@@ -28,7 +28,7 @@ struct VigilExpensesCommandDeck: View {
         } else {
           ForEach(activities.prefix(6)) { item in
             HStack(alignment: .top) {
-              Text(verbatim: Self.dateFormatter.string(from: item.occurredOn))
+              Text(verbatim: Self.dateText(item.occurredOn))
                 .font(.caption2.monospaced())
                 .foregroundStyle(.secondary)
                 .frame(width: 52, alignment: .leading)
@@ -64,11 +64,19 @@ struct VigilExpensesCommandDeck: View {
     }
   }
 
-  /// Built once: a `DateFormatter` per row per render was the old cost.
-  private static let dateFormatter: DateFormatter = {
+  /// One `DateFormatter` per locale, built on first use: a formatter per
+  /// row per render was the old cost, and one fixed at launch kept the old
+  /// language after the app language changed.
+  private static var dateFormatters: [String: DateFormatter] = [:]
+
+  static func dateText(_ date: Date, locale: Locale = MoneyFormatter.defaultLocale) -> String {
+    if let formatter = dateFormatters[locale.identifier] {
+      return formatter.string(from: date)
+    }
     let formatter = DateFormatter()
-    formatter.locale = MoneyFormatter.defaultLocale
+    formatter.locale = locale
     formatter.setLocalizedDateFormatFromTemplate("MMMd")
-    return formatter
-  }()
+    dateFormatters[locale.identifier] = formatter
+    return formatter.string(from: date)
+  }
 }

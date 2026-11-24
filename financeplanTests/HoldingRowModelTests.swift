@@ -69,6 +69,21 @@ final class HoldingRowModelTests: XCTestCase {
     XCTAssertEqual(model.costText, "50.00\u{00A0}—")
   }
 
+  func testDayChangeOfAnUnpricedPnlIsNotUsed() {
+    // The P/L has no price, so its day change is not about this price.
+    let quote = QuoteResponse(
+      symbol: "ABCL", currency: "USD", currentPrice: 11, change: 0.5, percentChange: 4.76,
+      high: nil, low: nil, open: nil, previousClose: nil, timestamp: 0
+    )
+    let unpriced = PnlBySymbol(
+      symbol: "ABCL", currency: "USD", realizedPnl: 0, unrealizedPnl: -100,
+      shares: 10, costBasis: 100, currentPrice: 0, marketValue: 0,
+      dayChange: -999, dayChangePercent: -50
+    )
+    let model = HoldingRowModel.make(pnl: unpriced, quote: quote, shares: 10, costBasis: 100, locale: unitedStates)
+    XCTAssertEqual(model.dayChangeText, "+$5.00 (+4.8%)")
+  }
+
   func testZeroPnlPriceFallsBackToTheLiveQuote() {
     let quote = QuoteResponse(
       symbol: "ABCL", currency: "USD", currentPrice: 11, change: nil, percentChange: nil,

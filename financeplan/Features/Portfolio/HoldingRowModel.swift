@@ -69,8 +69,9 @@ struct HoldingRowModel: Equatable {
     let gainLossFraction: Double? = pricedPnl?.unrealizedPnlPercent.map { $0 / 100 }
       ?? (cost > 0 ? gainLoss / cost : nil)
 
-    let dayChange = pnl?.dayChange ?? quote?.change.map { $0 * shares }
-    let dayFraction: Double? = (pnl?.dayChangePercent ?? quote?.percentChange).map { $0 / 100 }
+    // An unpriced P/L's day change is not about this price either.
+    let dayChange = pricedPnl?.dayChange ?? quote?.change.map { $0 * shares }
+    let dayFraction: Double? = (pricedPnl?.dayChangePercent ?? quote?.percentChange).map { $0 / 100 }
 
     return HoldingRowModel(
       priceText: MoneyFormatter.string(price, currencyCode: currency, locale: locale),

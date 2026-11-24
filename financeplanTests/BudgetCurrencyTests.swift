@@ -30,6 +30,15 @@ final class BudgetCurrencyTests: XCTestCase {
     XCTAssertEqual(VigilExpensesCommandDeck.tagLabel(for: .futureYou), "Variable")
   }
 
+  func testCommandDeckDateFollowsTheLocale() {
+    let date = day(2026, 11, 20)
+    let english = VigilExpensesCommandDeck.dateText(date, locale: Locale(identifier: "en_US"))
+    let portuguese = VigilExpensesCommandDeck.dateText(date, locale: portugal)
+    XCTAssertEqual(english, "Nov 20")
+    XCTAssertNotEqual(english, portuguese)
+    XCTAssertTrue(portuguese.contains("20"), portuguese)
+  }
+
   func testCommandDeckUsesSelectedMonth() {
     let june = BudgetActivity(title: "Coffee", amount: 3.5, pillar: .fun, occurredOn: day(2026, 6, 27))
     let november = BudgetActivity(title: "Groceries", amount: 82, pillar: .fundamentals, occurredOn: day(2026, 11, 20))

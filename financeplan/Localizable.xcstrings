@@ -1937,6 +1937,12 @@
             "state" : "new",
             "value" : "%1$@ of %2$@"
           }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ de %2$@"
+          }
         }
       }
     },
@@ -2152,6 +2158,12 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@, %2$@, spent %3$@ against %4$@"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@, gastou %3$@ de %4$@"
           }
         }
       }
@@ -14268,7 +14280,14 @@
       }
     },
     "Overspending has reduced this month's available investment capital by %@." : {
-
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os gastos acima do plano reduziram em %@ o capital disponível para investir este mês."
+          }
+        }
+      }
     },
     "Overview" : {
       "comment" : "A heading for the yearly spending overview.",
