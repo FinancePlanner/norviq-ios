@@ -160,7 +160,12 @@ struct PortfolioRow: View {
   }
 
   private func accessibilitySummary(_ model: HoldingRowModel) -> String {
-    var parts = [stock.symbol, model.marketValueText ?? priceUnavailableText]
+    var parts = [stock.symbol]
+    if let marketValueText = model.marketValueText {
+      parts.append(marketValueText)
+    } else if model.priceUnavailable {
+      parts.append(priceUnavailableText)
+    }
     if let dayChangeText = model.dayChangeText {
       parts.append(String(localized: "today \(dayChangeText)"))
     }
@@ -227,7 +232,7 @@ struct PortfolioRow: View {
                   .monospacedDigit()
                   .foregroundStyle(Self.tone(model.dayDirection))
               }
-            } else {
+            } else if model.priceUnavailable {
               // A missing price is not a loss: say so, and show no value.
               Text(verbatim: priceUnavailableText)
                 .font(.subheadline)

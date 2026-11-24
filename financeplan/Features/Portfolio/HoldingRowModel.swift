@@ -15,6 +15,8 @@ struct HoldingRowModel: Equatable {
   let glText: String?
   let costText: String
   let priceUnavailable: Bool
+  /// False until the P/L or a quote has arrived: not known is not unavailable.
+  let isLoaded: Bool
   /// "+$12.40 (+0.5%)" for today, when a price and a day change exist.
   let dayChangeText: String?
   /// Sign of the gain or loss and of the day change, for their colour.
@@ -33,13 +35,19 @@ struct HoldingRowModel: Equatable {
     let cost = pnl?.costBasis ?? costBasis
     let costText = MoneyFormatter.string(cost, currencyCode: currency, locale: locale)
 
-    guard let price = pnl?.currentPrice ?? quote?.currentPrice, price > 0 else {
+    // The first positive price: a P/L price of 0 must not hide a live quote.
+    let pnlPrice = pnl?.currentPrice.flatMap { $0 > 0 ? $0 : nil }
+    let quotePrice = quote.flatMap { $0.currentPrice > 0 ? $0.currentPrice : nil }
+    let isLoaded = pnl != nil || quote != nil
+
+    guard let price = pnlPrice ?? quotePrice else {
       return HoldingRowModel(
         priceText: nil,
         marketValueText: nil,
         glText: nil,
         costText: costText,
-        priceUnavailable: true,
+        priceUnavailable: isLoaded,
+        isLoaded: isLoaded,
         dayChangeText: nil,
         glDirection: nil,
         dayDirection: nil,
@@ -47,10 +55,13 @@ struct HoldingRowModel: Equatable {
       )
     }
 
-    let marketValue = pnl?.marketValue ?? (shares * price)
-    let gainLoss = pnl?.unrealizedPnl ?? (marketValue - cost)
+    // The backend's figures only hold when they were priced; otherwise the
+    // value and G/L come from the live quote.
+    let pricedPnl = pnlPrice == nil ? nil : pnl
+    let marketValue = pricedPnl?.marketValue ?? (shares * price)
+    let gainLoss = pricedPnl?.unrealizedPnl ?? (marketValue - cost)
     // The backend sends percentages in points (184.76 is 184.76%).
-    let gainLossFraction: Double? = pnl?.unrealizedPnlPercent.map { $0 / 100 }
+    let gainLossFraction: Double? = pricedPnl?.unrealizedPnlPercent.map { $0 / 100 }
       ?? (cost > 0 ? gainLoss / cost : nil)
 
     let dayChange = pnl?.dayChange ?? quote?.change.map { $0 * shares }
@@ -62,6 +73,7 @@ struct HoldingRowModel: Equatable {
       glText: withPercent(MoneyFormatter.signed(gainLoss, currencyCode: currency, locale: locale), gainLossFraction, locale),
       costText: costText,
       priceUnavailable: false,
+      isLoaded: true,
       dayChangeText: dayChange.map {
         withPercent(MoneyFormatter.signed($0, currencyCode: currency, locale: locale), dayFraction, locale)
       },

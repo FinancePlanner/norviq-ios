@@ -48,12 +48,43 @@ final class HoldingRowModelTests: XCTestCase {
   }
 
   func testNilPriceIsUnavailable() {
-    let model = HoldingRowModel.make(pnl: nil, quote: nil, shares: 10, costBasis: 50, locale: unitedStates)
+    let model = HoldingRowModel.make(
+      pnl: pnl(currentPrice: nil, marketValue: nil, costBasis: 50, unrealizedPnl: 0),
+      quote: nil,
+      shares: 10,
+      costBasis: 50,
+      locale: unitedStates
+    )
     XCTAssertTrue(model.priceUnavailable)
     XCTAssertNil(model.marketValueText)
     XCTAssertNil(model.glText)
+  }
+
+  func testNothingLoadedYetIsNotUnavailable() {
+    let model = HoldingRowModel.make(pnl: nil, quote: nil, shares: 10, costBasis: 50, locale: unitedStates)
+    XCTAssertFalse(model.isLoaded)
+    XCTAssertFalse(model.priceUnavailable)
+    XCTAssertNil(model.marketValueText)
     // No currency anywhere: the number is shown with " —", never "$".
     XCTAssertEqual(model.costText, "50.00\u{00A0}—")
+  }
+
+  func testZeroPnlPriceFallsBackToTheLiveQuote() {
+    let quote = QuoteResponse(
+      symbol: "ABCL", currency: "USD", currentPrice: 11, change: nil, percentChange: nil,
+      high: nil, low: nil, open: nil, previousClose: nil, timestamp: 0
+    )
+    let model = HoldingRowModel.make(
+      pnl: pnl(currentPrice: 0, marketValue: 0, costBasis: 100, unrealizedPnl: -100),
+      quote: quote,
+      shares: 10,
+      costBasis: 100,
+      locale: unitedStates
+    )
+    XCTAssertFalse(model.priceUnavailable)
+    XCTAssertEqual(model.priceText, "$11.00")
+    XCTAssertEqual(model.marketValueText, "$110.00")
+    XCTAssertEqual(model.glText, "+$10.00 (+10.0%)")
   }
 
   func testUsdHoldingInPtLocale() {
