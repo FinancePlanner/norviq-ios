@@ -24,6 +24,23 @@ struct StockDetailHeroCard: View {
         return details.shares * details.buyPrice
     }
 
+    /// The quote's currency, else the company's listing currency. Never the
+    /// phone's: "Current price €10,78" above "Currency USD" was the bug.
+    private var currencyCode: String? {
+        MoneyFormatter.resolvedCode(marketSnapshot?.currency)
+            ?? MoneyFormatter.resolvedCode(companyProfile?.currency)
+    }
+
+    /// Nil or 0 is no price, not a price of zero.
+    private var hasPrice: Bool {
+        (displayPrice ?? 0) > 0
+    }
+
+    private func money(_ value: Double?) -> String {
+        guard let value else { return String(localized: "Pending") }
+        return MoneyFormatter.string(value, currencyCode: currencyCode)
+    }
+
     private var symbolText: String {
         companyProfile?.displayTicker ?? comparisonProfile?.symbol ?? details?.symbol ?? "Stock"
     }
@@ -90,17 +107,19 @@ struct StockDetailHeroCard: View {
                 HStack(alignment: .top, spacing: 10) {
                     HeroMetricPill(
                         title: "Current price",
-                        value: displayPrice?.currency ?? "Pending",
+                        value: displayPrice == nil ? money(nil)
+                            : (hasPrice ? money(displayPrice) : String(localized: "Price unavailable")),
                         tint: AppTheme.Colors.tint(for: colorScheme)
                     )
                     HeroMetricPill(
                         title: "Position",
-                        value: positionMarketValue?.currency ?? "Pending",
+                        value: displayPrice == nil ? money(nil)
+                            : (hasPrice ? money(positionMarketValue) : String(localized: "Price unavailable")),
                         tint: AppTheme.Colors.success
                     )
                     HeroMetricPill(
                         title: "Cost basis",
-                        value: costBasis?.currency ?? "Pending",
+                        value: money(costBasis),
                         tint: AppTheme.Colors.warning
                     )
                 }

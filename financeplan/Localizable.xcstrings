@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "% Acct" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "% Conta"
+          }
+        }
+      }
+    },
+    "%@ shares" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ações"
+          }
+        }
+      }
+    },
     "%lld rows left out (options, shorts, dividends or fees)." : {
       "localizations" : {
         "pt-PT" : {
@@ -127,6 +147,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Compare cada linha com a sua captura de ecrã. Só as linhas assinaladas são guardadas."
+          }
+        }
+      }
+    },
+    "Cost" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Custo"
+          }
+        }
+      }
+    },
+    "cost %@" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "custo %@"
           }
         }
       }
@@ -328,12 +368,32 @@
         }
       }
     },
+    "Last" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Último"
+          }
+        }
+      }
+    },
     "Load your portfolios" : {
       "localizations" : {
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Carregar os seus portefólios"
+          }
+        }
+      }
+    },
+    "Market value" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valor de mercado"
           }
         }
       }
@@ -354,6 +414,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Não aplicado"
+          }
+        }
+      }
+    },
+    "Pending" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pendente"
+          }
+        }
+      }
+    },
+    "Price unavailable" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preço indisponível"
           }
         }
       }
@@ -1248,6 +1328,16 @@
         }
       }
     },
+    "today %@" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "hoje %@"
+          }
+        }
+      }
+    },
     "Too little history for a trend yet." : {
       "localizations" : {
         "pt-PT" : {
@@ -1264,6 +1354,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ferramentas"
+          }
+        }
+      }
+    },
+    "Total G/L" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "G/P total"
+          }
+        }
+      }
+    },
+    "total gain or loss %@" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ganho ou perda total %@"
           }
         }
       }

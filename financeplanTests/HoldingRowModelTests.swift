@@ -1,0 +1,96 @@
+import Foundation
+import StockPlanShared
+import XCTest
+@testable import financeplan
+
+/// A holding row prints every amount in the holding's own currency, and a
+/// missing price reads as "unavailable", never as a total loss (spec § 2.0
+/// A3, A6).
+@MainActor
+final class HoldingRowModelTests: XCTestCase {
+  private let unitedStates = Locale(identifier: "en_US")
+  private let portugal = Locale(identifier: "pt_PT")
+
+  private func pnl(
+    currency: String = "USD",
+    currentPrice: Double?,
+    marketValue: Double?,
+    costBasis: Double,
+    unrealizedPnl: Double,
+    unrealizedPnlPercent: Double? = nil
+  ) -> PnlBySymbol {
+    PnlBySymbol(
+      symbol: "ABCL",
+      currency: currency,
+      realizedPnl: 0,
+      unrealizedPnl: unrealizedPnl,
+      shares: 255.05,
+      costBasis: costBasis,
+      currentPrice: currentPrice,
+      marketValue: marketValue,
+      unrealizedPnlPercent: unrealizedPnlPercent
+    )
+  }
+
+  func testZeroPriceIsUnavailable() {
+    let model = HoldingRowModel.make(
+      pnl: pnl(currentPrice: 0, marketValue: 0, costBasis: 1075.89, unrealizedPnl: -1075.89),
+      quote: nil,
+      shares: 100,
+      costBasis: 1075.89,
+      locale: unitedStates
+    )
+    XCTAssertTrue(model.priceUnavailable)
+    XCTAssertNil(model.priceText)
+    XCTAssertNil(model.marketValueText)
+    XCTAssertNil(model.glText)
+    XCTAssertEqual(model.costText, "$1,075.89")
+  }
+
+  func testNilPriceIsUnavailable() {
+    let model = HoldingRowModel.make(pnl: nil, quote: nil, shares: 10, costBasis: 50, locale: unitedStates)
+    XCTAssertTrue(model.priceUnavailable)
+    XCTAssertNil(model.marketValueText)
+    XCTAssertNil(model.glText)
+    // No currency anywhere: the number is shown with " —", never "$".
+    XCTAssertEqual(model.costText, "50.00\u{00A0}—")
+  }
+
+  func testUsdHoldingInPtLocale() {
+    let model = HoldingRowModel.make(
+      pnl: pnl(currentPrice: 10.78, marketValue: 2749.47, costBasis: 965.54, unrealizedPnl: 1783.93),
+      quote: nil,
+      shares: 255.05,
+      costBasis: 965.54,
+      locale: portugal
+    )
+    XCTAssertEqual(model.costText, "965,54\u{00A0}US$")
+    XCTAssertFalse(model.costText.contains("€"))
+    XCTAssertEqual(model.priceText, "10,78\u{00A0}US$")
+  }
+
+  func testGainUsesSameCurrencyAsValue() {
+    let model = HoldingRowModel.make(
+      pnl: pnl(currentPrice: 10.78, marketValue: 2749.47, costBasis: 965.54, unrealizedPnl: 1783.93, unrealizedPnlPercent: 184.76),
+      quote: nil,
+      shares: 255.05,
+      costBasis: 965.54,
+      locale: portugal
+    )
+    // pt-PT does not group four-digit numbers (CLDR minimum grouping digits).
+    XCTAssertEqual(model.marketValueText, "2749,47\u{00A0}US$")
+    XCTAssertEqual(model.glText, "+1783,93\u{00A0}US$ (+184,8%)")
+  }
+
+  func testQuoteCurrencyIsTheFallback() {
+    let quote = QuoteResponse(
+      symbol: "SAP", currency: "EUR", currentPrice: 200, change: nil, percentChange: nil,
+      high: nil, low: nil, open: nil, previousClose: nil, timestamp: 0
+    )
+    let model = HoldingRowModel.make(pnl: nil, quote: quote, shares: 2, costBasis: 300, locale: unitedStates)
+    XCTAssertFalse(model.priceUnavailable)
+    XCTAssertEqual(model.priceText, "€200.00")
+    XCTAssertEqual(model.marketValueText, "€400.00")
+    XCTAssertEqual(model.glText, "+€100.00 (+33.3%)")
+  }
+}

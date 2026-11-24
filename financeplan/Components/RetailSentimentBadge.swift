@@ -98,7 +98,9 @@ struct RetailSentimentBadge: View {
                         .font(.caption2.monospacedDigit())
                         .opacity(0.7)
                 }
-                if let deltaText = display.deltaText {
+                // Rows show the label only: a signed delta beside "Positive"
+                // read as a contradiction ("Positive −0.04").
+                if showsScore, let deltaText = display.deltaText {
                     Text(deltaText)
                         .font(.system(size: 9).monospacedDigit())
                         .foregroundStyle(display.deltaUp ? AppTheme.Colors.gain : AppTheme.Colors.loss)
