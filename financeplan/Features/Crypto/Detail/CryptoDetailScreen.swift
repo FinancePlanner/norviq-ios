@@ -19,7 +19,9 @@ struct CryptoDetailScreen: View {
                     VigilPageHeader(
                         watch: .wealth,
                         title: LocalizedStringKey(viewModel.symbol),
-                        subtitle: LocalizedStringKey(viewModel.name)
+                        subtitle: LocalizedStringKey(viewModel.name),
+                        // A ticker is a symbol, not a title: SF, never the display serif.
+                        titleStyle: .title
                     )
 
                     header

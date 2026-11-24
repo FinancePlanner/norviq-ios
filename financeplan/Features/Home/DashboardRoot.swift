@@ -174,6 +174,10 @@ struct DashboardRoot: View {
           ToolbarItem(placement: .largeTitle) {
             Text(greetingText)
               .typography(.displayTitle)
+              // 28pt serif at AX3 outgrows the slot: two lines, then a little
+              // shrink, never an ellipsis.
+              .lineLimit(2)
+              .minimumScaleFactor(0.8)
               .foregroundStyle(AppTheme.Colors.foreground)
               .accessibilityAddTraits(.isHeader)
           }

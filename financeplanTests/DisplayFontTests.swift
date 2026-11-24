@@ -69,23 +69,51 @@ final class DisplayFontTests: XCTestCase {
   /// VigilDesignSystemTests.testHomeDropsCommandCenterTheater) and sets the
   /// display face in the iOS 26 large-title slot.
   func testPageHeaderAndHomeGreetingUseTheDisplayFace() throws {
-    func source(_ path: String) throws -> String {
-      let url = URL(fileURLWithPath: #filePath)
-        .deletingLastPathComponent()
-        .deletingLastPathComponent()
-        .appendingPathComponent(path)
-      return try String(contentsOf: url, encoding: .utf8)
-    }
-    let header = try source("financeplan/Components/VigilPageHeader.swift")
-    XCTAssertTrue(header.contains(".typography(.displayTitle)"), "VigilPageHeader's title is the display face")
+    let header = try Self.source("financeplan/Components/VigilPageHeader.swift")
+    XCTAssertTrue(header.contains("titleStyle: Typography = .displayTitle"), "page titles default to the display face")
+    XCTAssertTrue(header.contains(".typography(titleStyle)"), "VigilPageHeader's title uses its title style")
 
-    let home = try source("financeplan/Features/Home/DashboardRoot.swift")
-    XCTAssertTrue(home.contains("ToolbarItem(placement: .largeTitle)"), "the greeting sits in the large-title slot")
-    // Pieces, not one multi-line string, so a re-indent does not break the guard.
-    let slot = try XCTUnwrap(home.range(of: "ToolbarItem(placement: .largeTitle)"))
-    let item = home[slot.upperBound...].prefix(200)
+    let item = try Self.greetingItem()
     XCTAssertTrue(item.contains("Text(greetingText)"), "the large-title slot holds the greeting")
     XCTAssertTrue(item.contains(".typography(.displayTitle)"), "the greeting is the display face")
+  }
+
+  /// A ticker is a symbol, not a title: it stays SF, like every other figure.
+  func testTickerTitlesStaySans() throws {
+    for path in [
+      "financeplan/Features/Stocks/StockDetailsScreen.swift",
+      "financeplan/Features/Crypto/Detail/CryptoDetailScreen.swift"
+    ] {
+      let src = try Self.source(path)
+      let start = try XCTUnwrap(src.range(of: "VigilPageHeader("), "\(path) has no VigilPageHeader")
+      let call = src[start.upperBound...].prefix(400)
+      XCTAssertTrue(call.contains("titleStyle: .title"), "\(path): the ticker header must pass the SF title role")
+      XCTAssertFalse(call.contains(".displayTitle"), "\(path): a ticker never uses the display face")
+    }
+  }
+
+  /// 28pt serif at AX3 outgrows the large-title slot; two lines, then a little
+  /// shrink, never an ellipsis.
+  func testHomeGreetingWrapsBeforeItTruncates() throws {
+    let item = try Self.greetingItem()
+    XCTAssertTrue(item.contains(".lineLimit(2)"), "the greeting may take two lines")
+    XCTAssertTrue(item.contains(".minimumScaleFactor(0.8)"), "then shrink slightly rather than truncate")
+  }
+
+  private static func source(_ path: String) throws -> String {
+    let url = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .appendingPathComponent(path)
+    return try String(contentsOf: url, encoding: .utf8)
+  }
+
+  /// The large-title toolbar item in Home, matched in pieces so a re-indent
+  /// does not break the guards.
+  private static func greetingItem() throws -> Substring {
+    let home = try source("financeplan/Features/Home/DashboardRoot.swift")
+    let slot = try XCTUnwrap(home.range(of: "ToolbarItem(placement: .largeTitle)"), "the greeting sits in the large-title slot")
+    return home[slot.upperBound...].prefix(300)
   }
 
   private static func traits(_ category: UIContentSizeCategory) -> UITraitCollection {
