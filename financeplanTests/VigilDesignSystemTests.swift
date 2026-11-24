@@ -173,19 +173,24 @@ final class VigilDesignSystemTests: XCTestCase {
     return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
   }
 
-  /// `[iOS colour-set name: (token path, light hex, dark hex)]` for every colour
-  /// token that names one.
-  private func iosColorTokens() throws -> [String: (path: String, light: String, dark: String)] {
-    var found: [String: (path: String, light: String, dark: String)] = [:]
+  private struct ColorToken {
+    let path: String
+    let light: String
+    let dark: String
+  }
+
+  /// `[iOS colour-set name: token]` for every colour token that names one.
+  private func iosColorTokens() throws -> [String: ColorToken] {
+    var found: [String: ColorToken] = [:]
     func walk(_ node: [String: Any], _ path: [String]) {
       if node["$type"] as? String == "color" {
         let norviq = (node["$extensions"] as? [String: Any])?["norviq"] as? [String: Any]
         if let name = norviq?["ios"] as? String {
           XCTAssertNil(found[name], "\(name) is named by two tokens")
-          found[name] = (
-            path.joined(separator: "."),
-            node["$value"] as? String ?? "",
-            norviq?["dark"] as? String ?? ""
+          found[name] = ColorToken(
+            path: path.joined(separator: "."),
+            light: node["$value"] as? String ?? "",
+            dark: norviq?["dark"] as? String ?? ""
           )
         }
         return
@@ -211,7 +216,7 @@ final class VigilDesignSystemTests: XCTestCase {
       "red": String(format: "0x%02X", bytes[0]),
       "green": String(format: "0x%02X", bytes[1]),
       "blue": String(format: "0x%02X", bytes[2]),
-      "alpha": String(format: "%.3f", alpha),
+      "alpha": String(format: "%.3f", alpha)
     ]
   }
 

@@ -81,7 +81,11 @@ final class DisplayFontTests: XCTestCase {
 
     let home = try source("financeplan/Features/Home/DashboardRoot.swift")
     XCTAssertTrue(home.contains("ToolbarItem(placement: .largeTitle)"), "the greeting sits in the large-title slot")
-    XCTAssertTrue(home.contains("Text(greetingText)\n              .typography(.displayTitle)"), "the greeting is the display face")
+    // Pieces, not one multi-line string, so a re-indent does not break the guard.
+    let slot = try XCTUnwrap(home.range(of: "ToolbarItem(placement: .largeTitle)"))
+    let item = home[slot.upperBound...].prefix(200)
+    XCTAssertTrue(item.contains("Text(greetingText)"), "the large-title slot holds the greeting")
+    XCTAssertTrue(item.contains(".typography(.displayTitle)"), "the greeting is the display face")
   }
 
   private static func traits(_ category: UIContentSizeCategory) -> UITraitCollection {
