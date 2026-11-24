@@ -146,4 +146,37 @@ final class PortfolioHeroModelTests: XCTestCase {
     XCTAssertEqual(totals.keys.sorted(), ["USD"])
     XCTAssertEqual(totals["USD"] ?? 0, 6985.54, accuracy: 0.001)
   }
+
+  // MARK: - Home (C3)
+
+  func testHomeStaleSeriesFallsBackToLiveTotalWithoutDelta() {
+    let model = PortfolioHeroModel.forHome(
+      performance: performance([("2026-11-05", 810.19), ("2026-11-07", 850), ("2026-11-11", 919.06)]),
+      reportTotal: 46874.85,
+      now: now,
+      locale: unitedStates
+    )
+    XCTAssertEqual(model.valueText, "$46,874.85")
+    XCTAssertNil(model.deltaText)
+    XCTAssertTrue(model.points.isEmpty)
+    XCTAssertTrue(model.asOfText?.contains("11 Nov") ?? false, model.asOfText ?? "nil")
+  }
+
+  func testHomeFreshSeriesShowsItsRangeChange() {
+    let model = PortfolioHeroModel.forHome(
+      performance: freshMonth,
+      reportTotal: 48000,
+      now: now,
+      locale: portugal
+    )
+    XCTAssertEqual(model.valueText, "48\u{00A0}432,05\u{00A0}US$")
+    XCTAssertEqual(model.basisText, PortfolioHeroModel.basis(for: PortfolioHeroModel.homeRange, firstDate: now, locale: portugal))
+    XCTAssertNotNil(model.deltaText)
+  }
+
+  func testHomeWithoutReportTotalOrSeriesShowsNoValue() {
+    let model = PortfolioHeroModel.forHome(performance: nil, reportTotal: nil, now: now, locale: unitedStates)
+    XCTAssertNil(model.valueText)
+    XCTAssertNil(model.deltaText)
+  }
 }

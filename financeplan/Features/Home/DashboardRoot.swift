@@ -23,11 +23,9 @@ struct DashboardRoot: View {
   @State private var isInsightsLoading = false
   @State private var insightsLoadFailed = false
   @State private var isHomeMetricsLoading = false
-  @State private var portfolioTotalValue: Double = 0
+  @State private var portfolioHero: PortfolioHeroModel?
   @State private var spendingTotalValue: Double = 0
-  @State private var portfolioChange: PortfolioChange?
   @State private var spendingDeltaPercent: Double?
-  @State private var portfolioChartPoints: [ChartDataPoint] = []
   @State private var spendingChartPoints: [ChartDataPoint] = []
   @State private var isChartBuilderPresented = false
   @State private var isGoalPlanningPresented = false
@@ -74,7 +72,7 @@ struct DashboardRoot: View {
         ),
         .init(
             title: String(localized: "Cash buffer"),
-            value: insights.cashBuffer.formatted(.currency(code: "USD").presentation(.narrow)),
+            value: MoneyFormatter.string(insights.cashBuffer, currencyCode: portfolioHero?.currencyCode),
             detail: String(localized: "Enough for short-term volatility."),
             symbol: "shield",
             tint: AppTheme.Colors.tint
@@ -106,11 +104,9 @@ struct DashboardRoot: View {
         ScrollView {
           Group {
             DashboardContentSection(
-              portfolioTotalValue: portfolioTotalValue,
+              portfolioHero: portfolioHero,
               spendingTotalValue: spendingTotalValue,
-              portfolioChange: portfolioChange,
               spendingDeltaPercent: spendingDeltaPercent,
-              portfolioChartPoints: portfolioChartPoints,
               spendingChartPoints: spendingChartPoints,
               isHomeMetricsRedacted: isHomeMetricsRedacted,
               isSearchResultsVisible: isSearchResultsVisible,
@@ -261,29 +257,25 @@ struct DashboardRoot: View {
       }
 
       do {
-          async let performanceTask = stockService.fetchPortfolioPerformance()
+          async let performanceTask = stockService.fetchPortfolioPerformance(
+              portfolioListId: nil,
+              range: PortfolioHeroModel.homeRange.rawValue
+          )
           async let reportsTask = expensesService.getReportsOverview(from: nil, to: nil)
           let (performance, reports) = try await (performanceTask, reportsTask)
 
-          let portfolioPoints = Self.mapPortfolioPoints(from: performance.points)
           let monthlySummaries = reports.monthlySummaries.sorted { $0.monthStart < $1.monthStart }
-          let spendingPoints = Self.mapSpendingPoints(from: monthlySummaries)
-          let reportPortfolioValue = reports.portfolioStatistics.totalMarketValue
-          let resolvedPortfolioValue = portfolioPoints.last?.value ?? reportPortfolioValue
-          let shouldUseReportPortfolioFallback = reportPortfolioValue > 0
-            && (portfolioPoints.isEmpty || portfolioPoints.allSatisfy { $0.value == 0 })
-
-          portfolioChartPoints = shouldUseReportPortfolioFallback
-            ? [ChartDataPoint(date: Date(), value: reportPortfolioValue)]
-            : portfolioPoints
-          spendingChartPoints = spendingPoints
-          portfolioTotalValue = resolvedPortfolioValue > 0 ? resolvedPortfolioValue : reportPortfolioValue
+          spendingChartPoints = Self.mapSpendingPoints(from: monthlySummaries)
+          // The stored series when it is fresh; otherwise the live holdings
+          // total from the reports, with no change and the series' date
+          // under it. Never a point invented for today.
+          portfolioHero = PortfolioHeroModel.forHome(
+              performance: performance,
+              reportTotal: reports.portfolioStatistics.totalMarketValue,
+              now: Date(),
+              locale: MoneyFormatter.defaultLocale
+          )
           spendingTotalValue = max(0, monthlySummaries.last?.actual ?? reports.latestMonthSummary?.actual ?? 0)
-          // The backend knows which window it had enough history to measure, so
-          // it sends the change with that window attached. Nil when it could not
-          // compute one — which stays nil here, so the card shows no delta
-          // rather than a 0.0% claiming the portfolio was flat.
-          portfolioChange = PortfolioChangeFormatting.primary(from: performance.changes)
           spendingDeltaPercent = Self.deltaPercent(
               from: monthlySummaries.map { max(0, $0.actual) }
           )
@@ -346,13 +338,6 @@ struct DashboardRoot: View {
       return formatter
   }()
 
-  private static func mapPortfolioPoints(from points: [PerformancePoint]) -> [ChartDataPoint] {
-      points.compactMap { point in
-          guard let date = apiDateFormatter.date(from: point.date) else { return nil }
-          return ChartDataPoint(date: date, value: max(0, point.value))
-      }
-  }
-
   private static func mapSpendingPoints(from summaries: [BudgetMonthSummaryResponse]) -> [ChartDataPoint] {
       summaries.compactMap { summary in
           guard let date = apiDateFormatter.date(from: summary.monthStart) else { return nil }
@@ -383,11 +368,9 @@ struct DashboardRoot: View {
 }
 
 private struct DashboardContentSection: View {
-  let portfolioTotalValue: Double
+  let portfolioHero: PortfolioHeroModel?
   let spendingTotalValue: Double
-  let portfolioChange: PortfolioChange?
   let spendingDeltaPercent: Double?
-  let portfolioChartPoints: [ChartDataPoint]
   let spendingChartPoints: [ChartDataPoint]
   let isHomeMetricsRedacted: Bool
   let isSearchResultsVisible: Bool
@@ -423,11 +406,9 @@ private struct DashboardContentSection: View {
       }
 
       DashboardHeroCard(
-        totalValue: portfolioTotalValue,
+        portfolio: portfolioHero,
         totalSpending: spendingTotalValue,
-        portfolioChange: portfolioChange,
         spendingDeltaPercent: spendingDeltaPercent,
-        portfolioPoints: portfolioChartPoints,
         spendingPoints: spendingChartPoints
       )
       .redacted(reason: isHomeMetricsRedacted ? .placeholder : [])
@@ -488,14 +469,11 @@ private struct DashboardContentSection: View {
 }
 
 private struct DashboardHeroCard: View {
-  let totalValue: Double
+  let portfolio: PortfolioHeroModel?
   let totalSpending: Double
-  let portfolioChange: PortfolioChange?
   let spendingDeltaPercent: Double?
-  let portfolioPoints: [ChartDataPoint]
   let spendingPoints: [ChartDataPoint]
 
-  @Environment(\.colorScheme) private var colorScheme
   @State private var showingPortfolio = true
 
   private var currentTitle: String {
@@ -506,61 +484,73 @@ private struct DashboardHeroCard: View {
     }
   }
 
-  private var currentValue: Double {
-    showingPortfolio ? totalValue : totalSpending
+  /// The portfolio figure comes finished from `PortfolioHeroModel`, in the
+  /// currency the data names. Spending keeps its own formatting until the
+  /// budget currency reaches Home (P2).
+  private var currentValueText: String {
+    if showingPortfolio {
+      guard let portfolio else { return "\u{2014}" }
+      return portfolio.valueText ?? portfolio.subtotalTexts.joined(separator: " + ")
+    }
+    return totalSpending.currency
   }
 
   private var currentPoints: [ChartDataPoint] {
-    showingPortfolio ? portfolioPoints : spendingPoints
+    showingPortfolio ? (portfolio?.points ?? []) : spendingPoints
   }
 
-  /// The portfolio side is a fractional change from the backend (-0.004 is
-  /// -0.4%); the spending side is a fraction derived from monthly budget
-  /// totals. Both are nil when there is nothing to compare against.
-  private var currentDeltaPercent: Double? {
-    showingPortfolio ? portfolioChange?.percent : spendingDeltaPercent
-  }
-
+  /// Direction of money for the portfolio (gain or loss, never gold); a
+  /// spending series is not directional, so it takes the neutral series colour.
   private var currentColor: Color {
-    showingPortfolio
-      ? AppTheme.Colors.tint(for: colorScheme)
-      : AppTheme.Colors.secondaryTint(for: colorScheme)
+    guard showingPortfolio else { return AppTheme.Colors.secondaryTint }
+    switch portfolio?.direction ?? .flat {
+    case .up: return AppTheme.Colors.gain
+    case .down: return AppTheme.Colors.loss
+    case .flat: return AppTheme.Colors.foreground
+    }
   }
 
   private var deltaSymbol: String {
-    guard let currentDeltaPercent else { return "minus" }
     if showingPortfolio {
-      return currentDeltaPercent >= 0 ? "arrow.up.right" : "arrow.down.right"
+      switch portfolio?.deltaText == nil ? nil : portfolio?.direction {
+      case .up: return "arrow.up.right"
+      case .down: return "arrow.down.right"
+      case .flat: return "arrow.right"
+      case nil: return "minus"
+      }
     }
-    return currentDeltaPercent <= 0 ? "arrow.down.right" : "arrow.up.right"
+    guard let spendingDeltaPercent else { return "minus" }
+    return spendingDeltaPercent <= 0 ? "arrow.down.right" : "arrow.up.right"
   }
 
   private var deltaColor: Color {
-    guard let currentDeltaPercent else { return .secondary }
     if showingPortfolio {
-      return currentDeltaPercent >= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss
+      guard portfolio?.deltaText != nil else { return .secondary }
+      return currentColor
     }
-    return currentDeltaPercent <= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss
+    guard let spendingDeltaPercent else { return .secondary }
+    return spendingDeltaPercent <= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss
   }
 
+  /// The change with its basis, or the honest reason there is none: the
+  /// series' date when it is stale, or too little history.
   private var deltaText: String {
     if showingPortfolio {
-        // Nil means the backend had too little history to measure anything.
-        // Saying so is the honest answer; a 0.0% would claim the portfolio was
-        // flat over a window nobody measured.
-        guard let portfolioChange else {
-            return String(localized: "No baseline for trend yet")
+        if let portfolio, let delta = portfolio.deltaText {
+            return [delta, portfolio.basisText].compactMap { $0 }.joined(separator: " ")
         }
-        return PortfolioChangeFormatting.label(for: portfolioChange)
+        return portfolio?.asOfText
+          ?? portfolio?.historyCaption
+          ?? String(localized: "No baseline for trend yet")
     }
 
-    guard let currentDeltaPercent else {
+    guard let spendingDeltaPercent else {
         return String(localized: "No baseline for trend yet")
     }
     // Spending compares the last two monthly budget totals, which are real and
     // evenly spaced, so the window is known here without the server saying so.
-    let sign = currentDeltaPercent >= 0 ? "+" : ""
-    let percent = (currentDeltaPercent * 100).formatted(.number.precision(.fractionLength(1)))
+    let sign = spendingDeltaPercent >= 0 ? "+" : ""
+    let percent = (spendingDeltaPercent * 100).formatted(.number.precision(.fractionLength(1)))
     let vsLastMonth = String(localized: "vs last month")
     return "\(sign)\(percent)% \(vsLastMonth)"
   }
@@ -572,21 +562,27 @@ private struct DashboardHeroCard: View {
         .foregroundStyle(.secondary)
 
       VStack(alignment: .leading, spacing: 8) {
-        Text(currentValue.currency)
+        // Not animated: a changing value is never animated (DESIGN.md).
+        Text(verbatim: currentValueText)
           .typography(.displayNumber)
           .lineLimit(1)
-          .contentTransition(.numericText(value: currentValue))
-          .appAnimation(AppMotion.state, value: currentValue)
+          .minimumScaleFactor(0.6)
 
         HStack(spacing: 4) {
           Image(systemName: deltaSymbol).accessibilityHidden(true)
-          Text(deltaText)
+          Text(verbatim: deltaText)
         }
         .font(.subheadline.weight(.semibold))
         .foregroundStyle(deltaColor)
       }
 
-      InteractiveLineChart(data: currentPoints, color: currentColor)
+      if !currentPoints.isEmpty {
+        InteractiveLineChart(
+          data: currentPoints,
+          color: currentColor,
+          currencyCode: showingPortfolio ? portfolio?.currencyCode : "USD"
+        )
+      }
 
       Picker("View", selection: $showingPortfolio) {
         Text(LocalizedStringKey("Portfolio")).tag(true)

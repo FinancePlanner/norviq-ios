@@ -131,6 +131,30 @@ struct PortfolioHeroModel: Equatable {
     )
   }
 
+  /// The range Home asks the backend for, so its change label is known
+  /// rather than inferred from the server's default.
+  static let homeRange = PortfolioScreen.TimeRange.month
+
+  /// Home's hero: the stored series for `homeRange`, falling back to the
+  /// reports' live holdings total when the series is stale or empty. The
+  /// reports carry no currency, so that total is labelled with the series'
+  /// base currency.
+  static func forHome(
+    performance: PortfolioPerformanceResponse?,
+    reportTotal: Double?,
+    now: Date,
+    locale: Locale
+  ) -> PortfolioHeroModel {
+    make(
+      performance: performance,
+      holdingsByCurrency: [:],
+      range: homeRange,
+      now: now,
+      locale: locale,
+      liveTotal: reportTotal
+    )
+  }
+
   /// Market value per currency, from the backend's per-symbol P/L. Holdings
   /// with no price (nil or 0) are left out: their value is unknown, not zero.
   static func holdingsByCurrency(_ pnls: [PnlBySymbol]) -> [String: Double] {
