@@ -53,6 +53,20 @@ jobs:
           GH_TOKEN: ${{ secrets.BRAND_GUARD_TOKEN }}
         run: ./scripts/check-vig-motion-drift.sh
 
+  # The Theme colour sets are generated from financeplan/Design/tokens.json, a byte copy of
+  # norviq-web-v2/design/tokens.json. A hand-edited colour set, or a tokens.json change without
+  # `make tokens`, fails here.
+  tokens:
+    name: Theme colour sets match tokens.json
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check the generated colour sets
+        run: make tokens-check
+
   # The 3D Vig (BRD-001) is Debug and Beta only. This builds Release with the model fetched into
   # the source folder, so the exclusion is tested against files that are really there, and fails
   # if the app carries the model, its JSON or the 3D code. Needs cdn.norviq.org to serve the
