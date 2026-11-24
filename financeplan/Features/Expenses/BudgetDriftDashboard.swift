@@ -239,17 +239,37 @@ struct BudgetDriftDashboardCard: View {
     }
   }
 
+  /// Actual and target in one currency and one locale. `Text(_, format:)`
+  /// and `.formatted()` resolved the locale differently, which printed
+  /// "$0.00 of US$0,00" on one line.
+  static func totalTexts(
+    actual: Double,
+    target: Double,
+    currencyCode: String?,
+    locale: Locale = MoneyFormatter.defaultLocale
+  ) -> (actual: String, target: String) {
+    (
+      MoneyFormatter.string(actual, currencyCode: currencyCode, locale: locale),
+      MoneyFormatter.string(target, currencyCode: currencyCode, locale: locale)
+    )
+  }
+
   private func totalSummary(_ dashboard: BudgetDriftDashboardWire) -> some View {
-    VStack(alignment: .leading, spacing: 6) {
+    let totals = Self.totalTexts(
+      actual: dashboard.totalActual,
+      target: dashboard.totalTarget,
+      currencyCode: dashboard.currencyCode
+    )
+    return VStack(alignment: .leading, spacing: 6) {
       HStack(alignment: .firstTextBaseline) {
-        Text(dashboard.totalActual, format: .currency(code: dashboard.currencyCode)).font(.title3.bold())
-        Text("of \(dashboard.totalTarget.formatted(.currency(code: dashboard.currencyCode)))").foregroundStyle(.secondary)
+        Text(verbatim: totals.actual).font(.title3.bold())
+        Text("of \(totals.target)").foregroundStyle(.secondary)
         Spacer()
       }
       ProgressView(value: dashboard.totalTarget > 0 ? min(dashboard.totalActual / dashboard.totalTarget, 1) : 1)
         .tint(color(dashboard.totalLevel))
       if dashboard.lostInvestmentCapital > 0 {
-        Text("Overspending has reduced this month's available investment capital by \(dashboard.lostInvestmentCapital.formatted(.currency(code: dashboard.currencyCode))).")
+        Text("Overspending has reduced this month's available investment capital by \(MoneyFormatter.string(dashboard.lostInvestmentCapital, currencyCode: dashboard.currencyCode)).")
           .font(.caption).foregroundStyle(.secondary)
       }
     }
@@ -262,13 +282,13 @@ struct BudgetDriftDashboardCard: View {
         Image(systemName: icon(category.level)).foregroundStyle(color(category.level)).accessibilityHidden(true)
         Text(category.title).font(.subheadline.weight(.medium)).lineLimit(1)
         Spacer()
-        Text(category.driftAmount, format: .currency(code: currency)).font(.subheadline.monospacedDigit())
+        Text(verbatim: MoneyFormatter.string(category.driftAmount, currencyCode: currency)).font(.subheadline.monospacedDigit())
       }
       ProgressView(value: category.targetAmount > 0 ? min(category.actualAmount / category.targetAmount, 1) : 1)
         .tint(color(category.level))
     }
     .accessibilityElement(children: .combine)
-    .accessibilityLabel("\(category.title), \(category.level.rawValue), spent \(category.actualAmount.formatted(.currency(code: currency))) against \(category.targetAmount.formatted(.currency(code: currency)))")
+    .accessibilityLabel("\(category.title), \(category.level.rawValue), spent \(MoneyFormatter.string(category.actualAmount, currencyCode: currency)) against \(MoneyFormatter.string(category.targetAmount, currencyCode: currency))")
   }
 
   private func statusLabel(_ level: BudgetDriftLevelWire) -> some View {

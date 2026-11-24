@@ -329,6 +329,21 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
     }
   }
 
+  /// The budget's currency: the selected month's snapshot, else the latest
+  /// snapshot that names one. Nil until a snapshot has loaded, which prints
+  /// " —" rather than guessing a currency.
+  var budgetCurrencyCode: String? {
+    MoneyFormatter.resolvedCode(selectedMonthSnapshot?.currencyCode)
+      ?? monthlySnapshots.reversed().lazy
+        .compactMap { MoneyFormatter.resolvedCode($0.currencyCode) }
+        .first
+  }
+
+  /// The command deck lists the month on screen, not every expense ever.
+  var commandDeckActivities: [BudgetActivity] {
+    selectedMonthActivities
+  }
+
   var selectedMonthActivities: [BudgetActivity] {
     activitiesForMonth(selectedMonthStart)
       .sorted { $0.occurredOn > $1.occurredOn }
@@ -1118,7 +1133,8 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
       monthStart: parseDayString(snapshot.monthStart) ?? selectedMonthStart,
       netSalary: snapshot.netSalary,
       targetShares: mapTargetShares(snapshot.targetShares),
-      items: existingItems
+      items: existingItems,
+      currencyCode: snapshot.currencyCode
     )
   }
 
@@ -1151,7 +1167,8 @@ final class BudgetPlannerViewModel: BudgetPlannerStoreProtocol, ActivityTimeline
         monthStart: monthStart,
         netSalary: snapshot.netSalary,
         targetShares: mapTargetShares(snapshot.targetShares),
-        items: mappedItems
+        items: mappedItems,
+        currencyCode: snapshot.currencyCode
       )
     }
     .sorted { $0.monthStart < $1.monthStart }

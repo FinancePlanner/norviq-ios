@@ -106,6 +106,7 @@ struct DashboardRoot: View {
             DashboardContentSection(
               portfolioHero: portfolioHero,
               spendingTotalValue: spendingTotalValue,
+              spendingCurrencyCode: budgetStore.budgetCurrencyCode,
               spendingDeltaPercent: spendingDeltaPercent,
               spendingChartPoints: spendingChartPoints,
               isHomeMetricsRedacted: isHomeMetricsRedacted,
@@ -370,6 +371,7 @@ struct DashboardRoot: View {
 private struct DashboardContentSection: View {
   let portfolioHero: PortfolioHeroModel?
   let spendingTotalValue: Double
+  let spendingCurrencyCode: String?
   let spendingDeltaPercent: Double?
   let spendingChartPoints: [ChartDataPoint]
   let isHomeMetricsRedacted: Bool
@@ -408,6 +410,7 @@ private struct DashboardContentSection: View {
       DashboardHeroCard(
         portfolio: portfolioHero,
         totalSpending: spendingTotalValue,
+        spendingCurrencyCode: spendingCurrencyCode,
         spendingDeltaPercent: spendingDeltaPercent,
         spendingPoints: spendingChartPoints
       )
@@ -471,6 +474,8 @@ private struct DashboardContentSection: View {
 private struct DashboardHeroCard: View {
   let portfolio: PortfolioHeroModel?
   let totalSpending: Double
+  /// The budget's currency, from the budget planner.
+  let spendingCurrencyCode: String?
   let spendingDeltaPercent: Double?
   let spendingPoints: [ChartDataPoint]
 
@@ -485,14 +490,13 @@ private struct DashboardHeroCard: View {
   }
 
   /// The portfolio figure comes finished from `PortfolioHeroModel`, in the
-  /// currency the data names. Spending keeps its own formatting until the
-  /// budget currency reaches Home (P2).
+  /// currency the data names; spending is in the budget's currency.
   private var currentValueText: String {
     if showingPortfolio {
       guard let portfolio else { return "\u{2014}" }
       return portfolio.valueText ?? portfolio.subtotalTexts.joined(separator: " + ")
     }
-    return totalSpending.currency
+    return MoneyFormatter.string(totalSpending, currencyCode: spendingCurrencyCode)
   }
 
   private var currentPoints: [ChartDataPoint] {
@@ -580,7 +584,7 @@ private struct DashboardHeroCard: View {
         InteractiveLineChart(
           data: currentPoints,
           color: currentColor,
-          currencyCode: showingPortfolio ? portfolio?.currencyCode : "USD"
+          currencyCode: showingPortfolio ? portfolio?.currencyCode : spendingCurrencyCode
         )
       }
 

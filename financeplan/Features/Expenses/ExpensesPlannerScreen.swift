@@ -88,8 +88,8 @@ struct ExpensesPlannerScreen: View {
               .padding(.top, 4)
 
               VigilExpensesCommandDeck(
-                activities: viewModel.activities,
-                currencyCode: "USD"
+                activities: viewModel.commandDeckActivities,
+                currencyCode: viewModel.budgetCurrencyCode
               )
               .padding(.horizontal, 16)
 
@@ -102,7 +102,8 @@ struct ExpensesPlannerScreen: View {
           
               ExpensesCircularOverviewCard(
                 leftAmount: viewModel.selectedMonthLeftAfterSpending,
-                totalAmount: viewModel.selectedMonthSnapshot?.netSalary ?? 0
+                totalAmount: viewModel.selectedMonthSnapshot?.netSalary ?? 0,
+                currencyCode: viewModel.budgetCurrencyCode
               )
               .padding(.top, 10)
 

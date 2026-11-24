@@ -278,6 +278,16 @@
         }
       }
     },
+    "Fixed" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fixo"
+          }
+        }
+      }
+    },
     "Hard to read — check" : {
       "localizations" : {
         "pt-PT" : {
@@ -374,6 +384,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Último"
+          }
+        }
+      }
+    },
+    "Leisure" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lazer"
           }
         }
       }
@@ -1422,6 +1442,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Desafixar do perfil"
+          }
+        }
+      }
+    },
+    "Variable" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Variável"
           }
         }
       }
