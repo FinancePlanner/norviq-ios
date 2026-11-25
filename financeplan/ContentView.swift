@@ -591,7 +591,7 @@ private struct AppLockOverlay: View {
               .font(.title3.monospacedDigit())
               .padding(.horizontal, 12)
               .padding(.vertical, 10)
-              .appGlassEffect(.rect(cornerRadius: 8), interactive: true)
+              .appCardSurface(cornerRadius: AppTheme.Radius.control)
               .onChange(of: securityCodeInput) { _, newValue in
                 securityCodeInput = String(newValue.filter(\.isNumber).prefix(6))
               }
@@ -619,7 +619,7 @@ private struct AppLockOverlay: View {
       }
       .padding(24)
       .frame(maxWidth: 320)
-      .appGlassEffect(.rect(cornerRadius: 20))
+      .appCardSurface(cornerRadius: AppTheme.Radius.hero)
       .clipShape(.rect(cornerRadius: 20))
       .padding(.horizontal, 24)
     }

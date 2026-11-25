@@ -42,7 +42,8 @@ struct ManualImportScreen: View {
           }
           .padding(14)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .appGlassEffect(.rect(cornerRadius: 14), tint: AppTheme.Colors.tintSoft(for: colorScheme).opacity(0.4))
+          .background(AppTheme.Colors.tintSoft(for: colorScheme).opacity(0.4), in: .rect(cornerRadius: AppTheme.Radius.card))
+          .appCardSurface(cornerRadius: AppTheme.Radius.card)
           .padding(.horizontal, 20)
           .padding(.top, 16)
 

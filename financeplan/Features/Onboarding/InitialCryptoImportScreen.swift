@@ -119,7 +119,7 @@ struct InitialCryptoImportScreen: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .appGlassEffect(.rect(cornerRadius: 16))
+            .appCardSurface(cornerRadius: AppTheme.Radius.card)
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(isSelected ? AppTheme.Colors.success : .clear, lineWidth: 2)

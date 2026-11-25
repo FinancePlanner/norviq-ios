@@ -36,12 +36,13 @@
       "overline": { "displayName": "Overline", "fontSource": ".vigilOverline()", "dynamicType": true, "purpose": "Monospaced uppercase kicker on page and section headers." }
     },
     "materials": [
-      { "name": "card-surface", "api": "GlassCard { } over .appGlassEffect(.rect(cornerRadius:))", "usage": "Every card-shaped surface. Native .glassEffect on iOS 26, fill + hairline + shadow below it." },
+      { "name": "card-surface", "api": "GlassCard { } over .appCardSurface(cornerRadius:)", "usage": "Every card, panel, list row and sheet content block. Solid VigilCardBackground fill plus a 1pt VigilSeparator strokeBorder, no material, no shadow, on every OS version. Radius AppTheme.Radius.card (16) by default; hero cards pass AppTheme.Radius.hero (20)." },
+      { "name": "chrome-glass", "api": ".appGlassEffect(_:tint:interactive:), AppGlassContainer, .appGlassEffectID(_:in:)", "usage": "Chrome and controls only: tab bar, nav bars and toolbars, the range control, filter and segment chips, floating buttons, the toast. Native .glassEffect on iOS 26, fill + hairline + shadow below it, solid VigilTopBarBackground + separator stroke with Reduce Transparency on. Feature code never calls .glassEffect, GlassEffectContainer or .glassEffectID directly." },
       { "name": "system-material", "api": ".thinMaterial / .regularMaterial / .ultraThinMaterial", "usage": "Floating circles, sheets and the tab bar capsule. Not cards, not page backgrounds." },
       { "name": "page", "api": ".vigilScreenBackground() + .vigilListChrome()", "usage": "Flat VigilPageBackground canvas under themed screens and lists." }
     ],
     "shadows": [
-      { "name": "fallback-card", "value": ".shadow(color: .black.opacity(0.05), radius: 12, x: 0, y: 6) light; opacity 0.18, radius 16, y 10 dark", "purpose": "Pre-iOS 26 card fallback inside appGlassEffect. The only card shadow." },
+      { "name": "fallback-card", "value": ".shadow(color: .black.opacity(0.05), radius: 12, x: 0, y: 6) light; opacity 0.18, radius 16, y 10 dark", "purpose": "Pre-iOS 26 chrome fallback inside appGlassEffect. Cards have no shadow." },
       { "name": "fallback-capsule", "value": ".shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 3) light; opacity 0.12 dark", "purpose": "Pre-iOS 26 capsule and circle fallback." }
     ],
     "motion": [
@@ -77,9 +78,9 @@
       "kind": "card",
       "refersTo": "card",
       "swiftAPI": "GlassCard { content }",
-      "description": "The one card surface: flat fill, 1pt hairline, no glow.",
+      "description": "The one card surface: solid fill, 1pt hairline, no glass, no glow. 16pt radius; hero cards 20pt.",
       "html": "<div class=\"ds-card\"><strong>Allocation</strong><p>Cost basis by holding.</p></div>",
-      "css": ".ds-card { --card: #FFFFFF; --text: #111B2B; --line: #E2DCD0; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 20px; padding: 16px; font-size: 17px; } .ds-card p { margin: 4px 0 0; font-size: 15px; opacity: 0.75; } @media (prefers-color-scheme: dark) { .ds-card { --card: #111B2B; --text: #E9E9E5; --line: #344258; } }"
+      "css": ".ds-card { --card: #FFFFFF; --text: #111B2B; --line: #E2DCD0; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 16px; padding: 16px; font-size: 17px; } .ds-card p { margin: 4px 0 0; font-size: 15px; opacity: 0.75; } @media (prefers-color-scheme: dark) { .ds-card { --card: #111B2B; --text: #E9E9E5; --line: #344258; } }"
     },
     {
       "name": "Form Field",
@@ -134,7 +135,7 @@
       { "name": "The Twelve Percent Chip Rule", "body": "A status or direction chip is the semantic color as text on a 12% fill of itself. That is the pair the identity spec measured at 4.5:1 or better.", "section": "colors" },
       { "name": "The Tabular Rule", "body": "Any number that can sit next to another number uses tabular digits: .monospacedDigit() or a numeric Typography role.", "section": "typography" },
       { "name": "The Steps You Can See Rule", "body": "The ladder is 17 / 15 / 13 / 12 / 11. Do not add a size between two steps; a 1pt difference is not hierarchy.", "section": "typography" },
-      { "name": "The One Card Rule", "body": "Card-shaped surfaces go through GlassCard. Feature code does not call .appGlassEffect(), stack its own material, or add a shadow.", "section": "elevation" },
+      { "name": "The One Card Rule", "body": "Card-shaped surfaces go through GlassCard or .appCardSurface. Feature code does not put .appGlassEffect() on content, stack its own material, or add a shadow.", "section": "elevation" },
       { "name": "The No Glow Rule", "body": "No glow, no colored shadow, no gradient wash, no rim highlight.", "section": "elevation" }
     ],
     "dos": [

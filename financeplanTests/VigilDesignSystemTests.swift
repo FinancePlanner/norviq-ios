@@ -354,24 +354,25 @@ final class VigilDesignSystemTests: XCTestCase {
     )
   }
 
-  func testGlassCardStillAppliesAppGlassEffect() async throws {
+  func testGlassCardIsSolid() async throws {
     await Task.yield()
     let src = try source("financeplan/Components/GlassCard.swift")
 
-    // Guards the consolidation trap: pointing GlassCard at VigilGlassBackground
-    // would drop .appGlassEffect and leave a flat cardBackground fill with no
-    // stroke, shadow or native glass, flattening cards across all 75 sites. Any
-    // future change here needs a screenshot review first.
+    // DS 2.0: native glass is for chrome and controls only. Content cards are a
+    // solid VigilCardBackground plus a hairline, drawn by `.appCardSurface`.
+    // Putting `.appGlassEffect` back would make every card real Liquid Glass on
+    // iOS 26 now that the shim that hid it is gone.
     XCTAssertTrue(
-      src.contains(".appGlassEffect("),
-      "GlassCard must keep the native/fallback glass primitive"
+      src.contains(".appCardSurface("),
+      "GlassCard must draw the solid card surface"
     )
-
-    // Match construction, not any mention: the doc comment in that file
-    // deliberately names VigilGlassBackground to explain why it is NOT used.
     XCTAssertFalse(
-      src.contains("VigilGlassBackground("),
-      "swapping in VigilGlassBackground flattens the cards; needs visual review"
+      src.contains(".appGlassEffect("),
+      "GlassCard must not be glass; glass is for chrome and controls"
+    )
+    XCTAssertTrue(
+      src.contains("cornerRadius: CGFloat = AppTheme.Radius.card"),
+      "the default card radius is the card token (16)"
     )
   }
 

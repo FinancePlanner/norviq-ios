@@ -25,9 +25,9 @@ struct OnboardingSelectableTile: View {
       .frame(maxWidth: .infinity)
       .padding(.horizontal, 12)
       .padding(.vertical, 18)
-      .appGlassEffect(.rect(cornerRadius: 18))
+      .appCardSurface(cornerRadius: AppTheme.Radius.card)
       .overlay {
-        RoundedRectangle(cornerRadius: 18)
+        RoundedRectangle(cornerRadius: AppTheme.Radius.card)
           .stroke(
             isSelected ? AppTheme.Colors.tint(for: colorScheme) : .clear,
             lineWidth: 2

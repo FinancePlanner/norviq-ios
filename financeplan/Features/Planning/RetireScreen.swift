@@ -70,7 +70,7 @@ struct RetireScreen: View {
   }
 
   private var headline: some View {
-    GlassCard {
+    GlassCard(cornerRadius: AppTheme.Radius.hero) {
       VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
         Text("You will need")
           .typography(.overline)

@@ -71,7 +71,8 @@ struct ExpenseBudgetSetupScreen: View {
     }
     .padding(14)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .appGlassEffect(.rect(cornerRadius: 14), tint: AppTheme.Colors.tintSoft(for: colorScheme).opacity(0.4))
+    .background(AppTheme.Colors.tintSoft(for: colorScheme).opacity(0.4), in: .rect(cornerRadius: AppTheme.Radius.card))
+    .appCardSurface(cornerRadius: AppTheme.Radius.card)
     .padding(.horizontal, 20)
     .padding(.top, 16)
   }
@@ -95,7 +96,7 @@ struct ExpenseBudgetSetupScreen: View {
       }
       .padding(.horizontal, 16)
       .padding(.vertical, 14)
-      .appGlassEffect(.rect(cornerRadius: 16))
+      .appCardSurface(cornerRadius: AppTheme.Radius.card)
 
       if let monthlyBudget = viewModel.parsedMonthlyIncome, monthlyBudget > 0 {
         Text("Monthly budget will be set to \(monthlyBudget.currency). Include salary and side income. You can edit this later in Expenses.")
@@ -294,7 +295,7 @@ private struct PillarAllocationCard: View {
         .tint(pillar.color(for: colorScheme))
     }
     .padding(16)
-    .appGlassEffect(.rect(cornerRadius: 16))
+    .appCardSurface(cornerRadius: AppTheme.Radius.card)
   }
 }
 
@@ -394,8 +395,8 @@ private struct ExpenseEntryCard: View {
           .opacity(0.6)
       )
     }
-    .appGlassEffect(.rect(cornerRadius: 18))
-    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    .appCardSurface(cornerRadius: AppTheme.Radius.card)
+    .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous))
   }
 }
 

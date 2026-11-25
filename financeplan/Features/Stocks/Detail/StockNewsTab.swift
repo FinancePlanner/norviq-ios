@@ -118,7 +118,7 @@ private struct FeaturedNewsHero: View {
                 .padding(.top, 4)
             }
             .padding(20)
-            .appGlassEffect(.rect(cornerRadius: 24))
+            .appCardSurface(cornerRadius: AppTheme.Radius.hero)
         }
         .buttonStyle(.plain)
     }
@@ -207,7 +207,7 @@ private struct NewsFeedRow: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .padding(12)
-            .appGlassEffect(.rect(cornerRadius: 20))
+            .appCardSurface(cornerRadius: AppTheme.Radius.hero)
         }
         .buttonStyle(.plain)
     }

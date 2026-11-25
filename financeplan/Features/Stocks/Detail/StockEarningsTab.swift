@@ -84,7 +84,7 @@ struct StockEarningsTab: View {
                             }
                         }
                     }
-                    .appGlassEffect(.rect(cornerRadius: 24))
+                    .appCardSurface(cornerRadius: AppTheme.Radius.hero)
                 }
             }
         }
@@ -358,7 +358,7 @@ struct FinancialStatementPeriodPicker: View {
                     .typography(.nano)
                     .foregroundStyle(.secondary)
 
-                GlassEffectContainer(spacing: 8) {
+                AppGlassContainer(spacing: 8) {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(StockFinancialStatementPeriod.allCases) { period in
@@ -369,16 +369,15 @@ struct FinancialStatementPeriodPicker: View {
                                 } label: {
                                     Text(period.title)
                                         .typography(.caption, weight: .semibold)
-                                        .foregroundStyle(selectedPeriod == period ? .primary : .secondary)
+                                        .foregroundStyle(selectedPeriod == period ? AppTheme.Colors.onTint : Color.secondary)
                                         .padding(.horizontal, 14)
                                         .padding(.vertical, 10)
-                                        .glassEffect(
-                                            selectedPeriod == period
-                                                ? .regular.tint(AppTheme.Colors.tint(for: colorScheme)).interactive()
-                                                : .regular.interactive(),
-                                            in: .capsule
+                                        .appGlassEffect(
+                                            .capsule,
+                                            tint: selectedPeriod == period ? AppTheme.Colors.tint(for: colorScheme) : nil,
+                                            interactive: true
                                         )
-                                        .glassEffectID(period.id, in: selectionNamespace)
+                                        .appGlassEffectID(period.id, in: selectionNamespace)
                                 }
                                 .buttonStyle(.plain)
                             }

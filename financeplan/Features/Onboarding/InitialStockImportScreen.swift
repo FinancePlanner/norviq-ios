@@ -359,12 +359,13 @@ private struct ImportMethodCard: View {
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 14)
-    .appGlassEffect(
-      .rect(cornerRadius: 18),
-      tint: isSelected
+    .background(
+      isSelected
         ? AppTheme.Colors.tintSoft(for: colorScheme).opacity(colorScheme == .dark ? 0.55 : 0.45)
-        : nil
+        : Color.clear,
+      in: .rect(cornerRadius: AppTheme.Radius.card)
     )
+    .appCardSurface(cornerRadius: AppTheme.Radius.card)
     .appAnimation(.easeInOut(duration: 0.2), value: isSelected)
   }
 }

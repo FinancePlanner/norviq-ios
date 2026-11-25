@@ -7,13 +7,12 @@ import SwiftUI
 /// as a FLAT `cardBackground` fill under Classic, with no stroke, shadow or
 /// native glass, disagreeing with what this type already gave every other card.
 /// It has been retired — all 11 of its former call sites now go through
-/// `GlassCard`, whose
-/// Classic side was left untouched, so this only changed Vigil's background
-/// recipe plus the handful of sites where `.vigilGlassCard()` ran unconditionally.
+/// `GlassCard`.
 ///
-/// `.appGlassEffect()` is the primitive underneath this type: the native
-/// `.glassEffect` on iOS 26, a fill + separator stroke + shadow fallback below
-/// it. Call it from surface types like this one, not from feature code.
+/// DS 2.0: cards are solid. The surface is `.appCardSurface(cornerRadius:)`, a
+/// `VigilCardBackground` fill plus a 1pt `VigilSeparator` hairline. Native
+/// Liquid Glass is for chrome and controls only, so this type never uses the
+/// glass primitive. The name is historical (renamed `NorviqCard` in P5).
 ///
 /// Raw `.ultraThinMaterial` still has ~10 sites, but they are Circles, sheets
 /// and the tab-bar capsule rather than cards, so they are not candidates here.
@@ -23,6 +22,8 @@ public struct GlassCard<Content: View>: View {
   private let content: Content
   private let backgroundColor: Color?
 
+  /// - Parameter cornerRadius: `AppTheme.Radius.card` (16) by default, per spec
+  ///   §5.3. Hero cards pass `AppTheme.Radius.hero` explicitly.
   /// - Parameter padding: inset around `content`. `nil` keeps SwiftUI's adaptive
   ///   default, which is what every existing call site renders today.
   ///
@@ -30,8 +31,9 @@ public struct GlassCard<Content: View>: View {
   ///   padding of its own, so adopting the default here would silently inset the
   ///   content and change the layout. This parameter is what lets those 11 sites
   ///   move across with no visual change.
-  public init(
-    cornerRadius: CGFloat = 20,
+  /// - Parameter backgroundColor: an optional tint layered above the solid fill.
+  init(
+    cornerRadius: CGFloat = AppTheme.Radius.card,
     padding: CGFloat? = nil,
     backgroundColor: Color? = nil,
     @ViewBuilder content: () -> Content
@@ -62,17 +64,9 @@ public struct GlassCard<Content: View>: View {
         }
       }
       .clipShape(.rect(cornerRadius: cornerRadius))
-      .appGlassEffect(.rect(cornerRadius: cornerRadius))
-      .overlay {
-        // Vigil differs from Classic by a bordered card — same flat shape, no
-        // glow shadow.
-        //
-        // This used to stroke with the accent tint at 0.30/0.20. Across 143 call
-        // sites that made neon cyan the outline of every surface in the app,
-        // which is not what docs/vigil-identity.md asks for: it gives borders
-        // their own token (#C5DBE2 / #14303A). `separator` is that token.
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-          .stroke(AppTheme.Colors.separator, lineWidth: 1)
-      }
+      // Solid fill plus the separator hairline (#C5DBE2 / #14303A, the border
+      // token from docs/vigil-identity.md). The stroke lives in appCardSurface,
+      // so no second overlay here.
+      .appCardSurface(cornerRadius: cornerRadius)
   }
 }

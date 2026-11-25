@@ -231,6 +231,8 @@ jobs:
             -only-testing:financeplanTests/ChartRangeTests \
             -only-testing:financeplanTests/VigilDesignSystemTests/testEveryThemeColorsetMatchesTokensExactly \
             -only-testing:financeplanTests/VigilDesignSystemTests/testSpacingAndRadiusMatchTokens \
+            -only-testing:financeplanTests/VigilDesignSystemTests/testGlassCardIsSolid \
+            -only-testing:financeplanTests/LiquidGlassTests \
             -parallel-testing-enabled NO \
             -quiet
 

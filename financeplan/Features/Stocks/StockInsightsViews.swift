@@ -10,7 +10,7 @@ struct StockDetailTabBar: View {
     @Namespace private var selectionNamespace
 
     var body: some View {
-        GlassEffectContainer(spacing: 8) {
+        AppGlassContainer(spacing: 8) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(StockDetailTab.allCases) { tab in
@@ -22,7 +22,7 @@ struct StockDetailTabBar: View {
                             HStack(spacing: 4) {
                                 Text(tab.title)
                                     .typography(.caption, weight: .semibold)
-                                    .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                                    .foregroundStyle(selectedTab == tab ? AppTheme.Colors.onTint : Color.secondary)
                                 if tab.isProOnly && !isPro {
                                     Image(systemName: "lock.fill")
                                         .font(.caption2.weight(.semibold))
@@ -31,13 +31,12 @@ struct StockDetailTabBar: View {
                             }
                             .padding(.horizontal, 14)
                             .padding(.vertical, 10)
-                            .glassEffect(
-                                selectedTab == tab
-                                    ? .regular.tint(AppTheme.Colors.tint(for: colorScheme)).interactive()
-                                    : .regular.interactive(),
-                                in: .capsule
+                            .appGlassEffect(
+                                .capsule,
+                                tint: selectedTab == tab ? AppTheme.Colors.tint(for: colorScheme) : nil,
+                                interactive: true
                             )
-                            .glassEffectID(tab.id, in: selectionNamespace)
+                            .appGlassEffectID(tab.id, in: selectionNamespace)
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("stockDetail.tab.\(tab.rawValue)")
@@ -434,7 +433,7 @@ struct StockMarketSnapshotCard: View {
     }
 
     var body: some View {
-        GlassCard {
+        GlassCard(cornerRadius: AppTheme.Radius.hero) {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Market snapshot")

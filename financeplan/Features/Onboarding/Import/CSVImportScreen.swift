@@ -41,7 +41,7 @@ struct CSVImportScreen: View {
             .disabled(viewModel.isLoadingProviders)
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .appGlassEffect(.rect(cornerRadius: 16))
+            .appCardSurface(cornerRadius: AppTheme.Radius.card)
 
             if viewModel.isLoadingProviders {
               ProgressView("Loading broker connections...")
@@ -84,7 +84,7 @@ struct CSVImportScreen: View {
             }
             .padding(.vertical, 28)
             .frame(maxWidth: .infinity)
-            .appGlassEffect(.rect(cornerRadius: 20))
+            .appCardSurface(cornerRadius: AppTheme.Radius.hero)
           }
           .buttonStyle(PressableStyle())
           .padding(.horizontal, 20)
@@ -155,7 +155,7 @@ struct CSVImportScreen: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .appGlassEffect(.rect(cornerRadius: 14))
+                .appCardSurface(cornerRadius: AppTheme.Radius.card)
               }
 
               if preview.items.isEmpty {

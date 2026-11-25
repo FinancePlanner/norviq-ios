@@ -282,15 +282,25 @@ and `MoneyFormatterTests.testFixtures` proves every iOS case against it.
 
 ## 4. Elevation
 
-Flat by design, with glass reserved for the system. Depth is three tonal steps (page, card, elevated
-card) plus a 1pt hairline. `GlassCard` is the single card surface and resolves through
-`.appGlassEffect()`: native `.glassEffect` on iOS 26, and below that a card fill, a hairline stroke
-and one soft shadow. That fallback is the only card shadow in the app.
+Flat by design, with glass reserved for chrome and controls. Depth is three tonal steps (page, card,
+elevated card) plus a 1pt hairline. Content is solid: `GlassCard` (the name is historical) and every
+other card, panel, list row and sheet content block draw `.appCardSurface(cornerRadius:)`, a
+`VigilCardBackground` fill plus a 1pt `VigilSeparator` stroke, with no material and no shadow.
+
+Native Liquid Glass goes only on chrome and controls: the tab bar, nav bars and toolbars, the range
+control, filter and segment chips, floating buttons and the toast. They go through `.appGlassEffect()`
+(`GlassEffect+Compat.swift`): native `.glassEffect` on iOS 26, and below that a fill, a hairline stroke
+and one soft shadow. With Reduce Transparency on, chrome falls back to a solid `VigilTopBarBackground`
+fill plus the separator stroke.
 
 ### Material Vocabulary
 
-- **Card surface** (`GlassCard` over `.appGlassEffect(.rect(cornerRadius:))`): every card-shaped surface.
-- **Fallback card shadow** (`.shadow(color: .black.opacity(0.05), radius: 12, y: 6)` light;
+- **Card surface** (`GlassCard` over `.appCardSurface(cornerRadius:)`): every card-shaped surface.
+  Solid on every OS version.
+- **Chrome glass** (`.appGlassEffect(_:tint:interactive:)`, `AppGlassContainer`, `appGlassEffectID`):
+  chrome and controls only. Feature code never calls `.glassEffect`, `GlassEffectContainer` or
+  `.glassEffectID` directly (`LiquidGlassTests` enforces it).
+- **Fallback chrome shadow** (`.shadow(color: .black.opacity(0.05), radius: 12, y: 6)` light;
   `0.18`, radius 16, y 10 dark): pre-iOS 26 only, applied inside `appGlassEffect`.
 - **Fallback capsule and circle shadow** (`.shadow(color: .black.opacity(0.04), radius: 8, y: 3)`).
 - **System materials** (`.thinMaterial`, `.regularMaterial`, `.ultraThinMaterial`): floating circles,
@@ -300,8 +310,8 @@ and one soft shadow. That fallback is the only card shadow in the app.
 
 ### Named Rules
 
-**The One Card Rule.** Card-shaped surfaces go through `GlassCard`. Feature code does not call
-`.appGlassEffect()`, stack its own material, or add a shadow.
+**The One Card Rule.** Card-shaped surfaces go through `GlassCard` or `.appCardSurface`. Feature code
+does not put `.appGlassEffect()` on content, stack its own material, or add a shadow.
 
 **The No Glow Rule.** No glow, no colored shadow, no gradient wash, no rim highlight.
 
@@ -321,9 +331,10 @@ and one soft shadow. That fallback is the only card shadow in the app.
 
 ### Cards / Containers
 
-- **Corner Style:** continuous corners; 20pt default on `GlassCard`, 16pt (`AppTheme.Radius.card`) for
-  standard cards, 12pt (`AppTheme.Radius.control`) for controls and themed list rows.
-- **Background:** `VigilCardBackground`, or native glass on iOS 26.
+- **Corner Style:** continuous corners; 16pt (`AppTheme.Radius.card`) default on `GlassCard` and
+  `appCardSurface`, 20pt (`AppTheme.Radius.hero`) passed explicitly for hero cards, 12pt
+  (`AppTheme.Radius.control`) for controls and themed list rows.
+- **Background:** solid `VigilCardBackground`, on every OS version. Never glass.
 - **Shadow / Material Strategy:** see Elevation; none added by feature code.
 - **Border:** 1pt `VigilSeparator`.
 - **Internal Padding:** SwiftUI adaptive `.padding()` by default; pass an explicit value only when

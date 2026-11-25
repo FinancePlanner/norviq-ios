@@ -12,10 +12,11 @@ struct PortfolioFilterButton: View {
         .font(.subheadline.weight(.medium))
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity)
-        .foregroundStyle(isSelected ? .primary : .secondary)
-        .glassEffect(
-          isSelected ? .regular.tint(tint).interactive() : .regular.interactive(),
-          in: .rect(cornerRadius: 10)
+        .foregroundStyle(isSelected ? AppTheme.Colors.onTint : Color.secondary)
+        .appGlassEffect(
+          .rect(cornerRadius: AppTheme.Radius.control),
+          tint: isSelected ? tint : nil,
+          interactive: true
         )
     }
   }
