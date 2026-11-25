@@ -90,14 +90,17 @@ private struct QEntryPointModifier: ViewModifier {
         if #available(iOS 26, *) {
             content
         } else {
-            content
-                .overlay {
+            content.overlay {
+                // Animates the button alone: on the tab root, a push that hides
+                // it would run inside this animation too.
+                ZStack {
                     if let actions, coordinator.showsQEntry {
                         QuickAssistantFloatingButton(actions: actions)
                             .transition(.opacity)
                     }
                 }
                 .appAnimation(AppMotion.structural, value: coordinator.showsQEntry)
+            }
         }
     }
 }
