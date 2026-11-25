@@ -43,8 +43,9 @@ struct NorviqApp: App {
     Self.applyUITestAppearanceOverride()
     #endif
 
-    // Initialize Sentry
-    if let dsn = Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String, !dsn.isEmpty {
+    // Initialize Sentry (never during automated test runs — see SentryStartupPolicy)
+    if !SentryStartupPolicy.isAutomatedTestRun(),
+       let dsn = Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String, !dsn.isEmpty {
       #if DEBUG
       let defaultEnvironment = "development"
       #else
