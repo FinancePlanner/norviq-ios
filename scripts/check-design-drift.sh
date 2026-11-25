@@ -10,20 +10,18 @@
 #   1. $DESIGN_WEB_DIR or $VIG_WEB_DIR (a norviq-web-v2 checkout), or ../../norviq-web-v2 when that
 #      exists (local runs);
 #   2. otherwise norviq-web-v2 main through `gh api` (CI; needs GH_TOKEN = BRAND_GUARD_TOKEN).
-# A missing iOS copy always fails. A missing canonical file fails, except for a pair marked
-# `optional`, which prints a notice and passes: tokens.json is optional until the web PR that adds
-# it has merged.
+# A missing iOS copy or a missing canonical file fails.
 # Fix: cp <norviq-web-v2>/design/<file> <the copy below>, after the web change has merged.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 WEB_REPO="FinancePlanner/norviq-web-v2"
-# canonical:copy:required|optional
+# canonical:copy
 pairs=(
-  "design/vig-motion.json:financeplan/Design/vig-motion.json:required"
-  "design/vig-motion.fixtures.json:financeplanTests/vig-motion.fixtures.json:required"
-  "design/tokens.json:financeplan/Design/tokens.json:optional"
+  "design/vig-motion.json:financeplan/Design/vig-motion.json"
+  "design/vig-motion.fixtures.json:financeplanTests/vig-motion.fixtures.json"
+  "design/tokens.json:financeplan/Design/tokens.json"
 )
 
 web_dir="${DESIGN_WEB_DIR:-${VIG_WEB_DIR:-}}"
@@ -36,7 +34,7 @@ trap 'rm -rf "$tmp"' EXIT
 
 status=0
 for pair in "${pairs[@]}"; do
-  IFS=: read -r canonical copy mode <<<"$pair"
+  IFS=: read -r canonical copy <<<"$pair"
   if [ ! -f "$copy" ]; then
     echo "::error::$copy is missing (copy of $WEB_REPO/$canonical)." >&2
     status=1
@@ -67,12 +65,8 @@ for pair in "${pairs[@]}"; do
     [ -s "$source_file" ] || missing=1
   fi
   if [ -n "$missing" ]; then
-    if [ "$mode" = optional ]; then
-      echo "::notice::$where does not exist yet; $copy not compared."
-    else
-      echo "::error::$where is missing or empty." >&2
-      status=1
-    fi
+    echo "::error::$where is missing or empty." >&2
+    status=1
   elif ! cmp -s "$source_file" "$copy"; then
     echo "::error::$copy differs from $where. Copy the canonical file after the web change merges." >&2
     status=1
