@@ -540,7 +540,7 @@ struct PortfolioScreen: View {
               .foregroundStyle(.secondary)
           }
           .padding()
-          .appGlassEffect(.rect(cornerRadius: 16))
+          .appCardSurface(cornerRadius: AppTheme.Radius.card)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("portfolio.earningsCalendarLink")
@@ -563,7 +563,7 @@ struct PortfolioScreen: View {
               .foregroundStyle(.secondary)
           }
           .padding()
-          .appGlassEffect(.rect(cornerRadius: 16))
+          .appCardSurface(cornerRadius: AppTheme.Radius.card)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("portfolio.thesisWatchLink")
@@ -593,7 +593,7 @@ struct PortfolioScreen: View {
               .foregroundStyle(.secondary)
           }
           .padding()
-          .appGlassEffect(.rect(cornerRadius: 16))
+          .appCardSurface(cornerRadius: AppTheme.Radius.card)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("portfolio.sectorGainsLink")

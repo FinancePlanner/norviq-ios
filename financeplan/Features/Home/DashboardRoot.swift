@@ -830,7 +830,7 @@ private struct AssetSearchCard: View {
 private struct FocusInputSurfaceModifier: ViewModifier {
   func body(content: Content) -> some View {
     content
-      .appGlassEffect(.rect(cornerRadius: 12))
+      .appCardSurface(cornerRadius: AppTheme.Radius.control)
   }
 }
 

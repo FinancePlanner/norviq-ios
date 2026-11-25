@@ -39,7 +39,7 @@ struct GrowScreen: View {
   }
 
   private var headline: some View {
-    GlassCard {
+    GlassCard(cornerRadius: AppTheme.Radius.hero) {
       VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
         Text(model.showInTodaysMoney ? "In today's money" : "Projected value")
           .typography(.overline)

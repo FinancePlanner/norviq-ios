@@ -54,7 +54,7 @@ struct SectorGainsScreen: View {
           title: "Sector Gains"
         )
 
-        GlassCard(backgroundColor: pnlTint(totalUnrealizedPnl)) {
+        GlassCard(cornerRadius: AppTheme.Radius.hero, backgroundColor: pnlTint(totalUnrealizedPnl)) {
           VStack(alignment: .leading, spacing: 12) {
             Text("Total unrealized P/L")
               .typography(.small, weight: .semibold)

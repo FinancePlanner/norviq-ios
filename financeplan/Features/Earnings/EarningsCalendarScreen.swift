@@ -407,7 +407,7 @@ struct EarningsDetailView: View {
             }
         }
         .padding()
-        .appGlassEffect(.rect(cornerRadius: 16))
+        .appCardSurface(cornerRadius: AppTheme.Radius.card)
         .padding(.horizontal)
     }
 
@@ -453,7 +453,8 @@ private struct DetailMetricCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .appGlassEffect(.rect(cornerRadius: 16), tint: tint.opacity(0.1))
+        .background(tint.opacity(0.1), in: .rect(cornerRadius: AppTheme.Radius.card))
+        .appCardSurface(cornerRadius: AppTheme.Radius.card)
     }
 }
 
@@ -518,6 +519,7 @@ struct EarningsMetricPill: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.horizontal, 10)
     .padding(.vertical, 8)
-    .appGlassEffect(.rect(cornerRadius: 12), tint: tint.opacity(0.1))
+    .background(tint.opacity(0.1), in: .rect(cornerRadius: AppTheme.Radius.control))
+    .appCardSurface(cornerRadius: AppTheme.Radius.control)
   }
 }

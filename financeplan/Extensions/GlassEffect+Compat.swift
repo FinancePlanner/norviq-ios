@@ -142,3 +142,25 @@ extension View {
     modifier(GlassEffectModifier(shape: shape, tint: tint, interactive: interactive))
   }
 }
+
+// MARK: - Solid content surface
+
+extension View {
+  /// The solid surface for content: cards, panels, list rows and sheet
+  /// content blocks. A `VigilCardBackground` fill plus a 1pt `VigilSeparator`
+  /// hairline, with no material and no shadow.
+  ///
+  /// DS 2.0 keeps native glass for chrome and controls only (tab bar,
+  /// toolbars, the range control, floating controls). Content never uses
+  /// `appGlassEffect`; it uses this.
+  func appCardSurface(cornerRadius: CGFloat = AppTheme.Radius.card) -> some View {
+    background(
+      RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        .fill(AppTheme.Colors.cardBackground)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        .stroke(AppTheme.Colors.separator, lineWidth: 1)
+    )
+  }
+}

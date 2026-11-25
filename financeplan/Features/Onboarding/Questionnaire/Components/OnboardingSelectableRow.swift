@@ -28,7 +28,7 @@ struct OnboardingSelectableRow: View {
       }
       .padding(.horizontal, 16)
       .padding(.vertical, 14)
-      .appGlassEffect(.rect(cornerRadius: 16))
+      .appCardSurface(cornerRadius: AppTheme.Radius.card)
       .overlay {
         RoundedRectangle(cornerRadius: 16)
           .stroke(

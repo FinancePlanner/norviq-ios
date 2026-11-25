@@ -105,7 +105,7 @@ struct MarketNewsScreen: View {
           .foregroundStyle(.secondary)
       }
       .padding()
-      .appGlassEffect(.rect(cornerRadius: 16))
+      .appCardSurface(cornerRadius: AppTheme.Radius.card)
     }
     .buttonStyle(.plain)
   }
@@ -243,7 +243,7 @@ private struct ThesisWatchStoryCard: View {
       }
     }
     .padding(16)
-    .appGlassEffect(.rect(cornerRadius: 18))
+    .appCardSurface(cornerRadius: AppTheme.Radius.card)
     .opacity(story.isRead ? 0.78 : 1)
   }
 

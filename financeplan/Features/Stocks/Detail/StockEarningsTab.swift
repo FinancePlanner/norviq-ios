@@ -84,7 +84,7 @@ struct StockEarningsTab: View {
                             }
                         }
                     }
-                    .appGlassEffect(.rect(cornerRadius: 24))
+                    .appCardSurface(cornerRadius: AppTheme.Radius.hero)
                 }
             }
         }

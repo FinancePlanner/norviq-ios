@@ -97,7 +97,7 @@ struct ManualEntryCard: View {
           .opacity(0.6)
       )
     }
-    .appGlassEffect(.rect(cornerRadius: 18))
-    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    .appCardSurface(cornerRadius: AppTheme.Radius.card)
+    .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous))
   }
 }
