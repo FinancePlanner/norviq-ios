@@ -1,3 +1,4 @@
+import LinkPresentation
 import StockPlanShared
 import SwiftUI
 import XCTest
@@ -284,8 +285,63 @@ final class MarketBriefShareTelemetryTests: XCTestCase {
   func testChannelNamesAreStable() {
     XCTAssertEqual(
       MarketBriefShareChannel.allCases.map(\.rawValue),
-      ["link", "image", "x", "reddit", "whatsapp", "discord", "copy_link"]
+      ["link", "image", "x", "reddit", "whatsapp", "discord", "copy_link", "social", "story", "pdf"]
     )
+  }
+
+  @MainActor
+  func testStudioShareCarriesMethodAndSurface() throws {
+    let payload = try ShareFixtures.payload()
+    var captured: [(String, [String: Any])] = []
+    let telemetry = MarketBriefShareTelemetry { captured.append(($0, $1)) }
+
+    telemetry.shared(payload, channel: .pdf, method: "share", surface: "studio")
+
+    XCTAssertEqual(captured.first?.1 as? [String: String], [
+      "channel": "pdf",
+      "slot": "morning",
+      "date": "2026-10-15",
+      "lang": "en",
+      "surface": "studio",
+      "method": "share"
+    ])
+  }
+
+  func testCardShareHasNoMethod() throws {
+    let payload = try ShareFixtures.payload()
+    let properties = MarketBriefShareTelemetry.properties(payload, channel: .link)
+    XCTAssertNil(properties["method"])
+    XCTAssertEqual(properties["surface"], "card")
+  }
+}
+
+// MARK: - Link metadata
+
+@MainActor
+final class LPLinkMetadataItemSourceTests: XCTestCase {
+  func testFileItemMetadataUsesPreviewImage() {
+    let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("brief.png")
+    let source = LPLinkMetadataActivityItemSource(
+      title: "Brief", item: fileURL, previewImage: UIImage()
+    )
+    let controller = UIActivityViewController(activityItems: [source], applicationActivities: nil)
+
+    let metadata = source.activityViewControllerLinkMetadata(controller)
+
+    XCTAssertNotNil(metadata?.imageProvider)
+    XCTAssertNil(metadata?.url)
+    XCTAssertNil(metadata?.originalURL)
+  }
+
+  func testWebItemMetadataKeepsURL() throws {
+    let url = try XCTUnwrap(URL(string: "https://www.norviq.org/brief/2026-10-15/morning"))
+    let source = LPLinkMetadataActivityItemSource(title: "Brief", item: url)
+    let controller = UIActivityViewController(activityItems: [source], applicationActivities: nil)
+
+    let metadata = source.activityViewControllerLinkMetadata(controller)
+
+    XCTAssertEqual(metadata?.url, url)
+    XCTAssertNil(metadata?.imageProvider)
   }
 }
 

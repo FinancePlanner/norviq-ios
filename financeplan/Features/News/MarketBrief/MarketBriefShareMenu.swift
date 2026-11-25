@@ -96,6 +96,9 @@ struct MarketBriefShareMenu: View {
     case .copyLink:
       launcher.copyToPasteboard(payload.permalink(for: .copyLink).absoluteString)
       toast = .success(String(localized: "Link copied"))
+    case .social, .story, .pdf:
+      // Studio-only channels: the export studio shares these, not the card menu.
+      break
     }
   }
 
