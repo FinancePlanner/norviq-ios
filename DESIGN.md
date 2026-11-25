@@ -374,6 +374,98 @@ and one soft shadow. That fallback is the only card shadow in the app.
 - **Feedback:** `ToastBanner` for transient results; `appSensoryFeedback(success:destructive:)` on
   completion and on destructive results.
 
+### Components (DS 2.0)
+
+Canonical set from the design-system spec (§6.1). The semantic names are the shared vocabulary with web
+and Android; the SwiftUI column is what iOS uses. Status is as of DS 2.0 P2b.
+
+| Semantic component | SwiftUI | Status |
+|---|---|---|
+| Page | `vigilScreen` modifiers + `VigilPageHeader` (see Navigation) | exists |
+| Section (rule, not card) | `Section` in `List` / a `VigilSection` | not yet (P3/P4) |
+| Card (actionable object only) | `GlassCard` (renamed `NorviqCard` in P5, alias kept) | exists; rename P5 |
+| MoneyText / DeltaText | `MoneyText`, `DeltaText` (pure `DeltaText.Model`), on top of `MoneyFormatter` | done (P2b) |
+| MetricTile | `MetricTile`, tones neutral/gain/loss/warning; replaces `MetricItem`, `SummaryMetric`, `PortfolioMetricPill` (removed) | done (P2b); stock-insight tiles legacy / P4 |
+| DataTable | `Table` (iPad) / `List` rows | not yet (P3/P4) |
+| RangeControl | `RangePicker` (native segmented) over `ChartRange`; replaces `PortfolioRangeButton` (removed) | done (P2b) |
+| SegmentedControl | native `.segmented` picker | exists (system) |
+| Chart | Swift Charts wrappers (`Components/Charts`); `InteractiveLineChart` is still custom | partial; line-chart move legacy / P4 |
+| EmptyState | `ContentUnavailableView` (+ Vig via `EmptyStateView` only on onboarding-type empties) | exists |
+| Skeleton / ErrorRetry / StaleData | `.redacted` / `.shimmer()`, `ErrorRetryView`, `AsOfText` | exists; `AsOfText` done (P2b) |
+| Buttons | `GlowingButtonStyle` → `PrimaryButtonStyle`, system bordered | `PrimaryButtonStyle` not yet (P5) |
+| Toast | `ToastPresenter` / `ToastBanner` | exists |
+| Floating action zone | `tabViewBottomAccessory` | not yet (P3) |
+
+#### Money, change and staleness
+
+- Amounts go through `MoneyFormatter` (`string`, `signed`, `percentSigned`) via `MoneyText` and
+  `DeltaText`. A missing currency renders " —", never "$". Do not add new `Double.currency` or
+  `compactCurrency` calls.
+- A change always carries its basis. `AsOf.isStale(_:now:calendar:)` is true when the last point is
+  more than 4 calendar days old; the change is then hidden and `AsOfText` shows "Prices as of
+  {date}" in the warning colour. `AsOf.label(_:locale:calendar:)` is a fixed `d MMM yyyy`.
+- **Calendar rule.** Dates parsed from `yyyy-MM-dd` series strings are UTC midnight. Pass a UTC
+  Gregorian calendar to `AsOfText(_:now:calendar:)`, `AsOf.isStale` and `AsOf.label`, as
+  `PortfolioHeroModel` does. With `.current`, the label and the staleness shift by a day in
+  non-UTC zones. Web compares civil dates in UTC, so this keeps the platforms equal.
+
+#### Six states (every data view)
+
+Each data view handles all six; none is skipped silently.
+
+1. **Loading:** `.redacted(reason: .placeholder)` or `.shimmer()` skeleton at the final size. No
+   claim about state before the first load answers.
+2. **Empty (first-time):** `ContentUnavailableView`. `EmptyStateView` (with Vig) only for
+   onboarding-type empties.
+3. **Empty (filtered):** `ContentUnavailableView.search` or one with a "clear filters" action.
+4. **Error with retry:** `ErrorRetryView`.
+5. **Stale:** `AsOfText` (see above).
+6. **Pro-gated:** `ProGateView`.
+
+Never show synthetic data in place of a state.
+
+#### Chart ranges
+
+The display vocabulary is `1D 1W 1M 3M YTD 1Y 5Y ALL` (`ChartRange`). A chart offers only the ranges
+its data supports, through `RangePicker`:
+
+| List | Ranges |
+|---|---|
+| `ChartRange.portfolio` | 1W 1M 3M 1Y ALL (YTD hidden until the portfolio API serves it) |
+| `ChartRange.asset` | 1D 1W 1M 3M 1Y 5Y (`PriceChartRange` has no YTD or ALL) |
+| `ChartRange.crypto` | 1D 1W 1M 3M YTD 1Y ALL |
+
+Each API keeps its own wire values. Convert with the failable inits (`PortfolioScreen.TimeRange(_:)`,
+`PriceChartRange(_:)`, `CryptoChartRange(_:)`, and `ChartRange(_:)` back); a `nil` means the chart does
+not offer that range. Segments are 44pt tall.
+
+#### Lint: design literals
+
+`.swiftlint.yml` has two custom rules at error severity, for new code under `financeplan/` (tests,
+packages and tooling excluded):
+
+- `design_literal_corner_radius`: no `cornerRadius: <number>`. Use `AppTheme.Radius` (control 12,
+  card 16, hero 20).
+- `design_raw_font_size`: no `.font(.system(size:`. Use `.typography(...)`.
+
+The existing violations (339: 294 radius, 45 font size) are in `.swiftlint.baseline.json`, and
+`scripts/format.sh` passes `--baseline`, so only new violations fail. The baseline matches by file,
+rule and line text: **editing a baselined line makes its violation reappear. Fix it by using the
+token, not by re-baselining.**
+
+To regenerate the baseline after burning entries down, run from the repo root and write it filtered
+to the two design rules only. The repo has about 616 other SwiftLint warnings, and an unfiltered
+`--write-baseline` would swallow them:
+
+```bash
+swiftlint lint --quiet --config .swiftlint.yml \
+  --only-rule design_literal_corner_radius --only-rule design_raw_font_size \
+  --write-baseline .swiftlint.baseline.json >/dev/null || true
+```
+
+Entries are keyed by relative path, so run it from the repo root. Check the result contains only
+those two rule identifiers, and that `scripts/format.sh --lint-only` is clean.
+
 ## 6. Do's and Don'ts
 
 ### Do:
