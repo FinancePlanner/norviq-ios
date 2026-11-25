@@ -547,6 +547,44 @@ final class MarketBriefExportStudioModelTests: XCTestCase {
     model.cancel()
     XCTAssertEqual(model.state(for: .social), .ready(ready), "closing keeps what already loaded")
   }
+
+  func testRetryAfterNativeFallbackReachesTheBackendFile() async throws {
+    let service = ExportServiceFake()
+    // Busy on the first open, free on the retry.
+    service.manifests = [.failure(Self.busy), .success(manifest())]
+    service.files[.social] = [.success(png("norviq-MI-2026-11-25-O-social-en.png"))]
+    let model = try makeModel(service)
+
+    await model.load(.social)
+    XCTAssertTrue(try ready(model.state(for: .social)).isNativeFallback)
+
+    await model.retry(.social)
+
+    let remote = try ready(model.state(for: .social))
+    XCTAssertFalse(remote.isNativeFallback)
+    XCTAssertEqual(remote.fileURL, root.appending(path: "MI-2026-11-25-O-r1/norviq-MI-2026-11-25-O-social-en.png"))
+    XCTAssertEqual(service.manifestCalls, 2)
+    XCTAssertEqual(service.fileCalls.count, 1)
+  }
+
+  func testCancelDropsTheNativeFallbackSoTheNextOpenAsksAgain() async throws {
+    let service = ExportServiceFake()
+    service.manifests = [.failure(Self.busy), .success(manifest())]
+    service.files[.social] = [.success(png("norviq-MI-2026-11-25-O-social-en.png"))]
+    let model = try makeModel(service)
+
+    await model.load(.social)
+    XCTAssertTrue(try ready(model.state(for: .social)).isNativeFallback)
+
+    // The studio closes with nothing in flight.
+    model.cancel()
+    XCTAssertEqual(model.state(for: .social), .idle)
+
+    // It opens again on the same model.
+    await model.load(.social)
+    XCTAssertFalse(try ready(model.state(for: .social)).isNativeFallback)
+    XCTAssertEqual(service.fileCalls.count, 1)
+  }
 }
 
 @MainActor
@@ -623,6 +661,20 @@ final class MarketBriefExportStudioTests: XCTestCase {
     let fileSource = try XCTUnwrap(file.items.first as? LPLinkMetadataActivityItemSource)
     XCTAssertEqual(fileSource.item as? URL, ready().fileURL)
     XCTAssertEqual(file.items.last as? String, payload.imageMessage)
+  }
+
+  /// The share sheet reads a file URL's item on a background queue, through the
+  /// Objective-C protocol; a main-actor item source traps there.
+  func testShareItemsCanBeReadOffTheMainThread() throws {
+    let share = MarketBriefStudioShare.file(ready(), format: .pdf, payload: try payload())
+    let source = try XCTUnwrap(share.items.first as? UIActivityItemSource)
+    let controller = UIActivityViewController(activityItems: [], applicationActivities: nil)
+
+    let item = DispatchQueue.global().sync {
+      source.activityViewController(controller, itemForActivityType: nil) as? URL
+    }
+
+    XCTAssertEqual(item, ready().fileURL)
   }
 
   func testCopyLinkIsCountedAsCopy() throws {

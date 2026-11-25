@@ -104,8 +104,13 @@ final class MarketBriefExportStudioModel {
   }
 
   /// Stops every load in flight, for when the studio closes. Those formats go
-  /// back to `.idle`, so the next open loads them again; ready ones are kept.
+  /// back to `.idle`, so the next open loads them again. Backend files are
+  /// kept; a native fallback card is dropped too, so the next open asks the
+  /// backend again instead of keeping the offline card for the session.
   func cancel() {
+    for (format, state) in states {
+      if case let .ready(ready) = state, ready.isNativeFallback { states[format] = .idle }
+    }
     guard !loads.isEmpty else { return }
     for (format, task) in loads {
       task.cancel()

@@ -4,7 +4,10 @@ import UIKit
 /// Wraps an activity item so the iOS share sheet shows a rich preview
 /// (title, optional icon, and image preview) in apps that read
 /// `LPLinkMetadata` such as iMessage, Mail, and AirDrop.
-final class LPLinkMetadataActivityItemSource: NSObject, UIActivityItemSource {
+///
+/// Nonisolated: the share sheet asks for a file URL's item on a background
+/// queue, and a main-actor witness traps there. Every property is a `let`.
+nonisolated final class LPLinkMetadataActivityItemSource: NSObject, UIActivityItemSource {
   let title: String
   let item: Any
   let icon: UIImage?

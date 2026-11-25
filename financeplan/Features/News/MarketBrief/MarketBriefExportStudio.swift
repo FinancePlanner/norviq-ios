@@ -125,6 +125,12 @@ struct MarketBriefExportStudio: View {
         Text("Offline version")
           .typography(.caption)
           .foregroundStyle(.secondary)
+        // The renderer may only have been busy: ask the backend again.
+        Button("Try again") {
+          Task { await model.retry(format) }
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
       }
 
       if format == .pdf, let pages = ready.pages {
