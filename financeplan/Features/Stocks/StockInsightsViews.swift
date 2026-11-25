@@ -10,7 +10,7 @@ struct StockDetailTabBar: View {
     @Namespace private var selectionNamespace
 
     var body: some View {
-        GlassEffectContainer(spacing: 8) {
+        AppGlassContainer(spacing: 8) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(StockDetailTab.allCases) { tab in
@@ -31,13 +31,12 @@ struct StockDetailTabBar: View {
                             }
                             .padding(.horizontal, 14)
                             .padding(.vertical, 10)
-                            .glassEffect(
-                                selectedTab == tab
-                                    ? .regular.tint(AppTheme.Colors.tint(for: colorScheme)).interactive()
-                                    : .regular.interactive(),
-                                in: .capsule
+                            .appGlassEffect(
+                                .capsule,
+                                tint: selectedTab == tab ? AppTheme.Colors.tint(for: colorScheme) : nil,
+                                interactive: true
                             )
-                            .glassEffectID(tab.id, in: selectionNamespace)
+                            .appGlassEffectID(tab.id, in: selectionNamespace)
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("stockDetail.tab.\(tab.rawValue)")
