@@ -87,18 +87,11 @@ struct PortfolioHeroCard: View {
           .padding(.horizontal, -12)
         }
 
-        GlassEffectContainer(spacing: 8) {
-          HStack(spacing: 8) {
-            ForEach(PortfolioScreen.TimeRange.heroRanges) { range in
-              PortfolioRangeButton(
-                title: range.rawValue,
-                isSelected: selectedTimeRange == range,
-                tint: AppTheme.Colors.tint,
-                action: { onSelectTimeRange(range) }
-              )
-            }
-          }
-        }
+        RangePicker(
+          ChartRange.portfolio,
+          selection: rangeSelection,
+          label: "Chart range"
+        )
 
         HStack {
           MetricTile(
@@ -111,6 +104,19 @@ struct PortfolioHeroCard: View {
       }
     }
     .foregroundStyle(.primary)
+  }
+
+  private var rangeSelection: Binding<ChartRange> {
+    Binding(
+      get: { ChartRange(selectedTimeRange) ?? .oneMonth },
+      set: { newRange in
+        guard let wire = PortfolioScreen.TimeRange(newRange) else {
+          assertionFailure("RangePicker offered a range the portfolio API cannot serve: \(newRange)")
+          return
+        }
+        onSelectTimeRange(wire)
+      }
+    )
   }
 
   @ViewBuilder
