@@ -61,7 +61,12 @@ struct HomeScreen: View {
       }
 
       tabView
-        .qAccessory(coordinator: quickAssistant, onTap: tapQ, onHold: holdQ)
+        .qAccessory(
+          coordinator: quickAssistant,
+          isSummaryAvailable: isQTapASummary,
+          onTap: { openQ(isHold: false) },
+          onHold: { openQ(isHold: true) }
+        )
     }
     .appAnimation(AppMotion.structural, value: billingManager.shouldShowTrialEndedBanner)
     .guidedSpotlight(step: guided?.activeStep, activeTab: guidedTab(for: selectedTab), onSkip: { guided?.skip() })
@@ -73,6 +78,11 @@ struct HomeScreen: View {
       )
     }
     .aiSummaryPresentation(scope: $summaryScope)
+    // A guided step hides Q, as on the web; the bubble sits where Q does.
+    .onChange(of: guided?.activeStep != nil, initial: true) { _, active in
+      quickAssistant.setGuidedStepActive(active)
+    }
+    .onDisappear { quickAssistant.setGuidedStepActive(false) }
     .environment(guided)
     .environment(\.norviqReopenGuidedStart, guided.map { coordinator in
       {
@@ -148,28 +158,29 @@ struct HomeScreen: View {
     Container.shared.marketBriefRouter().open(ref)
   }
 
-  /// The screen on show, or failing that the tab.
-  private var currentQScope: AIViewScope? {
-    quickAssistant.currentScope ?? assistantScope(for: selectedTab)
+  /// Summaries are server-driven rather than a raw `isPro` read, so they can
+  /// be turned off for a user without an App Store release.
+  /// `isFeatureAvailable` already falls back to `isPro` when the server says
+  /// nothing.
+  private func qRoute(isHold: Bool) -> QEntryRoute {
+    QEntryRoute.resolve(
+      hasSummaries: billingManager.isFeatureAvailable("ai_insights"),
+      screenScope: quickAssistant.currentScope,
+      tabScope: assistantScope(for: selectedTab),
+      isHold: isHold
+    )
   }
 
-  /// A tap summarises what is on screen for anyone with summaries. Everyone
-  /// else, and a tab with nothing to summarise, gets the card.
-  ///
-  /// Server-driven rather than a raw `isPro` read, so summaries can be turned
-  /// off for a user without an App Store release. `isFeatureAvailable` already
-  /// falls back to `isPro` when the server says nothing.
-  private func tapQ() {
-    if billingManager.isFeatureAvailable("ai_insights"), let scope = currentQScope {
-      summaryScope = scope
-    } else {
-      quickAssistant.present(scope: currentQScope)
+  private var isQTapASummary: Bool {
+    if case .summary = qRoute(isHold: false) { return true }
+    return false
+  }
+
+  private func openQ(isHold: Bool) {
+    switch qRoute(isHold: isHold) {
+    case let .summary(scope): summaryScope = scope
+    case let .card(scope): quickAssistant.present(scope: scope)
     }
-  }
-
-  /// A hold always opens the card.
-  private func holdQ() {
-    quickAssistant.present(scope: currentQScope)
   }
 
   private func assistantScope(for tab: HomeTab) -> AIViewScope? {

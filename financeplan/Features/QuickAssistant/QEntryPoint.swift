@@ -10,12 +10,21 @@ import SwiftUI
 extension View {
     /// Attach to the `TabView`. On iOS 26 it adds the accessory; on every
     /// version it hands the tap and hold to each tab's `qEntryPoint()`.
+    ///
+    /// - Parameter isSummaryAvailable: whether a tap opens a summary, so
+    ///   VoiceOver names what the tap does.
     func qAccessory(
         coordinator: QuickAssistantCoordinator,
+        isSummaryAvailable: Bool,
         onTap: @escaping () -> Void,
         onHold: @escaping () -> Void
     ) -> some View {
-        modifier(QAccessoryModifier(coordinator: coordinator, actions: QEntryActions(onTap: onTap, onHold: onHold)))
+        modifier(
+            QAccessoryModifier(
+                coordinator: coordinator,
+                actions: QEntryActions(isSummaryAvailable: isSummaryAvailable, onTap: onTap, onHold: onHold)
+            )
+        )
     }
 
     /// Attach to each tab's root. Draws the floating button below iOS 26.
@@ -35,8 +44,29 @@ extension View {
     }
 }
 
+/// Where a tap or a hold on Q goes.
+nonisolated enum QEntryRoute: Equatable {
+    case summary(AIViewScope)
+    case card(AIViewScope?)
+
+    /// A tap summarises what is on screen for anyone with summaries, using the
+    /// screen's scope or failing that the tab's. Everyone else, a hold, and a
+    /// tab with nothing to summarise get the card.
+    static func resolve(
+        hasSummaries: Bool,
+        screenScope: AIViewScope?,
+        tabScope: AIViewScope?,
+        isHold: Bool
+    ) -> QEntryRoute {
+        let scope = screenScope ?? tabScope
+        if !isHold, hasSummaries, let scope { return .summary(scope) }
+        return .card(scope)
+    }
+}
+
 /// What a tap and a hold on Q do. Decided by `HomeScreen`.
 struct QEntryActions {
+    let isSummaryAvailable: Bool
     let onTap: () -> Void
     let onHold: () -> Void
 }
@@ -138,17 +168,18 @@ private struct QAccessoryHider: ViewModifier {
 /// Q's tap and hold, shared by the accessory and the floating button.
 ///
 /// A hold always opens the card. A long press ends with the finger lifting,
-/// and the button can read that lift as a tap; the gate swallows it.
+/// and the button can read that lift as a tap; the coordinator's gate
+/// swallows it, and closing the card re-arms tap.
 struct QEntryButton<Label: View>: View {
     let actions: QEntryActions
     @ViewBuilder let label: () -> Label
 
-    @State private var tapGate = QuickAssistantTapGate()
+    @InjectedObservable(\.quickAssistantCoordinator) private var coordinator
     @State private var holdCount = 0
 
     var body: some View {
         Button {
-            guard tapGate.allowsTap() else { return }
+            guard coordinator.allowsQTap() else { return }
             actions.onTap()
         } label: {
             label()
@@ -156,14 +187,21 @@ struct QEntryButton<Label: View>: View {
         .buttonStyle(.plain)
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.4).onEnded { _ in
-                tapGate.noteLongPress()
                 holdCount += 1
                 actions.onHold()
+                // After the hold has opened the card, whose opening re-arms tap.
+                coordinator.noteQHold()
             }
         )
         .sensoryFeedback(.impact, trigger: holdCount)
-        .accessibilityLabel("Ask Q")
-        .accessibilityAction(named: "Ask Q", actions.onHold)
+        // The tap's own name; the card stays one action away when a tap
+        // summarises instead.
+        .accessibilityLabel(actions.isSummaryAvailable ? "AI summary" : "Ask Q")
+        .accessibilityActions {
+            if actions.isSummaryAvailable {
+                Button("Ask Q", action: actions.onHold)
+            }
+        }
         .accessibilityIdentifier("q.entry")
     }
 }
