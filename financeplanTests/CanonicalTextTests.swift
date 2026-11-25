@@ -31,12 +31,23 @@ final class CanonicalTextTests: XCTestCase {
     XCTAssertTrue(AsOf.isStale(last, now: now, calendar: auckland))
   }
 
+  private var utc: Calendar {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = .gmt
+    return calendar
+  }
+
   func testAsOfLabelIsDayMonthYear() {
-    let day = date(2026, 11, 11, 12, 0)
-    let label = AsOf.label(day, locale: enUS)
-    XCTAssertTrue(label.contains("2026"))
-    XCTAssertFalse(label.contains("/"))
-    XCTAssertFalse(AsOf.label(day, locale: ptPT).isEmpty)
+    var parts = DateComponents(year: 2026, month: 11, day: 21, hour: 0, minute: 0)
+    parts.timeZone = .gmt
+    let utcMidnight = utc.date(from: parts) ?? .distantPast
+    XCTAssertEqual(AsOf.label(utcMidnight, locale: enUS, calendar: utc), "21 Nov 2026")
+    XCTAssertEqual(AsOf.label(utcMidnight, locale: ptPT, calendar: utc), "21 nov. 2026")
+    // 21 Nov 00:00 UTC is already the 21st at 13:00 in Auckland, and the 20th in UTC-5.
+    XCTAssertEqual(AsOf.label(utcMidnight, locale: enUS, calendar: auckland), "21 Nov 2026")
+    var west = Calendar(identifier: .gregorian)
+    west.timeZone = TimeZone(secondsFromGMT: -5 * 3600) ?? .gmt
+    XCTAssertEqual(AsOf.label(utcMidnight, locale: enUS, calendar: west), "20 Nov 2026")
   }
 
   // MARK: - DeltaText
@@ -65,6 +76,15 @@ final class CanonicalTextTests: XCTestCase {
     )
     XCTAssertEqual(model.tone, .flat)
     XCTAssertEqual(model.glyph, "–")
+  }
+
+  func testNegativeRoundsToZeroIsFlatAndUnchanged() throws {
+    let model = try XCTUnwrap(
+      DeltaText.Model.make(fraction: -0.00004, basis: nil, amount: nil, currencyCode: nil, locale: enUS)
+    )
+    XCTAssertEqual(model.tone, .flat)
+    XCTAssertEqual(model.glyph, "\u{2013}")
+    XCTAssertTrue(model.accessibilityLabel.contains("unchanged"))
   }
 
   func testMissingFractionHasNoModel() {

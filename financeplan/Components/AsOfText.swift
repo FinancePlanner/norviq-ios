@@ -5,15 +5,17 @@ import SwiftUI
 struct AsOfText: View {
   let date: Date
   let now: Date
+  let calendar: Calendar
 
-  init(_ date: Date, now: Date = .now) {
+  init(_ date: Date, now: Date = .now, calendar: Calendar = .current) {
     self.date = date
     self.now = now
+    self.calendar = calendar
   }
 
   var body: some View {
-    let label = AsOf.label(date, locale: MoneyFormatter.defaultLocale)
-    if AsOf.isStale(date, now: now) {
+    let label = AsOf.label(date, locale: MoneyFormatter.defaultLocale, calendar: calendar)
+    if AsOf.isStale(date, now: now, calendar: calendar) {
       Text(verbatim: String(localized: "Prices as of \(label)"))
         .typography(.caption)
         .foregroundStyle(AppTheme.Colors.warning)

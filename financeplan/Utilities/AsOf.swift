@@ -18,10 +18,15 @@ nonisolated enum AsOf {
     return days > staleAfterDays
   }
 
-  /// "11 Nov 2026" (en), in the locale's own order and month names.
-  static func label(_ date: Date, locale: Locale) -> String {
-    var style = Date.FormatStyle(date: .abbreviated)
-    style.locale = locale
-    return MoneyFormatter.normalise(date.formatted(style))
+  /// "11 Nov 2026" (en), "11 nov. 2026" (pt-PT): day, abbreviated month, year,
+  /// always in that order. The day is read in `calendar`'s time zone, the same
+  /// one `isStale` counts days in, so the two never disagree.
+  static func label(_ date: Date, locale: Locale, calendar: Calendar = .current) -> String {
+    let formatter = DateFormatter()
+    formatter.calendar = calendar
+    formatter.timeZone = calendar.timeZone
+    formatter.locale = locale
+    formatter.dateFormat = "d MMM yyyy"
+    return MoneyFormatter.normalise(formatter.string(from: date))
   }
 }
