@@ -3,6 +3,9 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIG_SWIFTLINT="$REPO_ROOT/.swiftlint.yml"
+# Relative on purpose: baseline entries are keyed by relative path, so this must
+# be run from $REPO_ROOT (the script cd's there) to match on any checkout.
+BASELINE_SWIFTLINT=".swiftlint.baseline.json"
 
 SKIP_INSTALL=false
 LINT_ONLY=false
@@ -57,9 +60,9 @@ cd "$REPO_ROOT"
 if [ "$LINT_ONLY" = true ]; then
   bold "=== Running SwiftLint ==="
   if [ "$SWIFTLINT_REPORTER" = "quiet" ]; then
-    swiftlint lint --quiet --config "$CONFIG_SWIFTLINT"
+    swiftlint lint --quiet --config "$CONFIG_SWIFTLINT" --baseline "$BASELINE_SWIFTLINT"
   else
-    swiftlint lint --config "$CONFIG_SWIFTLINT" --reporter "$SWIFTLINT_REPORTER"
+    swiftlint lint --config "$CONFIG_SWIFTLINT" --baseline "$BASELINE_SWIFTLINT" --reporter "$SWIFTLINT_REPORTER"
   fi
   exit 0
 fi
@@ -68,4 +71,4 @@ bold "=== Running SwiftLint fix ==="
 swiftlint lint --fix --quiet --config "$CONFIG_SWIFTLINT" 2>/dev/null || true
 
 bold "=== Checking remaining SwiftLint issues ==="
-swiftlint lint --config "$CONFIG_SWIFTLINT"
+swiftlint lint --config "$CONFIG_SWIFTLINT" --baseline "$BASELINE_SWIFTLINT"

@@ -72,3 +72,25 @@ excluded:
   # config); only their SwiftPM build output is skipped.
   - Packages/*/.build
   - Packages/*/.swiftpm
+
+# DS 2.0 (spec section 6.3): stop new literal radii and font sizes. Today's
+# violations are held by .swiftlint.baseline.json; only new ones fail.
+# `included` and `excluded` are regexes matched against the file path, which can
+# be absolute (the main checkout's own path contains "financeplan/"), so the
+# scope is "any .swift under a financeplan/ directory, minus tests, packages and
+# tooling".
+custom_rules:
+  design_literal_corner_radius:
+    name: "Literal corner radius"
+    regex: '(cornerRadius:\s*[0-9]|\.cornerRadius\(\s*[0-9])'
+    message: "Use AppTheme.Radius (control 12, card 16, hero 20)."
+    severity: error
+    included: '/financeplan/.*\.swift$'
+    excluded: '/(financeplanTests|financeplanUITests|Packages|scripts|BuildTools|fastlane)/'
+  design_raw_font_size:
+    name: "Raw font size"
+    regex: '\.font\(\s*\.system\(\s*size:'
+    message: "Use .typography(...)."
+    severity: error
+    included: '/financeplan/.*\.swift$'
+    excluded: '/(financeplanTests|financeplanUITests|Packages|scripts|BuildTools|fastlane)/'
