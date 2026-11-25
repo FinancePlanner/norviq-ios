@@ -22,6 +22,5 @@ struct RangePicker: View {
         .pickerStyle(.segmented)
         .labelsHidden()
         .frame(minHeight: 44)
-        .accessibilityLabel(Text(label))
     }
 }

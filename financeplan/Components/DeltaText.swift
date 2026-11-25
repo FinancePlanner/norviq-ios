@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// A change, always with its sign, a ▲/▼ glyph and (when known) its basis.
+/// A change, always with its sign, a ▲/▼ glyph and its basis (required: a
+/// change with no stated period is meaningless; pass "" only where none exists).
 ///
 /// Direction is never carried by colour alone. Nil or non-finite input draws
 /// nothing: a change with no number is hidden, not zeroed.
@@ -18,7 +19,7 @@ struct DeltaText: View {
     /// Nil for a nil or non-finite fraction.
     nonisolated static func make(
       fraction: Double?,
-      basis: String?,
+      basis: String,
       amount: Double?,
       currencyCode: String?,
       locale: Locale = MoneyFormatter.defaultLocale
@@ -35,34 +36,37 @@ struct DeltaText: View {
       case .flat: "\u{2013}"
       }
 
-      var body = percent
+      var rest = ""
       if let amount, amount.isFinite {
-        body += " \u{00B7} " + MoneyFormatter.signed(amount, currencyCode: currencyCode, locale: locale)
+        rest += " \u{00B7} " + MoneyFormatter.signed(amount, currencyCode: currencyCode, locale: locale)
       }
-      if let basis, !basis.isEmpty {
-        body += " \(basis)"
+      if !basis.isEmpty {
+        rest += " \(basis)"
       }
+      let body = percent + rest
 
-      let word = switch tone {
-      case .gain: String(localized: "up")
-      case .loss: String(localized: "down")
-      case .flat: String(localized: "unchanged")
+      // The percent is the format argument, as on web, so a translation can
+      // place it freely; amount and basis follow.
+      let lead = switch tone {
+      case .gain: String(localized: "up \(percent)")
+      case .loss: String(localized: "down \(percent)")
+      case .flat: String(localized: "unchanged \(percent)")
       }
       return Model(
         glyph: glyph,
         text: "\(glyph) \(body)",
-        accessibilityLabel: "\(word) \(body)",
+        accessibilityLabel: lead + rest,
         tone: tone
       )
     }
   }
 
   let fraction: Double?
-  let basis: String?
+  let basis: String
   let amount: Double?
   let currencyCode: String?
 
-  init(fraction: Double?, basis: String? = nil, amount: Double? = nil, currencyCode: String? = nil) {
+  init(fraction: Double?, basis: String, amount: Double? = nil, currencyCode: String? = nil) {
     self.fraction = fraction
     self.basis = basis
     self.amount = amount

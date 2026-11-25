@@ -57,7 +57,7 @@ final class CanonicalTextTests: XCTestCase {
       DeltaText.Model.make(fraction: -0.032, basis: "1 month", amount: nil, currencyCode: nil, locale: enUS)
     )
     XCTAssertEqual(model.text, "▼ \u{2212}3.2% 1 month")
-    XCTAssertTrue(model.accessibilityLabel.contains("down"))
+    XCTAssertEqual(model.accessibilityLabel, "down \u{2212}3.2% 1 month")
     XCTAssertEqual(model.tone, .loss)
   }
 
@@ -68,6 +68,7 @@ final class CanonicalTextTests: XCTestCase {
     XCTAssertEqual(model.glyph, "▲")
     XCTAssertEqual(model.tone, .gain)
     XCTAssertEqual(model.text, "▲ +3.2% · +$120.00 1 year")
+    XCTAssertEqual(model.accessibilityLabel, "up +3.2% · +$120.00 1 year")
   }
 
   func testRoundsToZeroIsFlat() throws {
@@ -80,17 +81,18 @@ final class CanonicalTextTests: XCTestCase {
 
   func testNegativeRoundsToZeroIsFlatAndUnchanged() throws {
     let model = try XCTUnwrap(
-      DeltaText.Model.make(fraction: -0.00004, basis: nil, amount: nil, currencyCode: nil, locale: enUS)
+      DeltaText.Model.make(fraction: -0.00004, basis: "", amount: nil, currencyCode: nil, locale: enUS)
     )
     XCTAssertEqual(model.tone, .flat)
     XCTAssertEqual(model.glyph, "\u{2013}")
-    XCTAssertTrue(model.accessibilityLabel.contains("unchanged"))
+    XCTAssertEqual(model.accessibilityLabel, "unchanged 0.0%")
+    XCTAssertEqual(model.text, "\u{2013} 0.0%")
   }
 
   func testMissingFractionHasNoModel() {
-    XCTAssertNil(DeltaText.Model.make(fraction: .nan, basis: nil, amount: nil, currencyCode: nil, locale: enUS))
-    XCTAssertNil(DeltaText.Model.make(fraction: nil, basis: nil, amount: nil, currencyCode: nil, locale: enUS))
-    XCTAssertNil(DeltaText.Model.make(fraction: .infinity, basis: nil, amount: nil, currencyCode: nil, locale: enUS))
+    XCTAssertNil(DeltaText.Model.make(fraction: .nan, basis: "", amount: nil, currencyCode: nil, locale: enUS))
+    XCTAssertNil(DeltaText.Model.make(fraction: nil, basis: "", amount: nil, currencyCode: nil, locale: enUS))
+    XCTAssertNil(DeltaText.Model.make(fraction: .infinity, basis: "", amount: nil, currencyCode: nil, locale: enUS))
   }
 
   // MARK: - MoneyText

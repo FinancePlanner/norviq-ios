@@ -385,7 +385,7 @@ and Android; the SwiftUI column is what iOS uses. Status is as of DS 2.0 P2b.
 | Section (rule, not card) | `Section` in `List` / a `VigilSection` | not yet (P3/P4) |
 | Card (actionable object only) | `GlassCard` (renamed `NorviqCard` in P5, alias kept) | exists; rename P5 |
 | MoneyText / DeltaText | `MoneyText`, `DeltaText` (pure `DeltaText.Model`), on top of `MoneyFormatter` | done (P2b) |
-| MetricTile | `MetricTile`, tones neutral/gain/loss/warning; replaces `MetricItem`, `SummaryMetric`, `PortfolioMetricPill` (removed) | done (P2b); stock-insight tiles legacy / P4 |
+| MetricTile | `MetricTile`, tones neutral/gain/loss/warning, value style `.regular` (24pt `metricNumber`) or `.compact` (~17pt `numeric`, for rows of three or more, e.g. the portfolio hero); replaces the Budget `MetricItem` view, `SummaryMetric` and `PortfolioMetricPill` | done (P2b); other tiles (e.g. `PillarMetricItem` in `ExpensesPlannerScreen`, stock-insight tiles) stay legacy until P4 |
 | DataTable | `Table` (iPad) / `List` rows | not yet (P3/P4) |
 | RangeControl | `RangePicker` (native segmented) over `ChartRange`; replaces `PortfolioRangeButton` (removed) | done (P2b) |
 | SegmentedControl | native `.segmented` picker | exists (system) |
@@ -401,7 +401,8 @@ and Android; the SwiftUI column is what iOS uses. Status is as of DS 2.0 P2b.
 - Amounts go through `MoneyFormatter` (`string`, `signed`, `percentSigned`) via `MoneyText` and
   `DeltaText`. A missing currency renders " —", never "$". Do not add new `Double.currency` or
   `compactCurrency` calls.
-- A change always carries its basis. `AsOf.isStale(_:now:calendar:)` is true when the last point is
+- A change always carries its basis: `DeltaText(fraction:basis:...)` and `DeltaText.Model.make` take `basis` as a required `String` (pass "" only where no period exists). Its VoiceOver label uses the catalog keys `up %@`, `down %@` and `unchanged %@` with the percent as the argument, as on web.
+- `AsOf.isStale(_:now:calendar:)` is true when the last point is
   more than 4 calendar days old; the change is then hidden and `AsOfText` shows "Prices as of
   {date}" in the warning colour. `AsOf.label(_:locale:calendar:)` is a fixed `d MMM yyyy`.
 - **Calendar rule.** Dates parsed from `yyyy-MM-dd` series strings are UTC midnight. Pass a UTC
@@ -437,7 +438,7 @@ its data supports, through `RangePicker`:
 
 Each API keeps its own wire values. Convert with the failable inits (`PortfolioScreen.TimeRange(_:)`,
 `PriceChartRange(_:)`, `CryptoChartRange(_:)`, and `ChartRange(_:)` back); a `nil` means the chart does
-not offer that range. Segments are 44pt tall.
+not offer that range. `RangePicker` requests a 44pt minimum height; whether the real segment hit area reaches 44pt is an owner device check.
 
 #### Lint: design literals
 
