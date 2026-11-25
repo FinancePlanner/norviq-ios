@@ -45,4 +45,10 @@ final class MetricTileTests: XCTestCase {
     XCTAssertTrue(text.contains("AppTheme.Radius.control"))
     XCTAssertNil(text.range(of: #"cornerRadius:\s*[0-9]"#, options: .regularExpression))
   }
+
+  func testValueNeverWrapsMidNumber() throws {
+    let text = try source("financeplan/Components/MetricTile.swift")
+    XCTAssertTrue(text.contains(".lineLimit(1)"))
+    XCTAssertTrue(text.contains(".minimumScaleFactor("))
+  }
 }

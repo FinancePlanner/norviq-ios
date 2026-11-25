@@ -11,6 +11,7 @@ struct MetricTile: View {
 
   let label: LocalizedStringKey
   let value: String
+  /// Shown verbatim: the caller passes it already formatted or localized.
   let caption: String?
   let tone: Tone
 
@@ -35,10 +36,13 @@ struct MetricTile: View {
       Text(label)
         .typography(.label)
         .foregroundStyle(AppTheme.Colors.secondaryText)
+        .lineLimit(2)
       Text(verbatim: value)
         .typography(.metricNumber)
         .monospacedDigit()
         .foregroundStyle(valueColor)
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
       if let caption {
         Text(verbatim: caption)
           .typography(.caption)
