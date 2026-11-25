@@ -22,7 +22,7 @@ struct StockDetailTabBar: View {
                             HStack(spacing: 4) {
                                 Text(tab.title)
                                     .typography(.caption, weight: .semibold)
-                                    .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                                    .foregroundStyle(selectedTab == tab ? AppTheme.Colors.onTint : Color.secondary)
                                 if tab.isProOnly && !isPro {
                                     Image(systemName: "lock.fill")
                                         .font(.caption2.weight(.semibold))
@@ -433,7 +433,7 @@ struct StockMarketSnapshotCard: View {
     }
 
     var body: some View {
-        GlassCard {
+        GlassCard(cornerRadius: AppTheme.Radius.hero) {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Market snapshot")

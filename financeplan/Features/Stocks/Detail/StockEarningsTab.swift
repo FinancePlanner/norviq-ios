@@ -369,7 +369,7 @@ struct FinancialStatementPeriodPicker: View {
                                 } label: {
                                     Text(period.title)
                                         .typography(.caption, weight: .semibold)
-                                        .foregroundStyle(selectedPeriod == period ? .primary : .secondary)
+                                        .foregroundStyle(selectedPeriod == period ? AppTheme.Colors.onTint : Color.secondary)
                                         .padding(.horizontal, 14)
                                         .padding(.vertical, 10)
                                         .appGlassEffect(

@@ -12,7 +12,7 @@ struct PortfolioFilterButton: View {
         .font(.subheadline.weight(.medium))
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity)
-        .foregroundStyle(isSelected ? .primary : .secondary)
+        .foregroundStyle(isSelected ? AppTheme.Colors.onTint : Color.secondary)
         .appGlassEffect(
           .rect(cornerRadius: AppTheme.Radius.control),
           tint: isSelected ? tint : nil,

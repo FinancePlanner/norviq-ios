@@ -244,6 +244,9 @@ extension View {
   /// DS 2.0 keeps native glass for chrome and controls only (tab bar,
   /// toolbars, the range control, floating controls). Content never uses
   /// `appGlassEffect`; it uses this.
+  ///
+  /// The hairline is a `strokeBorder` (drawn inside the shape), so a
+  /// `.clipShape` after this modifier keeps its full 1pt width.
   func appCardSurface(cornerRadius: CGFloat = AppTheme.Radius.card) -> some View {
     background(
       RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -251,7 +254,7 @@ extension View {
     )
     .overlay(
       RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        .stroke(AppTheme.Colors.separator, lineWidth: 1)
+        .strokeBorder(AppTheme.Colors.separator, lineWidth: 1)
     )
   }
 }
