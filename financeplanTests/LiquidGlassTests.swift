@@ -80,4 +80,13 @@ final class LiquidGlassTests: XCTestCase {
       "chrome must fall back to a solid surface when Reduce Transparency is on"
     )
   }
+
+  func testNavigationBarKeepsSystemGlassOnIOS26() async throws {
+    await Task.yield()
+    let src = try source("financeplan/Components/VigilNavigationAppearance.swift")
+    XCTAssertTrue(
+      src.contains("#unavailable(iOS 26)") || src.contains("#available(iOS 26"),
+      "the opaque UINavigationBarAppearance must not apply on iOS 26"
+    )
+  }
 }

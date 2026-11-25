@@ -6,7 +6,13 @@ enum VigilNavigationAppearance {
   ///   dynamic `UIColor`s, so UIKit resolves light/dark itself. The parameter and
   ///   the re-apply on scheme change are kept because the *brand* still has to be
   ///   resolved in Swift, and that is not something UIKit can track.
+  ///
+  /// On iOS 26 nothing is applied: the system default appearance is Liquid
+  /// Glass, and an opaque `UINavigationBarAppearance` would replace it with a
+  /// flat bar. The opaque Vigil bar is kept for iOS 18-25 only.
   static func apply(colorScheme _: ColorScheme) {
+    guard #unavailable(iOS 26) else { return }
+
     let nav = UINavigationBarAppearance()
     nav.configureWithOpaqueBackground()
     nav.backgroundColor = AppTheme.Colors.uiNavBarBackground
