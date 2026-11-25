@@ -4666,6 +4666,74 @@
         }
       }
     },
+    "Not available" : {
+      "comment" : "VoiceOver label for a dash shown where a value is missing.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not available"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indisponível"
+          }
+        }
+      }
+    },
+    "up" : {
+      "comment" : "VoiceOver word before a positive change, e.g. up +3.2%.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "up"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "em alta"
+          }
+        }
+      }
+    },
+    "down" : {
+      "comment" : "VoiceOver word before a negative change, e.g. down -3.2%.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "down"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "em baixa"
+          }
+        }
+      }
+    },
+    "unchanged" : {
+      "comment" : "VoiceOver word for a change that rounds to zero.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "unchanged"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sem alteração"
+          }
+        }
+      }
+    },
     "As of %@" : {
       "localizations" : {
         "en" : {

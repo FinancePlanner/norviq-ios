@@ -42,8 +42,6 @@ struct PortfolioHeroModel: Equatable {
   /// "Excludes 1 unpriced holding": the total leaves out holdings with no price.
   let unpricedCaption: String?
 
-  /// A series whose last point is older than this many calendar days is stale.
-  static let staleAfterDays = 4
   /// Fewer points than this is "too little history" for a line or a change.
   static let minimumTrendPoints = 3
 
@@ -65,7 +63,7 @@ struct PortfolioHeroModel: Equatable {
         result[code, default: 0] += entry.value
       }
 
-    let isStale = series.last.map { isOlderThanStaleLimit($0.date, now: now) } ?? false
+    let isStale = series.last.map { AsOf.isStale($0.date, now: now, calendar: utcCalendar) } ?? false
     // The series is in one base currency. Under per-currency subtotals a
     // change or an axis in it would imply a summed total, so mixed holdings
     // show neither.
@@ -276,16 +274,6 @@ struct PortfolioHeroModel: Equatable {
         return Point(date: date, value: point.value)
       }
       .sorted { $0.date < $1.date }
-  }
-
-  private static func isOlderThanStaleLimit(_ date: Date, now: Date) -> Bool {
-    let calendar = utcCalendar
-    let days = calendar.dateComponents(
-      [.day],
-      from: calendar.startOfDay(for: date),
-      to: calendar.startOfDay(for: now)
-    ).day ?? 0
-    return days > staleAfterDays
   }
 
   /// "11 Nov 2026" (en), "11/11/2026" never: a fixed day-month-year order.
