@@ -9,7 +9,18 @@ struct StockPriceChartTab: View {
     let errorMessage: String?
     let onSelectRange: (PriceChartRange) -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
+    private var rangeSelection: Binding<ChartRange> {
+        Binding(
+            get: { ChartRange(selectedRange) ?? .oneDay },
+            set: { newRange in
+                guard let wire = PriceChartRange(newRange) else {
+                    assertionFailure("RangePicker offered a range the price API cannot serve: \(newRange)")
+                    return
+                }
+                onSelectRange(wire)
+            }
+        )
+    }
 
     var body: some View {
         LazyVStack(spacing: 16) {
@@ -24,28 +35,11 @@ struct StockPriceChartTab: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(PriceChartRange.allCases, id: \.rawValue) { range in
-                                Button {
-                                    onSelectRange(range)
-                                } label: {
-                                    Text(range.title)
-                                        .typography(.caption, weight: .semibold)
-                                        .foregroundStyle(range == selectedRange ? .white : .primary)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .background(
-                                            range == selectedRange
-                                                ? AppTheme.Colors.tint(for: colorScheme)
-                                                : Color.secondary.opacity(0.10),
-                                            in: Capsule()
-                                        )
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
+                    RangePicker(
+                        ChartRange.asset,
+                        selection: rangeSelection,
+                        label: "Chart range"
+                    )
 
                     if isLoading && series == nil {
                         ProgressView()

@@ -224,6 +224,11 @@ jobs:
             -only-testing:financeplanTests/PortfolioCSVImportViewModelTests \
             -only-testing:financeplanTests/VigMotionTests \
             -only-testing:financeplanTests/DisplayFontTests \
+            -only-testing:financeplanTests/CanonicalTextTests \
+            -only-testing:financeplanTests/MoneyFormatterTests \
+            -only-testing:financeplanTests/PortfolioHeroModelTests \
+            -only-testing:financeplanTests/MetricTileTests \
+            -only-testing:financeplanTests/ChartRangeTests \
             -only-testing:financeplanTests/VigilDesignSystemTests/testEveryThemeColorsetMatchesTokensExactly \
             -only-testing:financeplanTests/VigilDesignSystemTests/testSpacingAndRadiusMatchTokens \
             -parallel-testing-enabled NO \

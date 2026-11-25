@@ -8,8 +8,6 @@ struct CryptoPriceChartTab: View {
     let errorMessage: String?
     let onSelectRange: (CryptoChartRange) -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
-
     private var change: Double? {
         guard let first = points.first?.close, let last = points.last?.close, first > 0 else { return nil }
         return (last - first) / first
@@ -46,26 +44,20 @@ struct CryptoPriceChartTab: View {
     }
 
     private var rangePicker: some View {
-        HStack(spacing: 8) {
-            ForEach(CryptoChartRange.allCases) { range in
-                Button {
-                    onSelectRange(range)
-                } label: {
-                    Text(range.title)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(range == selectedRange ? .white : .primary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .background(
-                            range == selectedRange
-                                ? AppTheme.Colors.tint(for: colorScheme)
-                                : Color.secondary.opacity(0.10),
-                            in: Capsule()
-                        )
+        RangePicker(
+            ChartRange.crypto,
+            selection: Binding(
+                get: { ChartRange(selectedRange) ?? .oneDay },
+                set: { newRange in
+                    guard let wire = CryptoChartRange(newRange) else {
+                        assertionFailure("RangePicker offered a range the crypto API cannot serve: \(newRange)")
+                        return
+                    }
+                    onSelectRange(wire)
                 }
-                .buttonStyle(.plain)
-            }
-        }
+            ),
+            label: "Chart range"
+        )
     }
 
     private var chart: some View {

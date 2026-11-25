@@ -136,18 +136,20 @@ private struct BudgetCategoryCard: View {
 
       VStack(spacing: 12) {
         HStack(spacing: 12) {
-          MetricItem(title: "Goal", value: summary.targetAmount.currency, color: .primary)
-          MetricItem(title: "Planned", value: summary.plannedAmount.currency, color: .primary)
+          MetricTile("Goal", value: summary.targetAmount.currency)
+          MetricTile("Planned", value: summary.plannedAmount.currency)
         }
+        .fixedSize(horizontal: false, vertical: true)
         
         HStack(spacing: 12) {
-          MetricItem(title: "Actual", value: summary.actualAmount.currency, color: .primary)
-          MetricItem(
-            title: "Left",
+          MetricTile("Actual", value: summary.actualAmount.currency)
+          MetricTile(
+            "Left",
             value: leftAmount.currency,
-            color: leftAmount >= 0 ? AppTheme.Colors.gain : AppTheme.Colors.loss
+            tone: leftAmount >= 0 ? .gain : .loss
           )
         }
+        .fixedSize(horizontal: false, vertical: true)
       }
       .padding(16)
     }
@@ -159,47 +161,6 @@ private struct BudgetCategoryCard: View {
     }
   }
 }
-
-private struct MetricItem: View {
-  let title: String
-  let value: String
-  let color: Color
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      Text(title)
-        .font(.caption2)
-        .foregroundStyle(.secondary)
-        .textCase(.uppercase)
-        .tracking(0.5)
-      Text(value)
-        .font(.headline.weight(.bold))
-        .foregroundStyle(color)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(12)
-    .background(AppTheme.Colors.tertiaryFill)
-    .clipShape(.rect(cornerRadius: 10))
-  }
-}
-
-//private struct MetricItem: View {
-//  let title: String
-//  let value: String
-//  let color: Color
-//
-//  var body: some View {
-//    VStack(spacing: 4) {
-//      Text(title)
-//        .font(.caption)
-//        .foregroundStyle(.secondary)
-//      Text(value)
-//        .font(.subheadline.weight(.semibold))
-//        .foregroundStyle(color)
-//    }
-//    .frame(maxWidth: .infinity)
-//  }
-//}
 
 private struct RecordedSpendCard: View {
   let activities: [BudgetActivity]

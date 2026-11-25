@@ -1121,29 +1121,6 @@ private struct PlannerItemRow: View {
   }
 }
 
-private struct SummaryMetric: View {
-  let title: String
-  let value: String
-  var accent: Color = .primary
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      Text(title)
-        .typography(.caption)
-        .foregroundStyle(.secondary)
-      Text(value)
-        .typography(.small, weight: .semibold)
-        .foregroundStyle(accent)
-        .contentTransition(.numericText())
-        .appAnimation(AppMotion.state, value: value)
-    }
-    .accessibilityElement(children: .combine)
-    .accessibilityLabel(Text(title))
-    .accessibilityValue(Text(value))
-    .frame(maxWidth: .infinity, alignment: .leading)
-  }
-}
-
 private struct NetSalaryEditorSheet: View {
   @Environment(\.dismiss) private var dismiss
   @State private var value: String
@@ -1953,24 +1930,6 @@ private struct HouseholdPartnerEditorSheet: View {
         }
       }
     }
-  }
-}
-
-private struct MetricItem: View {
-  let title: String
-  let value: String
-  let color: Color
-
-  var body: some View {
-    VStack(spacing: 4) {
-      Text(title)
-        .typography(.nano)
-        .foregroundStyle(.secondary)
-      Text(value)
-        .typography(.small, weight: .semibold)
-        .foregroundStyle(color)
-    }
-    .frame(maxWidth: .infinity)
   }
 }
 

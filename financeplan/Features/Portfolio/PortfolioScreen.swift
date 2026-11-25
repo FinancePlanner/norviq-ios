@@ -54,10 +54,6 @@ struct PortfolioScreen: View {
       case year = "1Y"
       case all = "ALL"
       var id: String { rawValue }
-
-      /// The ranges the portfolio series supports (spec § 5.5). There is no
-      /// intraday portfolio series, so 1D is not offered on the hero.
-      static let heroRanges: [TimeRange] = [.week, .month, .threeMonths, .year, .all]
   }
 
   enum AssetFilter: String, CaseIterable, Identifiable {

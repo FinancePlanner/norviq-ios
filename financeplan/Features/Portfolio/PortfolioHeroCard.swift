@@ -87,39 +87,38 @@ struct PortfolioHeroCard: View {
           .padding(.horizontal, -12)
         }
 
-        GlassEffectContainer(spacing: 8) {
-          HStack(spacing: 8) {
-            ForEach(PortfolioScreen.TimeRange.heroRanges) { range in
-              PortfolioRangeButton(
-                title: range.rawValue,
-                isSelected: selectedTimeRange == range,
-                tint: AppTheme.Colors.tint,
-                action: { onSelectTimeRange(range) }
-              )
-            }
-          }
-        }
+        RangePicker(
+          ChartRange.portfolio,
+          selection: rangeSelection,
+          label: "Chart range"
+        )
 
         HStack {
-          PortfolioMetricPill(
-            title: String(localized: "Positions"),
+          MetricTile(
+            "Positions",
             value: positionCount.formatted(.number.locale(MoneyFormatter.defaultLocale)),
-            tint: AppTheme.Colors.secondaryTint
+            valueStyle: .compact
           )
-          PortfolioMetricPill(
-            title: String(localized: "Avg / position"),
-            value: averagePositionText,
-            tint: AppTheme.Colors.tint
-          )
-          PortfolioMetricPill(
-            title: String(localized: "Cash"),
-            value: cashText,
-            tint: .mint
-          )
+          MetricTile("Avg / position", value: averagePositionText, valueStyle: .compact)
+          MetricTile("Cash", value: cashText, valueStyle: .compact)
         }
+        .fixedSize(horizontal: false, vertical: true)
       }
     }
     .foregroundStyle(.primary)
+  }
+
+  private var rangeSelection: Binding<ChartRange> {
+    Binding(
+      get: { ChartRange(selectedTimeRange) ?? .oneMonth },
+      set: { newRange in
+        guard let wire = PortfolioScreen.TimeRange(newRange) else {
+          assertionFailure("RangePicker offered a range the portfolio API cannot serve: \(newRange)")
+          return
+        }
+        onSelectTimeRange(wire)
+      }
+    )
   }
 
   @ViewBuilder
