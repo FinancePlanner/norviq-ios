@@ -96,11 +96,13 @@ struct PortfolioHeroCard: View {
         HStack {
           MetricTile(
             "Positions",
-            value: positionCount.formatted(.number.locale(MoneyFormatter.defaultLocale))
+            value: positionCount.formatted(.number.locale(MoneyFormatter.defaultLocale)),
+            valueStyle: .compact
           )
-          MetricTile("Avg / position", value: averagePositionText)
-          MetricTile("Cash", value: cashText)
+          MetricTile("Avg / position", value: averagePositionText, valueStyle: .compact)
+          MetricTile("Cash", value: cashText, valueStyle: .compact)
         }
+        .fixedSize(horizontal: false, vertical: true)
       }
     }
     .foregroundStyle(.primary)

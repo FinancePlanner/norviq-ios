@@ -9,17 +9,39 @@ struct MetricTile: View {
     case neutral, gain, loss, warning
   }
 
+  /// `regular` is the 24pt headline figure. `compact` is the ~17pt numeric
+  /// style for rows of three or more tiles, where a full money string such as
+  /// "48 432,05 US$" must fit in about 80pt without shrinking below legibility.
+  enum ValueStyle {
+    case regular, compact
+  }
+
   let label: LocalizedStringKey
   let value: String
   /// Shown verbatim: the caller passes it already formatted or localized.
   let caption: String?
   let tone: Tone
+  let valueStyle: ValueStyle
 
-  init(_ label: LocalizedStringKey, value: String, caption: String? = nil, tone: Tone = .neutral) {
+  init(
+    _ label: LocalizedStringKey,
+    value: String,
+    caption: String? = nil,
+    tone: Tone = .neutral,
+    valueStyle: ValueStyle = .regular
+  ) {
     self.label = label
     self.value = value
     self.caption = caption
     self.tone = tone
+    self.valueStyle = valueStyle
+  }
+
+  private var valueTypography: Typography {
+    switch valueStyle {
+    case .regular: .metricNumber
+    case .compact: .numeric
+    }
   }
 
   private var valueColor: Color {
@@ -38,7 +60,7 @@ struct MetricTile: View {
         .foregroundStyle(AppTheme.Colors.secondaryText)
         .lineLimit(2)
       Text(verbatim: value)
-        .typography(.metricNumber)
+        .typography(valueTypography)
         .monospacedDigit()
         .foregroundStyle(valueColor)
         .lineLimit(1)
@@ -49,7 +71,7 @@ struct MetricTile: View {
           .foregroundStyle(AppTheme.Colors.tertiaryText)
       }
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .padding(AppTheme.Spacing.md)
     .background(
       AppTheme.Colors.elevatedCardBackground,
