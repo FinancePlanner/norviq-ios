@@ -158,6 +158,18 @@ final class MarketBriefSharePayloadTests: XCTestCase {
     XCTAssertTrue(payload.imageMessage.hasSuffix("?utm_source=image&utm_medium=share"))
   }
 
+  func testFileMessageLinkCarriesItsChannel() throws {
+    let payload = try ShareFixtures.payload(ShareFixtures.morning(language: "pt-PT"))
+    XCTAssertEqual(payload.imageMessage, payload.message(for: .image))
+    for channel: MarketBriefShareChannel in [.social, .story, .pdf, .image] {
+      let message = payload.message(for: channel)
+      XCTAssertEqual(message, "\(payload.title)\n\(payload.permalink(for: channel).absoluteString)")
+      let link = try XCTUnwrap(message.split(separator: "\n").last.flatMap { URL(string: String($0)) })
+      XCTAssertEqual(queryValue("utm_source", in: link), channel.rawValue)
+      XCTAssertEqual(queryValue("lang", in: link), "pt-PT")
+    }
+  }
+
   func testCashtagsInOrderWithoutDuplicatesAtMostThreeLettersOnly() throws {
     // asml, NVDA | NVDA, BRK.B, XOM | JPM, TSLA
     XCTAssertEqual(try ShareFixtures.payload().cashtags, ["$ASML", "$NVDA", "$XOM"])

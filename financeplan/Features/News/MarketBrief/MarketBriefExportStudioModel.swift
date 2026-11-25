@@ -55,7 +55,10 @@ final class MarketBriefExportStudioModel {
   var selection: MarketBriefStudioTab = .social
   private var states: [MarketBriefExportFormat: MarketBriefExportState] = [:]
 
-  @ObservationIgnored private let payload: MarketBriefSharePayload
+  /// The brief this studio was opened for. The sheet reads it from here, so a
+  /// brief refreshed while the studio is open cannot pair these exports with
+  /// another brief's title and link.
+  @ObservationIgnored let payload: MarketBriefSharePayload
   @ObservationIgnored private let service: any MarketBriefExportServicing
   @ObservationIgnored private let store: MarketBriefExportFileStore
   @ObservationIgnored private let pause: @Sendable (Duration) async -> Void
@@ -181,8 +184,8 @@ final class MarketBriefExportStudioModel {
     }
   }
 
-  private func currentManifest() async throws -> MarketBriefExportManifest {
-    let task = manifestTask ?? fetchManifest()
+  private func currentManifest(fresh: Bool = false) async throws -> MarketBriefExportManifest {
+    let task = manifestTask ?? fetchManifest(fresh: fresh)
     do {
       return try await task.value
     } catch {
@@ -192,15 +195,17 @@ final class MarketBriefExportStudioModel {
     }
   }
 
+  /// Bypasses the URL cache: a cached manifest would name the revision that
+  /// just answered 404.
   private func refetchManifest() async throws -> MarketBriefExportManifest {
     manifestTask = nil
-    return try await currentManifest()
+    return try await currentManifest(fresh: true)
   }
 
-  private func fetchManifest() -> Task<MarketBriefExportManifest, any Error> {
+  private func fetchManifest(fresh: Bool) -> Task<MarketBriefExportManifest, any Error> {
     let service = service
     let payload = payload
-    let task = Task { try await service.manifest(for: payload) }
+    let task = Task { try await service.manifest(for: payload, fresh: fresh) }
     manifestTask = task
     return task
   }

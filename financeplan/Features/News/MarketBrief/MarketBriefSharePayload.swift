@@ -111,9 +111,13 @@ nonisolated struct MarketBriefSharePayload: Equatable, Sendable {
     [title, headline].compactMap(\.self).joined(separator: "\n")
   }
 
-  /// Sent with the image, so whoever sees it can find the page.
-  var imageMessage: String {
-    "\(title)\n\(permalink(for: .image).absoluteString)"
+  /// Sent with the native card image, so whoever sees it can find the page.
+  var imageMessage: String { message(for: .image) }
+
+  /// Title and permalink, sent with a shared file. The link's `utm_source` is
+  /// `channel`, so the web can tell the studio's formats and the native card apart.
+  func message(for channel: MarketBriefShareChannel) -> String {
+    "\(title)\n\(permalink(for: channel).absoluteString)"
   }
 
   /// Title, headline, cashtags and permalink in at most 280 characters. The

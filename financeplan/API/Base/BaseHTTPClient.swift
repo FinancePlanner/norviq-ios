@@ -91,12 +91,18 @@ nonisolated public struct BaseHTTPClient: Sendable {
 
     // MARK: - Core Request Logic
     
-    public func call<E: Endpoint, ErrorType: HTTPClientError>(_ endpoint: E, errorType: ErrorType.Type) async throws -> E.Response where E.Response: Codable & Sendable {
+    /// `cachePolicy` overrides the session's for every attempt, e.g.
+    /// `.reloadIgnoringLocalCacheData` to skip a cached response.
+    public func call<E: Endpoint, ErrorType: HTTPClientError>(
+        _ endpoint: E,
+        errorType: ErrorType.Type,
+        cachePolicy: URLRequest.CachePolicy? = nil
+    ) async throws -> E.Response where E.Response: Codable & Sendable {
         var attempt = 0
         
         while attempt < maxRetries {
             do {
-                let data = try await execute(endpoint, errorType: ErrorType.self)
+                let data = try await execute(endpoint, errorType: ErrorType.self, cachePolicy: cachePolicy)
                 return try await decodeResponse(E.Response.self, from: data, using: endpoint.decoder, errorType: ErrorType.self)
             } catch {
                 let shouldRetry = shouldRetry(error: error, attempt: attempt, endpoint: endpoint)
@@ -247,8 +253,13 @@ nonisolated public struct BaseHTTPClient: Sendable {
     
     // MARK: - Network Execution
     
-    public func execute<E: Endpoint, ErrorType: HTTPClientError>(_ endpoint: E, errorType: ErrorType.Type) async throws -> Data where E.Response: Codable {
-        let request = try await makeURLRequest(for: endpoint)
+    public func execute<E: Endpoint, ErrorType: HTTPClientError>(
+        _ endpoint: E,
+        errorType: ErrorType.Type,
+        cachePolicy: URLRequest.CachePolicy? = nil
+    ) async throws -> Data where E.Response: Codable {
+        var request = try await makeURLRequest(for: endpoint)
+        if let cachePolicy { request.cachePolicy = cachePolicy }
         return try await sendRequest(request, errorType: ErrorType.self)
     }
     

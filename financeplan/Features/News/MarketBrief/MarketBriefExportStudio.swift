@@ -7,7 +7,6 @@ import UIKit
 /// fetched when its tab first shows; the model keeps what loaded, so the menu
 /// reopens the same studio for the same brief.
 struct MarketBriefExportStudio: View {
-  let payload: MarketBriefSharePayload
   @Bindable var model: MarketBriefExportStudioModel
   /// "Link copied". Shown inside the sheet too, since the card's own overlay is under it.
   @Binding var toast: ToastData?
@@ -18,16 +17,18 @@ struct MarketBriefExportStudio: View {
   @State private var sheetHeight: CGFloat = 0
 
   init(
-    payload: MarketBriefSharePayload,
     model: MarketBriefExportStudioModel,
     toast: Binding<ToastData?> = .constant(nil),
     telemetry: MarketBriefShareTelemetry = .init()
   ) {
-    self.payload = payload
     self.model = model
     _toast = toast
     self.telemetry = telemetry
   }
+
+  /// The model's brief, never the menu's live one: the exports, the title and
+  /// the links must all describe the same brief.
+  private var payload: MarketBriefSharePayload { model.payload }
 
   var body: some View {
     NavigationStack {
@@ -217,7 +218,7 @@ struct MarketBriefStudioShare: Identifiable {
   let payload: MarketBriefSharePayload
 
   /// An export file. The native fallback card counts as `image`, so the
-  /// fallback rate stays measurable.
+  /// fallback rate stays measurable; the message's link carries the same channel.
   static func file(
     _ ready: MarketBriefExportReady,
     format: MarketBriefExportFormat,
@@ -232,7 +233,7 @@ struct MarketBriefStudioShare: Identifiable {
           icon: ready.preview,
           previewImage: ready.preview
         ),
-        payload.imageMessage
+        payload.message(for: channel)
       ],
       channel: channel,
       payload: payload
@@ -303,7 +304,7 @@ private extension MarketBriefExportFormat {
 #if DEBUG
 /// Canned exports for the canvas; never talks to the network.
 private struct PreviewMarketBriefExportService: MarketBriefExportServicing {
-  func manifest(for payload: MarketBriefSharePayload) async throws -> MarketBriefExportManifest {
+  func manifest(for payload: MarketBriefSharePayload, fresh: Bool) async throws -> MarketBriefExportManifest {
     MarketBriefExportManifest(
       editionId: "preview",
       revision: 1,
@@ -337,7 +338,6 @@ private struct PreviewMarketBriefExportService: MarketBriefExportServicing {
   )
   if let payload = MarketBriefSharePayload(brief: brief) {
     MarketBriefExportStudio(
-      payload: payload,
       model: MarketBriefExportStudioModel(
         payload: payload,
         service: PreviewMarketBriefExportService(),

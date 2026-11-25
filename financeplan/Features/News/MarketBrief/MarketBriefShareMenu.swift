@@ -54,13 +54,13 @@ struct MarketBriefShareMenu: View {
         .presentationDetents([.medium, .large])
     }
     .sheet(item: $presentedStudio, onDismiss: { studio?.model.cancel() }) { session in
-      MarketBriefExportStudio(payload: payload, model: session.model, toast: $toast, telemetry: telemetry)
+      MarketBriefExportStudio(model: session.model, toast: $toast, telemetry: telemetry)
     }
   }
 
-  /// Reuses the studio for the same date, slot and language.
+  /// Reuses the studio for the same brief: date, slot, language and generation.
   private func openStudio() {
-    let key = StudioKey(payload)
+    let key = MarketBriefStudioKey(payload)
     if studio?.key != key {
       studio = StudioSession(
         key: key,
@@ -87,6 +87,9 @@ struct MarketBriefShareMenu: View {
   }
 
   private func share(_ channel: MarketBriefShareChannel) {
+    // The Export Studio shares and counts these; the menu never offers them,
+    // and must not count them with its own surface.
+    guard !Self.studioChannels.contains(channel) else { return }
     telemetry.shared(payload, channel: channel)
     switch channel {
     case .link:
@@ -107,10 +110,11 @@ struct MarketBriefShareMenu: View {
       launcher.copyToPasteboard(payload.permalink(for: .copyLink).absoluteString)
       toast = .success(String(localized: "Link copied"))
     case .image, .social, .story, .pdf:
-      // The Export Studio shares and counts these; the menu never offers them.
-      break
+      break // Returned above.
     }
   }
+
+  private static let studioChannels: Set<MarketBriefShareChannel> = [.image, .social, .story, .pdf]
 
   private var launcher: ChannelShareLauncher {
     ChannelShareLauncher(
@@ -130,21 +134,26 @@ struct MarketBriefShareMenu: View {
   }
 
   private struct StudioSession: Identifiable {
-    let key: StudioKey
+    let key: MarketBriefStudioKey
     let model: MarketBriefExportStudioModel
-    var id: StudioKey { key }
+    var id: MarketBriefStudioKey { key }
   }
 }
 
-/// One studio per brief: the same date, slot and language reuse it.
-private struct StudioKey: Hashable {
+/// One studio per brief. The same date, slot and language reuse it, as long
+/// as the brief was not regenerated: a regeneration is a new edition revision,
+/// whose exports differ. The brief carries no revision, so `generatedAt`, which
+/// every regeneration renews, stands in for it.
+struct MarketBriefStudioKey: Hashable {
   let tradingDate: String
   let slot: MarketBriefSlot
   let languageCode: String
+  let generatedAt: String?
 
   init(_ payload: MarketBriefSharePayload) {
     tradingDate = payload.tradingDate
     slot = payload.slot
     languageCode = payload.languageCode
+    generatedAt = payload.brief.generatedAt
   }
 }

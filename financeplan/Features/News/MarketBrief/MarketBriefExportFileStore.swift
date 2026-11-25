@@ -4,7 +4,9 @@ import Foundation
 /// `{root}/{editionId}-r{revision}/{fileName}` for rendered files, and
 /// `{root}/native/{fileName}` for the card drawn on the device.
 ///
-/// A revision's files never change, so one already on disk is reused.
+/// A freshly downloaded file always replaces the copy on disk, so what is shared
+/// is what was just previewed: the renderer can change a file without a new
+/// revision. A file is reused only when the model keeps it and downloads nothing.
 nonisolated struct MarketBriefExportFileStore: Sendable {
   enum Error: Swift.Error, Equatable {
     /// The edition id or file name is not a plain path component.
@@ -17,13 +19,9 @@ nonisolated struct MarketBriefExportFileStore: Sendable {
     self.root = root
   }
 
-  /// Writes `file` atomically unless that revision already has it, and returns its URL.
+  /// Writes `file` atomically, replacing any older copy, and returns its URL.
   func url(for file: MarketBriefExportFile, editionId: String, revision: Int) throws -> URL {
-    let destination = try location(of: file, in: "\(editionId)-r\(revision)")
-    if FileManager.default.fileExists(atPath: destination.path(percentEncoded: false)) {
-      return destination
-    }
-    return try write(file, to: destination)
+    try write(file, to: location(of: file, in: "\(editionId)-r\(revision)"))
   }
 
   /// The card drawn on the device. Its name carries no revision, so it is always

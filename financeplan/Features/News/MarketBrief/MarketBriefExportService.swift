@@ -19,12 +19,19 @@ nonisolated struct MarketBriefExportFile: Sendable, Equatable {
 
 /// The export manifest and files of one brief, in the brief's own language.
 protocol MarketBriefExportServicing: Sendable {
-  func manifest(for payload: MarketBriefSharePayload) async throws -> MarketBriefExportManifest
+  /// `fresh` bypasses the URL cache, for the refetch after a superseded file.
+  func manifest(for payload: MarketBriefSharePayload, fresh: Bool) async throws -> MarketBriefExportManifest
   func file(
     _ format: MarketBriefExportFormat,
     query: String,
     for payload: MarketBriefSharePayload
   ) async throws -> MarketBriefExportFile
+}
+
+extension MarketBriefExportServicing {
+  func manifest(for payload: MarketBriefSharePayload) async throws -> MarketBriefExportManifest {
+    try await manifest(for: payload, fresh: false)
+  }
 }
 
 struct DefaultMarketBriefExportService: MarketBriefExportServicing {
@@ -38,8 +45,8 @@ struct DefaultMarketBriefExportService: MarketBriefExportServicing {
     )
   }
 
-  func manifest(for payload: MarketBriefSharePayload) async throws -> MarketBriefExportManifest {
-    try await client.exports(lang: payload.languageCode, slot: payload.slot, date: payload.tradingDate)
+  func manifest(for payload: MarketBriefSharePayload, fresh: Bool) async throws -> MarketBriefExportManifest {
+    try await client.exports(lang: payload.languageCode, slot: payload.slot, date: payload.tradingDate, fresh: fresh)
   }
 
   func file(

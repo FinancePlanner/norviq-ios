@@ -15,7 +15,7 @@ nonisolated struct MarketBriefHTTPClient: Sendable {
       switch self {
       case .invalidResponse: return "Invalid server response."
       case let .invalidStatus(code): return "Request failed (\(code))."
-      case let .unauthorized(message): return message ?? "Your session expired."
+      case let .unauthorized(message): return message ?? String(localized: "Your session expired.")
       case let .api(message): return message
       }
     }
@@ -82,8 +82,20 @@ nonisolated struct MarketBriefHTTPClient: Sendable {
 
   // MARK: Export Studio
 
-  func exports(lang: String, slot: MarketBriefSlot, date: String) async throws -> MarketBriefExportManifest {
-    try await client.call(GetMarketBriefExportsEndpoint(lang: lang, slot: slot, date: date), errorType: Error.self)
+  /// `fresh` skips the URL cache: the backend sends the manifest with
+  /// `max-age=300`, so a refetch after a superseded file would otherwise get
+  /// the same old revision back.
+  func exports(
+    lang: String,
+    slot: MarketBriefSlot,
+    date: String,
+    fresh: Bool = false
+  ) async throws -> MarketBriefExportManifest {
+    try await client.call(
+      GetMarketBriefExportsEndpoint(lang: lang, slot: slot, date: date),
+      errorType: Error.self,
+      cachePolicy: fresh ? .reloadIgnoringLocalCacheData : nil
+    )
   }
 
   /// One attempt, no client-side retry: the studio owns the 503/500 and 404 policy.

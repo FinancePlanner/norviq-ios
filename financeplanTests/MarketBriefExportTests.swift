@@ -215,6 +215,55 @@ final class MarketBriefExportEndpointTests: XCTestCase {
       XCTAssertTrue(query.contains("lang=pt-PT"), query)
     }
   }
+
+  /// The manifest is sent with `max-age=300`, so the refetch after a superseded
+  /// file must skip the URL cache or it gets the old revision back.
+  @MainActor
+  func testManifestRefetchAfter404BypassesURLCache() async throws {
+    let session = SessionMock()
+    let manifestPolicies = LockedBox<[URLRequest.CachePolicy]>([])
+    let fileQueries = LockedBox<[String]>([])
+    let png = UIGraphicsImageRenderer(size: CGSize(width: 2, height: 2)).image { context in
+      UIColor.systemTeal.setFill()
+      context.fill(CGRect(x: 0, y: 0, width: 2, height: 2))
+    }.pngData() ?? Data()
+    session.handler = { request in
+      let url = try XCTUnwrap(request.url)
+      if url.path == "/v1/market/brief/exports" {
+        manifestPolicies.value.append(request.cachePolicy)
+        let revision = manifestPolicies.value.count
+        let json = #"{"editionId":"MI-2026-11-25-O","revision":\#(revision),"rendererVersion":1,"#
+          + #""formats":[{"id":"social","mime":"image/png","query":"rev=\#(revision)&v=1"}]}"#
+        let response = try XCTUnwrap(HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil))
+        return (Data(json.utf8), response)
+      }
+      fileQueries.value.append(url.query ?? "")
+      // The first file request names a superseded revision.
+      let status = fileQueries.value.count == 1 ? 404 : 200
+      let response = try XCTUnwrap(HTTPURLResponse(
+        url: url, statusCode: status, httpVersion: nil, headerFields: ["Content-Type": "image/png"]
+      ))
+      return (status == 200 ? png : Data(), response)
+    }
+    let root = FileManager.default.temporaryDirectory.appending(path: "export-cache-tests-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: root) }
+    let model = MarketBriefExportStudioModel(
+      payload: try payload(language: "en"),
+      service: DefaultMarketBriefExportService(environmentManager: AppEnvironmentManager(), session: session),
+      store: MarketBriefExportFileStore(root: root),
+      pause: { _ in }
+    )
+
+    await model.load(.social)
+
+    guard case let .ready(ready) = model.state(for: .social) else {
+      return XCTFail("expected .ready, got \(model.state(for: .social))")
+    }
+    XCTAssertFalse(ready.isNativeFallback)
+    XCTAssertEqual(manifestPolicies.value, [.useProtocolCachePolicy, .reloadIgnoringLocalCacheData])
+    XCTAssertEqual(fileQueries.value.count, 2)
+    XCTAssertTrue(fileQueries.value.last?.contains("rev=2") == true, fileQueries.value.last ?? "")
+  }
 }
 
 @MainActor
@@ -370,6 +419,7 @@ final class MarketBriefExportStudioModelTests: XCTestCase {
     )
     XCTAssertEqual(ready.fileURL.deletingLastPathComponent().lastPathComponent, "MI-2026-11-25-O-r2")
     XCTAssertEqual(pauses.value, [])
+    XCTAssertEqual(service.manifestFresh, [false, true], "only the refetch bypasses the URL cache")
   }
 
   func testUnauthorizedNeverFallsBack() async throws {
@@ -420,6 +470,22 @@ final class MarketBriefExportStudioModelTests: XCTestCase {
     XCTAssertEqual(image.height, 1350)
   }
 
+  func testSocialFallsBackToNativeCardAfterFileIsBusyTwice() async throws {
+    let service = ExportServiceFake()
+    service.manifests = [.success(manifest())]
+    service.files[.social] = [.failure(Self.busy), .failure(Self.busy)]
+    let model = try makeModel(service)
+
+    await model.load(.social)
+
+    let ready = try ready(model.state(for: .social))
+    XCTAssertTrue(ready.isNativeFallback)
+    XCTAssertEqual(ready.fileURL, root.appending(path: "native/norviq-brief-2026-11-25-morning-social-en.png"))
+    XCTAssertEqual(service.manifestCalls, 1)
+    XCTAssertEqual(service.fileCalls.count, 2)
+    XCTAssertEqual(pauses.value, [.seconds(2)])
+  }
+
   func testFileStoreNamesPerRevision() throws {
     let store = MarketBriefExportFileStore(root: root)
     let first = MarketBriefExportFile(data: Data([1]), fileName: "norviq-MI-2026-11-25-O-social-pt-PT.png", mime: "image/png")
@@ -427,6 +493,7 @@ final class MarketBriefExportStudioModelTests: XCTestCase {
 
     let r1 = try store.url(for: first, editionId: "MI-2026-11-25-O", revision: 1)
     let r2 = try store.url(for: first, editionId: "MI-2026-11-25-O", revision: 2)
+    XCTAssertEqual(try Data(contentsOf: r1), Data([1]))
     let again = try store.url(for: replacement, editionId: "MI-2026-11-25-O", revision: 1)
 
     XCTAssertNotEqual(r1, r2)
@@ -434,7 +501,11 @@ final class MarketBriefExportStudioModelTests: XCTestCase {
     XCTAssertEqual(r2, root.appending(path: "MI-2026-11-25-O-r2/norviq-MI-2026-11-25-O-social-pt-PT.png"))
     XCTAssertTrue(r1.lastPathComponent.hasSuffix("-pt-PT.png"))
     XCTAssertEqual(again, r1)
-    XCTAssertEqual(try Data(contentsOf: r1), Data([1]), "an existing file is reused, not rewritten")
+    XCTAssertEqual(
+      try Data(contentsOf: r1),
+      Data([2]),
+      "a fresh download replaces the copy on disk, so the share matches the preview"
+    )
   }
 
   func testPDFReadyHasThumbnailAndManifestPages() async throws {
@@ -660,7 +731,60 @@ final class MarketBriefExportStudioTests: XCTestCase {
     let file = MarketBriefStudioShare.file(ready(), format: .social, payload: payload)
     let fileSource = try XCTUnwrap(file.items.first as? LPLinkMetadataActivityItemSource)
     XCTAssertEqual(fileSource.item as? URL, ready().fileURL)
-    XCTAssertEqual(file.items.last as? String, payload.imageMessage)
+  }
+
+  /// Each file's message links with its own channel; only the native card says `image`.
+  func testStudioFileSharesCarryTheirChannelInTheLink() throws {
+    let payload = try payload(language: "pt-PT")
+    struct Case {
+      let ready: MarketBriefExportReady
+      let format: MarketBriefExportFormat
+      let source: String
+    }
+    let cases = [
+      Case(ready: ready(), format: .social, source: "social"),
+      Case(ready: ready(), format: .story, source: "story"),
+      Case(ready: ready(), format: .pdf, source: "pdf"),
+      Case(ready: ready(native: true), format: .social, source: "image")
+    ]
+    for item in cases {
+      let share = MarketBriefStudioShare.file(item.ready, format: item.format, payload: payload)
+      let message = try XCTUnwrap(share.items.last as? String)
+      XCTAssertEqual(message, payload.message(for: share.channel))
+      let link = try XCTUnwrap(message.split(separator: "\n").last.flatMap { URL(string: String($0)) })
+      let items = URLComponents(url: link, resolvingAgainstBaseURL: false)?.queryItems ?? []
+      XCTAssertEqual(
+        items.first { $0.name == "utm_source" }?.value,
+        item.source,
+        "\(item.format) native: \(item.ready.isNativeFallback)"
+      )
+      XCTAssertEqual(items.first { $0.name == "lang" }?.value, "pt-PT")
+    }
+  }
+
+  /// A regenerated brief gets a new studio; the same brief reuses its studio.
+  func testStudioKeyChangesWhenTheBriefIsRegenerated() throws {
+    func payload(generatedAt: String?, language: String = "en") throws -> MarketBriefSharePayload {
+      try XCTUnwrap(MarketBriefSharePayload(brief: MarketBriefResponse(
+        enabled: true, tradingDate: "2026-11-25", slot: .evening, language: language, greeting: nil,
+        groups: [], items: [], generatedAt: generatedAt, degraded: false
+      )))
+    }
+    let first = try payload(generatedAt: "2026-11-25T21:31:00Z")
+
+    XCTAssertEqual(MarketBriefStudioKey(first), MarketBriefStudioKey(try payload(generatedAt: "2026-11-25T21:31:00Z")))
+    XCTAssertNotEqual(MarketBriefStudioKey(first), MarketBriefStudioKey(try payload(generatedAt: "2026-11-25T21:52:00Z")))
+    XCTAssertNotEqual(
+      MarketBriefStudioKey(first),
+      MarketBriefStudioKey(try payload(generatedAt: "2026-11-25T21:31:00Z", language: "pt-PT"))
+    )
+  }
+
+  /// The sheet reads the brief from the model, so it cannot show another brief's title or links.
+  func testModelKeepsTheBriefItWasOpenedFor() throws {
+    let payload = try payload()
+    let model = MarketBriefExportStudioModel(payload: payload, service: ExportServiceFake())
+    XCTAssertEqual(model.payload, payload)
   }
 
   /// The share sheet reads a file URL's item on a background queue, through the
@@ -693,7 +817,7 @@ final class MarketBriefExportStudioTests: XCTestCase {
     "Export…", "Export", "Social", "Story", "PDF", "Link", "Share…", "Try again",
     "This export isn't available right now.", "Offline version", "%lld pages",
     "Social image of this edition", "Story image of this edition", "First page of the PDF report",
-    "Share link…", "Copy link", "Link copied", "Done"
+    "Share link…", "Copy link", "Link copied", "Done", "Your session expired."
   ]
 
   func testStringsHavePortuguese() throws {
@@ -737,13 +861,16 @@ private final class ExportServiceFake: MarketBriefExportServicing, @unchecked Se
   var manifests: [Result<MarketBriefExportManifest, Error>] = []
   var files: [MarketBriefExportFormat: [Result<MarketBriefExportFile, Error>]] = [:]
   private(set) var manifestCalls = 0
+  /// `fresh` for each manifest request, in order.
+  private(set) var manifestFresh: [Bool] = []
   private(set) var fileCalls: [FileCall] = []
   /// When set, `manifest` waits for `releaseManifest()`.
   var holdsManifest = false
   private(set) var manifestGate: CheckedContinuation<Void, Never>?
 
-  func manifest(for payload: MarketBriefSharePayload) async throws -> MarketBriefExportManifest {
+  func manifest(for payload: MarketBriefSharePayload, fresh: Bool) async throws -> MarketBriefExportManifest {
     manifestCalls += 1
+    manifestFresh.append(fresh)
     if holdsManifest {
       await withCheckedContinuation { manifestGate = $0 }
     }
