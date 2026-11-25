@@ -101,21 +101,12 @@ struct PortfolioHeroCard: View {
         }
 
         HStack {
-          PortfolioMetricPill(
-            title: String(localized: "Positions"),
-            value: positionCount.formatted(.number.locale(MoneyFormatter.defaultLocale)),
-            tint: AppTheme.Colors.secondaryTint
+          MetricTile(
+            "Positions",
+            value: positionCount.formatted(.number.locale(MoneyFormatter.defaultLocale))
           )
-          PortfolioMetricPill(
-            title: String(localized: "Avg / position"),
-            value: averagePositionText,
-            tint: AppTheme.Colors.tint
-          )
-          PortfolioMetricPill(
-            title: String(localized: "Cash"),
-            value: cashText,
-            tint: .mint
-          )
+          MetricTile("Avg / position", value: averagePositionText)
+          MetricTile("Cash", value: cashText)
         }
       }
     }

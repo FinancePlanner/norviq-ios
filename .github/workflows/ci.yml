@@ -227,6 +227,7 @@ jobs:
             -only-testing:financeplanTests/CanonicalTextTests \
             -only-testing:financeplanTests/MoneyFormatterTests \
             -only-testing:financeplanTests/PortfolioHeroModelTests \
+            -only-testing:financeplanTests/MetricTileTests \
             -only-testing:financeplanTests/VigilDesignSystemTests/testEveryThemeColorsetMatchesTokensExactly \
             -only-testing:financeplanTests/VigilDesignSystemTests/testSpacingAndRadiusMatchTokens \
             -parallel-testing-enabled NO \
