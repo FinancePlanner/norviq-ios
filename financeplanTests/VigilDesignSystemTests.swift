@@ -84,41 +84,140 @@ final class VigilDesignSystemTests: XCTestCase {
   }
 
   /// Every colour the app actually renders comes from `Assets.xcassets/Theme`,
-  /// not from `AccentColor`, so this is what keeps
-  /// `docs/precision-identity.md`'s "do not fork values" true on the values
-  /// that ship.
+  /// not from `AccentColor`. Those sets are generated from `Design/tokens.json`
+  /// (a byte copy of the web master, `norviq-web-v2/design/tokens.json`) by
+  /// `scripts/tokens/generate_colorsets.py`, so the two platforms cannot fork a
+  /// value without this failing.
   ///
-  /// Hex is taken verbatim from that file's palette tables.
-  func testThemeColorsetsMatchTheSharedBrandSpec() async throws {
+  /// Exact, light and dark, alpha included, for every set in the folder: a set
+  /// with no token fails too, so nothing ships outside the generated range.
+  func testEveryThemeColorsetMatchesTokensExactly() async throws {
     await Task.yield()
-    let expected: [String: (light: String, dark: String)] = [
-      "VigilTint": (light: "0x80,0x61,0x2A", dark: "0xD8,0xB4,0x77"),
-      // Gold, not green: green means a gain and nothing else.
-      "VigilSecondaryTint": (light: "0xA0,0x7C,0x3E", dark: "0xF0,0xCA,0x8A"),
-      "VigilPageBackground": (light: "0xF7,0xF4,0xEE", dark: "0x0A,0x10,0x1A"),
-      "VigilCardBackground": (light: "0xFF,0xFF,0xFF", dark: "0x11,0x1B,0x2B"),
-      "VigilElevatedCard": (light: "0xEF,0xEB,0xE3", dark: "0x1B,0x29,0x40"),
-      "VigilForeground": (light: "0x11,0x1B,0x2B", dark: "0xE9,0xE9,0xE5"),
-      // The `border` token: a hairline, deliberately not the accent tint.
-      "VigilSeparator": (light: "0xE2,0xDC,0xD0", dark: "0x34,0x42,0x58"),
-      // Financial direction, separate from brand.
-      "VigilGain": (light: "0x1B,0x6E,0x51", dark: "0x42,0xB8,0x94"),
-      "VigilLoss": (light: "0xAB,0x36,0x40", dark: "0xE1,0x6D,0x75"),
-    ]
+    let tokens = try iosColorTokens()
+    let themeDir = repoURL("financeplan/Assets.xcassets/Theme")
+    let sets = try FileManager.default.contentsOfDirectory(atPath: themeDir.path)
+      .filter { $0.hasSuffix(".colorset") }
+      .map { String($0.dropLast(".colorset".count)) }
 
-    for (name, hex) in expected {
-      let json = try source("financeplan/Assets.xcassets/Theme/\(name).colorset/Contents.json")
-        .replacingOccurrences(of: " ", with: "")
-      for (label, value) in [("light", hex.light), ("dark", hex.dark)] {
-        let parts = value.split(separator: ",")
-        for (channel, component) in zip(["red", "green", "blue"], parts) {
-          XCTAssertTrue(
-            json.contains("\"\(channel)\":\"\(component)\""),
-            "\(name) \(label) must keep its docs/precision-identity.md value; expected \(channel) \(component)."
-          )
-        }
+    // 16 Vigil* sets, OnTint and TertiaryFill. A count guard keeps the loop
+    // below from passing vacuously on an empty folder or an unread file.
+    XCTAssertEqual(sets.count, 18, "expected 18 Theme colour sets, found \(sets.sorted())")
+    XCTAssertEqual(Set(sets), Set(tokens.keys), "Theme colour sets and tokens.json iOS names must be the same set")
+
+    for name in sets.sorted() {
+      guard let token = tokens[name] else { continue }
+      let data = try Data(contentsOf: themeDir.appendingPathComponent("\(name).colorset/Contents.json"))
+      let entries = try XCTUnwrap(
+        (JSONSerialization.jsonObject(with: data) as? [String: Any])?["colors"] as? [[String: Any]],
+        "\(name): no colors array"
+      )
+      let universal = entries.filter { $0["appearances"] == nil }
+      let dark = entries.filter { entry in
+        (entry["appearances"] as? [[String: String]])?
+          .contains { $0["appearance"] == "luminosity" && $0["value"] == "dark" } ?? false
+      }
+      XCTAssertEqual(universal.count, 1, "\(name): expected one universal (light) colour")
+      XCTAssertEqual(dark.count, 1, "\(name): expected one dark-appearance colour")
+
+      for (label, entry, hex) in [("light", universal.first, token.light), ("dark", dark.first, token.dark)] {
+        let actual = try XCTUnwrap(
+          (entry?["color"] as? [String: Any])?["components"] as? [String: String],
+          "\(name) \(label): no components"
+        )
+        XCTAssertEqual(
+          actual, try components(hex),
+          "\(name) \(label) must equal \(token.path) in tokens.json (\(hex)). Edit the web master, copy it, run `make tokens`."
+        )
       }
     }
+  }
+
+  /// Spacing and radius are not generated, so they are checked against the
+  /// same file. iOS names its steps xs…xxl; tokens.json names them by multiple
+  /// of 4. `radius.sm` (8) and `radius.pill` have no iOS counterpart.
+  @MainActor
+  func testSpacingAndRadiusMatchTokens() throws {
+    let root = try tokensJSON()
+    func px(_ path: String) throws -> CGFloat {
+      var node: Any? = root
+      for key in path.split(separator: ".") {
+        node = (node as? [String: Any])?[String(key)]
+      }
+      let value = try XCTUnwrap((node as? [String: Any])?["$value"] as? String, "tokens.json has no \(path)")
+      XCTAssertTrue(value.hasSuffix("px"), "\(path) must be px, got \(value)")
+      return CGFloat(try XCTUnwrap(Double(value.dropLast(2)), "\(path): \(value)"))
+    }
+
+    XCTAssertEqual(AppTheme.Spacing.xs, try px("space.1"))
+    XCTAssertEqual(AppTheme.Spacing.sm, try px("space.2"))
+    XCTAssertEqual(AppTheme.Spacing.md, try px("space.3"))
+    XCTAssertEqual(AppTheme.Spacing.lg, try px("space.4"))
+    XCTAssertEqual(AppTheme.Spacing.xl, try px("space.6"))
+    XCTAssertEqual(AppTheme.Spacing.xxl, try px("space.8"))
+    XCTAssertEqual(AppTheme.Radius.control, try px("radius.control"))
+    XCTAssertEqual(AppTheme.Radius.card, try px("radius.card"))
+    XCTAssertEqual(AppTheme.Radius.hero, try px("radius.hero"))
+  }
+
+  // MARK: tokens.json helpers
+
+  private func repoURL(_ relativePath: String) -> URL {
+    URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .appendingPathComponent(relativePath)
+  }
+
+  private func tokensJSON() throws -> [String: Any] {
+    let data = try Data(contentsOf: repoURL("financeplan/Design/tokens.json"))
+    return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+  }
+
+  private struct ColorToken {
+    let path: String
+    let light: String
+    let dark: String
+  }
+
+  /// `[iOS colour-set name: token]` for every colour token that names one.
+  private func iosColorTokens() throws -> [String: ColorToken] {
+    var found: [String: ColorToken] = [:]
+    func walk(_ node: [String: Any], _ path: [String]) {
+      if node["$type"] as? String == "color" {
+        let norviq = (node["$extensions"] as? [String: Any])?["norviq"] as? [String: Any]
+        if let name = norviq?["ios"] as? String {
+          XCTAssertNil(found[name], "\(name) is named by two tokens")
+          found[name] = ColorToken(
+            path: path.joined(separator: "."),
+            light: node["$value"] as? String ?? "",
+            dark: norviq?["dark"] as? String ?? ""
+          )
+        }
+        return
+      }
+      for (key, child) in node where !key.hasPrefix("$") {
+        if let child = child as? [String: Any] { walk(child, path + [key]) }
+      }
+    }
+    walk(try XCTUnwrap(tokensJSON()["color"] as? [String: Any]), ["color"])
+    return found
+  }
+
+  /// The colour-set components a token hex must produce. Alpha is the last
+  /// byte, written as round(byte / 255, 2) to three places: 0x1A is "0.100".
+  private func components(_ hex: String) throws -> [String: String] {
+    XCTAssertTrue(hex.hasPrefix("#") && (hex.count == 7 || hex.count == 9), "bad token hex \(hex)")
+    let digits = Array(hex.dropFirst())
+    let bytes = try stride(from: 0, to: digits.count, by: 2).map {
+      try XCTUnwrap(UInt8(String(digits[$0..<$0 + 2]), radix: 16), "bad token hex \(hex)")
+    }
+    let alpha = bytes.count == 4 ? (Double(bytes[3]) / 255 * 100).rounded() / 100 : 1
+    return [
+      "red": String(format: "0x%02X", bytes[0]),
+      "green": String(format: "0x%02X", bytes[1]),
+      "blue": String(format: "0x%02X", bytes[2]),
+      "alpha": String(format: "%.3f", alpha)
+    ]
   }
 
   /// White on the dark-mode Champagne gold is 1.96:1. `OnTint` is what stops

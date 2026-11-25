@@ -36,11 +36,13 @@ jobs:
       - name: Run SwiftLint
         run: ./scripts/format.sh --skip-install --lint-only --reporter github-actions-logging
 
-  # The 3D Vig motion data (BRD-001) is canonical in norviq-web-v2/design/. This repo carries byte
-  # copies; a copy that differs from web main would make the iOS and web Vig move apart.
-  # Merge order for a motion change: the web PR first, then this repo's copy.
+  # Shared design files are canonical in norviq-web-v2/design/: the 3D Vig motion data (BRD-001)
+  # and tokens.json (the Theme colour sets' source). This repo carries byte copies; a copy that
+  # differs from web main would make the iOS and web apps drift apart. Merge order for a change:
+  # the web PR first, then this repo's copy. tokens.json passes with a notice while web main has
+  # none (until the DS 2.0 tokens PR merges).
   vig-motion-drift:
-    name: Vig motion drift guard
+    name: Shared design files drift guard
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -51,7 +53,21 @@ jobs:
         env:
           # Fine-grained, read-only "Contents" on FinancePlanner/norviq-web-v2.
           GH_TOKEN: ${{ secrets.BRAND_GUARD_TOKEN }}
-        run: ./scripts/check-vig-motion-drift.sh
+        run: ./scripts/check-design-drift.sh
+
+  # The Theme colour sets are generated from financeplan/Design/tokens.json, a byte copy of
+  # norviq-web-v2/design/tokens.json. A hand-edited colour set, or a tokens.json change without
+  # `make tokens`, fails here.
+  tokens:
+    name: Theme colour sets match tokens.json
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check the generated colour sets
+        run: make tokens-check
 
   # The 3D Vig (BRD-001) is Debug and Beta only. This builds Release with the model fetched into
   # the source folder, so the exclusion is tested against files that are really there, and fails
@@ -207,6 +223,9 @@ jobs:
             -only-testing:financeplanTests/AssistantTradesCardTests \
             -only-testing:financeplanTests/PortfolioCSVImportViewModelTests \
             -only-testing:financeplanTests/VigMotionTests \
+            -only-testing:financeplanTests/DisplayFontTests \
+            -only-testing:financeplanTests/VigilDesignSystemTests/testEveryThemeColorsetMatchesTokensExactly \
+            -only-testing:financeplanTests/VigilDesignSystemTests/testSpacingAndRadiusMatchTokens \
             -parallel-testing-enabled NO \
             -quiet
 

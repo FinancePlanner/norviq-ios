@@ -112,6 +112,13 @@
 	<string>appl_WhkrrqIARwWCJUrxETkxkzdZzni</string>
 	<key>SENTRY_DSN</key>
 	<string>https://a8b2cb36518b8be68b0b8f41d7095b05@o4510766840872960.ingest.de.sentry.io/4511577338282064</string>
+	<!-- Brygada 1918 SemiBold (OFL, financeplan/Resources/Fonts): the display
+	     face for page titles and the Home greeting only (TypographyStyle
+	     .displayTitle). -->
+	<key>UIAppFonts</key>
+	<array>
+		<string>Brygada1918-SemiBold.ttf</string>
+	</array>
 	<!-- The launch screen is this dictionary, NOT LaunchScreen.storyboard: that
 	     file is not referenced anywhere in project.pbxproj, so it never enters
 	     the build. An empty dict here rendered plain systemBackground; naming a

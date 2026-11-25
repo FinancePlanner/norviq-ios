@@ -207,7 +207,9 @@ struct StockDetailScreen: View {
                 VigilPageHeader(
                     watch: .wealth,
                     title: LocalizedStringKey(viewModel.details?.symbol ?? initialSymbol),
-                    subtitle: LocalizedStringKey(viewModel.companyProfile?.name ?? "")
+                    subtitle: LocalizedStringKey(viewModel.companyProfile?.name ?? ""),
+                    // A ticker is a symbol, not a title: SF, never the display serif.
+                    titleStyle: .title
                 )
 
                 StockDetailHeroCard(

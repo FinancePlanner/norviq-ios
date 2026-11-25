@@ -605,7 +605,7 @@
 				FACEBOOK_APP_ID = "";
 				FACEBOOK_CLIENT_TOKEN = "";
 				FACEBOOK_URL_SCHEME = "fb$(FACEBOOK_APP_ID:default=-unset-norviq)";
-				EXCLUDED_SOURCE_FILE_NAMES = "Vig3DView.swift VigMotion.swift Vig.usdz vig-motion.json vig-model.json vig-poster.png";
+				EXCLUDED_SOURCE_FILE_NAMES = "Vig3DView.swift VigMotion.swift Vig.usdz vig-motion.json vig-model.json vig-poster.png tokens.json";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Norviq;
