@@ -516,6 +516,163 @@ final class MarketBriefExportStudioModelTests: XCTestCase {
     XCTAssertEqual(service.fileCalls.count, 3)
     XCTAssertEqual(service.manifestCalls, 1, "the manifest in memory is reused")
   }
+
+  func testCancelStopsTheLoadAndLetsTheNextOpenLoadAgain() async throws {
+    let service = ExportServiceFake()
+    service.holdsManifest = true
+    service.manifests = [.success(manifest())]
+    service.files[.social] = [.success(png("norviq-MI-2026-11-25-O-social-en.png"))]
+    let model = try makeModel(service)
+
+    let first = Task { await model.load(.social) }
+    while service.manifestGate == nil { await Task.yield() }
+    // The studio closes while the manifest is in flight.
+    model.cancel()
+    XCTAssertEqual(model.state(for: .social), .idle)
+    service.releaseManifest()
+    await first.value
+
+    XCTAssertEqual(model.state(for: .social), .idle, "a cancelled load neither finishes nor falls back")
+    XCTAssertEqual(service.fileCalls, [])
+    XCTAssertFalse(FileManager.default.fileExists(atPath: root.appending(path: "native").path))
+
+    // The studio opens again on the same model.
+    await model.load(.social)
+
+    let ready = try ready(model.state(for: .social))
+    XCTAssertFalse(ready.isNativeFallback)
+    XCTAssertEqual(service.manifestCalls, 2, "the cancelled manifest is not awaited again")
+    XCTAssertEqual(service.fileCalls.count, 1)
+
+    model.cancel()
+    XCTAssertEqual(model.state(for: .social), .ready(ready), "closing keeps what already loaded")
+  }
+}
+
+@MainActor
+final class MarketBriefExportStudioTests: XCTestCase {
+  private func payload(language: String = "en") throws -> MarketBriefSharePayload {
+    let brief = MarketBriefResponse(
+      enabled: true,
+      tradingDate: "2026-11-25",
+      slot: .evening,
+      language: language,
+      greeting: nil,
+      groups: [],
+      items: [MarketBriefItem(kind: .story, text: "Banks lead the S&P 500 higher.", tickers: ["GS"], sourceUrl: nil)],
+      generatedAt: "2026-11-25T21:31:00Z",
+      degraded: false
+    )
+    return try XCTUnwrap(MarketBriefSharePayload(brief: brief))
+  }
+
+  private func ready(native: Bool = false) -> MarketBriefExportReady {
+    MarketBriefExportReady(
+      fileURL: URL(filePath: "/tmp/norviq-MI-2026-11-25-E-social-en.png"),
+      preview: nil,
+      pages: nil,
+      isNativeFallback: native
+    )
+  }
+
+  /// Records `market_brief_shared` properties.
+  private func recorder() -> (MarketBriefShareTelemetry, () -> [[String: String]]) {
+    var events: [[String: String]] = []
+    let telemetry = MarketBriefShareTelemetry { _, properties in
+      events.append(properties.compactMapValues { $0 as? String })
+    }
+    return (telemetry, { events })
+  }
+
+  func testStudioTabsExcludeOG() {
+    XCTAssertEqual(MarketBriefStudioTab.allCases.compactMap(\.format), [.social, .story, .pdf])
+  }
+
+  func testStudioSharesCountOnlyWhenCompleted() throws {
+    let payload = try payload()
+    let (telemetry, events) = recorder()
+    let share = MarketBriefStudioShare.file(ready(), format: .story, payload: payload)
+
+    share.finish(completed: false, telemetry: telemetry)
+    XCTAssertEqual(events(), [], "a cancelled share sheet is not a share")
+
+    share.finish(completed: true, telemetry: telemetry)
+    XCTAssertEqual(events().count, 1)
+    XCTAssertEqual(events().first?["channel"], "story")
+    XCTAssertEqual(events().first?["method"], "share")
+    XCTAssertEqual(events().first?["surface"], "studio")
+  }
+
+  func testStudioShareChannels() throws {
+    let payload = try payload(language: "pt-PT")
+
+    XCTAssertEqual(MarketBriefStudioShare.file(ready(), format: .social, payload: payload).channel, .social)
+    XCTAssertEqual(MarketBriefStudioShare.file(ready(), format: .pdf, payload: payload).channel, .pdf)
+    XCTAssertEqual(
+      MarketBriefStudioShare.file(ready(native: true), format: .social, payload: payload).channel,
+      .image,
+      "the native fallback card keeps the old image channel"
+    )
+    let link = MarketBriefStudioShare.link(payload)
+    XCTAssertEqual(link.channel, .link)
+    XCTAssertEqual(link.items.first as? String, payload.linkMessage)
+    let source = try XCTUnwrap(link.items.last as? LPLinkMetadataActivityItemSource)
+    XCTAssertEqual(source.item as? URL, payload.permalink(for: .link))
+
+    let file = MarketBriefStudioShare.file(ready(), format: .social, payload: payload)
+    let fileSource = try XCTUnwrap(file.items.first as? LPLinkMetadataActivityItemSource)
+    XCTAssertEqual(fileSource.item as? URL, ready().fileURL)
+    XCTAssertEqual(file.items.last as? String, payload.imageMessage)
+  }
+
+  func testCopyLinkIsCountedAsCopy() throws {
+    let payload = try payload()
+    let (telemetry, events) = recorder()
+
+    let text = MarketBriefStudioShare.copyLink(payload, telemetry: telemetry)
+
+    XCTAssertEqual(text, payload.permalink(for: .copyLink).absoluteString)
+    XCTAssertEqual(events(), [["channel": "copy_link", "method": "copy", "surface": "studio",
+                               "slot": "evening", "date": "2026-11-25", "lang": "en"]])
+  }
+
+  /// Every key the studio adds, plus the two existing keys it gives a pt-PT value.
+  private static let studioKeys = [
+    "Export…", "Export", "Social", "Story", "PDF", "Link", "Share…", "Try again",
+    "This export isn't available right now.", "Offline version", "%lld pages",
+    "Social image of this edition", "Story image of this edition", "First page of the PDF report",
+    "Share link…", "Copy link", "Link copied", "Done"
+  ]
+
+  func testStringsHavePortuguese() throws {
+    // The catalog is compiled into .strings files, so read the source next to the tests.
+    let catalogURL = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .appendingPathComponent("financeplan/Localizable.xcstrings")
+    let catalog = try XCTUnwrap(
+      JSONSerialization.jsonObject(with: Data(contentsOf: catalogURL)) as? [String: Any]
+    )
+    let strings = try XCTUnwrap(catalog["strings"] as? [String: Any])
+    for key in Self.studioKeys {
+      let localizations = (strings[key] as? [String: Any])?["localizations"] as? [String: Any]
+      let portuguese = try XCTUnwrap(localizations?["pt-PT"] as? [String: Any], "missing pt-PT for \(key)")
+      // A plain value, or one per plural form.
+      let units: [[String: Any]]
+      if let plural = (portuguese["variations"] as? [String: Any])?["plural"] as? [String: Any] {
+        XCTAssertNotNil(plural["one"], "missing pt-PT one for \(key)")
+        XCTAssertNotNil(plural["other"], "missing pt-PT other for \(key)")
+        units = plural.values.compactMap { ($0 as? [String: Any])?["stringUnit"] as? [String: Any] }
+      } else {
+        units = [portuguese["stringUnit"] as? [String: Any]].compactMap(\.self)
+      }
+      XCTAssertFalse(units.isEmpty, "missing pt-PT value for \(key)")
+      for unit in units {
+        XCTAssertEqual(unit["state"] as? String, "translated", "untranslated pt-PT for \(key)")
+        XCTAssertFalse((unit["value"] as? String ?? "").isEmpty, "empty pt-PT for \(key)")
+      }
+    }
+  }
 }
 
 /// Scripted responses, consumed in order; the last one repeats.

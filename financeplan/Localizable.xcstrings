@@ -21,6 +21,46 @@
         }
       }
     },
+    "%lld pages" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld page"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld pages"
+                }
+              }
+            }
+          }
+        },
+        "pt-PT" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld página"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld páginas"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld rows left out (options, shorts, dividends or fees)." : {
       "localizations" : {
         "pt-PT" : {
@@ -298,6 +338,38 @@
         }
       }
     },
+    "Export" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exportar"
+          }
+        }
+      }
+    },
+    "Export…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export…"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exportar…"
+          }
+        }
+      }
+    },
     "Fees" : {
       "localizations" : {
         "pt-PT" : {
@@ -314,6 +386,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "As comissões têm de ser um número ou ficar em branco."
+          }
+        }
+      }
+    },
+    "First page of the PDF report" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "First page of the PDF report"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Primeira página do relatório PDF"
           }
         }
       }
@@ -484,6 +572,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Não aplicado"
+          }
+        }
+      }
+    },
+    "Offline version" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offline version"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versão offline"
           }
         }
       }
@@ -1224,6 +1328,22 @@
         }
       }
     },
+    "Share…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share…"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partilhar…"
+          }
+        }
+      }
+    },
     "Show achievements to friends" : {
       "localizations" : {
         "en" : {
@@ -1282,12 +1402,76 @@
         }
       }
     },
+    "Social" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Social"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redes sociais"
+          }
+        }
+      }
+    },
+    "Social image of this edition" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Social image of this edition"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imagem para redes sociais desta edição"
+          }
+        }
+      }
+    },
     "Spaces and a decimal point do not go together here. Type it without the spaces." : {
       "localizations" : {
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aqui não pode usar espaços e um ponto decimal juntos. Escreva sem os espaços."
+          }
+        }
+      }
+    },
+    "Story" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Story"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Story"
+          }
+        }
+      }
+    },
+    "Story image of this edition" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Story image of this edition"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imagem vertical (story) desta edição"
           }
         }
       }
@@ -1334,6 +1518,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Este cartão expirou. Envie o ficheiro novamente."
+          }
+        }
+      }
+    },
+    "This export isn't available right now." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This export isn't available right now."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta exportação não está disponível de momento."
           }
         }
       }
@@ -14476,7 +14676,21 @@
     },
     "PDF" : {
       "comment" : "A label for a PDF format.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDF"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDF"
+          }
+        }
+      }
     },
     "Peer comparison" : {
       "comment" : "A heading for the peer comparison section.",
@@ -21643,7 +21857,20 @@
       }
     },
     "Try again" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try again"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tentar novamente"
+          }
+        }
+      }
     },
     "Try Again" : {
       "comment" : "A button that triggers a retry action.",

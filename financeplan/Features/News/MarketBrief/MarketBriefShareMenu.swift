@@ -1,10 +1,11 @@
+import Factory
 import StockPlanShared
 import SwiftUI
 
-/// The share button at the end of the brief header: the permalink or a
-/// rendered image through the share sheet, prefilled X / Reddit / WhatsApp
-/// posts, Discord markdown, or a copied link. Every action is counted as
-/// `market_brief_shared`.
+/// The share button at the end of the brief header: the permalink through the
+/// share sheet, the Export Studio, prefilled X / Reddit / WhatsApp posts,
+/// Discord markdown, or a copied link. Every action is counted as
+/// `market_brief_shared`; the studio counts its own.
 ///
 /// Actions are buttons rather than `ShareLink`s because a `ShareLink` inside a
 /// `Menu` gives no callback to count the share with.
@@ -15,8 +16,11 @@ struct MarketBriefShareMenu: View {
 
   @Environment(\.openURL) private var openURL
   @State private var shareSheet: ShareSheetRequest?
-  /// Rendered on first use and kept for this brief.
-  @State private var renderedImage: RenderedImage?
+  /// Kept after the sheet closes, so reopening it for the same brief shows
+  /// what already loaded instead of fetching again.
+  @State private var studio: StudioSession?
+  /// The presented studio; `.sheet(item:)` clears it on dismiss.
+  @State private var presentedStudio: StudioSession?
 
   var body: some View {
     Menu {
@@ -24,8 +28,8 @@ struct MarketBriefShareMenu: View {
         Button("Share link…", systemImage: "link") {
           share(.link)
         }
-        Button("Share image…", systemImage: "photo") {
-          share(.image)
+        Button("Export…", systemImage: "square.and.arrow.up.on.square") {
+          openStudio()
         }
       }
 
@@ -49,6 +53,21 @@ struct MarketBriefShareMenu: View {
       ShareSheet(items: request.items)
         .presentationDetents([.medium, .large])
     }
+    .sheet(item: $presentedStudio, onDismiss: { studio?.model.cancel() }) { session in
+      MarketBriefExportStudio(payload: payload, model: session.model, toast: $toast, telemetry: telemetry)
+    }
+  }
+
+  /// Reuses the studio for the same date, slot and language.
+  private func openStudio() {
+    let key = StudioKey(payload)
+    if studio?.key != key {
+      studio = StudioSession(
+        key: key,
+        model: MarketBriefExportStudioModel(payload: payload, service: Container.shared.marketBriefExportService())
+      )
+    }
+    presentedStudio = studio
   }
 
   private func channelButton(
@@ -76,15 +95,6 @@ struct MarketBriefShareMenu: View {
         payload.linkMessage,
         LPLinkMetadataActivityItemSource(title: payload.title, item: url)
       ])
-    case .image:
-      guard let image = cardImage() else {
-        toast = .error(String(localized: "Could not create the image."))
-        return
-      }
-      presentShareSheet([
-        LPLinkMetadataActivityItemSource(title: payload.title, item: image, icon: image),
-        payload.imageMessage
-      ])
     case .x:
       launcher.open(payload.xIntentURL, fallbackItems: [payload.xText])
     case .reddit:
@@ -96,26 +106,10 @@ struct MarketBriefShareMenu: View {
     case .copyLink:
       launcher.copyToPasteboard(payload.permalink(for: .copyLink).absoluteString)
       toast = .success(String(localized: "Link copied"))
-    case .social, .story, .pdf:
-      // Studio-only channels: the export studio shares these, not the card menu.
+    case .image, .social, .story, .pdf:
+      // The Export Studio shares and counts these; the menu never offers them.
       break
     }
-  }
-
-  /// Renders `MarketBriefShareCard` the first time an image is shared, and
-  /// again only when the brief changes. Drawing one card is a few tens of
-  /// milliseconds, so it happens on the tap rather than on every dashboard load.
-  private func cardImage() -> UIImage? {
-    if let renderedImage, renderedImage.payload == payload {
-      return renderedImage.image
-    }
-    let image = ChartExporter.exportToImage(
-      MarketBriefShareCard(payload: payload),
-      size: MarketBriefShareCard.size,
-      scale: 1
-    )
-    renderedImage = image.map { RenderedImage(payload: payload, image: $0) }
-    return image
   }
 
   private var launcher: ChannelShareLauncher {
@@ -135,8 +129,22 @@ struct MarketBriefShareMenu: View {
     let items: [Any]
   }
 
-  private struct RenderedImage {
-    let payload: MarketBriefSharePayload
-    let image: UIImage
+  private struct StudioSession: Identifiable {
+    let key: StudioKey
+    let model: MarketBriefExportStudioModel
+    var id: StudioKey { key }
+  }
+}
+
+/// One studio per brief: the same date, slot and language reuse it.
+private struct StudioKey: Hashable {
+  let tradingDate: String
+  let slot: MarketBriefSlot
+  let languageCode: String
+
+  init(_ payload: MarketBriefSharePayload) {
+    tradingDate = payload.tradingDate
+    slot = payload.slot
+    languageCode = payload.languageCode
   }
 }

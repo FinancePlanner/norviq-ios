@@ -61,6 +61,8 @@ final class MarketBriefExportStudioModel {
   @ObservationIgnored private let pause: @Sendable (Duration) async -> Void
   /// Shared by concurrent loads of different formats, so one manifest is fetched.
   @ObservationIgnored private var manifestTask: Task<MarketBriefExportManifest, any Error>?
+  /// The work behind each format's `.loading`, so `cancel()` can stop it.
+  @ObservationIgnored private var loads: [MarketBriefExportFormat: Task<Void, Never>] = [:]
 
   init(
     payload: MarketBriefSharePayload,
@@ -89,7 +91,31 @@ final class MarketBriefExportStudioModel {
     states[format] = .loading
     // The model owns the work, so a caller cancelled by a tab switch cannot
     // leave the format stuck in `.loading` with nothing left to finish it.
-    await Task { states[format] = await resolve(format) }.value
+    let task = Task {
+      let state = await resolve(format)
+      // Cancelled by `cancel()`: the format is already back to `.idle`, and may
+      // be loading again under a newer task.
+      guard !Task.isCancelled else { return }
+      states[format] = state
+    }
+    loads[format] = task
+    await task.value
+    if loads[format] == task { loads[format] = nil }
+  }
+
+  /// Stops every load in flight, for when the studio closes. Those formats go
+  /// back to `.idle`, so the next open loads them again; ready ones are kept.
+  func cancel() {
+    guard !loads.isEmpty else { return }
+    for (format, task) in loads {
+      task.cancel()
+      if state(for: format) == .loading { states[format] = .idle }
+    }
+    loads.removeAll()
+    // Awaiting a task does not wake on cancellation, so a reopened studio must
+    // not wait on this one: it fetches the manifest again instead.
+    manifestTask?.cancel()
+    manifestTask = nil
   }
 
   /// Loads again, including over a native fallback card.
@@ -117,6 +143,8 @@ final class MarketBriefExportStudioModel {
       if case let error as MarketBriefHTTPClient.Error = error, case .unauthorized = error {
         return .unauthorized(error.errorDescription ?? "")
       }
+      // Closed mid-load: no native card for a studio nobody is looking at.
+      if Task.isCancelled { return .idle }
       return await fallback(format)
     }
   }

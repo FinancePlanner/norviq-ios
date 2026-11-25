@@ -78,9 +78,16 @@ struct ShareableChartView<Content: View>: View {
 
 struct ShareSheet: UIViewControllerRepresentable {
   let items: [Any]
-  
+  /// Called when the sheet closes: `true` if an activity was carried out,
+  /// `false` if the person cancelled.
+  var completion: ((Bool) -> Void)?
+
   func makeUIViewController(context: Context) -> UIActivityViewController {
-    UIActivityViewController(activityItems: items, applicationActivities: nil)
+    let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+    if let completion {
+      controller.completionWithItemsHandler = { _, completed, _, _ in completion(completed) }
+    }
+    return controller
   }
   
   func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
