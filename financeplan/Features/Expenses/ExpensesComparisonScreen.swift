@@ -88,7 +88,7 @@ struct ExpensesComparisonScreen: View {
         }
         .vigilScreenBackground()
         .vigilNavigationTitle(LocalizedStringKey("Reports"))
-        .aiViewSummary(.reports)
+        .qScope(.reports)
         .vigilInlineNavigationBar()
         .toolbar {
           ToolbarItemGroup(placement: .topBarTrailing) {

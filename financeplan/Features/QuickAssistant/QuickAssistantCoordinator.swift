@@ -1,18 +1,27 @@
 import Foundation
 import Observation
 
-/// Opens and closes the Quick Q card from the floating button or any screen's AI
-/// button. The card and the floating button are mounted once, on `HomeScreen`.
+/// Opens and closes the Quick Q card from the Q entry point. The card is mounted
+/// once, on `HomeScreen`.
 @Observable @MainActor
 final class QuickAssistantCoordinator {
     private(set) var isPresented = false
     private(set) var scope: AIViewScope?
 
-    /// How many visible screens have their own controls where the button sits.
-    private var floatingButtonHiders = 0
+    /// How many visible screens have their own controls where Q sits.
+    private(set) var qHiders = 0
 
-    var showsFloatingButton: Bool {
-        !isPresented && floatingButtonHiders == 0
+    /// The screens on show that said what they are about, oldest first.
+    private var scopes: [(id: UUID, scope: AIViewScope)] = []
+
+    /// Below iOS 26, whether the floating Q button is drawn.
+    var showsQEntry: Bool {
+        !isPresented && qHiders == 0
+    }
+
+    /// What the newest screen still on show is about.
+    var currentScope: AIViewScope? {
+        scopes.last?.scope
     }
 
     private let allowsAI: @MainActor () -> Bool
@@ -36,8 +45,17 @@ final class QuickAssistantCoordinator {
         isPresented = false
     }
 
-    func setFloatingButtonHidden(_ hidden: Bool) {
-        floatingButtonHiders = max(0, floatingButtonHiders + (hidden ? 1 : -1))
+    func setQAccessoryHidden(_ hidden: Bool) {
+        qHiders = max(0, qHiders + (hidden ? 1 : -1))
+    }
+
+    func pushScope(_ scope: AIViewScope, id: UUID) {
+        scopes.append((id, scope))
+    }
+
+    /// By id, not from the top: a screen underneath can disappear first.
+    func popScope(id: UUID) {
+        scopes.removeAll { $0.id == id }
     }
 }
 

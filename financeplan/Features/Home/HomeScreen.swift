@@ -40,6 +40,8 @@ struct HomeScreen: View {
   @State private var isAchievementsPresented = false
   /// A Friends section a push asked for (`feed`), consumed by the Social tab.
   @State private var pendingSocialSection: String?
+  /// The AI summary a tap on Q opened.
+  @State private var summaryScope: AIViewScope?
 
   init(onLogout: @escaping () async -> Void) {
     self.onLogout = onLogout
@@ -59,6 +61,7 @@ struct HomeScreen: View {
       }
 
       tabView
+        .qAccessory(coordinator: quickAssistant, onTap: tapQ, onHold: holdQ)
     }
     .appAnimation(AppMotion.structural, value: billingManager.shouldShowTrialEndedBanner)
     .guidedSpotlight(step: guided?.activeStep, activeTab: guidedTab(for: selectedTab), onSkip: { guided?.skip() })
@@ -66,11 +69,10 @@ struct HomeScreen: View {
     .overlay {
       QuickAssistantOverlay(
         onOpenInQ: { openAssistant(conversationID: $0) },
-        onPaywall: { isPaywallPresented = true },
-        currentScope: assistantScope(for: selectedTab),
-        allowsFloatingButton: guided?.activeStep == nil
+        onPaywall: { isPaywallPresented = true }
       )
     }
+    .aiSummaryPresentation(scope: $summaryScope)
     .environment(guided)
     .environment(\.norviqReopenGuidedStart, guided.map { coordinator in
       {
@@ -146,6 +148,30 @@ struct HomeScreen: View {
     Container.shared.marketBriefRouter().open(ref)
   }
 
+  /// The screen on show, or failing that the tab.
+  private var currentQScope: AIViewScope? {
+    quickAssistant.currentScope ?? assistantScope(for: selectedTab)
+  }
+
+  /// A tap summarises what is on screen for anyone with summaries. Everyone
+  /// else, and a tab with nothing to summarise, gets the card.
+  ///
+  /// Server-driven rather than a raw `isPro` read, so summaries can be turned
+  /// off for a user without an App Store release. `isFeatureAvailable` already
+  /// falls back to `isPro` when the server says nothing.
+  private func tapQ() {
+    if billingManager.isFeatureAvailable("ai_insights"), let scope = currentQScope {
+      summaryScope = scope
+    } else {
+      quickAssistant.present(scope: currentQScope)
+    }
+  }
+
+  /// A hold always opens the card.
+  private func holdQ() {
+    quickAssistant.present(scope: currentQScope)
+  }
+
   private func assistantScope(for tab: HomeTab) -> AIViewScope? {
     switch tab {
     case .dashboard: .home
@@ -181,13 +207,13 @@ struct HomeScreen: View {
     TabView(selection: $selectedTab) {
       ForEach(HomeTab.primaryTabs(groupsEnabled: groupsEnabled).filter(isAvailable), id: \.self) { tab in
         Tab(tab.title, systemImage: tab.systemImage, value: tab) {
-          root(for: tab)
+          root(for: tab).qEntryPoint()
         }
         .badge(badge(for: tab))
       }
       ForEach(HomeTab.moreMenuTabs(groupsEnabled: groupsEnabled).filter(isAvailable), id: \.self) { tab in
         Tab(tab.title, systemImage: tab.systemImage, value: tab) {
-          root(for: tab)
+          root(for: tab).qEntryPoint()
         }
         .badge(badge(for: tab))
       }
@@ -297,7 +323,7 @@ struct HomeScreen: View {
 
   private var isSheetOrCardCovering: Bool {
     isSettingsPresented || isPaywallPresented || isCapturePresented || assistantLaunch != nil
-      || quickAssistant.isPresented
+      || quickAssistant.isPresented || summaryScope != nil
   }
 
   private func openAssistant(conversationID: String?) {

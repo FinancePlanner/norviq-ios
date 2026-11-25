@@ -79,7 +79,7 @@ struct EconomyHubScreen: View {
     .vigilListChrome()
     .vigilScreenBackground()
     .vigilNavigationTitle("Economy")
-    .aiViewSummary(.economy)
+    .qScope(.economy)
     .vigilInlineNavigationBar()
     .navigationDestination(for: EconomyHubSection.self) { section in
       switch section {

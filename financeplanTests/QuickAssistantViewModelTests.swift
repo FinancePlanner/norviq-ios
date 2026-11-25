@@ -512,30 +512,71 @@ final class QuickAssistantCoordinatorTests: XCTestCase {
         XCTAssertNil(coordinator.scope)
     }
 
-    func testFloatingButtonHidesWhileAnyScreenAsksAndReturnsAfterTheLast() async {
+    func testQHidesWhileAnyScreenAsksAndReturnsAfterTheLast() async {
         let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
-        XCTAssertTrue(coordinator.showsFloatingButton)
-        coordinator.setFloatingButtonHidden(true)
-        coordinator.setFloatingButtonHidden(true)
-        coordinator.setFloatingButtonHidden(false)
-        XCTAssertFalse(coordinator.showsFloatingButton)
-        coordinator.setFloatingButtonHidden(false)
-        XCTAssertTrue(coordinator.showsFloatingButton)
+        XCTAssertEqual(coordinator.qHiders, 0)
+        XCTAssertTrue(coordinator.showsQEntry)
+        coordinator.setQAccessoryHidden(true)
+        coordinator.setQAccessoryHidden(true)
+        XCTAssertEqual(coordinator.qHiders, 2)
+        coordinator.setQAccessoryHidden(false)
+        XCTAssertEqual(coordinator.qHiders, 1)
+        XCTAssertFalse(coordinator.showsQEntry)
+        coordinator.setQAccessoryHidden(false)
+        XCTAssertEqual(coordinator.qHiders, 0)
+        XCTAssertTrue(coordinator.showsQEntry)
     }
 
-    func testFloatingButtonHidesWhileTheCardIsUp() async {
+    func testQEntryHidesWhileTheCardIsUp() async {
         let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
         coordinator.present(scope: .home)
-        XCTAssertFalse(coordinator.showsFloatingButton)
+        XCTAssertFalse(coordinator.showsQEntry)
         coordinator.dismiss()
-        XCTAssertTrue(coordinator.showsFloatingButton)
+        XCTAssertTrue(coordinator.showsQEntry)
     }
 
-    func testAnExtraUnhideCannotLeaveTheButtonStuck() async {
+    func testAnExtraUnhideNeverTakesTheCountBelowZero() async {
         let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
-        coordinator.setFloatingButtonHidden(false)
-        coordinator.setFloatingButtonHidden(true)
-        XCTAssertFalse(coordinator.showsFloatingButton)
+        coordinator.setQAccessoryHidden(false)
+        XCTAssertEqual(coordinator.qHiders, 0)
+        coordinator.setQAccessoryHidden(true)
+        XCTAssertEqual(coordinator.qHiders, 1)
+        XCTAssertFalse(coordinator.showsQEntry)
+    }
+
+    func testPoppingTheTopScopeRevealsTheOneBelow() async {
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
+        let markets = UUID()
+        let economy = UUID()
+        XCTAssertNil(coordinator.currentScope)
+        coordinator.pushScope(.markets, id: markets)
+        coordinator.pushScope(.economy, id: economy)
+        XCTAssertEqual(coordinator.currentScope, .economy)
+        coordinator.popScope(id: economy)
+        XCTAssertEqual(coordinator.currentScope, .markets)
+        coordinator.popScope(id: markets)
+        XCTAssertNil(coordinator.currentScope)
+    }
+
+    /// A screen underneath can disappear first, for example when a tab switch
+    /// tears down a stack. Its scope goes; the one on top stays current.
+    func testPoppingAScopeBelowTheTopKeepsTheTop() async {
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
+        let markets = UUID()
+        let economy = UUID()
+        coordinator.pushScope(.markets, id: markets)
+        coordinator.pushScope(.economy, id: economy)
+        coordinator.popScope(id: markets)
+        XCTAssertEqual(coordinator.currentScope, .economy)
+        coordinator.popScope(id: economy)
+        XCTAssertNil(coordinator.currentScope)
+    }
+
+    func testPoppingAnUnknownScopeIsANoOp() async {
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
+        coordinator.pushScope(.markets, id: UUID())
+        coordinator.popScope(id: UUID())
+        XCTAssertEqual(coordinator.currentScope, .markets)
     }
 
     func testDismissCloses() async {

@@ -73,7 +73,7 @@ struct TaxDashboardScreen: View {
       }
       .vigilScreenBackground()
       .vigilNavigationTitle("Tax strategy")
-      .aiViewSummary(.tax)
+      .qScope(.tax)
       .vigilInlineNavigationBar()
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
