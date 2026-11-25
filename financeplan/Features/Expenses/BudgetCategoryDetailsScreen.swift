@@ -139,6 +139,7 @@ private struct BudgetCategoryCard: View {
           MetricTile("Goal", value: summary.targetAmount.currency)
           MetricTile("Planned", value: summary.plannedAmount.currency)
         }
+        .fixedSize(horizontal: false, vertical: true)
         
         HStack(spacing: 12) {
           MetricTile("Actual", value: summary.actualAmount.currency)
@@ -148,6 +149,7 @@ private struct BudgetCategoryCard: View {
             tone: leftAmount >= 0 ? .gain : .loss
           )
         }
+        .fixedSize(horizontal: false, vertical: true)
       }
       .padding(16)
     }
