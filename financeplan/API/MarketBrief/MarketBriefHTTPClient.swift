@@ -35,6 +35,14 @@ nonisolated struct MarketBriefHTTPClient: Sendable {
       }
     }
 
+    /// 404 (superseded edition), 500 and 503 (renderer busy) drive the studio's
+    /// retry and fallback, so they keep their code even when the body has a message.
+    static func makeStatus(_ code: Int, message: String?) -> Error {
+      if [404, 500, 503].contains(code) { return .invalidStatus(code) }
+      if let message, !message.isEmpty { return .api(message) }
+      return .invalidStatus(code)
+    }
+
     static func makeInvalidResponse() -> Error { .invalidResponse }
     static func makeInvalidStatus(_ code: Int) -> Error { .invalidStatus(code) }
     static func makeUnauthorized(_ message: String?) -> Error { .unauthorized(message) }
@@ -70,5 +78,51 @@ nonisolated struct MarketBriefHTTPClient: Sendable {
       UpdateMarketBriefNotificationsEndpoint(enabled: enabled, language: language),
       errorType: Error.self
     )
+  }
+
+  // MARK: Export Studio
+
+  func exports(lang: String, slot: MarketBriefSlot, date: String) async throws -> MarketBriefExportManifest {
+    try await client.call(GetMarketBriefExportsEndpoint(lang: lang, slot: slot, date: date), errorType: Error.self)
+  }
+
+  /// One attempt, no client-side retry: the studio owns the 503/500 and 404 policy.
+  func exportFile(
+    lang: String,
+    slot: MarketBriefSlot,
+    date: String,
+    format: MarketBriefExportFormat,
+    query: String
+  ) async throws -> MarketBriefExportFile {
+    let endpoint = GetMarketBriefExportFileEndpoint(lang: lang, slot: slot, date: date, format: format, query: query)
+    var request = try await client.makeURLRequest(for: endpoint)
+    request.timeoutInterval = GetMarketBriefExportFileEndpoint.timeout
+    let data: Data
+    let response: HTTPURLResponse
+    do {
+      (data, response) = try await client.sendRequestWithResponse(request, errorType: Error.self)
+    } catch {
+      throw client.makeError(from: error, to: Error.self)
+    }
+    let fileName = Self.fileName(from: response)
+      ?? "norviq-brief-\(date)-\(slot.rawValue)-\(format.rawValue)-\(lang).\(format.fileExtension)"
+    let mime = response.value(forHTTPHeaderField: "Content-Type")?
+      .split(separator: ";").first.map { $0.trimmingCharacters(in: .whitespaces) }
+      ?? format.mime
+    return MarketBriefExportFile(data: data, fileName: fileName, mime: mime)
+  }
+
+  /// `inline; filename="norviq-MI-2026-11-25-O-social-en.png"`. The name ends up in a
+  /// file path, so anything that is not a plain file name is rejected.
+  static func fileName(from response: HTTPURLResponse) -> String? {
+    guard let header = response.value(forHTTPHeaderField: "Content-Disposition"),
+          let match = header.range(of: #"filename="([^"]+)""#, options: .regularExpression)
+    else { return nil }
+    let name = String(header[match]).dropFirst("filename=\"".count).dropLast()
+    let value = String(name)
+    guard !value.isEmpty, value != ".", value != "..",
+          !value.contains("/"), !value.contains("\\")
+    else { return nil }
+    return value
   }
 }

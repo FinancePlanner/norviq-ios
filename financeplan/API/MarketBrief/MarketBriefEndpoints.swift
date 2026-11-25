@@ -57,3 +57,59 @@ nonisolated struct UpdateMarketBriefNotificationsEndpoint: Endpoint {
   var decoder: JSONDecoder { .stockPlanShared }
   func asParameters() throws -> Parameters { ["enabled": enabled, "language": language] }
 }
+
+// MARK: - Export Studio
+
+/// `GET /v1/market/brief/exports`: which renders exist for an edition, and the
+/// `rev`/`v` query that busts the cache for each.
+nonisolated struct GetMarketBriefExportsEndpoint: Endpoint {
+  typealias Response = MarketBriefExportManifest
+  let lang: String
+  let slot: MarketBriefSlot
+  /// Lisbon calendar date, `yyyy-MM-dd`.
+  let date: String
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/brief/exports" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    ["lang": lang, "slot": slot.rawValue, "date": date]
+  }
+}
+
+/// `GET /v1/market/brief/export`: one rendered file (PNG or PDF) as raw bytes.
+nonisolated struct GetMarketBriefExportFileEndpoint: Endpoint {
+  typealias Response = Data
+  /// The backend's fill timeout is 20 s, so a cold render needs more than the
+  /// URLSession default would always give a busy renderer.
+  static let timeout: TimeInterval = 30
+
+  let lang: String
+  let slot: MarketBriefSlot
+  let date: String
+  let format: MarketBriefExportFormat
+  /// The manifest's `query` for this format, e.g. `rev=2&v=1`.
+  let query: String
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/brief/export" }
+
+  /// `rev` and `v` come only from the manifest, and only in the exact shape
+  /// the backend wrote; anything else is dropped rather than forwarded.
+  static func revisionParameters(from query: String) -> [String: String] {
+    guard query.range(of: #"^rev=\d+&v=\d+$"#, options: .regularExpression) != nil else { return [:] }
+    var result: [String: String] = [:]
+    for pair in query.split(separator: "&") {
+      let parts = pair.split(separator: "=", maxSplits: 1)
+      if parts.count == 2 { result[String(parts[0])] = String(parts[1]) }
+    }
+    return result
+  }
+
+  func asParameters() throws -> Parameters {
+    var parameters: Parameters = ["lang": lang, "slot": slot.rawValue, "date": date, "format": format.rawValue]
+    for (key, value) in Self.revisionParameters(from: query) { parameters[key] = value }
+    return parameters
+  }
+}
