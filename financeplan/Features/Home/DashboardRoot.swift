@@ -238,7 +238,7 @@ struct DashboardRoot: View {
               ToolbarItem(placement: .topBarLeading) {
                 Button("Close", systemImage: "xmark") { isGoalPlanningPresented = false }
                   .labelStyle(.iconOnly)
-                  .accessibilityLabel("Close financial goals")
+                  .accessibilityLabel("Close goals")
               }
             }
         }

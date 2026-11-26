@@ -104,7 +104,10 @@ struct HomeScreen: View {
     }
     .onChange(of: guided?.requestedTab) { _, requested in
       guard let requested else { return }
-      selectedTab = AppTab(guided: requested)
+      let tab = AppTab(guided: requested)
+      // Like Show me around: a step on Today starts from its root.
+      if tab == .today { todayPath = NavigationPath() }
+      selectedTab = tab
     }
     // Keep the card's ticks current: a latch can flip on another device, or
     // in a flow no step was open for.

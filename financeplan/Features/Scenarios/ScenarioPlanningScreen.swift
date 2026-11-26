@@ -292,7 +292,7 @@ struct ScenarioPlanningScreen: View {
       }
     }
     .alert(
-      "Scenario planning",
+      "Scenarios",
       isPresented: Binding(
         get: { model.errorMessage != nil },
         set: { if !$0 { model.errorMessage = nil } }

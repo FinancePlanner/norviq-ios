@@ -31,14 +31,14 @@ nonisolated enum AppTab: Hashable, CaseIterable, Sendable {
 
 nonisolated extension AppTab {
   /// What a Pro tap on Q summarises when the screen on top sets no scope of
-  /// its own. More has nothing to summarise.
+  /// its own. Plan and More have no one thing to summarise, so Q opens the
+  /// card there; Tax sets its own scope.
   var assistantScope: AIViewScope? {
     switch self {
     case .today: .home
     case .money: .expenses
     case .wealth: .portfolio
-    case .plan: .tax
-    case .more: nil
+    case .plan, .more: nil
     }
   }
 

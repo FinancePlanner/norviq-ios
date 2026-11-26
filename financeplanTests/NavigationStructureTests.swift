@@ -70,8 +70,40 @@ final class NavigationStructureTests: XCTestCase {
     await Task.yield()
     XCTAssertFalse(try code("Features/GoalPlanning/GoalPlanningScreen.swift").contains("xmark"))
     XCTAssertTrue(
-      try code("Features/Home/DashboardRoot.swift").contains("Close financial goals"),
+      try code("Features/Home/DashboardRoot.swift").contains("Close goals"),
       "the full-screen cover still needs a way out")
+  }
+
+  /// §4.4: one name everywhere. Today's cards use the hub rows' names.
+  func testTodayCardsUseTheHubNames() async throws {
+    await Task.yield()
+    let cards = [
+      ("Features/GoalPlanning/GoalPlanningDashboardCard.swift", "\"Goals\"", "\"Financial goals\""),
+      ("Features/TerminalPositions/TerminalDashboardCard.swift", "\"Terminal sizing\"", "\"Terminal positions\""),
+      ("Features/Stocks/ChartBuilder/ChartBuilderDashboardCard.swift", "\"Chart builder\"", "\"Chart Builder\"")
+    ]
+    for (path, name, old) in cards {
+      let src = try code(path)
+      XCTAssertTrue(src.contains(name), "\(path) should say \(name)")
+      XCTAssertFalse(src.contains(old), "\(path) still says \(old)")
+    }
+  }
+
+  /// pt-PT values the review found wrong, read from the catalog itself.
+  func testPortugueseNamesInTheCatalog() throws {
+    let data = try Data(contentsOf: appRoot.appendingPathComponent("Localizable.xcstrings"))
+    let strings = try XCTUnwrap(
+      (try JSONSerialization.jsonObject(with: data) as? [String: Any])?["strings"] as? [String: Any])
+    func portuguese(_ key: String) -> String? {
+      let entry = strings[key] as? [String: Any]
+      let localizations = entry?["localizations"] as? [String: Any]
+      let unit = (localizations?["pt-PT"] as? [String: Any])?["stringUnit"] as? [String: Any]
+      return unit?["value"] as? String
+    }
+    XCTAssertEqual(portuguese("Pro"), "Pro")
+    XCTAssertEqual(portuguese("Close"), "Fechar")
+    XCTAssertEqual(portuguese("Close goals"), "Fechar objetivos")
+    XCTAssertEqual(portuguese("Crypto"), "Cripto")
   }
 
   func testCryptoNoLongerOpensSettings() async throws {

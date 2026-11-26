@@ -50,9 +50,10 @@ final class HomeNavigationTests: XCTestCase {
   }
 
   /// The tab's root scope is what a Pro tap summarises when the screen sets
-  /// none. More has nothing to summarise.
+  /// none. Plan and More have no one thing to summarise, so Q opens the card;
+  /// Tax sets its own `.qScope(.tax)`.
   func testEachTabSummarisesItsOwnScope() {
-    XCTAssertEqual(AppTab.allCases.map(\.assistantScope), [.home, .expenses, .portfolio, .tax, nil])
+    XCTAssertEqual(AppTab.allCases.map(\.assistantScope), [.home, .expenses, .portfolio, nil, nil])
   }
 
   func testGuidedStartTabsMapBothWays() {

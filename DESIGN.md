@@ -435,8 +435,9 @@ decision: a friend request tapped inside Groups replaces Groups with Friends, so
   accessory joins the safe area there, so a bottom action sits above it.
 - **Tap:** for anyone with summaries (`ai_insights`: Pro, unless the server says otherwise), a tap
   opens the AI summary of what is on screen, using the screen's `qScope` or, failing that, the
-  tab's. A free user gets the Quick Q card, and so does everyone on More's hub, which has nothing to
-  summarise. `QEntryRoute.resolve` holds these rules.
+  tab's. A free user gets the Quick Q card, and so does everyone on a Plan or More screen that sets
+  no scope: those tabs have no one thing to summarise (Tax sets its own). `QEntryRoute.resolve`
+  holds these rules.
 - **Hold:** always the card.
 - **While the card is open (accepted owner decision):** the accessory stays visible, dimmed behind
   the card's scrim, on iOS 26.1 and later too, where it could hide. Below 26 the floating button
