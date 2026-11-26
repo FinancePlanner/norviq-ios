@@ -602,6 +602,12 @@ final class PortfolioViewModel {
     }
   }
 
+  /// Handler for `.portfolioDataDidChange`: follows the portfolio the poster
+  /// named (an import from Settings), or just reloads when it named none.
+  func handlePortfolioDataChange(_ notification: Notification) async {
+    await reloadAfterImport(into: notification.importedPortfolioListId)
+  }
+
   func selectAllLists() async {
     guard !isShowingAllLists else { return }
     isShowingAllLists = true

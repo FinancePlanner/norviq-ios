@@ -28,10 +28,6 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
       try listConnectionsResult.get()
     }
 
-    func getConnection(provider: String) async throws -> BrokerConnectionResponse {
-      BrokerConnectionResponse(id: UUID().uuidString, provider: provider, status: "csv")
-    }
-
     func disconnectIBKR() async throws -> BrokerConnectionResponse {
       try disconnectResult.get()
     }
@@ -43,7 +39,15 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
       return try previewResult.get()
     }
 
-    func commitCsvImport(provider: String, portfolioListId: String?, csvData: Data) async throws -> CsvImportCommitResponse {
+    private(set) var commitConfirmMergeCalls: [Bool] = []
+
+    func commitCsvImport(
+      provider: String,
+      portfolioListId: String?,
+      csvData: Data,
+      confirmMergeExisting: Bool
+    ) async throws -> CsvImportCommitResponse {
+      commitConfirmMergeCalls.append(confirmMergeExisting)
       lastCommitProvider = provider
       lastCommitPortfolioListId = portfolioListId
       lastCommitPayload = csvData
@@ -101,9 +105,6 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
       portfolioListId: "list-1",
       lockedProvider: "generic"
     )
-    XCTAssertTrue(viewModel.isProviderLocked)
-    // Even if something moves the selection, the locked provider wins.
-    viewModel.selectedProvider = "ibkr"
 
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).csv")
     try "symbol,shares,buy_price,buy_date\nAAPL,1,1,2026-01-10\n".write(to: url, atomically: true, encoding: .utf8)
@@ -113,33 +114,6 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
 
     XCTAssertEqual(brokerService.lastPreviewProvider, "generic")
     XCTAssertEqual(brokerService.lastCommitProvider, "generic")
-  }
-
-  func testUnlockedProvider_StaysPickable() {
-    let viewModel = CsvImportFlowViewModel(brokerService: BrokerServiceMock())
-    XCTAssertFalse(viewModel.isProviderLocked)
-  }
-
-  func testDefaultProviderOptions_AreAvailableBeforeBackendLoad() async {
-    await Task.yield()
-    let viewModel = CsvImportFlowViewModel(brokerService: BrokerServiceMock())
-
-    XCTAssertEqual(viewModel.selectedProvider, "generic")
-    XCTAssertEqual(viewModel.availableProviders, ["generic", "ibkr", "trading212", "degiro", "revolut"])
-    XCTAssertFalse(viewModel.canImport)
-  }
-
-  func testLoadProviders_MergesBackendConnectionsWithFallbackProviders() async {
-    let brokerService = BrokerServiceMock()
-    brokerService.listConnectionsResult = .success([
-      BrokerConnectionResponse(id: "1", provider: "ibkr", status: "connected")
-    ])
-    let viewModel = CsvImportFlowViewModel(brokerService: brokerService)
-
-    await viewModel.loadProvidersIfNeeded()
-
-    XCTAssertEqual(viewModel.availableProviders, ["generic", "ibkr", "trading212", "degiro", "revolut"])
-    XCTAssertEqual(viewModel.selectedProvider, "generic")
   }
 
   func testCSVImportStateTransitions_SuccessFlow() async throws {
@@ -177,8 +151,6 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     let viewModel = CsvImportFlowViewModel(brokerService: brokerService, portfolioListId: "portfolio-1")
 
     await viewModel.loadProvidersIfNeeded()
-    XCTAssertEqual(viewModel.availableProviders, ["generic", "ibkr", "trading212", "degiro", "revolut"])
-    XCTAssertEqual(viewModel.selectedProvider, "generic")
 
     let fileURL = makeTempCSVFile(
       contents: "symbol,shares,buy_price,buy_date,notes\nAAPL,10,120,2026-01-10,core holding\n"
@@ -553,5 +525,80 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
   func testReplaceNote_DefaultsHaveNoNote() async throws {
     let notes = try await previewNotes([.init(line: 2, symbol: "AAPL")])
     XCTAssertEqual(notes, [nil])
+  }
+
+  // MARK: - Confirm merge (foreign collisions)
+
+  private func loadedViewModel(
+    items: [CsvImportPreviewItem],
+    commit: Result<CsvImportCommitResponse, Error>? = nil
+  ) async throws -> (CsvImportFlowViewModel, BrokerServiceMock) {
+    let brokerService = BrokerServiceMock()
+    brokerService.previewResult = .success(CsvImportPreviewResponse(provider: "generic", items: items, errors: []))
+    if let commit { brokerService.commitResult = commit }
+    let viewModel = CsvImportFlowViewModel(brokerService: brokerService, lockedProvider: "generic")
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).csv")
+    try "symbol,shares\nAAPL,1\n".write(to: url, atomically: true, encoding: .utf8)
+    defer { try? FileManager.default.removeItem(at: url) }
+    await viewModel.loadCSV(from: url)
+    return (viewModel, brokerService)
+  }
+
+  private let okCommit = CsvImportCommitResponse(
+    provider: "generic", inserted: [], updated: [], errors: [], importedLotsCount: 1
+  )
+
+  func testMergeToggle_OnlyForForeignCollisions() async throws {
+    let (own, _) = try await loadedViewModel(items: [
+      .init(line: 2, symbol: "AAPL", existingPositionKind: .imported, willReplaceExistingImport: true),
+      .init(line: 3, symbol: "TSLA"),
+    ])
+    XCTAssertEqual(own.conflictingSymbols, [])
+    XCTAssertFalse(own.showsReplaceToggle)
+
+    let (foreign, _) = try await loadedViewModel(items: [
+      .init(line: 2, symbol: "AAPL", existingPositionKind: .imported, willReplaceExistingImport: true),
+      .init(line: 3, symbol: "MSFT", existingPositionKind: .manual),
+    ])
+    XCTAssertEqual(foreign.conflictingSymbols, ["MSFT"])
+    XCTAssertTrue(foreign.showsReplaceToggle)
+    XCTAssertFalse(foreign.replaceExisting)
+  }
+
+  func testCommit_SendsConfirmMergeOnlyWhenToggleOn() async throws {
+    let (viewModel, service) = try await loadedViewModel(
+      items: [.init(line: 2, symbol: "MSFT", existingPositionKind: .manual)],
+      commit: .success(okCommit)
+    )
+    _ = await viewModel.commitImport()
+    viewModel.replaceExisting = true
+    _ = await viewModel.commitImport()
+    XCTAssertEqual(service.commitConfirmMergeCalls, [false, true])
+  }
+
+  func testConflict409_KeepsRowsAndTurnsToggleOn() async throws {
+    let (viewModel, service) = try await loadedViewModel(
+      items: [.init(line: 2, symbol: "AAPL")],
+      commit: .failure(BrokerHTTPClient.Error.conflict("These holdings already exist."))
+    )
+    XCTAssertFalse(viewModel.showsReplaceToggle)
+    let didImport = await viewModel.commitImport()
+    XCTAssertFalse(didImport)
+    XCTAssertEqual(viewModel.previewResponse?.items.count, 1)
+    XCTAssertTrue(viewModel.replaceExisting)
+    XCTAssertTrue(viewModel.showsReplaceToggle)
+    XCTAssertEqual(viewModel.errorMessage, "These holdings already exist.")
+
+    service.commitResult = .success(okCommit)
+    let retried = await viewModel.commitImport()
+    XCTAssertTrue(retried)
+    XCTAssertEqual(service.commitConfirmMergeCalls, [false, true])
+  }
+
+  func testUnknownExistingPositionKind_DecodesAndStillNotes() throws {
+    let json = Data(#"{"line":2,"symbol":"AAPL","existingPositionKind":"brokerage","willReplaceExistingImport":false}"#.utf8)
+    let item = try JSONDecoder().decode(CsvImportPreviewItem.self, from: json)
+    XCTAssertEqual(item.existingPositionKind, .unknown)
+    XCTAssertNotNil(CsvImportFlowViewModel(brokerService: BrokerServiceMock()).replaceNote(for: item))
   }
 }

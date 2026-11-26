@@ -6,8 +6,6 @@ import StockPlanShared
 @MainActor
 final class CsvImportFlowViewModel: ObservableObject {
   @Published private(set) var connections: [BrokerConnectionResponse] = []
-  @Published private(set) var providerOptions: [String] = CsvImportFlowViewModel.fallbackProviders
-  @Published var selectedProvider: String = "generic"
   @Published private(set) var selectedFileName: String?
   @Published private(set) var previewResponse: CsvImportPreviewResponse?
   @Published private(set) var commitResponse: CsvImportCommitResponse?
@@ -22,30 +20,42 @@ final class CsvImportFlowViewModel: ObservableObject {
   private let portfolioListId: String?
   private var csvData: Data?
   private var hasLoadedProviders = false
-  private static let fallbackProviders = ["generic", "ibkr", "trading212", "degiro", "revolut"]
 
   init(
     brokerService: any BrokerServicing = Container.shared.brokerService(),
     portfolioListId: String? = nil,
-    lockedProvider: String? = nil
+    lockedProvider: String = BrokerImportCatalog.csvProvider
   ) {
     self.brokerService = brokerService
     self.portfolioListId = portfolioListId
     self.lockedProvider = lockedProvider
-    if let lockedProvider { selectedProvider = lockedProvider }
   }
 
-  /// Set when the caller fixes the provider (the broker picker always uses
-  /// `generic`), so the user cannot relabel the import.
-  private let lockedProvider: String?
+  /// The provider preview and commit send. Always fixed by the caller (the
+  /// broker picker uses `generic`), so the user cannot relabel the import.
+  private let lockedProvider: String
+  private var effectiveProvider: String { lockedProvider }
 
-  var isProviderLocked: Bool { lockedProvider != nil }
+  /// Whether the user chose to replace holdings the import does not own.
+  /// Sent as `confirmMergeExisting`; without it the backend answers 409.
+  @Published var replaceExisting = false
 
-  /// What preview and commit send.
-  private var effectiveProvider: String { lockedProvider ?? selectedProvider }
+  /// Symbols already held from somewhere this import will not replace on its
+  /// own (typed by hand, or imported from another broker).
+  var conflictingSymbols: [String] {
+    var seen = Set<String>()
+    return (previewResponse?.items ?? [])
+      .filter { $0.existingPositionKind != .none && !$0.willReplaceExistingImport }
+      .map { $0.symbol.trimmingCharacters(in: .whitespaces).uppercased() }
+      .filter { seen.insert($0).inserted }
+  }
 
-  var availableProviders: [String] {
-    providerOptions
+  /// True once the backend refused a commit for a collision the preview did
+  /// not flag, so the toggle must be offered.
+  @Published private(set) var didHitMergeConflict = false
+
+  var showsReplaceToggle: Bool {
+    !conflictingSymbols.isEmpty || didHitMergeConflict
   }
 
   var canImport: Bool {
@@ -109,12 +119,10 @@ final class CsvImportFlowViewModel: ObservableObject {
     do {
       let connections = try await brokerService.listConnections()
       self.connections = connections
-      applyProviders(connections.map(\.provider))
       errorMessage = nil
     } catch {
       errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
       connections = []
-      applyProviders([])
     }
   }
 
@@ -134,6 +142,8 @@ final class CsvImportFlowViewModel: ObservableObject {
 
       csvData = Data(csvText.utf8)
       selectedFileName = url.lastPathComponent
+      replaceExisting = false
+      didHitMergeConflict = false
       previewResponse = nil
       commitResponse = nil
       errorMessage = nil
@@ -197,7 +207,8 @@ final class CsvImportFlowViewModel: ObservableObject {
       let response = try await brokerService.commitCsvImport(
         provider: effectiveProvider,
         portfolioListId: portfolioListId,
-        csvData: csvData
+        csvData: csvData,
+        confirmMergeExisting: replaceExisting
       )
       commitResponse = response
       let importedRowCount = response.inserted.count + response.updated.count + response.importedLotsCount
@@ -211,6 +222,12 @@ final class CsvImportFlowViewModel: ObservableObject {
       return true
     } catch {
       commitResponse = nil
+      // A 409 is the backend asking for confirmation: keep the preview rows,
+      // show the toggle on, and let the user retry.
+      if (error as? BrokerHTTPClient.Error)?.isConflict == true {
+        didHitMergeConflict = true
+        replaceExisting = true
+      }
       errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
       return false
     }
@@ -234,25 +251,6 @@ final class CsvImportFlowViewModel: ObservableObject {
       errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
       return false
     }
-  }
-
-  private func applyProviders(_ providers: [String]) {
-    let normalized = providers
-      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
-      .filter { !$0.isEmpty }
-
-    providerOptions = mergeProviders(with: normalized)
-    let currentSelection = selectedProvider.lowercased()
-    selectedProvider = providerOptions.contains(currentSelection) ? currentSelection : (providerOptions.first ?? "generic")
-  }
-
-  private func mergeProviders(with providers: [String]) -> [String] {
-    var merged = [String]()
-    (Self.fallbackProviders + providers).forEach { provider in
-      if merged.contains(provider) { return }
-      merged.append(provider)
-    }
-    return merged
   }
 }
 

@@ -12,17 +12,6 @@ nonisolated struct GetBrokersEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
-nonisolated struct GetBrokerEndpoint: Endpoint {
-  typealias Response = BrokerConnectionResponse
-  let provider: String
-
-  var method: HTTPMethod { .get }
-  var path: String { "/v1/brokers/\(provider)" }
-  var decoder: JSONDecoder { .stockPlanShared }
-
-  func asParameters() throws -> Parameters { [:] }
-}
-
 nonisolated struct DisconnectIBKREndpoint: Endpoint {
   typealias Response = BrokerConnectionResponse
 

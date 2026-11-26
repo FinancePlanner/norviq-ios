@@ -333,8 +333,8 @@ struct PortfolioScreen: View {
       await reloadPortfolio(force: true)
       await viewModel.loadPerformance(performanceKey)
     }
-    .onReceive(NotificationCenter.default.publisher(for: .portfolioDataDidChange)) { _ in
-      Task { await reloadPortfolio(force: true) }
+    .onReceive(NotificationCenter.default.publisher(for: .portfolioDataDidChange)) { notification in
+      Task { await viewModel.handlePortfolioDataChange(notification) }
     }
     .onChange(of: pendingOpenSymbol) { _, _ in
       consumePendingOpenSymbolIfNeeded()

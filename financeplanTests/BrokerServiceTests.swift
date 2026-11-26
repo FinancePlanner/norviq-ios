@@ -162,6 +162,50 @@ final class BrokerServiceTests: XCTestCase {
     XCTAssertEqual(response, expected)
   }
 
+  func testCommitCsvImport_ConfirmMergeQueryOnlyWhenTrue() async throws {
+    let session = SessionMock()
+    let client = BrokerHTTPClient(
+      baseURL: URL(string: "https://api.example.com")!,
+      session: session,
+      authTokenProvider: { "token-123" }
+    )
+    let body = try JSONEncoder().encode(
+      CsvImportCommitResponse(provider: "generic", inserted: [], updated: [], errors: [])
+    )
+    final class Seen: @unchecked Sendable { var values: [String?] = [] }
+    let seen = Seen()
+    session.handler = { request in
+      let items = URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)?.queryItems
+      seen.values.append(items?.first(where: { $0.name == "confirmMergeExisting" })?.value)
+      let response = try XCTUnwrap(HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil))
+      return (body, response)
+    }
+    let csv = Data("symbol\nAAPL".utf8)
+    _ = try await client.commitCsvImport(provider: "generic", portfolioListId: nil, csvData: csv, confirmMergeExisting: false)
+    _ = try await client.commitCsvImport(provider: "generic", portfolioListId: nil, csvData: csv, confirmMergeExisting: true)
+    XCTAssertEqual(seen.values, [nil, "true"])
+  }
+
+  func testCommitCsvImport_409SurfacesAsConflict() async throws {
+    let session = SessionMock()
+    let client = BrokerHTTPClient(
+      baseURL: URL(string: "https://api.example.com")!,
+      session: session,
+      authTokenProvider: { "token-123" }
+    )
+    session.handler = { request in
+      let response = try XCTUnwrap(HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 409, httpVersion: nil, headerFields: nil))
+      return (Data(#"{"message":"Confirm the import to replace them."}"#.utf8), response)
+    }
+    do {
+      _ = try await client.commitCsvImport(provider: "generic", portfolioListId: nil, csvData: Data(), confirmMergeExisting: false)
+      XCTFail("expected a conflict")
+    } catch let error as BrokerHTTPClient.Error {
+      XCTAssertEqual(error.statusCode, 409)
+      XCTAssertTrue(error.isConflict)
+    }
+  }
+
   func testPreviewCsvImport_DecodesEnvelopedResponse() async throws {
     let session = SessionMock()
     let client = BrokerHTTPClient(

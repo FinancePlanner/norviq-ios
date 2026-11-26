@@ -77,8 +77,13 @@ struct IntegrationsView: View {
   /// already reload on.
   @ViewBuilder
   private var brokerImportDestination: some View {
-    BrokerImportSheet(portfolioListId: nil) { _ in
-      NotificationCenter.default.post(name: .portfolioDataDidChange, object: nil)
+    BrokerImportSheet(portfolioListId: nil) { importedInto in
+      // Name the target list so the Portfolio screen follows it.
+      NotificationCenter.default.post(
+        name: .portfolioDataDidChange,
+        object: nil,
+        userInfo: importedInto.map { [Notification.portfolioListIdKey: $0] }
+      )
     }
   }
 

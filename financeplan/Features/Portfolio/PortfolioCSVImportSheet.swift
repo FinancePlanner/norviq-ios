@@ -14,7 +14,7 @@ struct PortfolioCSVImportSheet: View {
 
   init(
     portfolioListId: String?,
-    lockedProvider: String? = nil,
+    lockedProvider: String,
     onImportCompleted: @escaping @MainActor () async -> Void
   ) {
     _viewModel = StateObject(
@@ -26,10 +26,6 @@ struct PortfolioCSVImportSheet: View {
   var body: some View {
     NavigationStack {
       List {
-        if !viewModel.isProviderLocked {
-          csvProviderSection
-        }
-
         Section {
           CSVImportFormatHint()
         }
@@ -87,6 +83,10 @@ struct PortfolioCSVImportSheet: View {
               }
             }
           }
+        }
+
+        if viewModel.showsReplaceToggle {
+          mergeConfirmationSection
         }
 
         if let preview = viewModel.previewResponse, !preview.errors.isEmpty {
@@ -178,35 +178,31 @@ struct PortfolioCSVImportSheet: View {
           viewModel.errorMessage = "Failed to read CSV: \(error.localizedDescription)"
         }
       }
-      .task {
-        await prepareSheet()
-      }
-      .onChange(of: viewModel.selectedProvider) { _, _ in
-        refreshPreviewIfNeeded()
-      }
     }
   }
 
-  private var csvProviderSection: some View {
-    Section("CSV Provider") {
-      Picker("Provider", selection: $viewModel.selectedProvider) {
-        ForEach(viewModel.availableProviders, id: \.self) { provider in
-          Text(provider.uppercased()).tag(provider)
-        }
+  /// Same wording as the screenshot import: importing over a holding the user
+  /// added by hand replaces it, so it is named before it happens.
+  private var mergeConfirmationSection: some View {
+    Section {
+      Toggle(isOn: $viewModel.replaceExisting) {
+        Text("Replace positions I already hold")
       }
-      .pickerStyle(.menu)
-      .disabled(viewModel.isLoadingProviders)
-    }
-  }
-
-  private func prepareSheet() async {
-    await viewModel.loadProvidersIfNeeded()
-  }
-
-  private func refreshPreviewIfNeeded() {
-    guard viewModel.previewResponse != nil else { return }
-    Task {
-      await viewModel.previewCSV()
+      .accessibilityIdentifier("portfolioCSVImport.replaceExisting")
+    } header: {
+      Text("Already in your portfolio")
+    } footer: {
+      if viewModel.conflictingSymbols.isEmpty {
+        Text("Some of these holdings already exist and were not created by this import. Turning this on replaces them with the imported ones. Leave it off and the import stops instead of listing the same symbol twice.")
+      } else {
+        Text(
+          """
+          You already hold \(viewModel.conflictingSymbols.joined(separator: ", ")) from \
+          outside this import. Turning this on replaces those positions with the imported \
+          ones. Leave it off and the import stops instead of listing the same symbol twice.
+          """
+        )
+      }
     }
   }
 }

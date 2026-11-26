@@ -69,6 +69,39 @@ final class PortfolioViewModelTests: XCTestCase {
     XCTAssertEqual(service.fetchPortfolioCalls, 2)
   }
 
+  func testDataChangeNotificationWithListIdFollowsThatList() async {
+    let service = MockStockService()
+    service.fetchPortfolioListsResult = .success([
+      PortfolioListDTOResponse(id: "a", name: "A", isDefault: true, createdAt: nil, updatedAt: nil),
+      PortfolioListDTOResponse(id: "b", name: "B", isDefault: false, createdAt: nil, updatedAt: nil)
+    ])
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
+    await viewModel.load()
+
+    let note = Notification(
+      name: .portfolioDataDidChange,
+      userInfo: [Notification.portfolioListIdKey: "b"]
+    )
+    XCTAssertEqual(note.importedPortfolioListId, "b")
+    await viewModel.handlePortfolioDataChange(note)
+
+    XCTAssertEqual(viewModel.selectedPortfolioListId, "b")
+  }
+
+  func testDataChangeNotificationWithoutListIdJustReloads() async {
+    let service = MockStockService()
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
+    await viewModel.load()
+    let selected = viewModel.selectedPortfolioListId
+    let note = Notification(name: .portfolioDataDidChange)
+    XCTAssertNil(note.importedPortfolioListId)
+
+    await viewModel.handlePortfolioDataChange(note)
+
+    XCTAssertEqual(viewModel.selectedPortfolioListId, selected)
+    XCTAssertEqual(service.fetchPortfolioCalls, 2)
+  }
+
   func testImportIntoTheShownPortfolioJustReloads() async {
     let service = MockStockService()
     let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())

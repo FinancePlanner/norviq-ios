@@ -4,10 +4,14 @@ import Factory
 
 protocol BrokerServicing: Sendable {
   func listConnections() async throws -> [BrokerConnectionResponse]
-  func getConnection(provider: String) async throws -> BrokerConnectionResponse
   func disconnectIBKR() async throws -> BrokerConnectionResponse
   func previewCsvImport(provider: String, portfolioListId: String?, csvData: Data) async throws -> CsvImportPreviewResponse
-  func commitCsvImport(provider: String, portfolioListId: String?, csvData: Data) async throws -> CsvImportCommitResponse
+  func commitCsvImport(
+    provider: String,
+    portfolioListId: String?,
+    csvData: Data,
+    confirmMergeExisting: Bool
+  ) async throws -> CsvImportCommitResponse
   func previewScreenshotImport(
     provider: String,
     portfolioListId: String?,
@@ -34,12 +38,6 @@ struct BrokerService: BrokerServicing {
   func listConnections() async throws -> [BrokerConnectionResponse] {
     try await performAuthenticated { client in
       try await client.getBrokers()
-    }
-  }
-
-  func getConnection(provider: String) async throws -> BrokerConnectionResponse {
-    try await performAuthenticated { client in
-      try await client.getBroker(provider: provider)
     }
   }
 
@@ -86,13 +84,15 @@ struct BrokerService: BrokerServicing {
   func commitCsvImport(
     provider: String,
     portfolioListId: String?,
-    csvData: Data
+    csvData: Data,
+    confirmMergeExisting: Bool = false
   ) async throws -> CsvImportCommitResponse {
     try await performAuthenticated { client in
       try await client.commitCsvImport(
         provider: provider,
         portfolioListId: portfolioListId,
-        csvData: csvData
+        csvData: csvData,
+        confirmMergeExisting: confirmMergeExisting
       )
     }
   }
