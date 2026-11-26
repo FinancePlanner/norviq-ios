@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 
 /// Something that asks the shell to go somewhere: a deep link, a push, a card.
 nonisolated enum NavigationRequest: Equatable, Sendable {
@@ -55,5 +55,20 @@ nonisolated enum NavigationResolver {
     case .settings:
       NavigationTarget(tab: .more, path: [.settings])
     }
+  }
+}
+
+nonisolated extension NavigationTarget {
+  /// The tab's path once this target lands on it, `current` being what is
+  /// open there now. Whatever else is open is replaced, but a tab already on
+  /// the target keeps what sits above it: Groups and Friends take their
+  /// pending link from there, and Groups moves its own part of the path.
+  /// Replacing it would pop the open group mid-link.
+  func path(replacing current: NavigationPath) -> NavigationPath {
+    let landing = NavigationPath(path)
+    guard !path.isEmpty, current.count >= path.count else { return landing }
+    var base = current
+    base.removeLast(current.count - path.count)
+    return base == landing ? current : landing
   }
 }

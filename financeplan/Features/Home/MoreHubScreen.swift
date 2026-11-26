@@ -56,12 +56,7 @@ struct MoreHubScreen: View {
       path.append(AppDestination.settings)
     } label: {
       HStack(spacing: AppTheme.Spacing.md) {
-        Text(verbatim: account.initial)
-          .font(.headline)
-          .foregroundStyle(AppTheme.Colors.tint)
-          .frame(width: 44, height: 44)
-          .background(AppTheme.Colors.tintSoft, in: Circle())
-          .accessibilityHidden(true)
+        AccountAvatar(initial: account.initial, size: 44)
         VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
           Group {
             if let name = account.name {
@@ -155,6 +150,22 @@ struct HubRowButton: View {
     }
     .accessibilityHint(isLocked ? Text("Opens the Pro upgrade") : Text(verbatim: ""))
     .accessibilityIdentifier("hub.row.\(row.id)")
+  }
+}
+
+/// The signed-in user's initial in a circle: More's account row, and the
+/// button on Today that opens Settings.
+struct AccountAvatar: View {
+  let initial: String
+  let size: CGFloat
+
+  var body: some View {
+    Text(verbatim: initial)
+      .font(size < 44 ? .subheadline.weight(.semibold) : .headline)
+      .foregroundStyle(AppTheme.Colors.tint)
+      .frame(width: size, height: size)
+      .background(AppTheme.Colors.tintSoft, in: Circle())
+      .accessibilityHidden(true)
   }
 }
 

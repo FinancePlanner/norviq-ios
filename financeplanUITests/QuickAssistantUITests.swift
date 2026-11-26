@@ -99,20 +99,31 @@ final class QuickAssistantUITests: XCTestCase {
         let app = launch(billingTier: "free")
         _ = qEntry(app)
         let tabBar = app.tabBars.firstMatch
-        // The third slot is Groups with groups on, Friends otherwise, and is
-        // left out while the server has not turned social on, as with no
-        // server. The More tabs that then move into the bar are not tapped.
-        let third = ["Groups", "Friends"].filter { tabBar.buttons[$0].exists }
         let button = app.buttons["q.entry"]
-        for tab in ["Portfolio"] + third + ["Expenses", "Home"] {
+        for tab in ["Money", "Wealth", "Plan", "More", "Today"] {
             tabBar.buttons[tab].tap()
             XCTAssertTrue(button.waitForExistence(timeout: 3), "Q missing on \(tab)")
-            XCTAssertLessThanOrEqual(button.frame.maxY, tabBar.frame.minY, "Q overlaps the tab bar on \(tab)")
+            let frame = settledFrame(of: button)
+            XCTAssertLessThanOrEqual(frame.maxY, tabBar.frame.minY, "Q overlaps the tab bar on \(tab)")
             if #unavailable(iOS 26) {
-                XCTAssertGreaterThan(button.frame.maxY, tabBar.frame.minY - 40, "Q drifted up from the tab bar on \(tab)")
-                XCTAssertGreaterThan(button.frame.maxX, app.frame.maxX - 40, "Q left the trailing edge on \(tab)")
+                XCTAssertGreaterThan(frame.maxY, tabBar.frame.minY - 40, "Q drifted up from the tab bar on \(tab)")
+                XCTAssertGreaterThan(frame.maxX, app.frame.maxX - 40, "Q left the trailing edge on \(tab)")
             }
         }
+    }
+
+    /// Right after a tab switch the accessory can report an infinite frame
+    /// for a moment while it is drawn in place, so a frame is read once it
+    /// is a real one.
+    @MainActor
+    private func settledFrame(of element: XCUIElement) -> CGRect {
+        let deadline = Date().addingTimeInterval(3)
+        var frame = element.frame
+        while !frame.maxY.isFinite, Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+            frame = element.frame
+        }
+        return frame
     }
 
     /// The floating button below iOS 26. The accessory is part of the tab bar
@@ -160,7 +171,7 @@ final class QuickAssistantUITests: XCTestCase {
         let app = launch(billingTier: "free")
         let button = qEntry(app)
 
-        app.tabBars.firstMatch.buttons["Portfolio"].tap()
+        app.tabBars.firstMatch.buttons["Wealth"].tap()
         app.buttons["Manage portfolios"].firstMatch.tap()
         let portfolio = app.staticTexts[StubAPIServer.portfolioName].firstMatch
         XCTAssertTrue(portfolio.waitForExistence(timeout: 10), "The stub's portfolio is not listed")
