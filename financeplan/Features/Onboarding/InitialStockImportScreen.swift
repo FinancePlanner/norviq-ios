@@ -18,7 +18,7 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
   var subtitle: String {
     switch self {
     case .broker:
-      return String(localized: "Screenshots or a CSV file from IBKR, DEGIRO, Trading 212, Revolut and more.")
+      return String(localized: "Screenshots from IBKR, DEGIRO, Trading 212 or Revolut, or a CSV file from any other broker.")
     case .manual:
       return String(localized: "Type in your holdings one position at a time.")
     }
@@ -278,9 +278,10 @@ struct InitialStockImportScreen: View {
 
   private var buttonTitle: String {
     guard let selectedMethod else {
-      return "Select a Method"
+      return String(localized: "Select a Method")
     }
-    return "Continue with \(selectedMethod.title)"
+    // The method's own title: "Continue with Import from broker" reads wrong.
+    return selectedMethod.title
   }
 
   // MARK: - Helpers

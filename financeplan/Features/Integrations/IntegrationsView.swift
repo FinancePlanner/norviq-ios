@@ -101,8 +101,15 @@ struct IntegrationsView: View {
           statusBadge(badge)
         }
       }
-      if let lastSynced = viewModel.ibkrConnection?.lastSyncedAt {
+      // Only a live connection has a sync worth reporting; a retired or
+      // disconnected row would show a stale date as if it still mattered.
+      if viewModel.canDisconnectIBKR, let lastSynced = viewModel.ibkrConnection?.lastSyncedAt {
         Text("Last synced \(lastSynced.formatted(.relative(presentation: .named)))")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+      if let detail = viewModel.ibkrErrorDetail {
+        Text(verbatim: detail)
           .font(.caption)
           .foregroundStyle(.secondary)
       }

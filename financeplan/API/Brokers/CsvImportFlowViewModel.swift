@@ -88,6 +88,13 @@ final class CsvImportFlowViewModel: ObservableObject {
     }
   }
 
+  /// The connection's own explanation, shown under an `error` row.
+  var ibkrErrorDetail: String? {
+    guard ibkrConnection?.status.lowercased() == "error" else { return nil }
+    let detail = ibkrConnection?.statusDetail?.trimmingCharacters(in: .whitespacesAndNewlines)
+    return (detail?.isEmpty == false) ? detail : nil
+  }
+
   /// Disconnect only makes sense while there is something live to remove.
   var canDisconnectIBKR: Bool {
     guard let status = ibkrConnection?.status.lowercased() else { return false }

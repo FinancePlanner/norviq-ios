@@ -32,6 +32,13 @@ nonisolated struct BrokerGuide: Equatable, Identifiable, Sendable {
   let id: String
   let name: String
   let methods: [ImportMethod]
+
+  /// What the picker shows. Named brokers are proper nouns and stay verbatim;
+  /// only `other` is prose, so only it is localized. `name` stays the stable
+  /// English catalogue value.
+  var displayName: String {
+    id == "other" ? String(localized: "Other broker (CSV)") : name
+  }
 }
 
 /// The broker catalogue and its copy. Same ids, names, order, methods and

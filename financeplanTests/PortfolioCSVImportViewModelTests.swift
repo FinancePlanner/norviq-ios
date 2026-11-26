@@ -601,4 +601,22 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     XCTAssertEqual(item.existingPositionKind, .unknown)
     XCTAssertNotNil(CsvImportFlowViewModel(brokerService: BrokerServiceMock()).replaceNote(for: item))
   }
+
+  func testIBKRErrorDetail_OnlyForErrorStatus() async {
+    func detail(status: String, statusDetail: String?) async -> String? {
+      let service = BrokerServiceMock()
+      service.listConnectionsResult = .success([
+        BrokerConnectionResponse(id: "1", provider: "ibkr", status: status, statusDetail: statusDetail)
+      ])
+      let viewModel = CsvImportFlowViewModel(brokerService: service)
+      await viewModel.loadProviders(force: true)
+      return viewModel.ibkrErrorDetail
+    }
+    let errorDetail = await detail(status: "error", statusDetail: "Token expired")
+    let disconnectedDetail = await detail(status: "disconnected", statusDetail: "Replaced by IBKR statement import.")
+    let blankDetail = await detail(status: "error", statusDetail: "  ")
+    XCTAssertEqual(errorDetail, "Token expired")
+    XCTAssertNil(disconnectedDetail)
+    XCTAssertNil(blankDetail)
+  }
 }

@@ -27,6 +27,14 @@ final class BrokerImportCatalogTests: XCTestCase {
     XCTAssertEqual(other?.methods, [.csv, .screenshot, .askQ])
   }
 
+  func testDisplayNameKeepsNamedBrokersVerbatim() {
+    for broker in BrokerImportCatalog.brokers where broker.id != "other" {
+      XCTAssertEqual(broker.displayName, broker.name)
+    }
+    // Under the en test locale the localized form equals the catalogue name.
+    XCTAssertEqual(BrokerImportCatalog.brokers.first { $0.id == "other" }?.displayName, "Other broker (CSV)")
+  }
+
   func testMethodLabels() {
     XCTAssertEqual(ImportMethod.screenshot.label, "Screenshots")
     XCTAssertEqual(ImportMethod.askQ.label, "Ask Q")

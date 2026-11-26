@@ -33,7 +33,7 @@ struct TaxMarketAdmissionSheet: View {
         }
         Section("Investment instruments") {
           if instruments.isEmpty {
-            ContentUnavailableView("No instruments", systemImage: "building.columns", description: Text("Sync a brokerage account before classifying markets."))
+            ContentUnavailableView("No instruments", systemImage: "building.columns", description: Text("Import holdings from your broker before classifying markets."))
           }
           ForEach(instruments) { instrument in
             VStack(alignment: .leading, spacing: 8) {

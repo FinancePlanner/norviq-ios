@@ -97,12 +97,13 @@ struct BrokerImportSheet: View {
           viewModel.selectedBrokerId = broker.id
         } label: {
           HStack {
-            Text(verbatim: broker.name)
+            Text(verbatim: broker.displayName)
               .foregroundStyle(.primary)
             Spacer()
             if broker.id == viewModel.selectedBroker.id {
               Image(systemName: "checkmark")
                 .foregroundStyle(AppTheme.Colors.tint)
+                .accessibilityHidden(true)
             }
           }
           .contentShape(Rectangle())
