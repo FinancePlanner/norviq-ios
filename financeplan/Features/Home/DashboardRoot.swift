@@ -211,6 +211,13 @@ struct DashboardRoot: View {
       .fullScreenCover(isPresented: $isGoalPlanningPresented) {
         NavigationStack {
           GoalPlanningScreen()
+            .toolbar {
+              ToolbarItem(placement: .topBarLeading) {
+                Button("Close", systemImage: "xmark") { isGoalPlanningPresented = false }
+                  .labelStyle(.iconOnly)
+                  .accessibilityLabel("Close financial goals")
+              }
+            }
         }
         // Anchors do not leave a presentation, so the cover spotlights its own.
         .guidedSpotlight(step: guided?.activeStep, activeTab: .goalPlanning, onSkip: { guided?.skip() })

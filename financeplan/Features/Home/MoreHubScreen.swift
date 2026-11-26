@@ -7,6 +7,10 @@ import SwiftUI
 /// hence a `NavigationPath`.
 struct MoreHubScreen: View {
   @Binding var path: NavigationPath
+  /// An invite link that opened the app, for Friends once it is pushed.
+  @Binding var pendingInviteCode: String?
+  /// A Friends section a push asked for (`feed`), consumed by Friends.
+  @Binding var pendingSocialSection: String?
   /// A row that leaves More, such as Market brief, which lives on Today.
   let onSelectTab: (AppTab, NavigationRequest) -> Void
   @InjectedObservable(\Container.billingManager) private var billingManager
@@ -31,7 +35,10 @@ struct MoreHubScreen: View {
       }
       .vigilListChrome()
       .navigationTitle(Text(AppTab.more.title))
-      .navigationDestination(for: AppDestination.self) { destinationView($0) }
+      .navigationDestination(for: AppDestination.self) {
+        destinationView(
+          $0, path: $path, pendingInviteCode: $pendingInviteCode, pendingSocialSection: $pendingSocialSection)
+      }
       // Forced, so a name changed in Settings shows on the way back.
       .task { await profile.load(force: true) }
       .sheet(isPresented: $isPaywallPresented) {

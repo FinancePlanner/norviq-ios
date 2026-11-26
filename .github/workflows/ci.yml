@@ -218,6 +218,7 @@ jobs:
             -only-testing:financeplanTests/QEntryPointTests \
             -only-testing:financeplanTests/NavigationResolverTests \
             -only-testing:financeplanTests/MoreHubModelTests \
+            -only-testing:financeplanTests/NavigationStructureTests \
             -only-testing:financeplanTests/QuickAssistantTapGateTests \
             -only-testing:financeplanTests/QuickAssistantStreamTests \
             -only-testing:financeplanTests/QuickAssistantVoiceTests \

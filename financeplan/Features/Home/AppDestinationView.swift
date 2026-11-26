@@ -4,8 +4,18 @@ import SwiftUI
 /// The screen each `AppDestination` pushes, per the destination table's iOS
 /// column. Registered on every hub stack with
 /// `.navigationDestination(for: AppDestination.self)`.
+///
+/// - Parameters:
+///   - path: the hub's path, which Friends and Groups push their own routes onto.
+///   - pendingInviteCode: an invite link waiting for Friends.
+///   - pendingSocialSection: a Friends section a push asked for.
 @ViewBuilder
-func destinationView(_ destination: AppDestination) -> some View {
+func destinationView(
+  _ destination: AppDestination,
+  path: Binding<NavigationPath>,
+  pendingInviteCode: Binding<String?>,
+  pendingSocialSection: Binding<String?>
+) -> some View {
   switch destination {
   case .markets:
     MarketsScreen()
@@ -20,15 +30,12 @@ func destinationView(_ destination: AppDestination) -> some View {
   case .chartBuilder:
     ChartBuilderStandaloneScreen()
   case .friends:
-    // Task 5: SocialRoot takes More's path; Task 6 passes HomeScreen's pending
-    // invite code and section instead of these constants.
-    SocialRoot(pendingInviteCode: .constant(nil), pendingSection: .constant(nil))
+    SocialRoot(path: path, pendingInviteCode: pendingInviteCode, pendingSection: pendingSocialSection)
   case .groups:
-    GroupsRoot()
+    GroupsRoot(path: path)
   case .boards:
     BoardsRoot()
   case .settings:
-    // Task 5: UserProfileView drops its own NavigationStack.
     UserProfileView()
   case .brokers:
     IntegrationsView()
@@ -51,14 +58,13 @@ func destinationView(_ destination: AppDestination) -> some View {
   case .terminalSizing:
     TerminalPositionsScreen()
   case .crypto:
-    // Task 5: CryptoHomeView drops this binding, its gear button and its stack.
-    CryptoHomeView(isSettingsPresented: .constant(false))
+    CryptoHomeView()
   case .notifications:
     NotificationInboxScreen()
   }
 }
 
-/// `destinationView(_:)` is a function and can't hold injected state, so the
+/// `destinationView` is a function and can't hold injected state, so the
 /// billing manager for the Pro gate is resolved here.
 private struct ProGatedDestination<Content: View>: View {
   @InjectedObservable(\Container.billingManager) private var billingManager

@@ -42,6 +42,10 @@ struct HomeScreen: View {
   @State private var pendingSocialSection: String?
   /// The AI summary a tap on Q opened.
   @State private var summaryScope: AIViewScope?
+  /// The Friends and Groups tab stacks, which those screens push onto. Task 6
+  /// moves both screens under More's stack.
+  @State private var socialPath = NavigationPath()
+  @State private var groupsPath = NavigationPath()
 
   init(onLogout: @escaping () async -> Void) {
     self.onLogout = onLogout
@@ -355,9 +359,18 @@ struct HomeScreen: View {
     assistantLaunch = launch
   }
 
+  /// Settings is a push now; until Task 6 retires this sheet, it brings the
+  /// stack and Done that the screen no longer has.
   private var settingsSheet: some View {
-    UserProfileView()
-      .environment(\.locale, Locale(identifier: appLanguage.localeIdentifier))
+    NavigationStack {
+      UserProfileView()
+        .toolbar {
+          ToolbarItem(placement: .confirmationAction) {
+            Button("Done") { isSettingsPresented = false }
+          }
+        }
+    }
+    .environment(\.locale, Locale(identifier: appLanguage.localeIdentifier))
   }
 
   @ViewBuilder
@@ -388,30 +401,32 @@ struct HomeScreen: View {
       }
       .accessibilityIdentifier("tab.economy")
     case .crypto:
-      CryptoHomeView(isSettingsPresented: $isSettingsPresented)
+      NavigationStack { CryptoHomeView() }
         .accessibilityIdentifier("tab.crypto")
     case .expenses:
       ExpensesPlannerScreen(isSettingsPresented: $isSettingsPresented, viewModel: budgetPlannerViewModel)
         .accessibilityIdentifier("tab.expenses")
     case .reports:
-      ExpensesComparisonScreen()
+      NavigationStack { ExpensesComparisonScreen() }
         .accessibilityIdentifier("tab.reports")
     case .tax:
-      TaxDashboardScreen()
+      NavigationStack { TaxDashboardScreen() }
         .accessibilityIdentifier("tab.tax")
     case .insights:
-      InsightsScreen()
+      NavigationStack { InsightsScreen() }
         .accessibilityIdentifier("tab.insights")
     case .social:
-      SocialRoot(pendingInviteCode: $pendingInviteCode, pendingSection: $pendingSocialSection)
-        .accessibilityIdentifier("tab.social")
+      NavigationStack(path: $socialPath) {
+        SocialRoot(path: $socialPath, pendingInviteCode: $pendingInviteCode, pendingSection: $pendingSocialSection)
+      }
+      .accessibilityIdentifier("tab.social")
     case .boards:
       overflowTabHost {
         BoardsRoot()
       }
       .accessibilityIdentifier("tab.boards")
     case .groups:
-      GroupsRoot()
+      NavigationStack(path: $groupsPath) { GroupsRoot(path: $groupsPath) }
         .accessibilityIdentifier("tab.groups")
     }
   }

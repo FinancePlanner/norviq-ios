@@ -24,7 +24,10 @@ struct PlanHubScreen: View {
           .accessibilityIdentifier("plan.newGoal")
         }
       }
-      .navigationDestination(for: AppDestination.self) { destinationView($0) }
+      // Friends lives in More, so Plan has no invite or section to hand on.
+      .navigationDestination(for: AppDestination.self) {
+        destinationView($0, path: $path, pendingInviteCode: .constant(nil), pendingSocialSection: .constant(nil))
+      }
       // Tools links to its tools by `ToolsRoute`.
       .toolsDestinations()
       .sheet(isPresented: $isPaywallPresented) {

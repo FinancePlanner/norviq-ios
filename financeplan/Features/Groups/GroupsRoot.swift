@@ -2,50 +2,64 @@ import Factory
 import StockPlanShared
 import SwiftUI
 
-/// Where the Groups tab navigates.
-enum GroupsRoute: Hashable {
+/// Where Groups navigates, pushed onto the enclosing stack's path.
+/// `nonisolated`, like `AppDestination`, so the path can hold it anywhere.
+nonisolated enum GroupsRoute: Hashable, Sendable {
   /// A group, opened on `channelID` or else its last-viewed channel.
   case group(UUID, channelID: UUID?)
   case discover
+
+  /// Pops `path` back to Groups, which sits at `depth`, then pushes `route`:
+  /// a link replaces whatever group was open, as on its own stack. Nothing
+  /// below Groups is popped.
+  static func show(_ route: GroupsRoute?, on path: inout NavigationPath, above depth: Int) {
+    if path.count > depth { path.removeLast(path.count - depth) }
+    if let route { path.append(route) }
+  }
 }
 
-/// The Groups tab: invitations, the user's groups, and ways to start or
-/// find one. A NavigationStack on iPhone and iPad alike; the iPad split view
-/// (groups, channels, chat) comes later.
+/// Groups: invitations, the user's groups, and ways to start or find one.
+/// It pushes onto the enclosing stack (More's, or the old tab's) rather than
+/// owning one; the iPad split view (groups, channels, chat) comes later.
 struct GroupsRoot: View {
+  /// The enclosing stack's path.
+  @Binding var path: NavigationPath
   @InjectedObservable(\Container.groupsStore) private var store
   @InjectedObservable(\Container.socialStore) private var socialStore
   @InjectedObservable(\Container.boardsViewerStore) private var viewer
-  @State private var path: [GroupsRoute] = []
+  /// Where Groups sits on `path`, read when it first shows: 1 under More, 0
+  /// as a tab root.
+  @State private var depth: Int?
   @State private var isCreating = false
   @State private var joinCode: GroupJoinRequest?
 
   var body: some View {
-    NavigationStack(path: $path) {
-      Group {
-        if viewer.isBanned {
-          ContentUnavailableView(
-            "Groups unavailable",
-            systemImage: "hand.raised",
-            description: Text("Your access to the Norviq community has been removed. The rest of Norviq works as usual.")
-          )
-        } else {
-          GroupsHomeScreen(
-            onOpen: { path.append(.group($0, channelID: nil)) },
-            onCreate: { isCreating = true },
-            onJoinWithLink: { joinCode = GroupJoinRequest(code: nil) },
-            onDiscover: { path.append(.discover) }
-          )
-        }
+    Group {
+      if viewer.isBanned {
+        ContentUnavailableView(
+          "Groups unavailable",
+          systemImage: "hand.raised",
+          description: Text("Your access to the Norviq community has been removed. The rest of Norviq works as usual.")
+        )
+      } else {
+        GroupsHomeScreen(
+          onOpen: { path.append(GroupsRoute.group($0, channelID: nil)) },
+          onCreate: { isCreating = true },
+          onJoinWithLink: { joinCode = GroupJoinRequest(code: nil) },
+          onDiscover: { path.append(GroupsRoute.discover) }
+        )
       }
-      .navigationDestination(for: GroupsRoute.self) { route in
-        switch route {
-        case let .group(groupID, channelID):
-          GroupScreen(groupID: groupID, requestedChannelID: channelID)
-        case .discover:
-          GroupDiscoverScreen { path.append(.group($0, channelID: nil)) }
-        }
+    }
+    .navigationDestination(for: GroupsRoute.self) { route in
+      switch route {
+      case let .group(groupID, channelID):
+        GroupScreen(groupID: groupID, requestedChannelID: channelID)
+      case .discover:
+        GroupDiscoverScreen { path.append(GroupsRoute.group($0, channelID: nil)) }
       }
+    }
+    .onAppear {
+      if depth == nil { depth = path.count }
     }
     .task {
       await viewer.load()
@@ -55,14 +69,19 @@ struct GroupsRoot: View {
     .onChange(of: store.pendingLink) { _, _ in consumePendingLink() }
     .sheet(isPresented: $isCreating) {
       CreateGroupSheet { detail in
-        path = [.group(detail.group.id, channelID: detail.group.defaultChannelId)]
+        show(.group(detail.group.id, channelID: detail.group.defaultChannelId))
       }
     }
     .sheet(item: $joinCode) { request in
       GroupJoinSheet(initialCode: request.code) { detail in
-        path = [.group(detail.group.id, channelID: nil)]
+        show(.group(detail.group.id, channelID: nil))
       }
     }
+  }
+
+  /// `route` directly above Groups; `nil` is Groups itself.
+  private func show(_ route: GroupsRoute?) {
+    GroupsRoute.show(route, on: &path, above: depth ?? path.count)
   }
 
   private func consumePendingLink() {
@@ -70,14 +89,14 @@ struct GroupsRoot: View {
     store.pendingLink = nil
     switch link {
     case let .channel(groupID, channelID):
-      path = [.group(groupID, channelID: channelID)]
+      show(.group(groupID, channelID: channelID))
     case let .group(groupID):
-      path = [.group(groupID, channelID: nil)]
+      show(.group(groupID, channelID: nil))
     case .invitations:
-      path = []
+      show(nil)
       Task { await store.load() }
     case let .invite(code):
-      path = []
+      show(nil)
       joinCode = GroupJoinRequest(code: code)
     }
   }
