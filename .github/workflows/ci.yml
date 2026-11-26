@@ -172,7 +172,7 @@ jobs:
           # The runtime decides which Q path the UI tests exercise: the
           # floating button below 26, the accessory on 26, hiding from 26.1.
           runtime="$(xcrun simctl list devices available \
-            | awk -v u="$udid" '/^-- /{rt=$0; gsub(/^-- | --$/, "", rt)} index($0, u){print rt; exit}')"
+            | awk -v u="$udid" '/^-- /{rt=$0; gsub(/^-- | --$/, "", rt)} index($0, u){print rt; exit}' || true)"
           echo "Using simulator: $name, ${runtime:-unknown runtime} ($udid)"
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
 
