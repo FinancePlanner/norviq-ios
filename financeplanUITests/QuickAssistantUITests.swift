@@ -4,9 +4,10 @@ import XCTest
 /// Q, the one entry point on every tab, and the Quick Q card, in the real app
 /// with a fake session.
 ///
-/// It runs against the `local` environment, where a refused connection, or a
-/// server that answers 404, leaves the session alone. A real backend there would
-/// answer the fake token with a 401 and sign the app out, which fails these tests.
+/// It runs against the `local` environment, localhost:8080. A refused connection
+/// or a 404 there leaves the session alone; a real backend would answer the fake
+/// token with a 401 and sign the app out, which fails these tests. The
+/// Rebalancing test puts its own stub on that port.
 ///
 /// On iOS 26 and later Q is the tab bar's bottom accessory; below 26 it is a
 /// floating button in each tab. Both carry the id `q.entry`. Its label changes
@@ -258,12 +259,18 @@ final class QuickAssistantUITests: XCTestCase {
     }
 }
 
+/// The stub API could not start, for a reason other than the port being taken.
+enum StubAPIError: Error {
+    case notReady(String)
+}
+
 /// A stand-in for the API at `AppEnvironments.local`, in the test runner.
 ///
 /// It serves fixed JSON for the routes it is given and answers anything else
 /// the way an API without that route does, with a 404 that leaves the session
 /// alone. The simulator shares the Mac's network, so the port must be free
-/// there: a backend already on it makes the test that needs this skip.
+/// there: a backend already on it makes the test that needs this skip. Only one
+/// stub can hold the port, so these tests run serially.
 final class StubAPIServer: @unchecked Sendable {
     /// `AppEnvironments.local`'s port.
     static let port: NWEndpoint.Port = 8080
@@ -288,36 +295,56 @@ final class StubAPIServer: @unchecked Sendable {
     private let routes: [String: Data]
     private let queue = DispatchQueue(label: "quick-q-ui-test.stub-api")
 
+    /// Throws `XCTSkip` when the port is taken, and the error itself for any
+    /// other failure.
     init(routes: [String: Data]) throws {
         self.routes = routes
-        listener = try NWListener(using: .tcp, on: Self.port)
+        do {
+            listener = try NWListener(using: .tcp, on: Self.port)
+        } catch let error as NWError {
+            throw Self.skipIfPortTaken(error, state: "init")
+        }
     }
 
-    /// Returns once listening. Throws `XCTSkip` when the port is taken.
+    /// Returns once listening. Throws `XCTSkip` when the port is taken, and
+    /// fails on any other error or when the listener never becomes ready.
     func start() throws {
         let settled = DispatchSemaphore(value: 0)
-        let failure = Failure()
+        let outcome = Outcome()
         listener.stateUpdateHandler = { state in
             switch state {
             case .ready:
-                settled.signal()
-            case let .failed(error), let .waiting(error):
-                failure.error = error
-                settled.signal()
+                outcome.state = "ready"
+            case let .failed(error):
+                (outcome.state, outcome.error) = ("failed", error)
+            case let .waiting(error):
+                (outcome.state, outcome.error) = ("waiting", error)
             default:
-                break
+                return
             }
+            settled.signal()
         }
         listener.newConnectionHandler = { [weak self] connection in
             self?.serve(connection)
         }
         listener.start(queue: queue)
-        let timedOut = settled.wait(timeout: .now() + 5) == .timedOut
-        if timedOut || failure.error != nil {
+        guard settled.wait(timeout: .now() + 5) == .success else {
             listener.cancel()
-            let reason = failure.error.map { "\($0)" } ?? "timed out"
-            throw XCTSkip("Cannot listen on localhost:\(Self.port) for the stub API (\(reason)); another server holds it")
+            throw StubAPIError.notReady("timed out after 5 s")
         }
+        if let error = outcome.error {
+            listener.cancel()
+            throw Self.skipIfPortTaken(error, state: outcome.state)
+        }
+    }
+
+    /// `XCTSkip` for a port already in use, which is another server on the
+    /// Mac; anything else is a real failure.
+    private static func skipIfPortTaken(_ error: NWError, state: String) -> Error {
+        if case .posix(.EADDRINUSE) = error {
+            return XCTSkip("localhost:\(port) is in use by another server (EADDRINUSE, listener \(state)), so the stub API cannot run")
+        }
+        return StubAPIError.notReady("listener \(state): \(error)")
     }
 
     func stop() {
@@ -361,7 +388,8 @@ final class StubAPIServer: @unchecked Sendable {
     }
 
     /// Set on the listener's queue, read after the semaphore.
-    private final class Failure: @unchecked Sendable {
+    private final class Outcome: @unchecked Sendable {
+        var state = ""
         var error: NWError?
     }
 }

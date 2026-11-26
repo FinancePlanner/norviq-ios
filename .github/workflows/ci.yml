@@ -296,6 +296,8 @@ jobs:
             -derivedDataPath "$DERIVED_DATA" \
             -clonedSourcePackagesDirPath "$SPM_DIR" \
             -only-testing:financeplanUITests/StockDetailTabTests \
+            -only-testing:financeplanUITests/QuickAssistantUITests \
+            -parallel-testing-enabled NO \
             -quiet
 
       - name: Upload Test Results
