@@ -32,7 +32,7 @@ struct TerminalPositionsScreen: View {
     }
     .vigilListChrome()
     .vigilScreenBackground()
-    .navigationTitle("Terminal positions")
+    .navigationTitle("Terminal sizing")
     .vigilInlineNavigationBar()
     .toolbar {
       ToolbarItemGroup(placement: .topBarTrailing) {

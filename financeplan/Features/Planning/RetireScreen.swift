@@ -19,7 +19,7 @@ struct RetireScreen: View {
       VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
         VigilPageHeader(
           watch: .wealthPlan,
-          title: "Retire",
+          title: "Retirement",
           subtitle: "What your life costs, and the shortest way to afford it."
         )
 
@@ -39,7 +39,7 @@ struct RetireScreen: View {
       .maxContentWidth(regularSizeClass: ContentWidth.dense)
     }
     .vigilScreenBackground()
-    .vigilNavigationTitle("Retire")
+    .vigilNavigationTitle("Retirement")
     .vigilInlineNavigationBar()
     .task { await model.loadPrefill() }
   }

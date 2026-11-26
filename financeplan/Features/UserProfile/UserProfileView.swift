@@ -518,7 +518,7 @@ public struct UserProfileView: View {
 
             Section(LocalizedStringKey("Integrations")) {
                 NavigationLink(value: UserProfileDestination.integrations) {
-                    Label(LocalizedStringKey("Connected Accounts"), systemImage: "building.columns")
+                    Label(LocalizedStringKey("Brokers and imports"), systemImage: "building.columns")
                 }
                 NavigationLink(value: UserProfileDestination.integrationsHub) {
                     HStack {
@@ -685,7 +685,7 @@ public struct UserProfileView: View {
         case .connect:
             ConnectView()
         // Two entry points into connections, deliberately kept:
-        //   .integrations    — Settings > "Connected Accounts", the functional
+        //   .integrations    — Settings > "Brokers and imports", the functional
         //                      screen (bank sync, IBKR). Kept SHALLOW on purpose;
         //                      PR #60 had to restore this entry once already.
         //   .integrationsHub — the informational Vigil "MCP engine room" named in

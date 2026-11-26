@@ -15,7 +15,7 @@ struct GoalPlanningScreen: View {
       VStack(alignment: .leading, spacing: 20) {
         VigilPageHeader(
           watch: .wealth,
-          title: "Financial goals"
+          title: "Goals"
         )
 
         overviewHeader
@@ -31,7 +31,7 @@ struct GoalPlanningScreen: View {
     }
     .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
     .vigilScreenBackground()
-    .vigilNavigationTitle("Financial goals")
+    .vigilNavigationTitle("Goals")
     .vigilInlineNavigationBar()
     .toolbar {
       ToolbarItem(placement: .topBarLeading) {

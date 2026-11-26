@@ -58,9 +58,7 @@ private struct ToolRow: View {
       Spacer(minLength: 0)
 
       if showsProMark {
-        Text("Pro")
-          .font(.caption.weight(.semibold))
-          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+        ProBadge()
       }
 
       Image(systemName: "chevron.right")

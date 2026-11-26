@@ -246,7 +246,7 @@ struct ScenarioPlanningScreen: View {
       LazyVStack(alignment: .leading, spacing: 24) {
         VigilPageHeader(
           watch: .wealth,
-          title: "Scenario planning"
+          title: "Scenarios"
         )
 
         if model.isLoading && model.catalog == nil {
@@ -265,7 +265,7 @@ struct ScenarioPlanningScreen: View {
       .padding(16)
     }
     .vigilScreenBackground()
-    .vigilNavigationTitle("Scenario planning")
+    .vigilNavigationTitle("Scenarios")
     .vigilInlineNavigationBar()
     .task { await model.load() }
     .task {
