@@ -15,8 +15,6 @@ final class CsvImportFlowViewModel: ObservableObject {
   @Published private(set) var isLoadingProviders = false
   @Published private(set) var isPreviewing = false
   @Published private(set) var isImporting = false
-  @Published private(set) var isConnectingBroker = false
-  @Published private(set) var isSyncingBroker = false
   @Published private(set) var isDisconnectingBroker = false
   @Published private(set) var brokerStatusMessage: String?
 
@@ -49,9 +47,14 @@ final class CsvImportFlowViewModel: ObservableObject {
     connections.first { $0.provider.lowercased() == "ibkr" }
   }
 
-  var isIBKRConnected: Bool {
+  /// The IBKR card is a notice for every status, including no connection at
+  /// all: the Web Service feed is retired and imports go through screenshots.
+  var ibkrNotice: IBKRImportNotice { .standard }
+
+  /// Disconnect only makes sense while there is something live to remove.
+  var canDisconnectIBKR: Bool {
     guard let status = ibkrConnection?.status.lowercased() else { return false }
-    return status == "connected" || status == "active"
+    return status == "connected" || status == "error"
   }
 
   func loadProvidersIfNeeded() async {
@@ -180,70 +183,6 @@ final class CsvImportFlowViewModel: ObservableObject {
   }
 
   @discardableResult
-  func connectIBKR() async -> Bool {
-    guard !isConnectingBroker else { return false }
-    isConnectingBroker = true
-    errorMessage = nil
-    brokerStatusMessage = nil
-    defer { isConnectingBroker = false }
-
-    do {
-      _ = try await brokerService.connectIBKR(portfolioListId: portfolioListId)
-      brokerStatusMessage = String(localized: "Connected IBKR.")
-      await loadProviders(force: true)
-      return true
-    } catch {
-      brokerStatusMessage = nil
-      errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-      return false
-    }
-  }
-
-  @discardableResult
-  func connectIBKRCredentials(token: String, queryId: String) async -> Bool {
-    guard !isConnectingBroker else { return false }
-    isConnectingBroker = true
-    errorMessage = nil
-    brokerStatusMessage = nil
-    defer { isConnectingBroker = false }
-
-    do {
-      _ = try await brokerService.connectIBKRCredentials(
-        token: token,
-        queryId: queryId,
-        portfolioListId: portfolioListId
-      )
-      brokerStatusMessage = String(localized: "Connected IBKR Web Service.")
-      await loadProviders(force: true)
-      return true
-    } catch {
-      brokerStatusMessage = nil
-      errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-      return false
-    }
-  }
-
-  @discardableResult
-  func syncIBKRConnection() async -> Bool {
-    guard !isSyncingBroker else { return false }
-    isSyncingBroker = true
-    errorMessage = nil
-    brokerStatusMessage = nil
-    defer { isSyncingBroker = false }
-
-    do {
-      _ = try await brokerService.syncIBKR()
-      brokerStatusMessage = String(localized: "Sync complete.")
-      await loadProviders(force: true)
-      return true
-    } catch {
-      brokerStatusMessage = nil
-      errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-      return false
-    }
-  }
-
-  @discardableResult
   func disconnectIBKRConnection() async -> Bool {
     guard !isDisconnectingBroker else { return false }
     isDisconnectingBroker = true
@@ -281,4 +220,18 @@ final class CsvImportFlowViewModel: ObservableObject {
     }
     return merged
   }
+}
+
+/// Copy for the Connected Accounts IBKR card. Identical to the shipped web
+/// app's "Import IBKR holdings" notice.
+struct IBKRImportNotice: Equatable {
+  let title: String
+  let body: String
+  let buttonTitle: String
+
+  static let standard = IBKRImportNotice(
+    title: String(localized: "Import IBKR holdings"),
+    body: String(localized: "Screenshot your positions in the IBKR app or Client Portal and import them from your portfolio. Statement import with full trade history is coming next."),
+    buttonTitle: String(localized: "Import from broker")
+  )
 }

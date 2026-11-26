@@ -2,30 +2,9 @@ import Foundation
 import StockPlanShared
 import Factory
 
-enum BrokerConnectionAuthError: LocalizedError {
-  case invalidAuthorizationURL
-  case cancelled
-  case failed(String)
-
-  var errorDescription: String? {
-    switch self {
-    case .invalidAuthorizationURL:
-      return "Broker authorization URL is invalid."
-    case .cancelled:
-      return "Broker connection was cancelled."
-    case let .failed(message):
-      return message
-    }
-  }
-}
-
 protocol BrokerServicing: Sendable {
   func listConnections() async throws -> [BrokerConnectionResponse]
   func getConnection(provider: String) async throws -> BrokerConnectionResponse
-  @MainActor
-  func connectIBKR(portfolioListId: String?) async throws -> BrokerConnectionResponse
-  func connectIBKRCredentials(token: String, queryId: String, portfolioListId: String?) async throws -> BrokerConnectionResponse
-  func syncIBKR() async throws -> BrokerSyncResponse
   func disconnectIBKR() async throws -> BrokerConnectionResponse
   func previewCsvImport(provider: String, portfolioListId: String?, csvData: Data) async throws -> CsvImportPreviewResponse
   func commitCsvImport(provider: String, portfolioListId: String?, csvData: Data) async throws -> CsvImportCommitResponse
@@ -41,18 +20,15 @@ struct BrokerService: BrokerServicing {
   private let environmentManager: AppEnvironmentManager
   private let authSessionManager: AuthSessionManaging
   private let session: any HTTPClientSession
-  private let webAuthenticator: OAuthWebAuthenticating
 
   init(
     environmentManager: AppEnvironmentManager,
     authSessionManager: AuthSessionManaging,
-    session: any HTTPClientSession = URLSession.shared,
-    webAuthenticator: OAuthWebAuthenticating = OAuthWebAuthenticator()
+    session: any HTTPClientSession = URLSession.shared
   ) {
     self.environmentManager = environmentManager
     self.authSessionManager = authSessionManager
     self.session = session
-    self.webAuthenticator = webAuthenticator
   }
 
   func listConnections() async throws -> [BrokerConnectionResponse] {
@@ -64,68 +40,6 @@ struct BrokerService: BrokerServicing {
   func getConnection(provider: String) async throws -> BrokerConnectionResponse {
     try await performAuthenticated { client in
       try await client.getBroker(provider: provider)
-    }
-  }
-
-  @MainActor
-  func connectIBKR(portfolioListId: String?) async throws -> BrokerConnectionResponse {
-    let callbackScheme = oauthCallbackScheme()
-    let redirectURI = brokerRedirectURI(for: callbackScheme)
-
-    let startResponse = try await performAuthenticated { client in
-      try await client.startIBKRConnect(
-        redirectURI: redirectURI,
-        portfolioListId: portfolioListId
-      )
-    }
-
-    guard let authorizationURL = URL(string: startResponse.authorizationURL) else {
-      throw BrokerConnectionAuthError.invalidAuthorizationURL
-    }
-
-    let callbackURL: URL
-    do {
-      callbackURL = try await webAuthenticator.authenticate(
-        url: authorizationURL,
-        callbackScheme: callbackScheme
-      )
-    } catch let error as OAuthWebAuthenticationError {
-      switch error {
-      case .cancelled:
-        throw BrokerConnectionAuthError.cancelled
-      default:
-        throw error
-      }
-    }
-
-    let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)
-    let queryItems = components?.queryItems ?? []
-    let status = queryItems.first(where: { $0.name == "status" })?.value?.lowercased()
-    if status != "success" {
-      let message = queryItems.first(where: { $0.name == "error" })?.value ?? "Broker connection failed."
-      throw BrokerConnectionAuthError.failed(message)
-    }
-
-    return try await getConnection(provider: "ibkr")
-  }
-
-  func connectIBKRCredentials(
-    token: String,
-    queryId: String,
-    portfolioListId: String?
-  ) async throws -> BrokerConnectionResponse {
-    try await performAuthenticated { client in
-      try await client.connectIBKRCredentials(
-        token: token,
-        queryId: queryId,
-        portfolioListId: portfolioListId
-      )
-    }
-  }
-
-  func syncIBKR() async throws -> BrokerSyncResponse {
-    try await performAuthenticated { client in
-      try await client.syncIBKR()
     }
   }
 
@@ -224,18 +138,4 @@ struct BrokerService: BrokerServicing {
     }
     return token
   }
-
-  private func oauthCallbackScheme() -> String {
-    let configured = (Bundle.main.object(forInfoDictionaryKey: "OAuthCallbackScheme") as? String)?
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-    if let configured, !configured.isEmpty {
-      return configured
-    }
-    return "norviqa"
-  }
-
-  private func brokerRedirectURI(for callbackScheme: String) -> String {
-    "\(callbackScheme)://oauth/broker-callback"
-  }
 }
-

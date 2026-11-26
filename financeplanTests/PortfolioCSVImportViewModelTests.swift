@@ -14,12 +14,6 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     private(set) var lastCommitPayload: Data?
 
     var listConnectionsResult: Result<[BrokerConnectionResponse], Error> = .success([])
-    var connectResult: Result<BrokerConnectionResponse, Error> = .success(
-      BrokerConnectionResponse(id: UUID().uuidString, provider: "ibkr", status: "connected")
-    )
-    var syncResult: Result<BrokerSyncResponse, Error> = .success(
-      BrokerSyncResponse(runId: UUID().uuidString, status: "completed")
-    )
     var disconnectResult: Result<BrokerConnectionResponse, Error> = .success(
       BrokerConnectionResponse(id: UUID().uuidString, provider: "ibkr", status: "disconnected")
     )
@@ -36,21 +30,6 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
 
     func getConnection(provider: String) async throws -> BrokerConnectionResponse {
       BrokerConnectionResponse(id: UUID().uuidString, provider: provider, status: "csv")
-    }
-
-    func connectIBKR(portfolioListId: String?) async throws -> BrokerConnectionResponse {
-      try connectResult.get()
-    }
-
-    func connectIBKRCredentials(token: String, queryId: String, portfolioListId: String?) async throws -> BrokerConnectionResponse {
-      _ = token
-      _ = queryId
-      _ = portfolioListId
-      return try connectResult.get()
-    }
-
-    func syncIBKR() async throws -> BrokerSyncResponse {
-      try syncResult.get()
     }
 
     func disconnectIBKR() async throws -> BrokerConnectionResponse {
@@ -390,5 +369,93 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
       .appendingPathExtension("csv")
     try? contents.write(to: fileURL, atomically: true, encoding: .utf8)
     return fileURL
+  }
+
+  // MARK: - IBKR import notice (Task 10)
+
+  private func sourceText(_ relativePath: String) throws -> String {
+    let url = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .appendingPathComponent(relativePath)
+    return try String(contentsOf: url, encoding: .utf8)
+  }
+
+  func testIBKRNotice_CopyIsVerbatimForEveryConnectionStatus() async {
+    let statuses: [String?] = [nil, "connected", "error", "disconnected", "csv", "active"]
+    for status in statuses {
+      let brokerService = BrokerServiceMock()
+      if let status {
+        brokerService.listConnectionsResult = .success([
+          BrokerConnectionResponse(id: "1", provider: "ibkr", status: status)
+        ])
+      }
+      let viewModel = CsvImportFlowViewModel(brokerService: brokerService)
+      await viewModel.loadProviders(force: true)
+
+      XCTAssertEqual(viewModel.ibkrNotice.title, "Import IBKR holdings", "status \(status ?? "none")")
+      XCTAssertEqual(
+        viewModel.ibkrNotice.body,
+        "Screenshot your positions in the IBKR app or Client Portal and import them from your portfolio. Statement import with full trade history is coming next.",
+        "status \(status ?? "none")"
+      )
+      XCTAssertEqual(viewModel.ibkrNotice.buttonTitle, "Import from broker", "status \(status ?? "none")")
+    }
+  }
+
+  func testCanDisconnectIBKR_OnlyForConnectedOrError() async {
+    let expectations: [(String?, Bool)] = [
+      (nil, false), ("connected", true), ("error", true), ("disconnected", false), ("csv", false),
+    ]
+    for (status, expected) in expectations {
+      let brokerService = BrokerServiceMock()
+      if let status {
+        brokerService.listConnectionsResult = .success([
+          BrokerConnectionResponse(id: "1", provider: "ibkr", status: status)
+        ])
+      }
+      let viewModel = CsvImportFlowViewModel(brokerService: brokerService)
+      await viewModel.loadProviders(force: true)
+      XCTAssertEqual(viewModel.canDisconnectIBKR, expected, "status \(status ?? "none")")
+    }
+  }
+
+  func testDisconnectIBKR_StillWorks() async {
+    let brokerService = BrokerServiceMock()
+    brokerService.listConnectionsResult = .success([
+      BrokerConnectionResponse(id: "1", provider: "ibkr", status: "connected")
+    ])
+    let viewModel = CsvImportFlowViewModel(brokerService: brokerService)
+    await viewModel.loadProviders(force: true)
+
+    let didDisconnect = await viewModel.disconnectIBKRConnection()
+    XCTAssertTrue(didDisconnect)
+  }
+
+  func testCSVFlowViewModelAndSheet_HaveNoIBKRConnectOrSyncState() throws {
+    // Disconnect stays; strip it so "connectIBKR" does not match inside it.
+    let viewModel = try sourceText("financeplan/API/Brokers/CsvImportFlowViewModel.swift")
+      .replacingOccurrences(of: "disconnectIBKR", with: "", options: .caseInsensitive)
+    let sheet = try sourceText("financeplan/Features/Portfolio/PortfolioCSVImportSheet.swift")
+      .replacingOccurrences(of: "disconnectIBKR", with: "", options: .caseInsensitive)
+    for needle in ["connectIBKR", "syncIBKR", "isConnectingBroker", "isSyncingBroker"] {
+      XCTAssertFalse(viewModel.contains(needle), "view model still has \(needle)")
+    }
+    for needle in ["connectIBKR", "syncIBKR", "tokenDraft", "queryIdDraft", "isPresentingCredentials",
+                   "brokerSection", "portfolioBroker", "Connect IBKR", "IBKR Broker", "Holdings import is coming soon"] {
+      XCTAssertFalse(sheet.contains(needle), "CSV sheet still has \(needle)")
+    }
+  }
+
+  func testIntegrationsView_HasNoConnectOrSyncActionsAndShowsNotice() throws {
+    let view = try sourceText("financeplan/Features/Integrations/IntegrationsView.swift")
+      .replacingOccurrences(of: "disconnectIBKR", with: "", options: .caseInsensitive)
+    for needle in ["connectIBKR", "syncIBKR", "tokenDraft", "queryIdDraft", "Connect IBKR", "Sync Now",
+                   "integrations.ibkr.connect", "integrations.ibkr.sync", "reportingintegration@",
+                   "does not add those positions", "Holdings import is coming soon"] {
+      XCTAssertFalse(view.contains(needle), "IntegrationsView still has \(needle)")
+    }
+    XCTAssertTrue(view.contains("integrations.ibkr.notice"))
+    XCTAssertTrue(view.contains("integrations.ibkr.importFromBroker"))
   }
 }
