@@ -35,12 +35,6 @@ struct OnboardingImportFlow: View {
           onBack: { viewModel.backToMain() },
           headerNamespace: headerNS
         )
-      case .csv:
-        CSVImportScreen(
-          headerNamespace: headerNS,
-          onBack: { viewModel.backToChooseStock() },
-          onDone: { _ in viewModel.finish(completedFlow: .stocks) }
-        )
       case .manual:
         ManualImportScreen(
           headerNamespace: headerNS,

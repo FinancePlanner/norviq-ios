@@ -21,3 +21,13 @@ extension Notification.Name {
   static let openBudgetFromPushNotification = Notification.Name("openBudgetFromPushNotification")
   static let openThesisWatchFromPushNotification = Notification.Name("openThesisWatchFromPushNotification")
 }
+
+extension Notification {
+  /// `userInfo` key naming the portfolio an import wrote into.
+  static let portfolioListIdKey = "portfolioListId"
+
+  /// The portfolio an import went into, when the poster named one.
+  var importedPortfolioListId: String? {
+    userInfo?[Self.portfolioListIdKey] as? String
+  }
+}

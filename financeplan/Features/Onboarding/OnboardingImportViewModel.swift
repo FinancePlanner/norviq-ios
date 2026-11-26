@@ -27,7 +27,6 @@ final class OnboardingImportViewModel: ObservableObject {
   enum Step: Hashable {
     case mainMenu
     case chooseStockMethod
-    case csv
     case manual
     case crypto
     case expenseBudgetSetup
@@ -54,8 +53,9 @@ final class OnboardingImportViewModel: ObservableObject {
 
   func selectStockMethod(_ method: StockImportMethod) {
     switch method {
-    case .csv:
-      step = .csv
+    case .broker:
+      // The import itself ran in a sheet over the method screen.
+      finish(completedFlow: .stocks)
     case .manual:
       step = .manual
     }

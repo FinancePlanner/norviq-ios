@@ -18,14 +18,6 @@ final class BrokerServiceTests: XCTestCase {
     }
   }
 
-  private final class WebAuthenticatorMock: OAuthWebAuthenticating, @unchecked Sendable {
-    var result: Result<URL, Error> = .failure(MockError.notConfigured)
-
-    func authenticate(url: URL, callbackScheme: String) async throws -> URL {
-      try result.get()
-    }
-  }
-
   private final class AuthSessionManagerMock: AuthSessionManaging, @unchecked Sendable {
     var validAccessTokenCalls = 0
     var refreshAccessTokenCalls = 0
@@ -57,39 +49,6 @@ final class BrokerServiceTests: XCTestCase {
 
   private enum MockError: Error {
     case notConfigured
-  }
-
-  func testStartIBKRConnect_UsesBrokerStartEndpoint() async throws {
-    let session = SessionMock()
-    let client = BrokerHTTPClient(
-      baseURL: URL(string: "https://api.example.com")!,
-      session: session,
-      authTokenProvider: { "token-123" }
-    )
-
-    let expected = BrokerConnectStartResponse(
-      flowId: UUID().uuidString,
-      authorizationURL: "https://api.example.com/v1/auth/brokers/ibkr/callback?flowId=1&state=abc",
-      expiresIn: 600
-    )
-    let expectedData = try JSONEncoder().encode(expected)
-
-    session.handler = { request in
-      XCTAssertEqual(request.httpMethod, "POST")
-      XCTAssertEqual(request.url?.path, "/v1/brokers/ibkr/connect/start")
-      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
-      let response = try XCTUnwrap(
-        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
-      )
-      return (expectedData, response)
-    }
-
-    let response = try await client.startIBKRConnect(
-      redirectURI: "norviqa://oauth/broker-callback",
-      portfolioListId: "portfolio-1"
-    )
-
-    XCTAssertEqual(response, expected)
   }
 
   func testPreviewCsvImport_UsesMultipartRequestAndProviderQuery() async throws {
@@ -203,6 +162,50 @@ final class BrokerServiceTests: XCTestCase {
     XCTAssertEqual(response, expected)
   }
 
+  func testCommitCsvImport_ConfirmMergeQueryOnlyWhenTrue() async throws {
+    let session = SessionMock()
+    let client = BrokerHTTPClient(
+      baseURL: URL(string: "https://api.example.com")!,
+      session: session,
+      authTokenProvider: { "token-123" }
+    )
+    let body = try JSONEncoder().encode(
+      CsvImportCommitResponse(provider: "generic", inserted: [], updated: [], errors: [])
+    )
+    final class Seen: @unchecked Sendable { var values: [String?] = [] }
+    let seen = Seen()
+    session.handler = { request in
+      let items = URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)?.queryItems
+      seen.values.append(items?.first(where: { $0.name == "confirmMergeExisting" })?.value)
+      let response = try XCTUnwrap(HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil))
+      return (body, response)
+    }
+    let csv = Data("symbol\nAAPL".utf8)
+    _ = try await client.commitCsvImport(provider: "generic", portfolioListId: nil, csvData: csv, confirmMergeExisting: false)
+    _ = try await client.commitCsvImport(provider: "generic", portfolioListId: nil, csvData: csv, confirmMergeExisting: true)
+    XCTAssertEqual(seen.values, [nil, "true"])
+  }
+
+  func testCommitCsvImport_409SurfacesAsConflict() async throws {
+    let session = SessionMock()
+    let client = BrokerHTTPClient(
+      baseURL: URL(string: "https://api.example.com")!,
+      session: session,
+      authTokenProvider: { "token-123" }
+    )
+    session.handler = { request in
+      let response = try XCTUnwrap(HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 409, httpVersion: nil, headerFields: nil))
+      return (Data(#"{"message":"Confirm the import to replace them."}"#.utf8), response)
+    }
+    do {
+      _ = try await client.commitCsvImport(provider: "generic", portfolioListId: nil, csvData: Data(), confirmMergeExisting: false)
+      XCTFail("expected a conflict")
+    } catch let error as BrokerHTTPClient.Error {
+      XCTAssertEqual(error.statusCode, 409)
+      XCTAssertTrue(error.isConflict)
+    }
+  }
+
   func testPreviewCsvImport_DecodesEnvelopedResponse() async throws {
     let session = SessionMock()
     let client = BrokerHTTPClient(
@@ -290,13 +293,11 @@ final class BrokerServiceTests: XCTestCase {
     let authSessionManager = AuthSessionManagerMock()
     authSessionManager.validAccessTokenResult = .success("expired-token")
     authSessionManager.refreshAccessTokenResult = .success("fresh-token")
-    let webAuthenticator = WebAuthenticatorMock()
 
     let service = BrokerService(
       environmentManager: AppEnvironmentManager(),
       authSessionManager: authSessionManager,
-      session: session,
-      webAuthenticator: webAuthenticator
+      session: session
     )
 
     nonisolated(unsafe) var requestCount = 0
@@ -335,13 +336,11 @@ final class BrokerServiceTests: XCTestCase {
     let authSessionManager = AuthSessionManagerMock()
     authSessionManager.validAccessTokenResult = .success("expired-token")
     authSessionManager.refreshAccessTokenResult = .success("fresh-token")
-    let webAuthenticator = WebAuthenticatorMock()
 
     let service = BrokerService(
       environmentManager: AppEnvironmentManager(),
       authSessionManager: authSessionManager,
-      session: session,
-      webAuthenticator: webAuthenticator
+      session: session
     )
 
     session.handler = { request in
@@ -369,54 +368,5 @@ final class BrokerServiceTests: XCTestCase {
 
     XCTAssertEqual(authSessionManager.refreshAccessTokenCalls, 1)
     XCTAssertEqual(authSessionManager.invalidateSessionCalls, 1)
-  }
-
-  func testConnectIBKR_StartsBrowserFlowAndLoadsConnection() async throws {
-    let session = SessionMock()
-    let authSessionManager = AuthSessionManagerMock()
-    let webAuthenticator = WebAuthenticatorMock()
-    authSessionManager.validAccessTokenResult = .success("token-123")
-    webAuthenticator.result = .success(URL(string: "norviqa://oauth/broker-callback?status=success&broker=ibkr")!)
-
-    let service = BrokerService(
-      environmentManager: AppEnvironmentManager(),
-      authSessionManager: authSessionManager,
-      session: session,
-      webAuthenticator: webAuthenticator
-    )
-
-    nonisolated(unsafe) var paths: [String] = []
-    session.handler = { request in
-      let path = request.url?.path ?? ""
-      paths.append(path)
-      let response = try XCTUnwrap(
-        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
-      )
-
-      switch path {
-      case "/v1/brokers/ibkr/connect/start":
-        let payload = BrokerConnectStartResponse(
-          flowId: UUID().uuidString,
-          authorizationURL: "https://api.example.com/v1/auth/brokers/ibkr/callback?flowId=1&state=abc",
-          expiresIn: 600
-        )
-        return (try JSONEncoder().encode(payload), response)
-      case "/v1/brokers/ibkr":
-        let payload = BrokerConnectionResponse(
-          id: UUID().uuidString,
-          provider: "ibkr",
-          status: "connected"
-        )
-        return (try JSONEncoder().encode(payload), response)
-      default:
-        XCTFail("Unexpected path \(path)")
-        return (Data(), response)
-      }
-    }
-
-    let response = try await service.connectIBKR(portfolioListId: "portfolio-1")
-    XCTAssertEqual(response.provider, "ibkr")
-    XCTAssertEqual(response.status, "connected")
-    XCTAssertEqual(paths, ["/v1/brokers/ibkr/connect/start", "/v1/brokers/ibkr"])
   }
 }

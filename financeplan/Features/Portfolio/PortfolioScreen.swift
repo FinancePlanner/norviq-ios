@@ -26,8 +26,7 @@ struct PortfolioScreen: View {
 
   @State private var isAddPositionPresented = false
   @State private var isOnePagePresented = false
-  @State private var isCSVImportPresented = false
-  @State private var isScreenshotImportPresented = false
+  @State private var isBrokerImportPresented = false
   @State private var destructiveFeedbackTrigger = 0
   @State private var selectedTimeRange: TimeRange = .month
   @State private var selectedAssetFilter: AssetFilter = .all
@@ -334,8 +333,8 @@ struct PortfolioScreen: View {
       await reloadPortfolio(force: true)
       await viewModel.loadPerformance(performanceKey)
     }
-    .onReceive(NotificationCenter.default.publisher(for: .portfolioDataDidChange)) { _ in
-      Task { await reloadPortfolio(force: true) }
+    .onReceive(NotificationCenter.default.publisher(for: .portfolioDataDidChange)) { notification in
+      Task { await viewModel.handlePortfolioDataChange(notification) }
     }
     .onChange(of: pendingOpenSymbol) { _, _ in
       consumePendingOpenSymbolIfNeeded()
@@ -357,14 +356,9 @@ struct PortfolioScreen: View {
     .sheet(isPresented: $isAddPositionPresented, onDismiss: { guided?.noteUserAction(.addHolding) }) {
       addPositionSheetContent
     }
-    .sheet(isPresented: $isCSVImportPresented) {
-      PortfolioCSVImportSheet(portfolioListId: viewModel.selectedPortfolioListId) {
-        await reloadPortfolio(force: true)
-      }
-    }
-    .sheet(isPresented: $isScreenshotImportPresented) {
-      PortfolioScreenshotImportSheet(portfolioListId: viewModel.selectedPortfolioListId) {
-        await reloadPortfolio(force: true)
+    .sheet(isPresented: $isBrokerImportPresented) {
+      BrokerImportSheet(portfolioListId: viewModel.selectedPortfolioListId) { importedInto in
+        await viewModel.reloadAfterImport(into: importedInto)
       }
     }
     .sheet(item: $targetAlertStock) { stock in
@@ -610,6 +604,7 @@ struct PortfolioScreen: View {
           targetAlertProvider: viewModel.targetAlert(for:),
           sentimentProvider: viewModel.sentiment(for:),
           onAddPosition: presentAddPositionSheet,
+          onImportFromBroker: presentBrokerImportSheet,
           onEditStock: beginEditing,
           onDeleteStock: deleteStock,
           onPresentTargetAlert: presentTargetAlert,
@@ -668,16 +663,11 @@ struct PortfolioScreen: View {
       }
 
       Button {
-        presentCSVImportSheet()
+        presentBrokerImportSheet()
       } label: {
-        Label("Import CSV", systemImage: "square.and.arrow.down.on.square")
+        Label("Import from broker", systemImage: "square.and.arrow.down.on.square")
       }
-
-      Button {
-        presentScreenshotImportSheet()
-      } label: {
-        Label("Import from screenshots", systemImage: "photo.on.rectangle.angled")
-      }
+      .accessibilityIdentifier("portfolio.importFromBroker")
 
       Button {
         isOnePagePresented = true
@@ -770,12 +760,8 @@ struct PortfolioScreen: View {
     isAddPositionPresented = true
   }
 
-  private func presentCSVImportSheet() {
-    isCSVImportPresented = true
-  }
-
-  private func presentScreenshotImportSheet() {
-    isScreenshotImportPresented = true
+  private func presentBrokerImportSheet() {
+    isBrokerImportPresented = true
   }
 
   private func loadMoreIfAvailable() {

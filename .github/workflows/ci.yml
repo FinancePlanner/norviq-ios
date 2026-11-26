@@ -227,6 +227,9 @@ jobs:
             -only-testing:financeplanTests/AssistantPushViewModelTests \
             -only-testing:financeplanTests/AssistantTradesCardTests \
             -only-testing:financeplanTests/PortfolioCSVImportViewModelTests \
+            -only-testing:financeplanTests/BrokerImportCatalogTests \
+            -only-testing:financeplanTests/BrokerImportViewModelTests \
+            -only-testing:financeplanTests/PortfolioViewModelTests \
             -only-testing:financeplanTests/VigMotionTests \
             -only-testing:financeplanTests/DisplayFontTests \
             -only-testing:financeplanTests/CanonicalTextTests \

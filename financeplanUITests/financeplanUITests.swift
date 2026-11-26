@@ -91,9 +91,17 @@ final class FinanceplanUITests: XCTestCase {
     XCTAssertTrue(actionsMenu.waitForExistence(timeout: 8))
     actionsMenu.tap()
 
-    let importAction = app.buttons["Import CSV"]
+    let importAction = app.buttons["portfolio.importFromBroker"]
     XCTAssertTrue(importAction.waitForExistence(timeout: 8))
     importAction.tap()
+
+    // "Other broker (CSV)" is the only catalogue entry that offers a CSV file.
+    let otherBroker = app.buttons["brokerImport.broker.other"]
+    XCTAssertTrue(otherBroker.waitForExistence(timeout: 8))
+    otherBroker.tap()
+    let csvMethod = app.buttons["brokerImport.method.csv"]
+    XCTAssertTrue(csvMethod.waitForExistence(timeout: 8))
+    csvMethod.tap()
 
     let importButton = app.buttons["portfolioCSVImport.commit"]
     XCTAssertTrue(importButton.waitForExistence(timeout: 8))

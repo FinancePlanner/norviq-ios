@@ -14,6 +14,8 @@ nonisolated final class BrokerHTTPClient: Sendable {
     case invalidStatus(Int)
     case unauthorized(String?)
     case api(String)
+    /// 409: the server refused until the caller confirms (CSV merge).
+    case conflict(String)
 
     nonisolated var errorDescription: String? {
       switch self {
@@ -23,9 +25,14 @@ nonisolated final class BrokerHTTPClient: Sendable {
         return "Request failed (\(code))."
       case let .unauthorized(message):
         return message ?? "Your session expired. Please sign in again."
-      case let .api(message):
+      case let .api(message), let .conflict(message):
         return message
       }
+    }
+
+    var isConflict: Bool {
+      if case .conflict = self { return true }
+      return false
     }
 
     var isUnauthorized: Bool {
@@ -36,8 +43,11 @@ nonisolated final class BrokerHTTPClient: Sendable {
     }
 
     nonisolated var statusCode: Int? {
-      if case let .invalidStatus(code) = self { return code }
-      return nil
+      switch self {
+      case let .invalidStatus(code): return code
+      case .conflict: return 409
+      default: return nil
+      }
     }
 
     nonisolated static func == (lhs: Error, rhs: Error) -> Bool {
@@ -46,6 +56,7 @@ nonisolated final class BrokerHTTPClient: Sendable {
       case let (.invalidStatus(l), .invalidStatus(r)): return l == r
       case let (.unauthorized(l), .unauthorized(r)): return l == r
       case let (.api(l), .api(r)): return l == r
+      case let (.conflict(l), .conflict(r)): return l == r
       default: return false
       }
     }
@@ -54,6 +65,11 @@ nonisolated final class BrokerHTTPClient: Sendable {
     static func makeInvalidStatus(_ code: Int) -> Error { .invalidStatus(code) }
     static func makeUnauthorized(_ message: String?) -> Error { .unauthorized(message) }
     static func makeAPI(_ message: String) -> Error { .api(message) }
+    static func makeStatus(_ code: Int, message: String?) -> Error {
+      if code == 409 { return .conflict(message ?? "Request conflicts with existing data.") }
+      if let message, !message.isEmpty { return .api(message) }
+      return .invalidStatus(code)
+    }
   }
 
   private let client: BaseHTTPClient
@@ -72,32 +88,6 @@ nonisolated final class BrokerHTTPClient: Sendable {
 
   func getBrokers() async throws -> [BrokerConnectionResponse] {
     try await client.call(GetBrokersEndpoint(), errorType: Error.self)
-  }
-
-  func getBroker(provider: String) async throws -> BrokerConnectionResponse {
-    try await client.call(GetBrokerEndpoint(provider: provider), errorType: Error.self)
-  }
-
-  func syncIBKR() async throws -> BrokerSyncResponse {
-    try await client.call(SyncIBKREndpoint(), errorType: Error.self)
-  }
-
-  func startIBKRConnect(
-    redirectURI: String,
-    portfolioListId: String?
-  ) async throws -> BrokerConnectStartResponse {
-    try await client.call(StartIBKRConnectEndpoint(redirectURI: redirectURI, portfolioListId: portfolioListId), errorType: Error.self)
-  }
-
-  func connectIBKRCredentials(
-    token: String,
-    queryId: String,
-    portfolioListId: String?
-  ) async throws -> BrokerConnectionResponse {
-    try await client.call(
-      ConnectIBKRCredentialsEndpoint(token: token, queryId: queryId, portfolioListId: portfolioListId),
-      errorType: Error.self
-    )
   }
 
   func disconnectIBKR() async throws -> BrokerConnectionResponse {
@@ -130,13 +120,15 @@ nonisolated final class BrokerHTTPClient: Sendable {
   func commitCsvImport(
     provider: String,
     portfolioListId: String?,
-    csvData: Data
+    csvData: Data,
+    confirmMergeExisting: Bool = false
   ) async throws -> CsvImportCommitResponse {
     let request = try await makeCSVUploadRequest(
       path: "/v1/brokers/import/csv/commit",
       provider: provider,
       portfolioListId: portfolioListId,
-      csvData: csvData
+      csvData: csvData,
+      confirmMergeExisting: confirmMergeExisting
     )
     let data = try await client.sendRequest(request, errorType: Error.self)
     do {
@@ -244,7 +236,8 @@ nonisolated final class BrokerHTTPClient: Sendable {
     path: String,
     provider: String,
     portfolioListId: String?,
-    csvData: Data
+    csvData: Data,
+    confirmMergeExisting: Bool = false
   ) async throws -> URLRequest {
     let normalizedPath = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     let base = client.baseURL.appendingPathComponent(normalizedPath)
@@ -253,6 +246,9 @@ nonisolated final class BrokerHTTPClient: Sendable {
     var queryItems = [URLQueryItem(name: "provider", value: provider)]
     if let portfolioListId, !portfolioListId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
       queryItems.append(URLQueryItem(name: "portfolioListId", value: portfolioListId))
+    }
+    if confirmMergeExisting {
+      queryItems.append(URLQueryItem(name: "confirmMergeExisting", value: "true"))
     }
     components?.queryItems = queryItems
     guard let url = components?.url else {

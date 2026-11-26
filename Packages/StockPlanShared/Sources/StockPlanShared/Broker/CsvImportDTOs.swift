@@ -5,6 +5,15 @@ public enum CsvImportExistingPositionKind: String, Codable, Sendable, Equatable 
     case manual
     case imported
     case mixed
+    /// A value this client does not know. A position exists, so it still
+    /// triggers the replace note and merge confirmation rather than failing
+    /// the whole preview.
+    case unknown
+
+    public init(from decoder: any Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = Self(rawValue: raw) ?? .unknown
+    }
 }
 
 public struct CsvImportPreviewItem: Codable, Sendable, Equatable {

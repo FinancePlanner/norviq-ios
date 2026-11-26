@@ -6,8 +6,6 @@ import StockPlanShared
 @MainActor
 final class CsvImportFlowViewModel: ObservableObject {
   @Published private(set) var connections: [BrokerConnectionResponse] = []
-  @Published private(set) var providerOptions: [String] = CsvImportFlowViewModel.fallbackProviders
-  @Published var selectedProvider: String = "generic"
   @Published private(set) var selectedFileName: String?
   @Published private(set) var previewResponse: CsvImportPreviewResponse?
   @Published private(set) var commitResponse: CsvImportCommitResponse?
@@ -15,8 +13,6 @@ final class CsvImportFlowViewModel: ObservableObject {
   @Published private(set) var isLoadingProviders = false
   @Published private(set) var isPreviewing = false
   @Published private(set) var isImporting = false
-  @Published private(set) var isConnectingBroker = false
-  @Published private(set) var isSyncingBroker = false
   @Published private(set) var isDisconnectingBroker = false
   @Published private(set) var brokerStatusMessage: String?
 
@@ -24,18 +20,42 @@ final class CsvImportFlowViewModel: ObservableObject {
   private let portfolioListId: String?
   private var csvData: Data?
   private var hasLoadedProviders = false
-  private static let fallbackProviders = ["generic", "ibkr", "trading212", "degiro", "revolut"]
 
   init(
     brokerService: any BrokerServicing = Container.shared.brokerService(),
-    portfolioListId: String? = nil
+    portfolioListId: String? = nil,
+    lockedProvider: String = BrokerImportCatalog.csvProvider
   ) {
     self.brokerService = brokerService
     self.portfolioListId = portfolioListId
+    self.lockedProvider = lockedProvider
   }
 
-  var availableProviders: [String] {
-    providerOptions
+  /// The provider preview and commit send. Always fixed by the caller (the
+  /// broker picker uses `generic`), so the user cannot relabel the import.
+  private let lockedProvider: String
+  private var effectiveProvider: String { lockedProvider }
+
+  /// Whether the user chose to replace holdings the import does not own.
+  /// Sent as `confirmMergeExisting`; without it the backend answers 409.
+  @Published var replaceExisting = false
+
+  /// Symbols already held from somewhere this import will not replace on its
+  /// own (typed by hand, or imported from another broker).
+  var conflictingSymbols: [String] {
+    var seen = Set<String>()
+    return (previewResponse?.items ?? [])
+      .filter { $0.existingPositionKind != .none && !$0.willReplaceExistingImport }
+      .map { $0.symbol.trimmingCharacters(in: .whitespaces).uppercased() }
+      .filter { seen.insert($0).inserted }
+  }
+
+  /// True once the backend refused a commit for a collision the preview did
+  /// not flag, so the toggle must be offered.
+  @Published private(set) var didHitMergeConflict = false
+
+  var showsReplaceToggle: Bool {
+    !conflictingSymbols.isEmpty || didHitMergeConflict
   }
 
   var canImport: Bool {
@@ -49,9 +69,43 @@ final class CsvImportFlowViewModel: ObservableObject {
     connections.first { $0.provider.lowercased() == "ibkr" }
   }
 
-  var isIBKRConnected: Bool {
+  /// The IBKR card is a notice for every status, including no connection at
+  /// all: the Web Service feed is retired and imports go through screenshots.
+  var ibkrNotice: IBKRImportNotice { .standard }
+
+  enum IBKRBadge: Equatable {
+    case connected, needsAttention, notConnected
+  }
+
+  /// Status chip for the IBKR card; nil until there is a connection row.
+  /// Independent of Disconnect gating: `error` is not "connected".
+  var ibkrBadge: IBKRBadge? {
+    guard let status = ibkrConnection?.status.lowercased() else { return nil }
+    switch status {
+    case "connected": return .connected
+    case "error": return .needsAttention
+    default: return .notConnected
+    }
+  }
+
+  /// The connection's own explanation, shown under an `error` row.
+  var ibkrErrorDetail: String? {
+    guard ibkrConnection?.status.lowercased() == "error" else { return nil }
+    let detail = ibkrConnection?.statusDetail?.trimmingCharacters(in: .whitespacesAndNewlines)
+    return (detail?.isEmpty == false) ? detail : nil
+  }
+
+  /// Disconnect only makes sense while there is something live to remove.
+  var canDisconnectIBKR: Bool {
     guard let status = ibkrConnection?.status.lowercased() else { return false }
-    return status == "connected" || status == "active"
+    return status == "connected" || status == "error"
+  }
+
+  /// Row note when committing would replace holdings the user already has.
+  /// `existingPositionKind == .none` means no existing position.
+  func replaceNote(for item: CsvImportPreviewItem) -> String? {
+    guard item.willReplaceExistingImport || item.existingPositionKind != .none else { return nil }
+    return BrokerImportCatalog.csvReplaceNote(symbol: item.symbol)
   }
 
   func loadProvidersIfNeeded() async {
@@ -72,12 +126,10 @@ final class CsvImportFlowViewModel: ObservableObject {
     do {
       let connections = try await brokerService.listConnections()
       self.connections = connections
-      applyProviders(connections.map(\.provider))
       errorMessage = nil
     } catch {
       errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
       connections = []
-      applyProviders([])
     }
   }
 
@@ -97,6 +149,8 @@ final class CsvImportFlowViewModel: ObservableObject {
 
       csvData = Data(csvText.utf8)
       selectedFileName = url.lastPathComponent
+      replaceExisting = false
+      didHitMergeConflict = false
       previewResponse = nil
       commitResponse = nil
       errorMessage = nil
@@ -125,7 +179,7 @@ final class CsvImportFlowViewModel: ObservableObject {
 
     do {
       let response = try await brokerService.previewCsvImport(
-        provider: selectedProvider,
+        provider: effectiveProvider,
         portfolioListId: portfolioListId,
         csvData: csvData
       )
@@ -158,9 +212,10 @@ final class CsvImportFlowViewModel: ObservableObject {
 
     do {
       let response = try await brokerService.commitCsvImport(
-        provider: selectedProvider,
+        provider: effectiveProvider,
         portfolioListId: portfolioListId,
-        csvData: csvData
+        csvData: csvData,
+        confirmMergeExisting: replaceExisting
       )
       commitResponse = response
       let importedRowCount = response.inserted.count + response.updated.count + response.importedLotsCount
@@ -174,70 +229,12 @@ final class CsvImportFlowViewModel: ObservableObject {
       return true
     } catch {
       commitResponse = nil
-      errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-      return false
-    }
-  }
-
-  @discardableResult
-  func connectIBKR() async -> Bool {
-    guard !isConnectingBroker else { return false }
-    isConnectingBroker = true
-    errorMessage = nil
-    brokerStatusMessage = nil
-    defer { isConnectingBroker = false }
-
-    do {
-      _ = try await brokerService.connectIBKR(portfolioListId: portfolioListId)
-      brokerStatusMessage = String(localized: "Connected IBKR.")
-      await loadProviders(force: true)
-      return true
-    } catch {
-      brokerStatusMessage = nil
-      errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-      return false
-    }
-  }
-
-  @discardableResult
-  func connectIBKRCredentials(token: String, queryId: String) async -> Bool {
-    guard !isConnectingBroker else { return false }
-    isConnectingBroker = true
-    errorMessage = nil
-    brokerStatusMessage = nil
-    defer { isConnectingBroker = false }
-
-    do {
-      _ = try await brokerService.connectIBKRCredentials(
-        token: token,
-        queryId: queryId,
-        portfolioListId: portfolioListId
-      )
-      brokerStatusMessage = String(localized: "Connected IBKR Web Service.")
-      await loadProviders(force: true)
-      return true
-    } catch {
-      brokerStatusMessage = nil
-      errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-      return false
-    }
-  }
-
-  @discardableResult
-  func syncIBKRConnection() async -> Bool {
-    guard !isSyncingBroker else { return false }
-    isSyncingBroker = true
-    errorMessage = nil
-    brokerStatusMessage = nil
-    defer { isSyncingBroker = false }
-
-    do {
-      _ = try await brokerService.syncIBKR()
-      brokerStatusMessage = String(localized: "Sync complete.")
-      await loadProviders(force: true)
-      return true
-    } catch {
-      brokerStatusMessage = nil
+      // A 409 is the backend asking for confirmation: keep the preview rows,
+      // show the toggle on, and let the user retry.
+      if (error as? BrokerHTTPClient.Error)?.isConflict == true {
+        didHitMergeConflict = true
+        replaceExisting = true
+      }
       errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
       return false
     }
@@ -262,23 +259,18 @@ final class CsvImportFlowViewModel: ObservableObject {
       return false
     }
   }
+}
 
-  private func applyProviders(_ providers: [String]) {
-    let normalized = providers
-      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
-      .filter { !$0.isEmpty }
+/// Copy for the Connected Accounts IBKR card. Identical to the shipped web
+/// app's "Import IBKR holdings" notice.
+struct IBKRImportNotice: Equatable {
+  let title: String
+  let body: String
+  let buttonTitle: String
 
-    providerOptions = mergeProviders(with: normalized)
-    let currentSelection = selectedProvider.lowercased()
-    selectedProvider = providerOptions.contains(currentSelection) ? currentSelection : (providerOptions.first ?? "generic")
-  }
-
-  private func mergeProviders(with providers: [String]) -> [String] {
-    var merged = [String]()
-    (Self.fallbackProviders + providers).forEach { provider in
-      if merged.contains(provider) { return }
-      merged.append(provider)
-    }
-    return merged
-  }
+  static let standard = IBKRImportNotice(
+    title: String(localized: "Import IBKR holdings"),
+    body: String(localized: "Screenshot your positions in the IBKR app or Client Portal and import them from your portfolio. Statement import with full trade history is coming next."),
+    buttonTitle: String(localized: "Import from broker")
+  )
 }

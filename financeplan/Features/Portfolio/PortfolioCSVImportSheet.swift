@@ -9,27 +9,23 @@ struct PortfolioCSVImportSheet: View {
   @Environment(\.dismiss) private var dismiss
   @StateObject private var viewModel: CsvImportFlowViewModel
   @State private var isImporterPresented = false
-  @State private var isPresentingCredentials = false
-  @State private var tokenDraft = ""
-  @State private var queryIdDraft = ""
 
   let onImportCompleted: @MainActor () async -> Void
 
   init(
     portfolioListId: String?,
+    lockedProvider: String,
     onImportCompleted: @escaping @MainActor () async -> Void
   ) {
-    _viewModel = StateObject(wrappedValue: CsvImportFlowViewModel(portfolioListId: portfolioListId))
+    _viewModel = StateObject(
+      wrappedValue: CsvImportFlowViewModel(portfolioListId: portfolioListId, lockedProvider: lockedProvider)
+    )
     self.onImportCompleted = onImportCompleted
   }
 
   var body: some View {
     NavigationStack {
       List {
-        brokerSection
-
-        csvProviderSection
-
         Section {
           CSVImportFormatHint()
         }
@@ -68,6 +64,11 @@ struct PortfolioCSVImportSheet: View {
                 Text("Shares: \(item.shares?.formatted(.number.precision(.fractionLength(0...6))) ?? "-") • Buy price: \(item.buyPrice?.formatted(.number.precision(.fractionLength(0...6))) ?? "-")")
                   .font(.subheadline)
                   .foregroundStyle(.secondary)
+                if let replaceNote = viewModel.replaceNote(for: item) {
+                  Text(replaceNote)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                }
                 if let buyDate = item.buyDate, !buyDate.isEmpty {
                   Text("Buy date: \(buyDate)")
                     .font(.subheadline)
@@ -82,6 +83,10 @@ struct PortfolioCSVImportSheet: View {
               }
             }
           }
+        }
+
+        if viewModel.showsReplaceToggle {
+          mergeConfirmationSection
         }
 
         if let preview = viewModel.previewResponse, !preview.errors.isEmpty {
@@ -113,13 +118,6 @@ struct PortfolioCSVImportSheet: View {
                 }
               }
             }
-          }
-        }
-
-        if let statusMessage = viewModel.brokerStatusMessage {
-          Section("Broker Status") {
-            Text(statusMessage)
-              .foregroundStyle(.secondary)
           }
         }
 
@@ -180,162 +178,31 @@ struct PortfolioCSVImportSheet: View {
           viewModel.errorMessage = "Failed to read CSV: \(error.localizedDescription)"
         }
       }
-      .task {
-        await prepareSheet()
-      }
-      .onChange(of: viewModel.selectedProvider) { _, _ in
-        refreshPreviewIfNeeded()
-      }
     }
   }
 
-  private var brokerSection: some View {
-    Section("IBKR Broker") {
-      VStack(alignment: .leading, spacing: 6) {
-        Text("Interactive Brokers")
-          .font(.headline)
-        Text(brokerSubtitle)
-          .font(.subheadline)
-          .foregroundStyle(.secondary)
-        Text("Holdings import is coming soon — Sync fetches your IBKR statement but does not import it yet.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
+  /// Same wording as the screenshot import: importing over a holding the user
+  /// added by hand replaces it, so it is named before it happens.
+  private var mergeConfirmationSection: some View {
+    Section {
+      Toggle(isOn: $viewModel.replaceExisting) {
+        Text("Replace positions I already hold")
       }
-
-      if viewModel.isLoadingProviders {
-        ProgressView("Loading broker connection...")
-      }
-
-      if viewModel.isIBKRConnected {
-        Button {
-          Task {
-            let didSync = await viewModel.syncIBKRConnection()
-            if didSync {
-              PostHogSDK.shared.capture("broker_synced", properties: [
-                "provider": "ibkr",
-              ])
-              await onImportCompleted()
-            }
-          }
-        } label: {
-          if viewModel.isSyncingBroker {
-            ProgressView()
-          } else {
-            Text("Sync Now")
-          }
-        }
-        .disabled(true)
-        .accessibilityIdentifier("portfolioBroker.sync")
-
-        Button(role: .destructive) {
-          Task {
-            let result = await viewModel.disconnectIBKRConnection()
-            if result {
-              PostHogSDK.shared.capture("broker_disconnected", properties: [
-                "provider": "ibkr",
-              ])
-            }
-          }
-        } label: {
-          if viewModel.isDisconnectingBroker {
-            ProgressView()
-          } else {
-            Text("Disconnect")
-          }
-        }
-        .accessibilityIdentifier("portfolioBroker.disconnect")
+      .accessibilityIdentifier("portfolioCSVImport.replaceExisting")
+    } header: {
+      Text("Already in your portfolio")
+    } footer: {
+      if viewModel.conflictingSymbols.isEmpty {
+        Text("Some of these holdings already exist and were not created by this import. Turning this on replaces them with the imported ones. Leave it off and the import stops instead of listing the same symbol twice.")
       } else {
-        Button {
-          tokenDraft = ""
-          queryIdDraft = ""
-          isPresentingCredentials = true
-        } label: {
-          if viewModel.isConnectingBroker {
-            ProgressView()
-          } else {
-            Text("Connect IBKR")
-          }
-        }
-        .disabled(true)
-        .accessibilityIdentifier("portfolioBroker.connect")
+        Text(
+          """
+          You already hold \(viewModel.conflictingSymbols.joined(separator: ", ")) from \
+          outside this import. Turning this on replaces those positions with the imported \
+          ones. Leave it off and the import stops instead of listing the same symbol twice.
+          """
+        )
       }
-    }
-    .sheet(isPresented: $isPresentingCredentials) {
-      NavigationStack {
-        Form {
-          Section {
-            SecureField("Token", text: $tokenDraft)
-              .textInputAutocapitalization(.never)
-              .autocorrectionDisabled()
-            TextField("Query ID", text: $queryIdDraft)
-              .textInputAutocapitalization(.never)
-              .autocorrectionDisabled()
-          } footer: {
-            Text("Paste the IBKR Norviq Web Service token and query ID.")
-          }
-        }
-        .navigationTitle("Connect IBKR")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-          ToolbarItem(placement: .cancellationAction) {
-            Button("Cancel") { isPresentingCredentials = false }
-          }
-          ToolbarItem(placement: .confirmationAction) {
-            Button("Connect") {
-              Task {
-                let didConnect = await viewModel.connectIBKRCredentials(
-                  token: tokenDraft,
-                  queryId: queryIdDraft
-                )
-                if didConnect {
-                  isPresentingCredentials = false
-                  PostHogSDK.shared.capture("broker_connected", properties: [
-                    "provider": "ibkr",
-                    "mode": "sod",
-                  ])
-                  await onImportCompleted()
-                }
-              }
-            }
-            .disabled(
-              tokenDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                || queryIdDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                || viewModel.isConnectingBroker
-            )
-          }
-        }
-      }
-      .presentationDetents([.medium])
-    }
-  }
-
-  private var csvProviderSection: some View {
-    Section("CSV Provider") {
-      Picker("Provider", selection: $viewModel.selectedProvider) {
-        ForEach(viewModel.availableProviders, id: \.self) { provider in
-          Text(provider.uppercased()).tag(provider)
-        }
-      }
-      .pickerStyle(.menu)
-      .disabled(viewModel.isLoadingProviders)
-    }
-  }
-
-  private var brokerSubtitle: String {
-    if let connection = viewModel.ibkrConnection {
-      return "Status: \(connection.status.capitalized)"
-    }
-    return "Connect IBKR to auto-import positions into Portfolio."
-  }
-
-  private func prepareSheet() async {
-    await viewModel.loadProvidersIfNeeded()
-  }
-
-  private func refreshPreviewIfNeeded() {
-    guard viewModel.previewResponse != nil else { return }
-    Task {
-      await viewModel.previewCSV()
     }
   }
 }

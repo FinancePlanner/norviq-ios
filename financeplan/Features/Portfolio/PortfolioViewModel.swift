@@ -592,6 +592,22 @@ final class PortfolioViewModel {
     await load(force: true)
   }
 
+  /// After an import into `listId`: follow the user to that list, unless they
+  /// are looking at all lists (which already includes it) or are on it.
+  func reloadAfterImport(into listId: String?) async {
+    if !isShowingAllLists, let listId, !listId.isEmpty, listId != selectedPortfolioListId {
+      await selectPortfolioList(listId)
+    } else {
+      await load(force: true)
+    }
+  }
+
+  /// Handler for `.portfolioDataDidChange`: follows the portfolio the poster
+  /// named (an import from Settings), or just reloads when it named none.
+  func handlePortfolioDataChange(_ notification: Notification) async {
+    await reloadAfterImport(into: notification.importedPortfolioListId)
+  }
+
   func selectAllLists() async {
     guard !isShowingAllLists else { return }
     isShowingAllLists = true
