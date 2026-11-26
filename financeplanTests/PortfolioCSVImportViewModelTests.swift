@@ -446,7 +446,7 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
   func testHubCopy_NoLongerPromisesConnectingIBKR() throws {
     let hub = try sourceText("financeplan/Features/UserProfile/IntegrationsHubView.swift")
     XCTAssertFalse(hub.contains("Connect Interactive Brokers today"))
-    XCTAssertTrue(hub.contains("Import holdings from IBKR and other brokers."))
+    XCTAssertTrue(hub.contains("Text(\"Import holdings from IBKR and other brokers. Bank sync is read-only, always.\")"))
   }
 
   func testDisconnectIBKR_StillWorks() async {

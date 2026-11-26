@@ -6697,18 +6697,18 @@
         }
       }
     },
-    "Import holdings from IBKR and other brokers." : {
+    "Import holdings from IBKR and other brokers. Bank sync is read-only, always." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Import holdings from IBKR and other brokers."
+            "value" : "Import holdings from IBKR and other brokers. Bank sync is read-only, always."
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Importe posições da IBKR e de outras corretoras."
+            "value" : "Importe posições da IBKR e de outras corretoras. A sincronização bancária é sempre só de leitura."
           }
         }
       }

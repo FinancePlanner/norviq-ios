@@ -82,7 +82,7 @@ struct IntegrationsHubView: View {
           VStack(alignment: .leading, spacing: 6) {
             Label("Brokerage & bank sync", systemImage: "building.columns")
               .font(.body.weight(.semibold))
-            Text("Import holdings from IBKR and other brokers.")
+            Text("Import holdings from IBKR and other brokers. Bank sync is read-only, always.")
               .font(.subheadline)
               .foregroundStyle(.secondary)
           }
