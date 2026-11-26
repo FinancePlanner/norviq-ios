@@ -1,0 +1,55 @@
+import Foundation
+
+/// Where exported files live before they go to the share sheet:
+/// `{root}/{editionId}-r{revision}/{fileName}` for rendered files, and
+/// `{root}/native/{fileName}` for the card drawn on the device.
+///
+/// A freshly downloaded file always replaces the copy on disk, so what is shared
+/// is what was just previewed: the renderer can change a file without a new
+/// revision. A file is reused only when the model keeps it and downloads nothing.
+nonisolated struct MarketBriefExportFileStore: Sendable {
+  enum Error: Swift.Error, Equatable {
+    /// The edition id or file name is not a plain path component.
+    case unsafeName(String)
+  }
+
+  let root: URL
+
+  init(root: URL = FileManager.default.temporaryDirectory.appending(path: "market-brief-exports")) {
+    self.root = root
+  }
+
+  /// Writes `file` atomically, replacing any older copy, and returns its URL.
+  func url(for file: MarketBriefExportFile, editionId: String, revision: Int) throws -> URL {
+    try write(file, to: location(of: file, in: "\(editionId)-r\(revision)"))
+  }
+
+  /// The card drawn on the device. Its name carries no revision, so it is always
+  /// rewritten: an older card for the same brief may show older items.
+  func nativeURL(for file: MarketBriefExportFile) throws -> URL {
+    try write(file, to: location(of: file, in: "native"))
+  }
+
+  private func location(of file: MarketBriefExportFile, in directory: String) throws -> URL {
+    for name in [directory, file.fileName] where !Self.isPlainComponent(name) {
+      throw Error.unsafeName(name)
+    }
+    return root
+      .appending(path: directory, directoryHint: .isDirectory)
+      .appending(path: file.fileName, directoryHint: .notDirectory)
+  }
+
+  private func write(_ file: MarketBriefExportFile, to destination: URL) throws -> URL {
+    try FileManager.default.createDirectory(
+      at: destination.deletingLastPathComponent(),
+      withIntermediateDirectories: true
+    )
+    try file.data.write(to: destination, options: .atomic)
+    return destination
+  }
+
+  private static func isPlainComponent(_ name: String) -> Bool {
+    !name.isEmpty && name != "." && name != ".."
+      && !name.contains("/") && !name.contains("\\") && !name.contains("\0")
+  }
+}

@@ -12,4 +12,10 @@ nonisolated enum MarketBriefShareChannel: String, CaseIterable, Sendable {
   case whatsapp
   case discord
   case copyLink = "copy_link"
+  /// The export studio's social image.
+  case social
+  /// The export studio's vertical story image.
+  case story
+  /// The export studio's PDF report.
+  case pdf
 }

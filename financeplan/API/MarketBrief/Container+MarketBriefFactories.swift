@@ -8,6 +8,12 @@ extension Container {
     }
   }
 
+  var marketBriefExportService: Factory<any MarketBriefExportServicing> {
+    self { @MainActor in
+      DefaultMarketBriefExportService(environmentManager: self.appEnvironment())
+    }
+  }
+
   /// Shared so the latest brief per language outlives the card, which is
   /// rebuilt whenever the root view's language or environment changes.
   var marketBriefCache: Factory<any MarketBriefCaching> {
