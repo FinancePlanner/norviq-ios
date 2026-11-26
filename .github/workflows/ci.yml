@@ -169,7 +169,11 @@ jobs:
             exit 1
           fi
           name="$(xcrun simctl list devices available | grep "$udid" | sed -E 's/^ *([^(]+) \(.*/\1/')"
-          echo "Using simulator: $name ($udid)"
+          # The runtime decides which Q path the UI tests exercise: the
+          # floating button below 26, the accessory on 26, hiding from 26.1.
+          runtime="$(xcrun simctl list devices available \
+            | awk -v u="$udid" '/^-- /{rt=$0; gsub(/^-- | --$/, "", rt)} index($0, u){print rt; exit}' || true)"
+          echo "Using simulator: $name, ${runtime:-unknown runtime} ($udid)"
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
 
       # Compiles the app and every test target once, for the simulator the tests
@@ -211,6 +215,7 @@ jobs:
             -only-testing:financeplanTests/AchievementsLocalizationTests \
             -only-testing:financeplanTests/QuickAssistantViewModelTests \
             -only-testing:financeplanTests/QuickAssistantCoordinatorTests \
+            -only-testing:financeplanTests/QEntryPointTests \
             -only-testing:financeplanTests/QuickAssistantTapGateTests \
             -only-testing:financeplanTests/QuickAssistantStreamTests \
             -only-testing:financeplanTests/QuickAssistantVoiceTests \
@@ -295,6 +300,8 @@ jobs:
             -derivedDataPath "$DERIVED_DATA" \
             -clonedSourcePackagesDirPath "$SPM_DIR" \
             -only-testing:financeplanUITests/StockDetailTabTests \
+            -only-testing:financeplanUITests/QuickAssistantUITests \
+            -parallel-testing-enabled NO \
             -quiet
 
       - name: Upload Test Results

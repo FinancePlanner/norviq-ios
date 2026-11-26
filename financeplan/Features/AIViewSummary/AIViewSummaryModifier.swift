@@ -1,74 +1,36 @@
-import Factory
 import SwiftUI
 
 extension View {
-    /// Adds this screen's AI summary button and everything behind it.
+    /// Shows the AI summary for `scope` while it is set, and hands off to the
+    /// assistant if the reader continues from it.
     ///
-    /// One line per screen, and that is the entire point. The alternative —
-    /// each screen declaring its own toolbar item, its own sheet state, its own
-    /// assistant hand-off — would be the same plumbing written eight times.
-    /// `ExpensesPlannerScreen` already carries fourteen `.sheet` modifiers and
-    /// `TaxDashboardScreen` twelve; adding two more to each is how a screen
-    /// becomes unreadable.
-    ///
-    /// Attach it to the screen's `NavigationStack`. `.toolbar` is the mount
-    /// rather than `VigilPageHeader(trailing:)` because the header is not
-    /// universal — `DashboardRoot` has none, and `PortfolioRoot` keeps its in a
-    /// child view — while every one of these screens has a stack.
-    ///
-    /// - Parameter placement: overridden only on Portfolio, whose trailing
-    ///   toolbar already holds two links and a menu; a fifth item there
-    ///   collapses into overflow on small devices.
-    func aiViewSummary(
-        _ scope: AIViewScope,
-        placement: ToolbarItemPlacement = .topBarTrailing
-    ) -> some View {
-        modifier(AIViewSummaryModifier(scope: scope, placement: placement))
+    /// Mounted once, on `HomeScreen`, which sets the scope when a Pro reader
+    /// taps Q. One presenter rather than one per screen: Q is shared by every
+    /// tab, and a tab with no screen-level scope still has a summary.
+    func aiSummaryPresentation(scope: Binding<AIViewScope?>) -> some View {
+        modifier(AIViewSummaryPresentation(scope: scope))
     }
 }
 
-private struct AIViewSummaryModifier: ViewModifier {
-    let scope: AIViewScope
-    let placement: ToolbarItemPlacement
+private struct AIViewSummaryPresentation: ViewModifier {
+    @Binding var scope: AIViewScope?
 
-    @State private var isSummaryPresented = false
     @State private var isAssistantPresented = false
     @State private var pendingSeed: String?
-    @InjectedObservable(\.billingManager) private var billingManager
-    @InjectedObservable(\.quickAssistantCoordinator) private var quickAssistant
-
-    /// Server-driven rather than a raw `isPro` read, so the feature can be
-    /// turned off for a user without an App Store release. `isFeatureAvailable`
-    /// already falls back to `isPro` when the server says nothing.
-    private var isAvailable: Bool {
-        billingManager.isFeatureAvailable("ai_insights")
-    }
 
     func body(content: Content) -> some View {
         content
-            .toolbar {
-                // Shown to everyone: only the summary is gated, and Quick Q
-                // has its own monthly allowance for free accounts.
-                ToolbarItem(placement: placement) {
-                    QuickAssistantTrigger(
-                        isSummaryAvailable: isAvailable,
-                        identifier: "aiSummary.open.\(scope.rawValue)",
-                        onSummary: { isSummaryPresented = true },
-                        onAsk: { quickAssistant.present(scope: scope) }
-                    )
-                }
-            }
-            .sheet(isPresented: $isSummaryPresented) {
+            .sheet(item: $scope) { scope in
                 AIViewSummarySheet(scope: scope) { seed in
                     // Close this sheet first and hand off on its dismissal.
                     // Presenting a second sheet while the first is still up is
                     // ignored on iOS, so the assistant would simply never open.
                     pendingSeed = seed
-                    isSummaryPresented = false
+                    self.scope = nil
                 }
             }
-            .onChange(of: isSummaryPresented) { _, presented in
-                guard !presented, pendingSeed != nil else { return }
+            .onChange(of: scope == nil) { _, closed in
+                guard closed, pendingSeed != nil else { return }
                 isAssistantPresented = true
             }
             .sheet(isPresented: $isAssistantPresented, onDismiss: { pendingSeed = nil }) {
@@ -79,4 +41,8 @@ private struct AIViewSummaryModifier: ViewModifier {
                 PersistentAssistantView(seed: pendingSeed)
             }
     }
+}
+
+nonisolated extension AIViewScope: Identifiable {
+    var id: Self { self }
 }

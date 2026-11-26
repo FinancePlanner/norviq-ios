@@ -372,6 +372,7 @@ public struct ContentView: View {
     Container.shared.gamificationStore().reset()
     Container.shared.aiConsentStore().reset()
     Container.shared.marketBriefAlertsStore().reset()
+    Container.shared.quickAssistantCoordinator().resetForSignOut()
     // Crash reports after sign-out must not carry the previous user's ID.
     SentrySDK.setUser(nil)
   }

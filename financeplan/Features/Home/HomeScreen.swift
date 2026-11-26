@@ -40,6 +40,8 @@ struct HomeScreen: View {
   @State private var isAchievementsPresented = false
   /// A Friends section a push asked for (`feed`), consumed by the Social tab.
   @State private var pendingSocialSection: String?
+  /// The AI summary a tap on Q opened.
+  @State private var summaryScope: AIViewScope?
 
   init(onLogout: @escaping () async -> Void) {
     self.onLogout = onLogout
@@ -59,6 +61,12 @@ struct HomeScreen: View {
       }
 
       tabView
+        .qAccessory(
+          coordinator: quickAssistant,
+          isSummaryAvailable: isQTapASummary,
+          onTap: { openQ(isHold: false) },
+          onHold: { openQ(isHold: true) }
+        )
     }
     .appAnimation(AppMotion.structural, value: billingManager.shouldShowTrialEndedBanner)
     .guidedSpotlight(step: guided?.activeStep, activeTab: guidedTab(for: selectedTab), onSkip: { guided?.skip() })
@@ -66,11 +74,15 @@ struct HomeScreen: View {
     .overlay {
       QuickAssistantOverlay(
         onOpenInQ: { openAssistant(conversationID: $0) },
-        onPaywall: { isPaywallPresented = true },
-        currentScope: assistantScope(for: selectedTab),
-        allowsFloatingButton: guided?.activeStep == nil
+        onPaywall: { isPaywallPresented = true }
       )
     }
+    .aiSummaryPresentation(scope: $summaryScope)
+    // A guided step hides Q, as on the web; the bubble sits where Q does.
+    .onChange(of: guided?.activeStep != nil, initial: true) { _, active in
+      quickAssistant.setGuidedStepActive(active)
+    }
+    .onDisappear { quickAssistant.setGuidedStepActive(false) }
     .environment(guided)
     .environment(\.norviqReopenGuidedStart, guided.map { coordinator in
       {
@@ -146,6 +158,31 @@ struct HomeScreen: View {
     Container.shared.marketBriefRouter().open(ref)
   }
 
+  /// Summaries are server-driven rather than a raw `isPro` read, so they can
+  /// be turned off for a user without an App Store release.
+  /// `isFeatureAvailable` already falls back to `isPro` when the server says
+  /// nothing.
+  private func qRoute(isHold: Bool) -> QEntryRoute {
+    QEntryRoute.resolve(
+      hasSummaries: billingManager.isFeatureAvailable("ai_insights"),
+      screenScope: quickAssistant.currentScope,
+      tabScope: assistantScope(for: selectedTab),
+      isHold: isHold
+    )
+  }
+
+  private var isQTapASummary: Bool {
+    if case .summary = qRoute(isHold: false) { return true }
+    return false
+  }
+
+  private func openQ(isHold: Bool) {
+    switch qRoute(isHold: isHold) {
+    case let .summary(scope): summaryScope = scope
+    case let .card(scope): quickAssistant.present(scope: scope)
+    }
+  }
+
   private func assistantScope(for tab: HomeTab) -> AIViewScope? {
     switch tab {
     case .dashboard: .home
@@ -181,13 +218,13 @@ struct HomeScreen: View {
     TabView(selection: $selectedTab) {
       ForEach(HomeTab.primaryTabs(groupsEnabled: groupsEnabled).filter(isAvailable), id: \.self) { tab in
         Tab(tab.title, systemImage: tab.systemImage, value: tab) {
-          root(for: tab)
+          root(for: tab).qEntryPoint()
         }
         .badge(badge(for: tab))
       }
       ForEach(HomeTab.moreMenuTabs(groupsEnabled: groupsEnabled).filter(isAvailable), id: \.self) { tab in
         Tab(tab.title, systemImage: tab.systemImage, value: tab) {
-          root(for: tab)
+          root(for: tab).qEntryPoint()
         }
         .badge(badge(for: tab))
       }
@@ -297,7 +334,7 @@ struct HomeScreen: View {
 
   private var isSheetOrCardCovering: Bool {
     isSettingsPresented || isPaywallPresented || isCapturePresented || assistantLaunch != nil
-      || quickAssistant.isPresented
+      || quickAssistant.isPresented || summaryScope != nil
   }
 
   private func openAssistant(conversationID: String?) {

@@ -49,7 +49,7 @@ struct CryptoHomeView: View {
             }
             .vigilScreenBackground()
             .vigilNavigationTitle("Crypto")
-            .aiViewSummary(.crypto)
+            .qScope(.crypto)
             .vigilInlineNavigationBar()
             .navigationDestination(for: CryptoDetailRoute.self) { route in
                 CryptoDetailScreen(route: route)

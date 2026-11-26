@@ -64,7 +64,7 @@ struct MarketsScreen: View {
     }
     .vigilScreenBackground()
     .vigilNavigationTitle("Markets")
-    .aiViewSummary(.markets)
+    .qScope(.markets)
     .vigilInlineNavigationBar()
     .refreshable {
       await viewModel.load()

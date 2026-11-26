@@ -196,7 +196,7 @@ struct ExpensesPlannerScreen: View {
       .task { await viewModel.load() }
       .vigilScreenBackground()
       .vigilNavigationTitle("Expenses and Budgeting")
-      .aiViewSummary(.expenses)
+      .qScope(.expenses)
       .vigilInlineNavigationBar()
       .toolbar {
         ToolbarItem(placement: .topBarLeading) {

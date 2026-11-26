@@ -72,7 +72,7 @@ struct GroupChatView: View {
       }
       .overlay(alignment: .top) { noticeBanner }
       .safeAreaInset(edge: .bottom) { bottomBar }
-      .hidesQuickAssistantButton()
+      .hidesQAccessory()
       .onChange(of: model.messages.last?.id) { _, _ in
         guard isAtBottom || model.messages.last?.authorId == model.currentUserID else { return }
         withAnimation { proxy.scrollTo(Self.bottomID, anchor: .bottom) }

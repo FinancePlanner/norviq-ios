@@ -81,7 +81,7 @@ struct PortfolioRoot: View {
         }
       }
       .vigilNavigationTitle("Portfolio")
-      .aiViewSummary(.portfolio, placement: .topBarLeading)
+      .qScope(.portfolio)
       .vigilInlineNavigationBar()
       .vigilScreenBackground()
       .toolbar {

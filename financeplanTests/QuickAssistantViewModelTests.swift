@@ -505,37 +505,177 @@ final class QuickAssistantCoordinatorTests: XCTestCase {
         XCTAssertEqual(consentPrompts, 1)
     }
 
-    func testFloatingButtonCanOpenWithoutAScreen() async {
+    func testCardOpensWithoutAScope() async {
         let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
         coordinator.present(scope: nil)
         XCTAssertTrue(coordinator.isPresented)
         XCTAssertNil(coordinator.scope)
     }
 
-    func testFloatingButtonHidesWhileAnyScreenAsksAndReturnsAfterTheLast() async {
+    func testQHidesWhileAnyScreenAsksAndReturnsAfterTheLast() async {
         let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
-        XCTAssertTrue(coordinator.showsFloatingButton)
-        coordinator.setFloatingButtonHidden(true)
-        coordinator.setFloatingButtonHidden(true)
-        coordinator.setFloatingButtonHidden(false)
-        XCTAssertFalse(coordinator.showsFloatingButton)
-        coordinator.setFloatingButtonHidden(false)
-        XCTAssertTrue(coordinator.showsFloatingButton)
+        XCTAssertEqual(coordinator.qHiders, 0)
+        XCTAssertTrue(coordinator.showsQEntry)
+        coordinator.setQAccessoryHidden(true)
+        coordinator.setQAccessoryHidden(true)
+        XCTAssertEqual(coordinator.qHiders, 2)
+        coordinator.setQAccessoryHidden(false)
+        XCTAssertEqual(coordinator.qHiders, 1)
+        XCTAssertFalse(coordinator.showsQEntry)
+        coordinator.setQAccessoryHidden(false)
+        XCTAssertEqual(coordinator.qHiders, 0)
+        XCTAssertTrue(coordinator.showsQEntry)
     }
 
-    func testFloatingButtonHidesWhileTheCardIsUp() async {
+    func testQEntryHidesWhileTheCardIsUp() async {
         let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
         coordinator.present(scope: .home)
-        XCTAssertFalse(coordinator.showsFloatingButton)
+        XCTAssertFalse(coordinator.showsQEntry)
         coordinator.dismiss()
-        XCTAssertTrue(coordinator.showsFloatingButton)
+        XCTAssertTrue(coordinator.showsQEntry)
     }
 
-    func testAnExtraUnhideCannotLeaveTheButtonStuck() async {
+    func testAnExtraUnhideNeverTakesTheCountBelowZero() async {
         let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
-        coordinator.setFloatingButtonHidden(false)
-        coordinator.setFloatingButtonHidden(true)
-        XCTAssertFalse(coordinator.showsFloatingButton)
+        coordinator.setQAccessoryHidden(false)
+        XCTAssertEqual(coordinator.qHiders, 0)
+        coordinator.setQAccessoryHidden(true)
+        XCTAssertEqual(coordinator.qHiders, 1)
+        XCTAssertFalse(coordinator.showsQEntry)
+    }
+
+    func testPoppingTheTopScopeRevealsTheOneBelow() async {
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
+        let markets = UUID()
+        let economy = UUID()
+        XCTAssertNil(coordinator.currentScope)
+        coordinator.pushScope(.markets, id: markets)
+        coordinator.pushScope(.economy, id: economy)
+        XCTAssertEqual(coordinator.currentScope, .economy)
+        coordinator.popScope(id: economy)
+        XCTAssertEqual(coordinator.currentScope, .markets)
+        coordinator.popScope(id: markets)
+        XCTAssertNil(coordinator.currentScope)
+    }
+
+    /// A screen underneath can disappear first, for example when a tab switch
+    /// tears down a stack. Its scope goes; the one on top stays current.
+    func testPoppingAScopeBelowTheTopKeepsTheTop() async {
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
+        let markets = UUID()
+        let economy = UUID()
+        coordinator.pushScope(.markets, id: markets)
+        coordinator.pushScope(.economy, id: economy)
+        coordinator.popScope(id: markets)
+        XCTAssertEqual(coordinator.currentScope, .economy)
+        coordinator.popScope(id: economy)
+        XCTAssertNil(coordinator.currentScope)
+    }
+
+    func testPoppingAnUnknownScopeIsANoOp() async {
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
+        coordinator.pushScope(.markets, id: UUID())
+        coordinator.popScope(id: UUID())
+        XCTAssertEqual(coordinator.currentScope, .markets)
+    }
+
+    func testPushingTheSameScopeIdTwiceNeedsOnlyOnePop() async {
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
+        let id = UUID()
+        coordinator.pushScope(.markets, id: id)
+        coordinator.pushScope(.markets, id: id)
+        coordinator.popScope(id: id)
+        XCTAssertNil(coordinator.currentScope)
+    }
+
+    func testSignOutClearsScopesAndClosesTheCard() async {
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
+        coordinator.pushScope(.markets, id: UUID())
+        coordinator.present(scope: .markets)
+        coordinator.setQAccessoryHidden(true)
+        coordinator.setGuidedStepActive(true)
+        coordinator.resetForSignOut()
+        XCTAssertNil(coordinator.currentScope)
+        XCTAssertFalse(coordinator.isPresented)
+        XCTAssertEqual(coordinator.qHiders, 0, "the next account must not inherit a hidden Q")
+        XCTAssertTrue(coordinator.showsQEntry)
+
+        // A screen torn down after the reset still reports its unhide.
+        coordinator.setQAccessoryHidden(false)
+        coordinator.setGuidedStepActive(false)
+        XCTAssertEqual(coordinator.qHiders, 0, "a late unhide clamps at 0")
+        XCTAssertTrue(coordinator.showsQEntry)
+
+        // The next account's first guided step hides Q again.
+        coordinator.setGuidedStepActive(true)
+        XCTAssertEqual(coordinator.qHiders, 1)
+    }
+
+    func testAGuidedStepHidesQUntilItEnds() async {
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
+        coordinator.setGuidedStepActive(true)
+        coordinator.setGuidedStepActive(true)
+        XCTAssertEqual(coordinator.qHiders, 1, "a step counts once, however often it is reported")
+        XCTAssertFalse(coordinator.showsQEntry)
+        coordinator.setQAccessoryHidden(true)
+        coordinator.setGuidedStepActive(false)
+        XCTAssertEqual(coordinator.qHiders, 1, "a hiding screen still hides Q after the step")
+        coordinator.setGuidedStepActive(false)
+        coordinator.setQAccessoryHidden(false)
+        XCTAssertEqual(coordinator.qHiders, 0)
+        XCTAssertTrue(coordinator.showsQEntry)
+    }
+
+    func testTheLiftThatEndsAHoldIsNotATap() async {
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
+        coordinator.present(scope: .home)
+        coordinator.noteQHold()
+        XCTAssertFalse(coordinator.allowsQTap())
+    }
+
+    func testClosingTheCardRearmsTapRightAway() async {
+        let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
+        coordinator.present(scope: .home)
+        coordinator.noteQHold()
+        coordinator.dismiss()
+        XCTAssertTrue(coordinator.allowsQTap(), "the next tap after closing the card was swallowed")
+    }
+
+    // MARK: Q tap routing
+
+    func testProTapSummarisesTheScreen() async {
+        XCTAssertEqual(
+            QEntryRoute.resolve(hasSummaries: true, screenScope: .markets, tabScope: .home, isHold: false),
+            .summary(.markets)
+        )
+    }
+
+    func testProTapFallsBackToTheTab() async {
+        XCTAssertEqual(
+            QEntryRoute.resolve(hasSummaries: true, screenScope: nil, tabScope: .portfolio, isHold: false),
+            .summary(.portfolio)
+        )
+    }
+
+    func testProTapWithNothingToSummariseOpensTheCard() async {
+        XCTAssertEqual(
+            QEntryRoute.resolve(hasSummaries: true, screenScope: nil, tabScope: nil, isHold: false),
+            .card(nil)
+        )
+    }
+
+    func testFreeTapOpensTheCardWithTheScope() async {
+        XCTAssertEqual(
+            QEntryRoute.resolve(hasSummaries: false, screenScope: .markets, tabScope: .home, isHold: false),
+            .card(.markets)
+        )
+    }
+
+    func testHoldAlwaysOpensTheCard() async {
+        XCTAssertEqual(
+            QEntryRoute.resolve(hasSummaries: true, screenScope: .economy, tabScope: .home, isHold: true),
+            .card(.economy)
+        )
     }
 
     func testDismissCloses() async {
