@@ -71,11 +71,15 @@ struct IntegrationsView: View {
   // MARK: - Broker import seam
 
   /// The ONE place the notice's "Import from broker" button is wired to.
-  /// Today it presents the existing portfolio screenshot import; Task 11
-  /// repoints it at the new "Import from broker" sheet by changing this view.
+  /// There is no portfolio on screen here, so the sheet defaults to the
+  /// user's default portfolio, and a completed import posts
+  /// `.portfolioDataDidChange`, which the Portfolio screen and the dashboard
+  /// already reload on.
   @ViewBuilder
   private var brokerImportDestination: some View {
-    PortfolioScreenshotImportSheet(portfolioListId: nil) {}
+    BrokerImportSheet(portfolioListId: nil) {
+      NotificationCenter.default.post(name: .portfolioDataDidChange, object: nil)
+    }
   }
 
   @ViewBuilder

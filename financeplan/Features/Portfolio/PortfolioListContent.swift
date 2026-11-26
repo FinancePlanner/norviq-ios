@@ -12,6 +12,7 @@ struct PortfolioPositionsSection: View {
   /// compiling and simply render the absence treatment.
   var sentimentProvider: (String) -> SymbolSentiment? = { _ in nil }
   let onAddPosition: () -> Void
+  let onImportFromBroker: () -> Void
   let onEditStock: (StockResponse) -> Void
   let onDeleteStock: (String) -> Void
   let onPresentTargetAlert: (SDPortfolioStock) -> Void
@@ -29,6 +30,9 @@ struct PortfolioPositionsSection: View {
             .buttonStyle(.borderedProminent)
             .accessibilityIdentifier("portfolio.addPositionButton")
             .guidedTarget(.holdingAdd, in: .portfolio)
+          Button("Import from broker", action: onImportFromBroker)
+            .buttonStyle(.bordered)
+            .accessibilityIdentifier("portfolio.importFromBrokerButton")
         }
         .padding(.vertical, 24)
       } else {

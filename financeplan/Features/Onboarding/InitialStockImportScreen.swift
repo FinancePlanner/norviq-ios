@@ -1,15 +1,15 @@
 import SwiftUI
 
 enum StockImportMethod: String, CaseIterable, Identifiable {
-  case csv
+  case broker
   case manual
 
   var id: String { rawValue }
 
   var title: String {
     switch self {
-    case .csv:
-      return "Import CSV"
+    case .broker:
+      return "Import from broker"
     case .manual:
       return "Enter Manually"
     }
@@ -17,8 +17,8 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
 
   var subtitle: String {
     switch self {
-    case .csv:
-      return "CSV with symbol, shares, buy_price, buy_date (+ optional notes)."
+    case .broker:
+      return "Screenshots, Ask Q or a CSV file from IBKR, DEGIRO, Trading 212, Revolut and more."
     case .manual:
       return "Type in your holdings one position at a time."
     }
@@ -26,8 +26,8 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
 
   var icon: String {
     switch self {
-    case .csv:
-      return "doc.text.fill"
+    case .broker:
+      return "square.and.arrow.down.on.square"
     case .manual:
       return "square.and.pencil"
     }
@@ -35,7 +35,7 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
 
   var iconColor: (ColorScheme) -> Color {
     switch self {
-    case .csv:
+    case .broker:
       return { scheme in AppTheme.Colors.secondaryTint(for: scheme) }
     case .manual:
       return { scheme in AppTheme.Colors.tint(for: scheme) }
@@ -56,6 +56,8 @@ struct InitialStockImportScreen: View {
   @State private var isSubmitting = false
   @State private var isSigningOut = false
   @State private var message: String?
+  @State private var isBrokerImportPresented = false
+  @State private var didImportFromBroker = false
   @State private var animatedIndices: Set<Int> = []
   @State private var headerVisible = false
 
@@ -110,6 +112,20 @@ struct InitialStockImportScreen: View {
       EmptyView()
     }
     .accessibilityIdentifier("initialStockImportScreen")
+    // Q is not reachable before the tab shell exists, so no Ask Q here. A new
+    // user has no portfolio context: the sheet picks the default one, and
+    // onboarding has no portfolio on screen to reload.
+    .sheet(isPresented: $isBrokerImportPresented, onDismiss: finishBrokerImportIfDone) {
+      BrokerImportSheet(portfolioListId: nil, allowsAskQ: false) {
+        didImportFromBroker = true
+      }
+    }
+  }
+
+  private func finishBrokerImportIfDone() {
+    guard didImportFromBroker else { return }
+    didImportFromBroker = false
+    onImportCompleted(.broker)
   }
 
   private var topActions: some View {
@@ -294,6 +310,10 @@ struct InitialStockImportScreen: View {
     defer { isSubmitting = false }
 
     message = nil
+    if selectedMethod == .broker {
+      isBrokerImportPresented = true
+      return
+    }
     onImportCompleted(selectedMethod)
   }
 }
