@@ -1,7 +1,7 @@
-• Interactive Brokers: a step-by-step guide to connect your account read-only, from Integrations
-• Q's holdings and trades cards: an easier keypad, clearer dates and plainer messages when something goes wrong
-• Pro features ask once per group instead of on every screen
-• Integrations now in Portuguese (Portugal)
+• Export a market brief: share it as a social image, a story, a PDF report or a link. Tap Export… in the brief's share menu
+• Every amount shows in its own currency, and one screen never mixes number formats
+• Portfolio chart: your real history, with a range picker. A change says which period it covers, and the chart tells you when prices are out of date
+• A cleaner look: serif page titles, solid cards, and Liquid Glass on iOS 26 controls
 • Bug fixes
 
 Norviq is a planning and organization tool. Not financial advice.
