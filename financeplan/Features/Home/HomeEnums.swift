@@ -88,6 +88,36 @@ enum HomeTab: Hashable, CaseIterable {
   }
 }
 
+/// The five tabs of the app shell. `HomeTab` goes when `HomeScreen` switches
+/// over to this.
+nonisolated enum AppTab: Hashable, CaseIterable, Sendable {
+  case today
+  case money
+  case wealth
+  case plan
+  case more
+
+  var title: LocalizedStringResource {
+    switch self {
+    case .today: "Today"
+    case .money: "Money"
+    case .wealth: "Wealth"
+    case .plan: "Plan"
+    case .more: "More"
+    }
+  }
+
+  var systemImage: String {
+    switch self {
+    case .today: "sun.max"
+    case .money: "creditcard"
+    case .wealth: "chart.line.uptrend.xyaxis"
+    case .plan: "target"
+    case .more: "ellipsis.circle"
+    }
+  }
+}
+
 enum PortfolioSegment: String, CaseIterable, Identifiable {
   case holdings
   case allocation
