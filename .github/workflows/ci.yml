@@ -169,7 +169,11 @@ jobs:
             exit 1
           fi
           name="$(xcrun simctl list devices available | grep "$udid" | sed -E 's/^ *([^(]+) \(.*/\1/')"
-          echo "Using simulator: $name ($udid)"
+          # The runtime decides which Q path the UI tests exercise: the
+          # floating button below 26, the accessory on 26, hiding from 26.1.
+          runtime="$(xcrun simctl list devices available \
+            | awk -v u="$udid" '/^-- /{rt=$0; gsub(/^-- | --$/, "", rt)} index($0, u){print rt; exit}')"
+          echo "Using simulator: $name, ${runtime:-unknown runtime} ($udid)"
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
 
       # Compiles the app and every test target once, for the simulator the tests

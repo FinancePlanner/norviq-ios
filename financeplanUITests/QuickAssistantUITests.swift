@@ -136,7 +136,9 @@ final class QuickAssistantUITests: XCTestCase {
         let app = launch(billingTier: "free")
         let button = qEntry(app)
         let resting = button.frame
-        app.searchFields.firstMatch.tap()
+        let search = app.searchFields.firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 5), "No search field on Home")
+        search.tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "Keyboard missing")
         XCTAssertEqual(button.frame.minY, resting.minY, accuracy: 1, "Q moved with the keyboard")
     }
@@ -147,6 +149,10 @@ final class QuickAssistantUITests: XCTestCase {
     /// supply, so a stub stands in for the API.
     @MainActor
     func testQEntryHiddenOnRebalancing() throws {
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        if os.majorVersion == 26, os.minorVersion == 0 {
+            throw XCTSkip("iOS 26.0 has no tabViewBottomAccessory(isEnabled:), so the accessory stays on Rebalancing by design")
+        }
         let stub = try StubAPIServer(routes: ["/v1/portfolios": StubAPIServer.onePortfolio])
         stubAPI = stub
         try stub.start()

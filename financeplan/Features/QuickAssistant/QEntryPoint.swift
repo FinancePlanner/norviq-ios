@@ -197,6 +197,8 @@ struct QEntryButton<Label: View>: View {
         // The tap's own name; the card stays one action away when a tap
         // summarises instead.
         .accessibilityLabel(actions.isSummaryAvailable ? "AI summary" : "Ask Q")
+        // Voice Control matches the visible "Ask Q" as well as the label.
+        .accessibilityInputLabels([Text("Ask Q"), Text("AI summary")])
         .accessibilityActions {
             if actions.isSummaryAvailable {
                 Button("Ask Q", action: actions.onHold)

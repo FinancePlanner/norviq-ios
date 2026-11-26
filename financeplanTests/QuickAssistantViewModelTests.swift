@@ -505,7 +505,7 @@ final class QuickAssistantCoordinatorTests: XCTestCase {
         XCTAssertEqual(consentPrompts, 1)
     }
 
-    func testFloatingButtonCanOpenWithoutAScreen() async {
+    func testCardOpensWithoutAScope() async {
         let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
         coordinator.present(scope: nil)
         XCTAssertTrue(coordinator.isPresented)
@@ -592,9 +592,23 @@ final class QuickAssistantCoordinatorTests: XCTestCase {
         let coordinator = QuickAssistantCoordinator(allowsAI: { true }, presentConsent: {})
         coordinator.pushScope(.markets, id: UUID())
         coordinator.present(scope: .markets)
+        coordinator.setQAccessoryHidden(true)
+        coordinator.setGuidedStepActive(true)
         coordinator.resetForSignOut()
         XCTAssertNil(coordinator.currentScope)
         XCTAssertFalse(coordinator.isPresented)
+        XCTAssertEqual(coordinator.qHiders, 0, "the next account must not inherit a hidden Q")
+        XCTAssertTrue(coordinator.showsQEntry)
+
+        // A screen torn down after the reset still reports its unhide.
+        coordinator.setQAccessoryHidden(false)
+        coordinator.setGuidedStepActive(false)
+        XCTAssertEqual(coordinator.qHiders, 0, "a late unhide clamps at 0")
+        XCTAssertTrue(coordinator.showsQEntry)
+
+        // The next account's first guided step hides Q again.
+        coordinator.setGuidedStepActive(true)
+        XCTAssertEqual(coordinator.qHiders, 1)
     }
 
     func testAGuidedStepHidesQUntilItEnds() async {

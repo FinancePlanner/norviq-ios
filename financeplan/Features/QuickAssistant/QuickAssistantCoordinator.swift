@@ -91,10 +91,13 @@ final class QuickAssistantCoordinator {
         scopes.removeAll { $0.id == id }
     }
 
-    /// The next account must not inherit a scope a torn-down screen left behind.
+    /// The next account must not inherit a scope, a hider or a guided step that
+    /// a torn-down screen left behind. A late unhide still clamps at 0.
     func resetForSignOut() {
         dismiss()
         scopes.removeAll()
+        qHiders = 0
+        isGuidedStepActive = false
         tapGate = QuickAssistantTapGate()
     }
 }
