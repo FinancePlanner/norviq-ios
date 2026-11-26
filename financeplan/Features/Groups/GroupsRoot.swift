@@ -16,6 +16,37 @@ nonisolated enum GroupsRoute: Hashable, Sendable {
     if path.count > depth { path.removeLast(path.count - depth) }
     if let route { path.append(route) }
   }
+
+  /// Moves `path` for a deep link, as `show` does, and says what is left for
+  /// GroupsRoot to do.
+  static func follow(_ link: GroupDeepLink, on path: inout NavigationPath, above depth: Int) -> GroupsLinkFollowUp {
+    switch link {
+    case let .channel(groupID, channelID):
+      show(.group(groupID, channelID: channelID), on: &path, above: depth)
+      return .nothing
+    case let .group(groupID):
+      show(.group(groupID, channelID: nil), on: &path, above: depth)
+      return .nothing
+    case .invitations:
+      show(nil, on: &path, above: depth)
+      return .reloadInvitations
+    case let .invite(code):
+      let covered = path.count > depth
+      show(nil, on: &path, above: depth)
+      return .join(code: code, afterReturn: covered)
+    }
+  }
+}
+
+/// What a deep link leaves for GroupsRoot once `GroupsRoute.follow` has moved
+/// the path.
+nonisolated enum GroupsLinkFollowUp: Equatable, Sendable {
+  case nothing
+  case reloadInvitations
+  /// Offer to join with `code`. The join sheet hangs off Groups' own screen;
+  /// when a pushed screen covered it, `afterReturn` holds the sheet until that
+  /// screen appears again, because a sheet asked of it mid-pop can be dropped.
+  case join(code: String, afterReturn: Bool)
 }
 
 /// Groups: invitations, the user's groups, and ways to start or find one.
@@ -32,6 +63,9 @@ struct GroupsRoot: View {
   @State private var depth: Int?
   @State private var isCreating = false
   @State private var joinCode: GroupJoinRequest?
+  /// An invite that arrived while a pushed screen covered Groups, shown once
+  /// Groups' own screen appears again.
+  @State private var joinOnReturn: GroupJoinRequest?
 
   var body: some View {
     Group {
@@ -60,6 +94,12 @@ struct GroupsRoot: View {
     }
     .onAppear {
       if depth == nil { depth = path.count }
+      if let request = joinOnReturn {
+        joinOnReturn = nil
+        joinCode = request
+      }
+      // A link that arrived while Groups was covered and was not handled then.
+      if store.hasLoaded { consumePendingLink() }
     }
     .task {
       await viewer.load()
@@ -87,17 +127,17 @@ struct GroupsRoot: View {
   private func consumePendingLink() {
     guard let link = store.pendingLink else { return }
     store.pendingLink = nil
-    switch link {
-    case let .channel(groupID, channelID):
-      show(.group(groupID, channelID: channelID))
-    case let .group(groupID):
-      show(.group(groupID, channelID: nil))
-    case .invitations:
-      show(nil)
+    switch GroupsRoute.follow(link, on: &path, above: depth ?? path.count) {
+    case .nothing:
+      break
+    case .reloadInvitations:
       Task { await store.load() }
-    case let .invite(code):
-      show(nil)
-      joinCode = GroupJoinRequest(code: code)
+    case let .join(code, afterReturn):
+      if afterReturn {
+        joinOnReturn = GroupJoinRequest(code: code)
+      } else {
+        joinCode = GroupJoinRequest(code: code)
+      }
     }
   }
 }

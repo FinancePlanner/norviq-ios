@@ -92,25 +92,29 @@ final class NavigationStructureTests: XCTestCase {
 
   // MARK: - Groups on a shared path
 
-  func testAGroupsLinkPopsToGroupsThenPushes() {
+  /// A path holding `items`, bottom first, to compare a whole path with:
+  /// `NavigationPath` is equatable, so this checks the top element too.
+  private func pathOf(_ items: any Hashable...) -> NavigationPath {
     var path = NavigationPath()
-    path.append(AppDestination.groups)
-    path.append(GroupsRoute.discover)
-    path.append(GroupsRoute.group(UUID(), channelID: nil))
+    for item in items { path.append(item) }
+    return path
+  }
 
-    GroupsRoute.show(.group(UUID(), channelID: nil), on: &path, above: 1)
+  func testAGroupsLinkPopsToGroupsThenPushes() {
+    let linked = UUID()
+    var path = pathOf(AppDestination.groups, GroupsRoute.discover, GroupsRoute.group(UUID(), channelID: nil))
 
-    XCTAssertEqual(path.count, 2, "More > Groups > the linked group")
+    GroupsRoute.show(.group(linked, channelID: nil), on: &path, above: 1)
+
+    XCTAssertEqual(path, pathOf(AppDestination.groups, GroupsRoute.group(linked, channelID: nil)), "More > Groups > the linked group")
   }
 
   func testAnInvitationsLinkReturnsToGroups() {
-    var path = NavigationPath()
-    path.append(AppDestination.groups)
-    path.append(GroupsRoute.discover)
+    var path = pathOf(AppDestination.groups, GroupsRoute.discover)
 
     GroupsRoute.show(nil, on: &path, above: 1)
 
-    XCTAssertEqual(path.count, 1, "back on Groups, More's root stays below it")
+    XCTAssertEqual(path, pathOf(AppDestination.groups), "back on Groups, More's root stays below it")
   }
 
   func testGroupsAsATabRootStartsAtDepthZero() {
@@ -118,15 +122,78 @@ final class NavigationStructureTests: XCTestCase {
 
     GroupsRoute.show(.discover, on: &path, above: 0)
 
-    XCTAssertEqual(path.count, 1)
+    XCTAssertEqual(path, pathOf(GroupsRoute.discover))
   }
 
   func testGroupsNeverPopsBelowItself() {
-    var path = NavigationPath()
-    path.append(AppDestination.groups)
+    var path = pathOf(AppDestination.groups)
 
     GroupsRoute.show(.discover, on: &path, above: 1)
 
-    XCTAssertEqual(path.count, 2)
+    XCTAssertEqual(path, pathOf(AppDestination.groups, GroupsRoute.discover))
+  }
+
+  // MARK: - Groups deep links
+
+  func testAChannelLinkReplacesTheOpenGroup() {
+    let group = UUID(), channel = UUID()
+    var path = pathOf(AppDestination.groups, GroupsRoute.group(UUID(), channelID: nil))
+
+    let followUp = GroupsRoute.follow(.channel(groupID: group, channelID: channel), on: &path, above: 1)
+
+    XCTAssertEqual(followUp, .nothing)
+    XCTAssertEqual(path, pathOf(AppDestination.groups, GroupsRoute.group(group, channelID: channel)))
+  }
+
+  func testAGroupLinkReplacesTheOpenGroup() {
+    let group = UUID()
+    var path = pathOf(AppDestination.groups, GroupsRoute.discover, GroupsRoute.group(UUID(), channelID: nil))
+
+    let followUp = GroupsRoute.follow(.group(group), on: &path, above: 1)
+
+    XCTAssertEqual(followUp, .nothing)
+    XCTAssertEqual(path, pathOf(AppDestination.groups, GroupsRoute.group(group, channelID: nil)))
+  }
+
+  func testAnInvitationsLinkReturnsToGroupsAndReloads() {
+    var path = pathOf(AppDestination.groups, GroupsRoute.discover)
+
+    let followUp = GroupsRoute.follow(.invitations, on: &path, above: 1)
+
+    XCTAssertEqual(followUp, .reloadInvitations)
+    XCTAssertEqual(path, pathOf(AppDestination.groups))
+  }
+
+  /// The join sheet hangs off Groups' own screen. With a group open on top,
+  /// that screen is off screen until the pop lands, and a sheet asked of it
+  /// mid-pop can be dropped, so the sheet waits for Groups to appear again.
+  func testAnInviteOverAnOpenGroupWaitsForGroupsToAppear() {
+    var path = pathOf(AppDestination.groups, GroupsRoute.group(UUID(), channelID: nil))
+
+    let followUp = GroupsRoute.follow(.invite(code: "abc"), on: &path, above: 1)
+
+    XCTAssertEqual(followUp, .join(code: "abc", afterReturn: true))
+    XCTAssertEqual(path, pathOf(AppDestination.groups))
+  }
+
+  func testAnInviteOnGroupsItselfOpensTheSheetAtOnce() {
+    var path = pathOf(AppDestination.groups)
+
+    let followUp = GroupsRoute.follow(.invite(code: "abc"), on: &path, above: 1)
+
+    XCTAssertEqual(followUp, .join(code: "abc", afterReturn: false))
+    XCTAssertEqual(path, pathOf(AppDestination.groups))
+  }
+
+  func testGroupsRootPresentsADeferredJoinOnlyWhenItAppears() async throws {
+    await Task.yield()
+    let src = try code("Features/Groups/GroupsRoot.swift")
+    XCTAssertTrue(src.contains("GroupsRoute.follow("), "GroupsRoot routes links through GroupsRoute.follow")
+    guard let start = src.range(of: ".onAppear {"), let end = src.range(of: ".task {", range: start.upperBound..<src.endIndex) else {
+      return XCTFail("GroupsRoot keeps an onAppear ahead of its task")
+    }
+    let onAppear = src[start.upperBound..<end.lowerBound]
+    XCTAssertTrue(onAppear.contains("joinCode = request"), "a held invite is shown when Groups appears again")
+    XCTAssertTrue(src.contains("joinOnReturn = GroupJoinRequest(code: code)"), "a covered Groups holds the invite until it appears")
   }
 }
