@@ -17,6 +17,15 @@ final class FinanceplanUITestsLaunchTests: XCTestCase {
         continueAfterFailure = false
     }
 
+    /// Each UI configuration can leave the simulator in landscape, and the
+    /// classes that run after this one expect portrait.
+    override func tearDownWithError() throws {
+        // XCTest calls tearDown on the main thread.
+        MainActor.assumeIsolated {
+            XCUIDevice.shared.orientation = .portrait
+        }
+    }
+
     @MainActor
     func testLaunch() throws {
         let app = XCUIApplication()

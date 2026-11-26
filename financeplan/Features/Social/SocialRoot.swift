@@ -1,9 +1,13 @@
 import Factory
 import SwiftUI
 
-/// The Friends tab: friends-only leaderboards (when the server turns them on),
+/// Friends: friends-only leaderboards (when the server turns them on),
 /// invites, pending requests and the friend list. Messages join in Phase 4.
+/// It pushes onto the enclosing stack (More's, or the old tab's) rather than
+/// owning one.
 struct SocialRoot: View {
+  /// The enclosing stack's path.
+  @Binding var path: NavigationPath
   @Binding var pendingInviteCode: String?
   /// A section a push asked for (`feed`); consumed once.
   @Binding var pendingSection: String?
@@ -15,53 +19,50 @@ struct SocialRoot: View {
   @State private var isFacebookImportPresented = false
   @State private var redeemingInvite: InviteCodeItem?
   @State private var section: SocialSection = .friends
-  @State private var path = NavigationPath()
 
   var body: some View {
-    NavigationStack(path: $path) {
-      content
-        .navigationTitle("Friends")
-        .toolbar { toolbar }
-        .navigationDestination(for: SocialUserSummary.self) { user in
-          SocialProfileView(user: user)
+    content
+      .navigationTitle("Friends")
+      .toolbar { toolbar }
+      .navigationDestination(for: SocialUserSummary.self) { user in
+        SocialProfileView(user: user)
+      }
+      .navigationDestination(for: SocialSettingsDestination.self) { destination in
+        switch destination {
+        case .privacy: SocialPrivacySettingsView()
+        case .blocked: BlockedUsersView()
         }
-        .navigationDestination(for: SocialSettingsDestination.self) { destination in
-          switch destination {
-          case .privacy: SocialPrivacySettingsView()
-          case .blocked: BlockedUsersView()
-          }
+      }
+      .refreshable { await store.load() }
+      .task {
+        if !store.hasLoaded { await store.load() }
+      }
+      .sheet(isPresented: $isSearchPresented) { UserSearchView() }
+      .sheet(isPresented: $isInvitePresented) { InviteFriendsView() }
+      .sheet(isPresented: $isContactsPresented) { ContactsDiscoveryView() }
+      .sheet(isPresented: $isXImportPresented) { XImportView() }
+      .sheet(isPresented: $isFacebookImportPresented) { FacebookImportView() }
+      .sheet(item: $redeemingInvite) { item in InviteRedeemSheet(code: item.code) }
+      .onChange(of: pendingSection, initial: true) { _, requested in
+        guard let requested else { return }
+        pendingSection = nil
+        if requested == AchievementPushDestination.feedSection, store.config.activityFeed {
+          section = .feed
         }
-        .refreshable { await store.load() }
-        .task {
-          if !store.hasLoaded { await store.load() }
-        }
-        .sheet(isPresented: $isSearchPresented) { UserSearchView() }
-        .sheet(isPresented: $isInvitePresented) { InviteFriendsView() }
-        .sheet(isPresented: $isContactsPresented) { ContactsDiscoveryView() }
-        .sheet(isPresented: $isXImportPresented) { XImportView() }
-        .sheet(isPresented: $isFacebookImportPresented) { FacebookImportView() }
-        .sheet(item: $redeemingInvite) { item in InviteRedeemSheet(code: item.code) }
-        .onChange(of: pendingSection, initial: true) { _, requested in
-          guard let requested else { return }
-          pendingSection = nil
-          if requested == AchievementPushDestination.feedSection, store.config.activityFeed {
-            section = .feed
-          }
-        }
-        .onChange(of: pendingInviteCode, initial: true) { _, code in
-          guard let code else { return }
-          pendingInviteCode = nil
-          redeemingInvite = InviteCodeItem(code: code)
-        }
-        .alert(
-          "Something went wrong",
-          isPresented: Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })
-        ) {
-          Button("OK", role: .cancel) {}
-        } message: {
-          Text(store.errorMessage ?? "")
-        }
-    }
+      }
+      .onChange(of: pendingInviteCode, initial: true) { _, code in
+        guard let code else { return }
+        pendingInviteCode = nil
+        redeemingInvite = InviteCodeItem(code: code)
+      }
+      .alert(
+        "Something went wrong",
+        isPresented: Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })
+      ) {
+        Button("OK", role: .cancel) {}
+      } message: {
+        Text(store.errorMessage ?? "")
+      }
   }
 
   /// Leaderboard and Feed each need their server switch; Friends is always there.
@@ -206,7 +207,8 @@ enum SocialSection: String, CaseIterable, Identifiable {
   }
 }
 
-enum SocialSettingsDestination: Hashable {
+/// `nonisolated`, like `AppDestination`, so the path can hold it anywhere.
+nonisolated enum SocialSettingsDestination: Hashable, Sendable {
   case privacy
   case blocked
 }

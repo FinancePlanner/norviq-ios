@@ -12,8 +12,9 @@ private let homePerformanceLogger = Logger(
 
 @MainActor
 struct DashboardRoot: View {
-  @Binding var selectedTab: HomeTab
-  @Binding var isSettingsPresented: Bool
+  @Binding var selectedTab: AppTab
+  /// Today's stack: Settings and the notification inbox push onto it.
+  @Binding var path: NavigationPath
   @Binding var isCapturePresented: Bool
   @Bindable var budgetStore: BudgetPlannerViewModel
   @State private var searchViewModel = AssetSearchViewModel()
@@ -31,6 +32,7 @@ struct DashboardRoot: View {
   @State private var isGoalPlanningPresented = false
   @State private var isTerminalPositionsPresented = false
   @State private var hasLoadedContent = false
+  @State private var profile = UserProfileViewModel()
   @Environment(GuidedStartCoordinator.self) private var guided: GuidedStartCoordinator?
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @InjectedObservable(\Container.marketBriefRouter) private var marketBriefRouter
@@ -99,7 +101,7 @@ struct DashboardRoot: View {
   }
 
   var body: some View {
-    NavigationStack {
+    NavigationStack(path: $path) {
       ScrollViewReader { scrollProxy in
         ScrollView {
           Group {
@@ -154,9 +156,15 @@ struct DashboardRoot: View {
       .navigationDestination(isPresented: $isTerminalPositionsPresented) {
         TerminalPositionsScreen()
       }
+      // Friends and Groups live in More, so Today has no invite or section to hand on.
+      .navigationDestination(for: AppDestination.self) {
+        destinationView($0, path: $path, pendingInviteCode: .constant(nil), pendingSocialSection: .constant(nil))
+      }
       .task {
         await handleInitialTask()
       }
+      // Forced, so a name changed in Settings shows on the way back.
+      .task { await profile.load(force: true) }
       .onReceive(NotificationCenter.default.publisher(for: .portfolioDataDidChange)) { _ in
         handleHomeDataDidChange()
       }
@@ -190,11 +198,26 @@ struct DashboardRoot: View {
           .accessibilityLabel(LocalizedStringKey("Capture expense"))
         }
         ToolbarItem(placement: .topBarTrailing) {
-          Button("Settings", systemImage: "gearshape") {
-            openSettings()
+          Button("Notifications", systemImage: "bell") {
+            path.append(AppDestination.notifications)
           }
           .labelStyle(.iconOnly)
-          .accessibilityLabel(LocalizedStringKey("Open settings"))
+          .accessibilityIdentifier("today.notifications")
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+          Button {
+            path.append(AppDestination.settings)
+          } label: {
+            AccountAvatar(
+              initial: MoreHubModel.account(username: profile.profile?.username, email: profile.profile?.email).initial,
+              size: 28
+            )
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
+          }
+          .accessibilityLabel(Text("Account"))
+          .accessibilityHint(Text("Opens Settings"))
+          .accessibilityIdentifier("today.account")
         }
       }
       .searchable(
@@ -211,6 +234,13 @@ struct DashboardRoot: View {
       .fullScreenCover(isPresented: $isGoalPlanningPresented) {
         NavigationStack {
           GoalPlanningScreen()
+            .toolbar {
+              ToolbarItem(placement: .topBarLeading) {
+                Button("Close", systemImage: "xmark") { isGoalPlanningPresented = false }
+                  .labelStyle(.iconOnly)
+                  .accessibilityLabel("Close goals")
+              }
+            }
         }
         // Anchors do not leave a presentation, so the cover spotlights its own.
         .guidedSpotlight(step: guided?.activeStep, activeTab: .goalPlanning, onSkip: { guided?.skip() })
@@ -230,13 +260,9 @@ struct DashboardRoot: View {
     }
   }
 
-  private func handleTabSelectionChange(_ tab: HomeTab) {
-    guard tab == .dashboard else { return }
+  private func handleTabSelectionChange(_ tab: AppTab) {
+    guard tab == .today else { return }
     Task { await loadContent(force: true) }
-  }
-
-  private func openSettings() {
-    isSettingsPresented = true
   }
 
   private func presentChartBuilder() {

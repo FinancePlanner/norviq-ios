@@ -3,9 +3,10 @@ import Factory
 import StockPlanShared
 import SwiftUI
 
+/// Pushed from Plan, so it has a back button; a presenter that covers the
+/// screen with it adds its own Close.
 struct GoalPlanningScreen: View {
   @Environment(\.colorScheme) private var colorScheme
-  @Environment(\.dismiss) private var dismiss
   @Environment(GuidedStartCoordinator.self) private var guided: GuidedStartCoordinator?
   @State private var model = GoalPlanningViewModel(service: Container.shared.goalPlanningService())
   @State private var isCreatingGoal = false
@@ -15,7 +16,7 @@ struct GoalPlanningScreen: View {
       VStack(alignment: .leading, spacing: 20) {
         VigilPageHeader(
           watch: .wealth,
-          title: "Financial goals"
+          title: "Goals"
         )
 
         overviewHeader
@@ -31,14 +32,9 @@ struct GoalPlanningScreen: View {
     }
     .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
     .vigilScreenBackground()
-    .vigilNavigationTitle("Financial goals")
+    .vigilNavigationTitle("Goals")
     .vigilInlineNavigationBar()
     .toolbar {
-      ToolbarItem(placement: .topBarLeading) {
-        Button("Close", systemImage: "xmark", action: dismiss.callAsFunction)
-          .labelStyle(.iconOnly)
-          .accessibilityLabel("Close financial goals")
-      }
       ToolbarItem(placement: .topBarTrailing) {
         Button("New goal", systemImage: "plus") { isCreatingGoal = true }
           .disabled(!model.canCreateActiveGoal)

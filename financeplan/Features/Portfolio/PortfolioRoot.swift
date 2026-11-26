@@ -16,12 +16,11 @@ enum PortfolioRootRoute: Hashable {
   case rebalancingRules
   case notifications
   case terminalPositions
+  case crypto
 }
 
 @MainActor
 struct PortfolioRoot: View {
-  @Environment(\.colorScheme) private var colorScheme
-  @Binding var isSettingsPresented: Bool
   @Binding var pendingOpenSymbol: String?
   @Binding var pendingThesisWatchOpen: Bool
   @Binding var pendingAutomationDestination: AutomationNavigationDestination?
@@ -63,6 +62,9 @@ struct PortfolioRoot: View {
         // Free, like Grow and Retire: only the AI suggestions inside are Pro.
         case .terminalPositions:
           TerminalPositionsScreen()
+        // Gated inside: a free user gets its own Pro gate.
+        case .crypto:
+          CryptoHomeView()
         }
       }
       .navigationDestination(for: PortfolioStockRoute.self) { route in
@@ -85,15 +87,6 @@ struct PortfolioRoot: View {
       .vigilInlineNavigationBar()
       .vigilScreenBackground()
       .toolbar {
-        ToolbarItem(placement: .topBarLeading) {
-          Button("Settings", systemImage: "gearshape") {
-            isSettingsPresented = true
-          }
-          .labelStyle(.iconOnly)
-          .buttonStyle(.bordered)
-          .tint(AppTheme.Colors.tint(for: colorScheme))
-          .accessibilityLabel(LocalizedStringKey("Open settings"))
-        }
         ToolbarItemGroup(placement: .topBarTrailing) {
           NavigationLink(value: PortfolioRootRoute.workspace) {
             Label("Manage portfolios", systemImage: "rectangle.stack")
@@ -101,15 +94,14 @@ struct PortfolioRoot: View {
           .labelStyle(.iconOnly)
           .accessibilityLabel("Manage portfolios")
           NavigationLink(value: PortfolioRootRoute.simulator) {
-            Label("Portfolio simulator", systemImage: "slider.horizontal.below.square.filled.and.square")
+            Label("Simulator", systemImage: "slider.horizontal.below.square.filled.and.square")
           }
           .labelStyle(.iconOnly)
-          .accessibilityLabel("Open portfolio simulator")
           NavigationLink(value: PortfolioRootRoute.scenarioPlanning) {
-            Label("Scenario planning", systemImage: "chart.xyaxis.line")
+            Label("Scenarios", systemImage: "chart.xyaxis.line")
           }
           .labelStyle(.iconOnly)
-          .accessibilityLabel("Open scenario planning")
+          .accessibilityLabel("Open scenarios")
         }
         // A menu rather than two more icons: the top bar already carries four,
         // and these two belong together as one idea - path, and destination.
@@ -122,10 +114,13 @@ struct PortfolioRoot: View {
               Label("Grow", systemImage: "chart.line.uptrend.xyaxis")
             }
             NavigationLink(value: PortfolioRootRoute.retire) {
-              Label("Retire", systemImage: "beach.umbrella")
+              Label("Retirement", systemImage: "beach.umbrella")
             }
             NavigationLink(value: PortfolioRootRoute.terminalPositions) {
-              Label("Terminal position sizing", systemImage: "scope")
+              Label("Terminal sizing", systemImage: "scope")
+            }
+            NavigationLink(value: PortfolioRootRoute.crypto) {
+              Label("Crypto", systemImage: "bitcoinsign.circle")
             }
           }
           .accessibilityLabel("Open planning")

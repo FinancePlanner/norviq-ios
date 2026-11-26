@@ -41,9 +41,7 @@ public struct UserProfileView: View {
     @InjectedObservable(\Container.appEnvironment) private var environmentManager
     @InjectedObservable(\Container.billingManager) private var billingManager
     @InjectedObservable(\Container.socialStore) private var socialStore
-    @State private var path: [UserProfileDestination] = []
     @State private var isEditPresented = false
-    @State private var isAssistantPresented = false
     @State private var isPaywallPresented = false
     @State private var isLoggingOut = false
     @State private var isDeletingAccount = false
@@ -84,58 +82,39 @@ public struct UserProfileView: View {
         )
     }
 
+    /// Pushed from More, so it has a back button; a presenter that shows it
+    /// as a sheet wraps it in a stack and adds its own Done.
     public var body: some View {
-        NavigationStack(path: $path) {
-            rootContent
-                .id(appLanguage.rawValue)
-                .vigilScreenBackground()
-                .vigilNavigationTitle(LocalizedStringKey("Settings"))
-                .navigationBarTitleDisplayMode(.large)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            isAssistantPresented = true
-                        } label: {
-                            Image(systemName: "sparkles")
-                        }
-                        .foregroundStyle(AppTheme.Colors.tint(for: scheme))
-                        .accessibilityLabel("Q")
-                    }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") { dismiss() }
-                            .font(.headline)
-                            .foregroundStyle(AppTheme.Colors.tint(for: scheme))
-                    }
-                }
-                .task {
-                    await initialLoad()
-                }
-                .onReceive(pushNotificationsCoordinator.$isOptedIn) { isNotificationsOn = $0 }
-                .onReceive(pushNotificationsCoordinator.$earningsAlertsEnabled) { isEarningsAlertsOn = $0 }
-                .alert(
-                    "Face ID",
-                    isPresented: Binding(
-                        get: { faceIDErrorMessage != nil },
-                        set: { if !$0 { faceIDErrorMessage = nil } }
-                    )
-                ) {
-                    Button("OK", role: .cancel) {}
-                } message: {
-                    Text(faceIDErrorMessage ?? "")
-                }
-                .sheet(isPresented: $isEditPresented) {
-                    editProfileSheet
-                }
-                .sheet(isPresented: $isAssistantPresented) {
-                    PersistentAssistantView()
-                }
-                .sheet(isPresented: $isPaywallPresented) {
-                    PaywallView(billingManager: billingManager)
-                }
-                .navigationDestination(for: UserProfileDestination.self) { destination in
-                    destinationView(for: destination)
-                }
-        }
+        rootContent
+            .id(appLanguage.rawValue)
+            .vigilScreenBackground()
+            .vigilNavigationTitle(LocalizedStringKey("Settings"))
+            .navigationBarTitleDisplayMode(.large)
+            .task {
+                await initialLoad()
+            }
+            .onReceive(pushNotificationsCoordinator.$isOptedIn) { isNotificationsOn = $0 }
+            .onReceive(pushNotificationsCoordinator.$earningsAlertsEnabled) { isEarningsAlertsOn = $0 }
+            .alert(
+                "Face ID",
+                isPresented: Binding(
+                    get: { faceIDErrorMessage != nil },
+                    set: { if !$0 { faceIDErrorMessage = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(faceIDErrorMessage ?? "")
+            }
+            .sheet(isPresented: $isEditPresented) {
+                editProfileSheet
+            }
+            .sheet(isPresented: $isPaywallPresented) {
+                PaywallView(billingManager: billingManager)
+            }
+            .navigationDestination(for: UserProfileDestination.self) { destination in
+                destinationView(for: destination)
+            }
     }
 
     @ViewBuilder
@@ -518,7 +497,7 @@ public struct UserProfileView: View {
 
             Section(LocalizedStringKey("Integrations")) {
                 NavigationLink(value: UserProfileDestination.integrations) {
-                    Label(LocalizedStringKey("Connected Accounts"), systemImage: "building.columns")
+                    Label(LocalizedStringKey("Brokers and imports"), systemImage: "building.columns")
                 }
                 NavigationLink(value: UserProfileDestination.integrationsHub) {
                     HStack {
@@ -685,7 +664,7 @@ public struct UserProfileView: View {
         case .connect:
             ConnectView()
         // Two entry points into connections, deliberately kept:
-        //   .integrations    — Settings > "Connected Accounts", the functional
+        //   .integrations    — Settings > "Brokers and imports", the functional
         //                      screen (bank sync, IBKR). Kept SHALLOW on purpose;
         //                      PR #60 had to restore this entry once already.
         //   .integrationsHub — the informational Vigil "MCP engine room" named in

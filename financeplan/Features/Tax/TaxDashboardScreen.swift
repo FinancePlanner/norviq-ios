@@ -45,126 +45,124 @@ struct TaxDashboardScreen: View {
   }
 
   var body: some View {
-    NavigationStack {
-      ScrollView {
-        LazyVStack(alignment: .leading, spacing: 16) {
-          VigilPageHeader(
-            watch: .spending,
-            title: "Tax strategy"
-          )
+    ScrollView {
+      LazyVStack(alignment: .leading, spacing: 16) {
+        VigilPageHeader(
+          watch: .spending,
+          title: "Tax strategy"
+        )
 
-          jurisdictionPicker
-          supportLevelBanner
-          profileStatus
-          if model.isLoading, model.dashboard == nil {
-            loadingState
-          } else if let dashboard = model.dashboard {
-            summary(dashboard)
-            taxDrag(dashboard)
-            assetLocation(dashboard)
-            assumptions(dashboard)
-            opportunities(dashboard)
-            recentPlans
-          } else {
-            ContentUnavailableView("Tax estimate unavailable", systemImage: "building.columns")
-          }
-        }
-        .padding()
-      }
-      .vigilScreenBackground()
-      .vigilNavigationTitle("Tax strategy")
-      .qScope(.tax)
-      .vigilInlineNavigationBar()
-      .toolbar {
-        ToolbarItemGroup(placement: .topBarTrailing) {
-          if model.selectedJurisdiction == .spain {
-            Button("Markets", systemImage: "building.columns") { isMarketAdmissionPresented = true }
-          }
-          if model.selectedJurisdiction == .germany {
-            Button("Funds", systemImage: "chart.pie") { isFundClassificationPresented = true }
-            Button("Fund values", systemImage: "calendar.badge.plus") {
-              presentPro { isFundAnnualInputPresented = true }
-            }
-          }
-          if
-            model.selectedJurisdiction == .portugal
-            || model.selectedJurisdiction == .germany
-            || model.selectedJurisdiction == .unitedStates
-            || model.selectedJurisdiction == .spain
-          {
-            Button("Losses", systemImage: "calendar.badge.clock") {
-              presentPro { isCarryforwardPresented = true }
-            }
-          }
-          Button("Profile", systemImage: "person.crop.circle") {
-            presentPro { isProfilePresented = true }
-          }
-          Button("Reports", systemImage: "doc.text") { isReportsPresented = true }
-          Button("Settings", systemImage: "gearshape") {
-            presentPro { isSettingsPresented = true }
-          }
+        jurisdictionPicker
+        supportLevelBanner
+        profileStatus
+        if model.isLoading, model.dashboard == nil {
+          loadingState
+        } else if let dashboard = model.dashboard {
+          summary(dashboard)
+          taxDrag(dashboard)
+          assetLocation(dashboard)
+          assumptions(dashboard)
+          opportunities(dashboard)
+          recentPlans
+        } else {
+          ContentUnavailableView("Tax estimate unavailable", systemImage: "building.columns")
         }
       }
-      .refreshable { await model.load() }
-      .task { await model.load() }
-      .onChange(of: model.selectedJurisdiction) { _, _ in Task { await model.load() } }
-      .alert("Tax strategy", isPresented: Binding(
-        get: { model.errorMessage != nil },
-        set: {
-          if !$0 {
-            model.errorMessage = nil
+      .padding()
+    }
+    .vigilScreenBackground()
+    .vigilNavigationTitle("Tax strategy")
+    .qScope(.tax)
+    .vigilInlineNavigationBar()
+    .toolbar {
+      ToolbarItemGroup(placement: .topBarTrailing) {
+        if model.selectedJurisdiction == .spain {
+          Button("Markets", systemImage: "building.columns") { isMarketAdmissionPresented = true }
+        }
+        if model.selectedJurisdiction == .germany {
+          Button("Funds", systemImage: "chart.pie") { isFundClassificationPresented = true }
+          Button("Fund values", systemImage: "calendar.badge.plus") {
+            presentPro { isFundAnnualInputPresented = true }
           }
         }
-      )) { Button("OK", role: .cancel) {} } message: { Text(model.errorMessage ?? "") }
-      .sheet(item: $model.scenario) { scenario in scenarioSheet(scenario) }
-      .sheet(item: $selectedOpportunity) { opportunity in
-        TaxOpportunityDetailSheet(
-          opportunity: opportunity,
-          onSimulate: { replacement in
-            selectedOpportunity = nil
-            Task { await model.simulate(opportunity, replacement: replacement) }
-          },
-          onDismiss: {
-            selectedOpportunity = nil
-            Task { await model.dismiss(opportunity) }
+        if
+          model.selectedJurisdiction == .portugal
+          || model.selectedJurisdiction == .germany
+          || model.selectedJurisdiction == .unitedStates
+          || model.selectedJurisdiction == .spain
+        {
+          Button("Losses", systemImage: "calendar.badge.clock") {
+            presentPro { isCarryforwardPresented = true }
           }
-        )
-      }
-      .sheet(item: $model.locationScenario) { scenario in locationScenarioSheet(scenario) }
-      .sheet(item: $model.actionPlan) { plan in actionPlanSheet(plan) }
-      .sheet(isPresented: $isSettingsPresented) { TaxSettingsSheet(service: service) }
-      .sheet(isPresented: $isReportsPresented) { TaxReportsSheet(service: service) }
-      .sheet(isPresented: $isPaywallPresented) { PaywallView(billingManager: billingManager) }
-      .sheet(item: profileSetup) { setup in
-        TaxProfileSetupSheet(service: service, context: setup.context) {
-          Task { await model.load() }
+        }
+        Button("Profile", systemImage: "person.crop.circle") {
+          presentPro { isProfilePresented = true }
+        }
+        Button("Reports", systemImage: "doc.text") { isReportsPresented = true }
+        Button("Settings", systemImage: "gearshape") {
+          presentPro { isSettingsPresented = true }
         }
       }
-      .sheet(isPresented: $isCarryforwardPresented) {
-        TaxLossCarryforwardSheet(
-          service: service,
-          jurisdiction: model.selectedJurisdiction,
-          taxYear: Calendar.current.component(.year, from: Date())
-        )
+    }
+    .refreshable { await model.load() }
+    .task { await model.load() }
+    .onChange(of: model.selectedJurisdiction) { _, _ in Task { await model.load() } }
+    .alert("Tax strategy", isPresented: Binding(
+      get: { model.errorMessage != nil },
+      set: {
+        if !$0 {
+          model.errorMessage = nil
+        }
       }
-      .sheet(isPresented: $isMarketAdmissionPresented) {
-        TaxMarketAdmissionSheet(
-          service: service,
-          instruments: model.profileContext?.instruments ?? []
-        ) { Task { await model.reloadProfileContext() } }
+    )) { Button("OK", role: .cancel) {} } message: { Text(model.errorMessage ?? "") }
+    .sheet(item: $model.scenario) { scenario in scenarioSheet(scenario) }
+    .sheet(item: $selectedOpportunity) { opportunity in
+      TaxOpportunityDetailSheet(
+        opportunity: opportunity,
+        onSimulate: { replacement in
+          selectedOpportunity = nil
+          Task { await model.simulate(opportunity, replacement: replacement) }
+        },
+        onDismiss: {
+          selectedOpportunity = nil
+          Task { await model.dismiss(opportunity) }
+        }
+      )
+    }
+    .sheet(item: $model.locationScenario) { scenario in locationScenarioSheet(scenario) }
+    .sheet(item: $model.actionPlan) { plan in actionPlanSheet(plan) }
+    .sheet(isPresented: $isSettingsPresented) { TaxSettingsSheet(service: service) }
+    .sheet(isPresented: $isReportsPresented) { TaxReportsSheet(service: service) }
+    .sheet(isPresented: $isPaywallPresented) { PaywallView(billingManager: billingManager) }
+    .sheet(item: profileSetup) { setup in
+      TaxProfileSetupSheet(service: service, context: setup.context) {
+        Task { await model.load() }
       }
-      .sheet(isPresented: $isFundClassificationPresented) {
-        TaxFundClassificationSheet(
-          service: service,
-          instruments: model.profileContext?.instruments ?? []
-        ) { Task { await model.reloadProfileContext() } }
-      }
-      .sheet(isPresented: $isFundAnnualInputPresented) {
-        TaxFundAnnualInputSheet(
-          service: service,
-          context: model.profileContext
-        )
-      }
+    }
+    .sheet(isPresented: $isCarryforwardPresented) {
+      TaxLossCarryforwardSheet(
+        service: service,
+        jurisdiction: model.selectedJurisdiction,
+        taxYear: Calendar.current.component(.year, from: Date())
+      )
+    }
+    .sheet(isPresented: $isMarketAdmissionPresented) {
+      TaxMarketAdmissionSheet(
+        service: service,
+        instruments: model.profileContext?.instruments ?? []
+      ) { Task { await model.reloadProfileContext() } }
+    }
+    .sheet(isPresented: $isFundClassificationPresented) {
+      TaxFundClassificationSheet(
+        service: service,
+        instruments: model.profileContext?.instruments ?? []
+      ) { Task { await model.reloadProfileContext() } }
+    }
+    .sheet(isPresented: $isFundAnnualInputPresented) {
+      TaxFundAnnualInputSheet(
+        service: service,
+        context: model.profileContext
+      )
     }
   }
 

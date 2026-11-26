@@ -22,8 +22,9 @@ struct ToolEntry: Identifiable {
 }
 
 enum ToolsCatalog {
-  /// Titles and icons match the labels `PortfolioRoot` already shows. Dividends
-  /// stays out until its server-side numbers are real.
+  /// Titles are the destination table's names, the same titles the screens
+  /// show; icons match `PortfolioRoot`'s. Dividends stays out until its
+  /// server-side numbers are real.
   static let entries: [ToolEntry] = [
     ToolEntry(
       route: .grow,
@@ -34,21 +35,21 @@ enum ToolsCatalog {
     ),
     ToolEntry(
       route: .retire,
-      title: "Retire",
+      title: "Retirement",
       question: "How much do I need to retire?",
       systemImage: "beach.umbrella",
       requiresPro: false
     ),
     ToolEntry(
       route: .terminalPositions,
-      title: "Terminal position sizing",
+      title: "Terminal sizing",
       question: "How many shares does my target position take?",
       systemImage: "scope",
       requiresPro: false
     ),
     ToolEntry(
       route: .simulator,
-      title: "Portfolio simulator",
+      title: "Simulator",
       question: "What would a different portfolio look like?",
       systemImage: "slider.horizontal.below.square.filled.and.square",
       requiresPro: false

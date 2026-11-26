@@ -1,89 +1,63 @@
 import SwiftUI
 
-enum HomeTab: Hashable, CaseIterable {
-  case dashboard
-  case portfolio
-  case economy
-  case markets
-  case crypto
-  case expenses
-  case reports
-  case tax
-  case insights
-  case social
-  case boards
-  case groups
+/// The five tabs of the app shell, in order.
+nonisolated enum AppTab: Hashable, CaseIterable, Sendable {
+  case today
+  case money
+  case wealth
+  case plan
+  case more
 
-  /// Always-visible iPhone tabs, registered first so the system bar shows
-  /// these before overflow. iPad sidebar still lists every destination.
-  /// With groups on, Groups takes Friends' slot and Friends moves to More:
-  /// friend requests still badge the Groups tab and open Friends from there.
-  static func primaryTabs(groupsEnabled: Bool) -> [HomeTab] {
-    [.dashboard, .portfolio, groupsEnabled ? .groups : .social, .expenses]
-  }
-
-  /// Destinations that sit after the primary four. On iPhone they land in
-  /// More; on iPad they appear in the sidebar. A tab in neither list is
-  /// unreachable — which is how Markets shipped invisible once already.
-  static func moreMenuTabs(groupsEnabled: Bool) -> [HomeTab] {
-    (groupsEnabled ? [.social] : []) + [.markets, .boards, .crypto, .economy, .reports, .tax, .insights]
-  }
-
-  var title: String {
+  var title: LocalizedStringResource {
     switch self {
-    case .dashboard:
-      return String(localized: "Home")
-    case .portfolio:
-      return String(localized: "Portfolio")
-    case .economy:
-      return String(localized: "Economy")
-    case .markets:
-      return String(localized: "Markets")
-    case .crypto:
-      return String(localized: "Crypto")
-    case .expenses:
-      return String(localized: "Expenses")
-    case .reports:
-      return String(localized: "Reports")
-    case .tax:
-      return String(localized: "Tax")
-    case .insights:
-      return String(localized: "Insights")
-    case .social:
-      return String(localized: "Friends")
-    case .boards:
-      return String(localized: "Boards")
-    case .groups:
-      return String(localized: "Groups")
+    case .today: "Today"
+    case .money: "Money"
+    case .wealth: "Wealth"
+    case .plan: "Plan"
+    case .more: "More"
     }
   }
 
   var systemImage: String {
     switch self {
-    case .dashboard:
-      return "house.fill"
-    case .portfolio:
-      return "chart.line.uptrend.xyaxis"
-    case .economy:
-      return "chart.bar.fill"
-    case .markets:
-      return "square.grid.3x3.fill"
-    case .crypto:
-      return "bitcoinsign.circle.fill"
-    case .expenses:
-      return "creditcard.fill"
-    case .reports:
-      return "chart.bar.doc.horizontal.fill"
-    case .tax:
-      return "building.columns.fill"
-    case .insights:
-      return "sparkles"
-    case .social:
-      return "person.2.fill"
-    case .boards:
-      return "bubble.left.and.text.bubble.right.fill"
-    case .groups:
-      return "bubble.left.and.bubble.right.fill"
+    case .today: "sun.max"
+    case .money: "creditcard"
+    case .wealth: "chart.line.uptrend.xyaxis"
+    case .plan: "target"
+    case .more: "ellipsis.circle"
+    }
+  }
+}
+
+nonisolated extension AppTab {
+  /// What a Pro tap on Q summarises when the screen on top sets no scope of
+  /// its own. Plan and More have no one thing to summarise, so Q opens the
+  /// card there; Tax sets its own scope.
+  var assistantScope: AIViewScope? {
+    switch self {
+    case .today: .home
+    case .money: .expenses
+    case .wealth: .portfolio
+    case .plan, .more: nil
+    }
+  }
+
+  /// The guided-start tab this one is, for the spotlight.
+  var guidedTab: GuidedTab? {
+    switch self {
+    case .today: .dashboard
+    case .money: .expenses
+    case .wealth: .portfolio
+    case .plan, .more: nil
+    }
+  }
+
+  /// The tab a guided step asks for. The Goals cover sits on Today until P4.
+  init(guided tab: GuidedTab) {
+    switch tab {
+    case .dashboard, .goalPlanning: self = .today
+    case .portfolio: self = .wealth
+    case .expenses: self = .money
     }
   }
 }

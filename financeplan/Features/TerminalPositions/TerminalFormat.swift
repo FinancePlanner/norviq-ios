@@ -35,7 +35,7 @@ enum TerminalFormat {
 /// Contract copy. Computed so a language switch takes effect without a relaunch.
 enum TerminalCopy {
   static var title: String {
-    String(localized: "Terminal position sizing")
+    String(localized: "Terminal sizing")
   }
 
   static var subtitle: String {

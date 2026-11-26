@@ -51,9 +51,9 @@ struct IntegrationsView: View {
     .vigilListChrome()
     .vigilScreenBackground()
     .appSensoryFeedback(success: successCount, destructive: destructiveCount)
-    // Named for the Settings row that leads here; the hub one level up already
-    // owns "Integrations".
-    .navigationTitle("Connected Accounts")
+    // The destination table's name, shared by the More row and the Settings
+    // row that lead here; the hub one level up already owns "Integrations".
+    .navigationTitle("Brokers and imports")
     .navigationBarTitleDisplayMode(.inline)
     .task { await viewModel.loadProvidersIfNeeded() }
     .refreshable { await viewModel.loadProviders(force: true) }

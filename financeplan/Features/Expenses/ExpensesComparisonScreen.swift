@@ -59,67 +59,65 @@ struct ExpensesComparisonScreen: View {
   }
 
   var body: some View {
-    NavigationStack {
-        VStack(spacing: 0) {
-          VigilPageHeader(
-            watch: .reports,
-            title: "Reports"
+    VStack(spacing: 0) {
+      VigilPageHeader(
+        watch: .reports,
+        title: "Reports"
+      )
+      .padding(.horizontal, 16)
+      .padding(.top, 8)
+
+      tabPicker
+
+      ScrollView {
+        ReportContentView(
+            isShowingLoadingState: isShowingLoadingState,
+            loadErrorMessage: loadErrorMessage,
+            shouldShowEmptyState: shouldShowEmptyState,
+            cards: visibleCards,
+            onRetry: retryLoad,
+            cardContent: cardView(for:)
           )
           .padding(.horizontal, 16)
-          .padding(.top, 8)
-
-          tabPicker
-
-          ScrollView {
-            ReportContentView(
-                isShowingLoadingState: isShowingLoadingState,
-                loadErrorMessage: loadErrorMessage,
-                shouldShowEmptyState: shouldShowEmptyState,
-                cards: visibleCards,
-                onRetry: retryLoad,
-                cardContent: cardView(for:)
-              )
-              .padding(.horizontal, 16)
-              .padding(.vertical, 20)
-              .accessibilityIdentifier("reports.scrollContent")
-              // Center the reports column on iPad instead of stretching edge-to-edge (Guideline 4).
-              .maxContentWidth(regularSizeClass: ContentWidth.dense)
-            }
+          .padding(.vertical, 20)
+          .accessibilityIdentifier("reports.scrollContent")
+          // Center the reports column on iPad instead of stretching edge-to-edge (Guideline 4).
+          .maxContentWidth(regularSizeClass: ContentWidth.dense)
         }
-        .vigilScreenBackground()
-        .vigilNavigationTitle(LocalizedStringKey("Reports"))
-        .qScope(.reports)
-        .vigilInlineNavigationBar()
-        .toolbar {
-          ToolbarItemGroup(placement: .topBarTrailing) {
-            NavigationLink {
-              AdvancedReportingScreen()
-            } label: {
-              Label("Reporting Center", systemImage: "doc.richtext")
-            }
-            .labelStyle(.iconOnly)
-            .accessibilityLabel("Open Reporting Center")
-            Button {
-              showingCustomize = true
-            } label: {
-              Image(systemName: "slider.horizontal.3")
-            }
+    }
+    .vigilScreenBackground()
+    .vigilNavigationTitle(LocalizedStringKey("Reports"))
+    .qScope(.reports)
+    .vigilInlineNavigationBar()
+    .toolbar {
+      ToolbarItemGroup(placement: .topBarTrailing) {
+        NavigationLink {
+          AdvancedReportingScreen()
+        } label: {
+          Label("Reporting Center", systemImage: "doc.richtext")
+        }
+        .labelStyle(.iconOnly)
+        .accessibilityLabel("Open Reporting Center")
+        Button {
+          showingCustomize = true
+        } label: {
+          Image(systemName: "slider.horizontal.3")
+        }
 .buttonStyle(.borderedProminent)
-            .accessibilityIdentifier("reports.customizeButton")
-          }
-        }
-        .refreshable {
-          await reloadReports(force: true)
-        }
-        .task {
-          await initialLoad()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .budgetPlannerDataDidChange)) { _ in
-          Task { await reloadReports(force: true) }
-        }
-        .sheet(isPresented: $showingCustomize) {
-          CustomizeDashboardSheet(preferences: dashboardPrefs)
-        }
+        .accessibilityIdentifier("reports.customizeButton")
+      }
+    }
+    .refreshable {
+      await reloadReports(force: true)
+    }
+    .task {
+      await initialLoad()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .budgetPlannerDataDidChange)) { _ in
+      Task { await reloadReports(force: true) }
+    }
+    .sheet(isPresented: $showingCustomize) {
+      CustomizeDashboardSheet(preferences: dashboardPrefs)
     }
   }
 

@@ -18,8 +18,12 @@ struct HomeScreen: View {
   @InjectedObservable(\Container.groupsStore) private var groupsStore
   @AppStorage(AppLanguage.storageKey) private var appLanguageRawValue = AppLanguage.english.rawValue
   let onLogout: () async -> Void
-  @State private var selectedTab: HomeTab = .dashboard
-  @State private var isSettingsPresented = false
+  @State private var selectedTab: AppTab = .today
+  /// The stacks a request can push onto. Money's and Wealth's roots keep a
+  /// plain stack: no request lands above them.
+  @State private var todayPath = NavigationPath()
+  @State private var planPath = NavigationPath()
+  @State private var morePath = NavigationPath()
   @State private var isPaywallPresented = false
   @State private var pendingPortfolioOpenSymbol: String?
   @State private var pendingThesisWatchOpen = false
@@ -33,12 +37,12 @@ struct HomeScreen: View {
   /// presented while another is still up.
   @State private var pendingAssistantLaunch: AssistantLaunch?
   @State private var guided: GuidedStartCoordinator?
-  /// An invite link that opened the app, shown once the Friends tab is up.
+  /// An invite link that opened the app, shown once Friends is up.
   @State private var pendingInviteCode: String?
   /// New unlocks waiting to be celebrated, and the screen they lead to.
   @State private var unlockCoordinator = Container.shared.achievementUnlockCoordinator()
   @State private var isAchievementsPresented = false
-  /// A Friends section a push asked for (`feed`), consumed by the Social tab.
+  /// A Friends section a push asked for (`feed`), consumed by Friends.
   @State private var pendingSocialSection: String?
   /// The AI summary a tap on Q opened.
   @State private var summaryScope: AIViewScope?
@@ -69,7 +73,7 @@ struct HomeScreen: View {
         )
     }
     .appAnimation(AppMotion.structural, value: billingManager.shouldShowTrialEndedBanner)
-    .guidedSpotlight(step: guided?.activeStep, activeTab: guidedTab(for: selectedTab), onSkip: { guided?.skip() })
+    .guidedSpotlight(step: guided?.activeStep, activeTab: selectedTab.guidedTab, onSkip: { guided?.skip() })
     // After the spotlight, or its scrim draws over the card.
     .overlay {
       QuickAssistantOverlay(
@@ -85,8 +89,10 @@ struct HomeScreen: View {
     .onDisappear { quickAssistant.setGuidedStepActive(false) }
     .environment(guided)
     .environment(\.norviqReopenGuidedStart, guided.map { coordinator in
+      // The tour starts on Today's root, whichever stack Settings was on.
       {
-        selectedTab = .dashboard
+        selectedTab = .today
+        todayPath = NavigationPath()
         Task { await coordinator.showMeAround() }
       }
     })
@@ -98,7 +104,10 @@ struct HomeScreen: View {
     }
     .onChange(of: guided?.requestedTab) { _, requested in
       guard let requested else { return }
-      selectedTab = homeTab(for: requested)
+      let tab = AppTab(guided: requested)
+      // Like Show me around: a step on Today starts from its root.
+      if tab == .today { todayPath = NavigationPath() }
+      selectedTab = tab
     }
     // Keep the card's ticks current: a latch can flip on another device, or
     // in a flow no step was open for.
@@ -107,7 +116,7 @@ struct HomeScreen: View {
       Task { await guided.refresh() }
     }
     .onChange(of: selectedTab) { _, tab in
-      guard tab == .dashboard, let guided else { return }
+      guard tab == .today, let guided else { return }
       Task { await guided.refresh() }
     }
     // Kept off `tabView`, whose modifier chain is at the type checker's limit.
@@ -119,7 +128,7 @@ struct HomeScreen: View {
     }
     // A cold start from a group link or push can beat the config fetch.
     .onChange(of: groupsEnabled) { _, enabled in
-      if enabled, groupsStore.pendingLink != nil { selectedTab = .groups }
+      if enabled, groupsStore.pendingLink != nil { navigate(to: .groups) }
     }
     // Live while the app is in front; pushes cover the background.
     .task(id: groupsEnabled && scenePhase == .active) {
@@ -133,29 +142,57 @@ struct HomeScreen: View {
 
   private var groupsEnabled: Bool { socialStore.config.groupsEnabled }
 
-  /// A group push or link: the Groups tab, which opens what it names.
-  private func openGroups(_ notification: Notification) {
-    groupsStore.pendingLink = notification.userInfo?["link"] as? GroupDeepLink
-    if groupsEnabled { selectedTab = .groups }
-  }
-
-  private func badge(for tab: HomeTab) -> Int {
-    switch tab {
-    case .social: socialStore.badgeCount
-    // Friends sits in More while groups are on, so its requests count here.
-    case .groups: groupsStore.badgeCount + socialStore.badgeCount
-    default: 0
+  /// Lands a push, link or hub row: its tab, and that tab's path. Side
+  /// effects (a pending symbol or link, the brief router) stay with the caller.
+  private func navigate(to request: NavigationRequest) {
+    guard
+      let target = NavigationResolver.target(
+        for: request, groupsEnabled: groupsEnabled, socialEnabled: socialStore.config.enabled)
+    else { return }
+    selectedTab = target.tab
+    switch target.tab {
+    case .today: todayPath = target.path(replacing: todayPath)
+    case .plan: planPath = target.path(replacing: planPath)
+    case .more: morePath = target.path(replacing: morePath)
+    case .money, .wealth: assert(target.path.isEmpty, "\(target.tab)'s root has no path to push onto")
     }
   }
 
-  /// A brief push or link: the dashboard tab, with the card on that brief.
+  /// A group push or link: Groups under More, which opens what it names. Only
+  /// Groups is pushed; it reads its depth when it first appears, then follows
+  /// the link itself.
+  private func openGroups(_ notification: Notification) {
+    groupsStore.pendingLink = notification.userInfo?["link"] as? GroupDeepLink
+    navigate(to: .groups)
+  }
+
+  /// More carries what Groups and Friends have waiting.
+  private func badge(for tab: AppTab) -> Int {
+    tab == .more ? groupsStore.badgeCount + socialStore.badgeCount : 0
+  }
+
+  /// A brief push or link: Today, with the card on that brief.
   private func openMarketBrief(_ notification: Notification) {
-    selectedTab = .dashboard
-    let ref = MarketBriefDeepLink.ref(
-      slot: notification.userInfo?["slot"] as? String,
-      date: notification.userInfo?["tradingDate"] as? String
-    )
+    openMarketBrief(
+      MarketBriefDeepLink.ref(
+        slot: notification.userInfo?["slot"] as? String,
+        date: notification.userInfo?["tradingDate"] as? String
+      ))
+  }
+
+  /// `nil` is the latest brief.
+  private func openMarketBrief(_ ref: MarketBriefRef?) {
+    navigate(to: .marketBrief)
     Container.shared.marketBriefRouter().open(ref)
+  }
+
+  /// A More row that lives on another tab.
+  private func openFromHub(_ request: NavigationRequest) {
+    if request == .marketBrief {
+      openMarketBrief(nil)
+    } else {
+      navigate(to: request)
+    }
   }
 
   /// Summaries are server-driven rather than a raw `isPro` read, so they can
@@ -166,7 +203,7 @@ struct HomeScreen: View {
     QEntryRoute.resolve(
       hasSummaries: billingManager.isFeatureAvailable("ai_insights"),
       screenScope: quickAssistant.currentScope,
-      tabScope: assistantScope(for: selectedTab),
+      tabScope: selectedTab.assistantScope,
       isHold: isHold
     )
   }
@@ -183,48 +220,13 @@ struct HomeScreen: View {
     }
   }
 
-  private func assistantScope(for tab: HomeTab) -> AIViewScope? {
-    switch tab {
-    case .dashboard: .home
-    case .portfolio: .portfolio
-    case .economy: .economy
-    case .markets: .markets
-    case .crypto: .crypto
-    case .expenses: .expenses
-    case .reports: .reports
-    case .tax: .tax
-    case .insights, .social, .boards, .groups: nil
-    }
-  }
-
-  private func guidedTab(for tab: HomeTab) -> GuidedTab? {
-    switch tab {
-    case .dashboard: .dashboard
-    case .portfolio: .portfolio
-    case .expenses: .expenses
-    default: nil
-    }
-  }
-
-  private func homeTab(for tab: GuidedTab) -> HomeTab {
-    switch tab {
-    case .dashboard, .goalPlanning: .dashboard
-    case .portfolio: .portfolio
-    case .expenses: .expenses
-    }
-  }
-
   private var tabView: some View {
     TabView(selection: $selectedTab) {
-      ForEach(HomeTab.primaryTabs(groupsEnabled: groupsEnabled).filter(isAvailable), id: \.self) { tab in
-        Tab(tab.title, systemImage: tab.systemImage, value: tab) {
+      ForEach(AppTab.allCases, id: \.self) { tab in
+        Tab(value: tab) {
           root(for: tab).qEntryPoint()
-        }
-        .badge(badge(for: tab))
-      }
-      ForEach(HomeTab.moreMenuTabs(groupsEnabled: groupsEnabled).filter(isAvailable), id: \.self) { tab in
-        Tab(tab.title, systemImage: tab.systemImage, value: tab) {
-          root(for: tab).qEntryPoint()
+        } label: {
+          Label { Text(tab.title) } icon: { Image(systemName: tab.systemImage) }
         }
         .badge(badge(for: tab))
       }
@@ -238,9 +240,6 @@ struct HomeScreen: View {
     // the finger.
     .tabViewStyle(.sidebarAdaptable)
     .reviewPromptPresenter()
-    .sheet(isPresented: $isSettingsPresented, onDismiss: presentPendingAssistant) {
-      settingsSheet
-    }
     .sheet(isPresented: $isPaywallPresented, onDismiss: presentPendingAssistant) {
       PaywallView(billingManager: billingManager)
     }
@@ -260,12 +259,7 @@ struct HomeScreen: View {
         await handleCaptureSave(draft)
       }
     }
-    .onChange(of: selectedTab) { _, newValue in
-      guard newValue == .insights, !billingManager.isPro else { return }
-      selectedTab = .dashboard
-      isPaywallPresented = true
-    }
-    // Never let the review sheet land on top of a settings, paywall, or capture sheet.
+    // Never let the review sheet land on top of a paywall or capture sheet.
     .onChange(of: isSheetOrCardCovering, initial: true) {
       _, isCovered in
       Container.shared.reviewPromptCoordinator().setContextEligible(!isCovered)
@@ -278,10 +272,10 @@ struct HomeScreen: View {
       openPortfolioTab(notification)
     }
     .onReceive(NotificationCenter.default.publisher(for: .openTaxFromPushNotification)) { _ in
-      selectedTab = .tax
+      navigate(to: .tax)
     }
     .onReceive(NotificationCenter.default.publisher(for: .openBudgetFromPushNotification)) { _ in
-      selectedTab = .expenses
+      navigate(to: .budget)
       Task { await budgetPlannerViewModel.load(force: true) }
     }
     // An app left open across the 1st must land on the new month without a relaunch.
@@ -291,7 +285,7 @@ struct HomeScreen: View {
     }
     .onReceive(NotificationCenter.default.publisher(for: .openThesisWatchFromPushNotification)) { _ in
       pendingThesisWatchOpen = true
-      selectedTab = .portfolio
+      navigate(to: .thesisWatch)
     }
     .onReceive(NotificationCenter.default.publisher(for: .openAssistantFromPushNotification)) { notification in
       openAssistant(conversationID: notification.userInfo?["conversationId"] as? String)
@@ -299,29 +293,21 @@ struct HomeScreen: View {
     .onReceive(NotificationCenter.default.publisher(for: .openSocialFromPushNotification)) { notification in
       pendingInviteCode = notification.userInfo?["inviteCode"] as? String
       pendingSocialSection = notification.userInfo?[AchievementPushDestination.socialSectionKey] as? String
-      if socialStore.config.enabled { selectedTab = .social }
+      navigate(to: .social(inviteCode: pendingInviteCode, section: pendingSocialSection))
     }
     .onReceive(NotificationCenter.default.publisher(for: .openBoardPostFromPushNotification)) { notification in
       guard let raw = notification.userInfo?["postId"] as? String, let postID = UUID(uuidString: raw) else { return }
-      selectedTab = .boards
+      navigate(to: .boardPost)
       boardsViewer.open(postID: postID)
     }
     // A cold start from an invite link can beat the config fetch.
     .onChange(of: socialStore.config.enabled) { _, enabled in
-      if enabled, pendingInviteCode != nil { selectedTab = .social }
+      if enabled, pendingInviteCode != nil {
+        navigate(to: .social(inviteCode: pendingInviteCode, section: pendingSocialSection))
+      }
     }
     // Loaded up front so the tab badge shows pending requests before the tab is opened.
     .task { await loadSocial() }
-  }
-
-  /// Friends and Groups stay hidden until the server switches them on: a tab
-  /// with nothing behind it is the "incomplete feature" App Review rejects.
-  private func isAvailable(_ tab: HomeTab) -> Bool {
-    switch tab {
-    case .social: socialStore.config.enabled
-    case .groups: groupsEnabled
-    default: true
-    }
   }
 
   private func loadSocial() async {
@@ -333,18 +319,17 @@ struct HomeScreen: View {
   }
 
   private var isSheetOrCardCovering: Bool {
-    isSettingsPresented || isPaywallPresented || isCapturePresented || assistantLaunch != nil
+    isPaywallPresented || isCapturePresented || assistantLaunch != nil
       || quickAssistant.isPresented || summaryScope != nil
   }
 
   private func openAssistant(conversationID: String?) {
     let launch = AssistantLaunch(conversationID: conversationID)
-    guard isSettingsPresented || isPaywallPresented || isCapturePresented else {
+    guard isPaywallPresented || isCapturePresented else {
       assistantLaunch = launch
       return
     }
     pendingAssistantLaunch = launch
-    isSettingsPresented = false
     isPaywallPresented = false
     isCapturePresented = false
   }
@@ -355,77 +340,33 @@ struct HomeScreen: View {
     assistantLaunch = launch
   }
 
-  private var settingsSheet: some View {
-    UserProfileView()
-      .environment(\.locale, Locale(identifier: appLanguage.localeIdentifier))
-  }
-
   @ViewBuilder
-  private func root(for tab: HomeTab) -> some View {
+  private func root(for tab: AppTab) -> some View {
     switch tab {
-    case .dashboard:
+    case .today:
       DashboardRoot(
         selectedTab: $selectedTab,
-        isSettingsPresented: $isSettingsPresented,
+        path: $todayPath,
         isCapturePresented: $isCapturePresented,
         budgetStore: budgetPlannerViewModel
       )
-    case .portfolio:
+    case .money:
+      ExpensesPlannerScreen(viewModel: budgetPlannerViewModel)
+    case .wealth:
       PortfolioRoot(
-        isSettingsPresented: $isSettingsPresented,
         pendingOpenSymbol: $pendingPortfolioOpenSymbol,
         pendingThesisWatchOpen: $pendingThesisWatchOpen,
         pendingAutomationDestination: $pendingAutomationDestination
       )
-    case .markets:
-      overflowTabHost {
-        MarketsScreen()
-      }
-      .accessibilityIdentifier("tab.markets")
-    case .economy:
-      overflowTabHost {
-        EconomyHubScreen()
-      }
-      .accessibilityIdentifier("tab.economy")
-    case .crypto:
-      CryptoHomeView(isSettingsPresented: $isSettingsPresented)
-        .accessibilityIdentifier("tab.crypto")
-    case .expenses:
-      ExpensesPlannerScreen(isSettingsPresented: $isSettingsPresented, viewModel: budgetPlannerViewModel)
-        .accessibilityIdentifier("tab.expenses")
-    case .reports:
-      ExpensesComparisonScreen()
-        .accessibilityIdentifier("tab.reports")
-    case .tax:
-      TaxDashboardScreen()
-        .accessibilityIdentifier("tab.tax")
-    case .insights:
-      InsightsScreen()
-        .accessibilityIdentifier("tab.insights")
-    case .social:
-      SocialRoot(pendingInviteCode: $pendingInviteCode, pendingSection: $pendingSocialSection)
-        .accessibilityIdentifier("tab.social")
-    case .boards:
-      overflowTabHost {
-        BoardsRoot()
-      }
-      .accessibilityIdentifier("tab.boards")
-    case .groups:
-      GroupsRoot()
-        .accessibilityIdentifier("tab.groups")
-    }
-  }
-
-  /// iPhone More already pushes overflow tabs onto a UINavigationController.
-  /// Nesting another NavigationStack is what produced two bars (back on one,
-  /// AI on the other). iPad sidebar has no such push, so it still needs a stack
-  /// for NavigationLink / navigationDestination.
-  @ViewBuilder
-  private func overflowTabHost<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-    if UIDevice.current.userInterfaceIdiom == .pad {
-      NavigationStack { content() }
-    } else {
-      content()
+    case .plan:
+      PlanHubScreen(path: $planPath)
+    case .more:
+      MoreHubScreen(
+        path: $morePath,
+        pendingInviteCode: $pendingInviteCode,
+        pendingSocialSection: $pendingSocialSection,
+        onSelectTab: { _, request in openFromHub(request) }
+      )
     }
   }
 
@@ -457,18 +398,19 @@ struct HomeScreen: View {
     }
 
     pendingPortfolioOpenSymbol = symbol
-    selectedTab = .portfolio
+    navigate(to: .stock(symbol: symbol))
   }
 
   private func openPortfolioTab(_ notification: Notification) {
     pendingPortfolioOpenSymbol = nil
     let id = (notification.userInfo?["automation_id"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-    switch notification.userInfo?["automation_destination"] as? String {
+    let destination = notification.userInfo?["automation_destination"] as? String
+    switch destination {
     case "watchlist_screen": pendingAutomationDestination = .smartScreen(id)
     case "rebalancing": pendingAutomationDestination = .rebalancing(id)
     default: pendingAutomationDestination = nil
     }
-    selectedTab = .portfolio
+    navigate(to: .portfolio(automation: destination))
   }
 }
 

@@ -34,9 +34,9 @@ final class FilmQuickAddTests: XCTestCase {
     ]
     app.launch()
 
-    app.tapExpensesTab()
+    app.tapTab(.money)
     let record = app.buttons["expenses.recordSpendButton"]
-    XCTAssertTrue(record.waitForExistence(timeout: 20), "Not on Expenses, or not signed in")
+    XCTAssertTrue(record.waitForExistence(timeout: 20), "Not on Money, or not signed in")
     beat(1.6) // establishing shot of the budget
 
     record.tap()

@@ -350,15 +350,98 @@ does not put `.appGlassEffect()` on content, stack its own material, or add a sh
 - **Error / Disabled:** `FormErrorBanner` (a `VigilLoss` tinted surface) or inline `VigilLoss` text
   next to the field. The error must be visible on the surface where the action was taken.
 
-### Navigation
+### Navigation (DS 2.0)
 
-- `NavigationStack` with inline titles; a floating tab bar with a selection pill that morphs over
-  `AppMotion.tabBar`.
+Five tabs, one stack per tab, one resolver. The design record for every name, hub row and gate is
+the destination table, `../../docs/superpowers/plans/2026-11-25-ds2-p3-destinations.md` in the
+norviq workspace docs (outside this repo). Labels come from it verbatim, and a destination has one
+name on every platform.
+
+#### Tabs
+
+| Tab | pt-PT | Symbol | Root |
+|---|---|---|---|
+| Today | Hoje | `sun.max` | `DashboardRoot`. The toolbar has the bell (Notifications) and the account avatar (Settings) |
+| Money | Dinheiro | `creditcard` | `ExpensesPlannerScreen`, titled "Budget" |
+| Wealth | Património | `chart.line.uptrend.xyaxis` | `PortfolioRoot`. Crypto is pushed from its Planning menu |
+| Plan | Plano | `target` | `PlanHubScreen`, a hub, with "New goal" (opens Goals) in the toolbar |
+| More | Mais | `ellipsis.circle` | `MoreHubScreen`, a hub. Its tab badge is the Groups and Friends counts added up |
+
+`AppTab` holds the order, titles and symbols. The `TabView` is `.sidebarAdaptable`: on iPad the
+sidebar lists the five tabs only. Hub sections as sidebar groups are deferred, so one resolver
+serves iPhone and iPad.
+
+#### Hubs
+
+Plan and More are lists of rows, built by `PlanHubModel` and `MoreHubModel` and drawn by
+`HubSectionsView`:
+
+- **Plan:** Goals (Goals); Your future (Net worth forecast, Retirement, Scenarios, Simulator, Grow,
+  Tools); Tax (Tax strategy, Terminal sizing).
+- **More:** the account row (avatar, name, Pro or Free; opens Settings); Intelligence (Market brief,
+  Markets, Economy, Insights, Reports, Chart builder); Community (Groups, Friends, Boards); Account
+  (Brokers and imports, Settings).
+
+Rules:
+
+- A row whose feature is switched off is left out, never shown disabled: Groups needs `groups`,
+  Friends needs `social`. Boards has no switch, so Community is never empty.
+- A Pro row carries `ProBadge`: Insights, Net worth forecast and Scenarios. A user who isn't Pro
+  gets `PaywallView` as a sheet presented by the hub itself, in place: nothing is pushed and the
+  tab never changes. Tax strategy and Chart builder are free on iOS today, so they have no badge,
+  although the table gates them on web.
+- Market brief is a card on Today, so its row selects Today and opens the card. It is the only row
+  that leaves its tab.
+- Groups and Friends each show their own "N new" count.
+
+#### One stack per tab
+
+- Each tab root owns the tab's only `NavigationStack`. A pushed screen never adds a stack of its own
+  and shows Back, never Close.
+- Hub rows and deep links push `AppDestination` values, and `destinationView` builds the screen.
+  Settings is a push (More › Settings, the account row, the Today avatar), not a sheet.
+- Today, Plan and More bind their stacks to paths held by `HomeScreen`, so a request can land
+  there. Money's and Wealth's roots keep a plain stack, because no request lands above them.
 - Themed screens use `VigilPageHeader` in content, with `.vigilNavigationTitle`,
   `.vigilInlineNavigationBar`, `.vigilListChrome` and `.vigilScreenBackground` applied together. A
   screen that omits them flashes the system grouped background between two themed ones.
 - Sheets use detents (`.medium`, `.large`), a Cancel item on the leading side and the confirming
   action on the trailing side.
+
+#### The resolver
+
+`NavigationResolver.target(for:groupsEnabled:socialEnabled:)` is the one place that maps a
+`NavigationRequest` (a push, a deep link, or a hub row that leaves its tab) to a tab and a path. It
+returns `nil` when the request needs a feature that is off. It decides only where to land; side
+effects such as a pending symbol, a pending invite or group link, or the brief router stay with
+`HomeScreen`.
+
+`NavigationTarget.path(replacing:)` replaces whatever is open on the tab, except that a tab already
+on the target keeps what sits above it, so an open group is not popped mid-link. Accepted owner
+decision: a friend request tapped inside Groups replaces Groups with Friends, so Back goes to More.
+
+#### Q entry point
+
+- **iOS 26 and later:** Q is the tab bar's bottom accessory, attached once to the `TabView` with
+  `.qAccessory(...)`.
+- **Below iOS 26:** a floating button at the trailing edge, above the tab bar, drawn in each tab
+  root by `.qEntryPoint()`. Both carry the id `q.entry`.
+- **`.hidesQAccessory()`:** for a pushed screen with its own controls at the bottom, where Q would
+  cover them (Rebalancing, a group chat, a board post). On iOS 26.1 and later it hides the accessory
+  through `tabViewBottomAccessory(isEnabled:)`, which keeps the pushed screen. Below 26 the floating
+  button hides. An active guided-start step hides Q the same way.
+- **iOS 26.0 (accepted owner decision):** the accessory never hides. 26.0 has no `isEnabled`, and
+  adding or removing the accessory rebuilds the `TabView` and pops the screen that asked. The
+  accessory joins the safe area there, so a bottom action sits above it.
+- **Tap:** for anyone with summaries (`ai_insights`: Pro, unless the server says otherwise), a tap
+  opens the AI summary of what is on screen, using the screen's `qScope` or, failing that, the
+  tab's. A free user gets the Quick Q card, and so does everyone on a Plan or More screen that sets
+  no scope: those tabs have no one thing to summarise (Tax sets its own). `QEntryRoute.resolve`
+  holds these rules.
+- **Hold:** always the card.
+- **While the card is open (accepted owner decision):** the accessory stays visible, dimmed behind
+  the card's scrim, on iOS 26.1 and later too, where it could hide. Below 26 the floating button
+  gives way to the card and comes back when it closes.
 
 ### SF Symbols usage
 
@@ -405,7 +488,7 @@ and Android; the SwiftUI column is what iOS uses. Status is as of DS 2.0 P2b.
 | Skeleton / ErrorRetry / StaleData | `.redacted` / `.shimmer()`, `ErrorRetryView`, `AsOfText` | exists; `AsOfText` done (P2b) |
 | Buttons | `GlowingButtonStyle` → `PrimaryButtonStyle`, system bordered | `PrimaryButtonStyle` not yet (P5) |
 | Toast | `ToastPresenter` / `ToastBanner` | exists |
-| Floating action zone | `tabViewBottomAccessory` | not yet (P3) |
+| Floating action zone | `tabViewBottomAccessory` on iOS 26+, floating button below (see Q entry point) | done (P3) |
 
 #### Money, change and staleness
 

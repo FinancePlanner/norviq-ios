@@ -135,7 +135,7 @@ struct TerminalPositionEditorSheet: View {
             .disabled(!model.canSave)
         }
       }
-      .alert("Terminal position sizing", isPresented: errorBinding) {
+      .alert("Terminal sizing", isPresented: errorBinding) {
         Button("OK", role: .cancel) { model.errorMessage = nil }
       } message: {
         Text(model.errorMessage ?? "")

@@ -78,7 +78,7 @@ struct TerminalDashboardCard: View {
 
   private func summaryContent(_ summary: TerminalPositionsSummaryResponse) -> some View {
     VStack(alignment: .leading, spacing: 8) {
-      Label("Terminal positions", systemImage: "scope")
+      Label("Terminal sizing", systemImage: "scope")
         .font(.headline)
       Text("Value wanted: \(TerminalFormat.money(summary.totalValueWanted, currency: summary.currency))")
         .font(.subheadline)

@@ -4,7 +4,6 @@ import StockPlanShared
 import Factory
 
 struct ExpensesPlannerScreen: View {
-  @Binding var isSettingsPresented: Bool
   @Bindable var viewModel: BudgetPlannerViewModel
 
   @Environment(\.colorScheme) private var colorScheme
@@ -81,7 +80,7 @@ struct ExpensesPlannerScreen: View {
             VStack(spacing: 24) {
               VigilPageHeader(
                 watch: .spendingDCA,
-                title: "Budget planner",
+                title: "Budget",
                 subtitle: LocalizedStringKey(viewModel.selectedMonthDisplayTitle)
               )
               .padding(.horizontal, 16)
@@ -195,7 +194,7 @@ struct ExpensesPlannerScreen: View {
       .refreshable { await viewModel.load(force: true) }
       .task { await viewModel.load() }
       .vigilScreenBackground()
-      .vigilNavigationTitle("Expenses and Budgeting")
+      .vigilNavigationTitle("Budget")
       .qScope(.expenses)
       .vigilInlineNavigationBar()
       .toolbar {
@@ -353,13 +352,6 @@ struct ExpensesPlannerScreen: View {
       }
       .buttonStyle(.bordered)
       .accessibilityLabel("Expense actions")
-
-      Button(action: openSettings) {
-        Image(systemName: "gearshape")
-          .typography(.small, weight: .semibold)
-      }
-      .buttonStyle(.bordered)
-      .accessibilityLabel("Open settings")
     }
   }
 
@@ -388,10 +380,6 @@ struct ExpensesPlannerScreen: View {
 
   private func retryLoad() {
     Task { await viewModel.load(force: true) }
-  }
-
-  private func openSettings() {
-    isSettingsPresented = true
   }
 
   private func presentSalaryEditor() {

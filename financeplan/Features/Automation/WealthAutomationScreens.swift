@@ -115,7 +115,7 @@ struct NetWorthForecastScreen: View {
       Section {
         VigilPageHeader(
           watch: .businessRules("Forecast"),
-          title: "Net Worth Forecast"
+          title: "Net worth forecast"
         )
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
@@ -199,7 +199,7 @@ struct NetWorthForecastScreen: View {
     }
     .vigilListChrome()
     .vigilScreenBackground()
-    .vigilNavigationTitle("Net Worth Forecast")
+    .vigilNavigationTitle("Net worth forecast")
     .vigilInlineNavigationBar()
     .overlay {
       if model.isLoading {

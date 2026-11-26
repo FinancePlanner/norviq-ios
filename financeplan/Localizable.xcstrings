@@ -141,6 +141,16 @@
         }
       }
     },
+    "Brokers and imports" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Corretoras e importações"
+          }
+        }
+      }
+    },
     "Buy date" : {
       "localizations" : {
         "pt-PT" : {
@@ -187,6 +197,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Compare cada linha com a sua captura de ecrã. Só as linhas assinaladas são guardadas."
+          }
+        }
+      }
+    },
+    "Community" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comunidade"
           }
         }
       }
@@ -416,6 +436,26 @@
         }
       }
     },
+    "Goals" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Objetivos"
+          }
+        }
+      }
+    },
+    "Groups" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grupos"
+          }
+        }
+      }
+    },
     "Hard to read — check" : {
       "localizations" : {
         "pt-PT" : {
@@ -536,6 +576,16 @@
         }
       }
     },
+    "Market brief" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Briefing de mercado"
+          }
+        }
+      }
+    },
     "Market value" : {
       "localizations" : {
         "pt-PT" : {
@@ -588,6 +638,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Versão offline"
+          }
+        }
+      }
+    },
+    "Opens Settings" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abre as definições"
+          }
+        }
+      }
+    },
+    "Opens the Pro upgrade" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abre a atualização para Pro"
           }
         }
       }
@@ -1188,6 +1258,16 @@
         }
       }
     },
+    "Retirement" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reforma"
+          }
+        }
+      }
+    },
     "Review holdings" : {
       "localizations" : {
         "pt-PT" : {
@@ -1308,6 +1388,16 @@
         }
       }
     },
+    "Scenarios" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cenários"
+          }
+        }
+      }
+    },
     "Sells update realized P&L, not yet your annual tax figures." : {
       "localizations" : {
         "pt-PT" : {
@@ -1402,6 +1492,16 @@
         }
       }
     },
+    "Simulator" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simulador"
+          }
+        }
+      }
+    },
     "Social" : {
       "localizations" : {
         "en" : {
@@ -1472,6 +1572,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Imagem vertical (story) desta edição"
+          }
+        }
+      }
+    },
+    "Terminal sizing" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dimensionamento terminal"
           }
         }
       }
@@ -1761,6 +1871,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Podes afixar até 3 conquistas."
+          }
+        }
+      }
+    },
+    "Your future" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O seu futuro"
           }
         }
       }
@@ -2657,10 +2777,40 @@
     },
     "%lld new" : {
       "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld new"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld new"
+                }
+              }
+            }
+          }
+        },
         "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld novas"
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld nova"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld novas"
+                }
+              }
+            }
           }
         }
       }
@@ -3512,7 +3662,15 @@
     },
     "Account" : {
       "comment" : "A label for the user to select a bank account.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conta"
+          }
+        }
+      }
     },
     "Account classification" : {
       "comment" : "A section of the tax profile setup sheet that allows the user to select how they want to treat their investments.",
@@ -5436,7 +5594,14 @@
 
     },
     "Boards" : {
-
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fóruns"
+          }
+        }
+      }
     },
     "Boards are for sharing ideas about money, markets and Norviq. By posting you agree to:" : {
 
@@ -5555,7 +5720,14 @@
       "isCommentAutoGenerated" : true
     },
     "Budget" : {
-
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orçamento"
+          }
+        }
+      }
     },
     "BUDGET" : {
       "comment" : "A label for the budget amount.",
@@ -6047,7 +6219,15 @@
     },
     "Chart builder" : {
       "comment" : "Title of the chart builder screen.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Construtor de gráficos"
+          }
+        }
+      }
     },
     "Chart Builder" : {
       "comment" : "A label for a chart builder feature.",
@@ -6269,7 +6449,7 @@
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Perto"
+            "value" : "Fechar"
           }
         }
       }
@@ -6278,9 +6458,16 @@
       "comment" : "A label for a button that closes the email sign-up flow.",
       "isCommentAutoGenerated" : true
     },
-    "Close financial goals" : {
+    "Close goals" : {
       "comment" : "A label for a button that dismisses the goal planning screen.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fechar objetivos"
+          }
+        }
+      }
     },
     "Close sign up" : {
       "localizations" : {
@@ -7188,7 +7375,7 @@
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Criptografia"
+            "value" : "Cripto"
           }
         }
       }
@@ -8404,7 +8591,15 @@
     },
     "Economy" : {
       "comment" : "The title of the Economy tab.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Economia"
+          }
+        }
+      }
     },
     "Economy data comes from Eurostat, the European Central Bank, FRED® (Federal Reserve Bank of St. Louis), IBGE and Banco Central do Brasil. Those institutions publish the figures and do not endorse Norviq." : {
       "comment" : "A disclaimer that explains that the data is from third-party organizations and does not endorse Norviq.",
@@ -9717,7 +9912,7 @@
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Livre"
+            "value" : "Gratuito"
           }
         }
       }
@@ -9788,7 +9983,14 @@
 
     },
     "Friends" : {
-
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Amigos"
+          }
+        }
+      }
     },
     "Friends from Facebook" : {
 
@@ -10146,7 +10348,14 @@
 
     },
     "Grow" : {
-
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crescer"
+          }
+        }
+      }
     },
     "Growth" : {
       "comment" : "A label displayed above the growth section of a chart builder.",
@@ -10898,7 +11107,7 @@
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Percepções"
+            "value" : "Perceções"
           }
         }
       }
@@ -10940,7 +11149,15 @@
     },
     "Intelligence" : {
       "comment" : "A label displayed above the list of integrations.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inteligência"
+          }
+        }
+      }
     },
     "Interactive Brokers" : {
       "comment" : "The name of the broker used for importing data.",
@@ -12091,7 +12308,15 @@
     },
     "Markets" : {
       "comment" : "A button that opens a sheet for selecting the tax markets.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mercados"
+          }
+        }
+      }
     },
     "Markets are warming up" : {
       "comment" : "A title for a view that shows when the market is loading.",
@@ -12250,6 +12475,16 @@
     "Model" : {
       "comment" : "A section of the allocation model editor.",
       "isCommentAutoGenerated" : true
+    },
+    "Money" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dinheiro"
+          }
+        }
+      }
     },
     "Money you could find from spending" : {
       "comment" : "A callout that appears when you tap the \"Get Started\" button.",
@@ -12505,7 +12740,14 @@
       }
     },
     "More" : {
-
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mais"
+          }
+        }
+      }
     },
     "More actions" : {
       "comment" : "A label for a menu button that appears in a list.",
@@ -12713,7 +12955,14 @@
       "isCommentAutoGenerated" : true
     },
     "Net worth forecast" : {
-
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Previsão do património"
+          }
+        }
+      }
     },
     "Net Worth Forecast" : {
 
@@ -12773,7 +13022,14 @@
 
     },
     "New goal" : {
-
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Novo objetivo"
+          }
+        }
+      }
     },
     "New List" : {
       "comment" : "A heading for a section of a view that allows the user to create a new list.",
@@ -14318,7 +14574,14 @@
       }
     },
     "Open planning" : {
-
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir planeamento"
+          }
+        }
+      }
     },
     "Open portfolio simulator" : {
 
@@ -14328,6 +14591,16 @@
     },
     "Open scenario planning" : {
 
+    },
+    "Open scenarios" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir cenários"
+          }
+        }
+      }
     },
     "Open settings" : {
       "comment" : "A button that opens the app's settings.",
@@ -15631,7 +15904,7 @@
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pró"
+            "value" : "Pro"
           }
         }
       }
@@ -20519,7 +20792,15 @@
     },
     "Tax" : {
       "comment" : "Title of the tax tab in the home tab bar.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impostos"
+          }
+        }
+      }
     },
     "Tax cost ratio" : {
 
@@ -20571,7 +20852,15 @@
     },
     "Tax strategy" : {
       "comment" : "A title for the tax strategy view.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estratégia fiscal"
+          }
+        }
+      }
     },
     "Tax treatment" : {
       "comment" : "A label for the tax treatment of an investment account.",
@@ -21383,7 +21672,15 @@
     },
     "Today" : {
       "comment" : "A label that indicates the date of the Why Moved",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoje"
+          }
+        }
+      }
     },
     "Today %@" : {
 
@@ -22936,7 +23233,15 @@
     },
     "Wealth" : {
       "comment" : "A label displayed above the user's wealth allocation donut chart.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Património"
+          }
+        }
+      }
     },
     "Wealth & Spending" : {
       "comment" : "A section title for the user's wealth and spending.",

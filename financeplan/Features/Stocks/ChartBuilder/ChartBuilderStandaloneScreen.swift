@@ -21,7 +21,7 @@ struct ChartBuilderStandaloneScreen: View {
         resultsList
       }
     }
-    .vigilNavigationTitle("Chart Builder")
+    .vigilNavigationTitle("Chart builder")
     .vigilInlineNavigationBar()
     .vigilScreenBackground()
     .searchable(
@@ -54,7 +54,7 @@ struct ChartBuilderStandaloneScreen: View {
   private var chartBuilderHeader: some View {
     VigilPageHeader(
       watch: .wealth,
-      title: "Chart Builder"
+      title: "Chart builder"
     )
   }
 

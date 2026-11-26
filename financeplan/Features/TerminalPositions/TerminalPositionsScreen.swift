@@ -32,7 +32,7 @@ struct TerminalPositionsScreen: View {
     }
     .vigilListChrome()
     .vigilScreenBackground()
-    .navigationTitle("Terminal positions")
+    .navigationTitle("Terminal sizing")
     .vigilInlineNavigationBar()
     .toolbar {
       ToolbarItemGroup(placement: .topBarTrailing) {
@@ -59,7 +59,7 @@ struct TerminalPositionsScreen: View {
         Task { await model.reloadAutobuys() }
       }
     }
-    .alert("Terminal position sizing", isPresented: errorBinding) {
+    .alert("Terminal sizing", isPresented: errorBinding) {
       Button("OK", role: .cancel) { model.errorMessage = nil }
     } message: {
       Text(model.errorMessage ?? "")

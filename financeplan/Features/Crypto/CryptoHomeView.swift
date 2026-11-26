@@ -4,7 +4,6 @@ import Factory
 import OSLog
 
 struct CryptoHomeView: View {
-    @Binding var isSettingsPresented: Bool
     @StateObject private var viewModel = CryptoViewModel()
     /// Shared by the Market segment and the bubbles screen so both keep the
     /// same timeframe.
@@ -36,86 +35,75 @@ struct CryptoHomeView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                AppTheme.Colors.pageBackground(for: colorScheme)
-                    .ignoresSafeArea()
+        ZStack {
+            AppTheme.Colors.pageBackground(for: colorScheme)
+                .ignoresSafeArea()
 
-                if billingManager.isPro {
-                    proContent
-                } else {
-                    lockedContent
-                }
+            if billingManager.isPro {
+                proContent
+            } else {
+                lockedContent
             }
-            .vigilScreenBackground()
-            .vigilNavigationTitle("Crypto")
-            .qScope(.crypto)
-            .vigilInlineNavigationBar()
-            .navigationDestination(for: CryptoDetailRoute.self) { route in
-                CryptoDetailScreen(route: route)
-            }
-            .refreshable {
-                await reloadCrypto(force: true)
-            }
-            .task {
-                await initialLoad()
-            }
+        }
+        .vigilScreenBackground()
+        .vigilNavigationTitle("Crypto")
+        .qScope(.crypto)
+        .vigilInlineNavigationBar()
+        .navigationDestination(for: CryptoDetailRoute.self) { route in
+            CryptoDetailScreen(route: route)
+        }
+        .refreshable {
+            await reloadCrypto(force: true)
+        }
+        .task {
+            await initialLoad()
+        }
 
-            .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    if billingManager.isPro, selectedSegment == .portfolio {
-                        Button(action: presentAddHoldingSheet) {
-                            Image(systemName: "plus")
-                                .typography(.small, weight: .semibold)
-                                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-                                .padding(6)
-                                .appGlassEffect(.capsule)
-                        }
-                        .accessibilityLabel("Add crypto holding")
-                    }
-
-                    if selectedSegment == .watchlist {
-                        Button(action: presentAddWatchlistSheet) {
-                            Image(systemName: "plus")
-                                .typography(.small, weight: .semibold)
-                                .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-                                .padding(6)
-                                .appGlassEffect(.capsule)
-                        }
-                        .accessibilityLabel("Add crypto to watchlist")
-                    }
-
-                    Button(action: presentBubbles) {
-                        Image(systemName: "circle.hexagongrid.fill")
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if billingManager.isPro, selectedSegment == .portfolio {
+                    Button(action: presentAddHoldingSheet) {
+                        Image(systemName: "plus")
                             .typography(.small, weight: .semibold)
                             .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
                             .padding(6)
                             .appGlassEffect(.capsule)
                     }
-                    .accessibilityLabel("Open crypto bubbles")
+                    .accessibilityLabel("Add crypto holding")
+                }
 
-                    Button(action: openSettings) {
-                        Image(systemName: "gearshape")
+                if selectedSegment == .watchlist {
+                    Button(action: presentAddWatchlistSheet) {
+                        Image(systemName: "plus")
                             .typography(.small, weight: .semibold)
                             .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
                             .padding(6)
                             .appGlassEffect(.capsule)
                     }
-                    .accessibilityLabel("Open settings")
+                    .accessibilityLabel("Add crypto to watchlist")
                 }
+
+                Button(action: presentBubbles) {
+                    Image(systemName: "circle.hexagongrid.fill")
+                        .typography(.small, weight: .semibold)
+                        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                        .padding(6)
+                        .appGlassEffect(.capsule)
+                }
+                .accessibilityLabel("Open crypto bubbles")
             }
-            .sheet(isPresented: $isAddCryptoPresented) {
-                AddCryptoHoldingSheet(viewModel: viewModel)
-            }
-            .sheet(isPresented: $isAddWatchlistPresented) {
-                AddCryptoWatchlistSheet(viewModel: viewModel)
-            }
-            .fullScreenCover(isPresented: $isBubblesPresented) {
-                CryptoBubblesView(viewModel: marketsViewModel)
-            }
-            .sheet(item: $editingHolding) { holding in
-                EditCryptoHoldingSheet(viewModel: viewModel, holding: holding)
-            }
+        }
+        .sheet(isPresented: $isAddCryptoPresented) {
+            AddCryptoHoldingSheet(viewModel: viewModel)
+        }
+        .sheet(isPresented: $isAddWatchlistPresented) {
+            AddCryptoWatchlistSheet(viewModel: viewModel)
+        }
+        .fullScreenCover(isPresented: $isBubblesPresented) {
+            CryptoBubblesView(viewModel: marketsViewModel)
+        }
+        .sheet(item: $editingHolding) { holding in
+            EditCryptoHoldingSheet(viewModel: viewModel, holding: holding)
         }
     }
 
@@ -213,9 +201,5 @@ struct CryptoHomeView: View {
 
     private func presentBubbles() {
         isBubblesPresented = true
-    }
-
-    private func openSettings() {
-        isSettingsPresented = true
     }
 }

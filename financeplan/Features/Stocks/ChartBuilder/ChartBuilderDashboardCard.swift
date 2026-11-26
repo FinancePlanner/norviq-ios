@@ -13,7 +13,7 @@ struct ChartBuilderDashboardCard: View {
             .accessibilityHidden(true)
 
           VStack(alignment: .leading, spacing: 4) {
-            Text("Chart Builder")
+            Text("Chart builder")
               .font(.headline)
             Text("Plot financial metrics, compare peers, and export CSV data.")
               .font(.subheadline)

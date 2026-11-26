@@ -14,7 +14,7 @@ struct GoalPlanningDashboardCard: View {
       HStack(spacing: 16) {
         progressRing
         VStack(alignment: .leading, spacing: 5) {
-          Text("Financial goals")
+          Text("Goals")
             .font(.headline)
           Text(summary)
             .font(.subheadline)
