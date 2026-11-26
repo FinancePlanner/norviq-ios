@@ -523,4 +523,35 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     XCTAssertTrue(view.contains("integrations.ibkr.notice"))
     XCTAssertTrue(view.contains("integrations.ibkr.importFromBroker"))
   }
+
+  private func previewNotes(_ items: [CsvImportPreviewItem]) async throws -> [String?] {
+    let brokerService = BrokerServiceMock()
+    brokerService.previewResult = .success(CsvImportPreviewResponse(provider: "generic", items: items, errors: []))
+    let viewModel = CsvImportFlowViewModel(brokerService: brokerService, lockedProvider: "generic")
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).csv")
+    try "symbol,shares\nAAPL,1\n".write(to: url, atomically: true, encoding: .utf8)
+    defer { try? FileManager.default.removeItem(at: url) }
+    await viewModel.loadCSV(from: url)
+    return items.map { viewModel.replaceNote(for: $0) }
+  }
+
+  func testReplaceNote_WillReplaceExistingImport() async throws {
+    let notes = try await previewNotes([.init(line: 2, symbol: "AAPL", willReplaceExistingImport: true)])
+    XCTAssertEqual(notes, [BrokerImportCatalog.csvReplaceNote(symbol: "AAPL")])
+  }
+
+  func testReplaceNote_ExistingManualPosition() async throws {
+    let notes = try await previewNotes([.init(line: 2, symbol: "MSFT", existingPositionKind: .manual)])
+    XCTAssertEqual(notes, [BrokerImportCatalog.csvReplaceNote(symbol: "MSFT")])
+  }
+
+  func testReplaceNote_NoneKindHasNoNote() async throws {
+    let notes = try await previewNotes([.init(line: 2, symbol: "AAPL", existingPositionKind: .none)])
+    XCTAssertEqual(notes, [nil])
+  }
+
+  func testReplaceNote_DefaultsHaveNoNote() async throws {
+    let notes = try await previewNotes([.init(line: 2, symbol: "AAPL")])
+    XCTAssertEqual(notes, [nil])
+  }
 }

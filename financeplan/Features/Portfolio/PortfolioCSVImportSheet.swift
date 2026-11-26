@@ -68,6 +68,11 @@ struct PortfolioCSVImportSheet: View {
                 Text("Shares: \(item.shares?.formatted(.number.precision(.fractionLength(0...6))) ?? "-") • Buy price: \(item.buyPrice?.formatted(.number.precision(.fractionLength(0...6))) ?? "-")")
                   .font(.subheadline)
                   .foregroundStyle(.secondary)
+                if let replaceNote = viewModel.replaceNote(for: item) {
+                  Text(replaceNote)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                }
                 if let buyDate = item.buyDate, !buyDate.isEmpty {
                   Text("Buy date: \(buyDate)")
                     .font(.subheadline)

@@ -84,6 +84,13 @@ final class CsvImportFlowViewModel: ObservableObject {
     return status == "connected" || status == "error"
   }
 
+  /// Row note when committing would replace holdings the user already has.
+  /// `existingPositionKind == .none` means no existing position.
+  func replaceNote(for item: CsvImportPreviewItem) -> String? {
+    guard item.willReplaceExistingImport || item.existingPositionKind != .none else { return nil }
+    return BrokerImportCatalog.csvReplaceNote(symbol: item.symbol)
+  }
+
   func loadProvidersIfNeeded() async {
     guard !hasLoadedProviders else { return }
     await loadProviders(force: true)
