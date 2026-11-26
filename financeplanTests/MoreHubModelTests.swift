@@ -45,9 +45,11 @@ final class MoreHubModelTests: XCTestCase {
     XCTAssertEqual(titles(sections[2]), ["Brokers and imports", "Settings"])
   }
 
-  func testOnlyInsightsIsProInMore() {
+  /// The table's Pro rows that iOS gates today. Chart builder's charts sit
+  /// behind ProGateView; the rest of More is free.
+  func testInsightsAndChartBuilderAreProInMore() {
     let pro = more().flatMap(\.rows).filter(\.isPro).map(\.id)
-    XCTAssertEqual(pro, ["insights"])
+    XCTAssertEqual(pro, ["insights", "chartBuilder"])
   }
 
   func testMoreActions() {
@@ -102,6 +104,8 @@ final class MoreHubModelTests: XCTestCase {
     XCTAssertEqual(titles(sections[2]), ["Tax strategy", "Terminal sizing"])
   }
 
+  /// Tax strategy stays unmarked: the table says Pro, but its dashboard is
+  /// free on iOS today (only profile, losses, fund values and settings are).
   func testPlanProRows() {
     let pro = PlanHubModel.sections().flatMap(\.rows).filter(\.isPro).map(\.id)
     XCTAssertEqual(pro, ["netWorthForecast", "scenarios"])

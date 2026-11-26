@@ -14,6 +14,7 @@ struct MoreHubScreen: View {
   @InjectedObservable(\Container.groupsStore) private var groupsStore
   @State private var profile = UserProfileViewModel()
   @State private var isPaywallPresented = false
+  @Environment(\.locale) private var locale
 
   var body: some View {
     NavigationStack(path: $path) {
@@ -22,7 +23,9 @@ struct MoreHubScreen: View {
           accountRow
         }
         HubSectionsView(
-          sections: MoreHubModel.sections(social: socialStore.config, groupsBadge: groupsStore.badgeCount),
+          sections: MoreHubModel.sections(
+            social: socialStore.config, groupsBadge: groupsStore.badgeCount, locale: locale),
+          userIsPro: billingManager.isPro,
           onTap: handle
         )
       }
@@ -78,6 +81,7 @@ struct MoreHubScreen: View {
       .frame(minHeight: 44)
       .contentShape(Rectangle())
     }
+    .accessibilityHint(Text("Opens Settings"))
     .accessibilityIdentifier("hub.account")
   }
 
@@ -96,13 +100,14 @@ struct MoreHubScreen: View {
 /// A hub's sections, inside its `List`.
 struct HubSectionsView: View {
   let sections: [HubSection]
+  let userIsPro: Bool
   let onTap: (HubRow) -> Void
 
   var body: some View {
     ForEach(sections) { section in
       Section {
         ForEach(section.rows) { row in
-          HubRowButton(row: row) { onTap(row) }
+          HubRowButton(row: row, isLocked: row.tap(userIsPro: userIsPro) == .paywall) { onTap(row) }
         }
       } header: {
         Text(section.title)
@@ -114,6 +119,8 @@ struct HubSectionsView: View {
 /// A hub row: symbol, title, optional value, Pro mark.
 struct HubRowButton: View {
   let row: HubRow
+  /// A Pro row the user can't open yet: the tap shows the paywall.
+  let isLocked: Bool
   let action: () -> Void
 
   var body: some View {
@@ -139,6 +146,7 @@ struct HubRowButton: View {
       .frame(minHeight: 44)
       .contentShape(Rectangle())
     }
+    .accessibilityHint(isLocked ? Text("Opens the Pro upgrade") : Text(verbatim: ""))
     .accessibilityIdentifier("hub.row.\(row.id)")
   }
 }

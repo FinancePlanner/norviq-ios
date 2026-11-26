@@ -10,6 +10,7 @@ struct PortfolioSimulatorScreen: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: AppTheme.Spacing.lg) {
+        VigilPageHeader(watch: .wealthPlan, title: "Simulator")
         positionsCard
         if let result = viewModel.result {
           allocationCard(result)

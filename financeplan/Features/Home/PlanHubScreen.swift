@@ -11,7 +11,7 @@ struct PlanHubScreen: View {
   var body: some View {
     NavigationStack(path: $path) {
       List {
-        HubSectionsView(sections: PlanHubModel.sections(), onTap: handle)
+        HubSectionsView(sections: PlanHubModel.sections(), userIsPro: billingManager.isPro, onTap: handle)
       }
       .vigilListChrome()
       .navigationTitle(Text(AppTab.plan.title))
@@ -39,9 +39,8 @@ struct PlanHubScreen: View {
       isPaywallPresented = true
     case let .perform(.push(destination)):
       path.append(destination)
-    // No Plan row leaves the tab.
     case .perform(.selectTab):
-      break
+      assertionFailure("No Plan row leaves the tab")
     }
   }
 }

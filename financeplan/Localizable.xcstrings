@@ -642,6 +642,26 @@
         }
       }
     },
+    "Opens Settings" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abre as definições"
+          }
+        }
+      }
+    },
+    "Opens the Pro upgrade" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abre a atualização para Pro"
+          }
+        }
+      }
+    },
     "Pending" : {
       "localizations" : {
         "pt-PT" : {
@@ -9878,7 +9898,7 @@
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Livre"
+            "value" : "Gratuito"
           }
         }
       }
@@ -11073,7 +11093,7 @@
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Percepções"
+            "value" : "Perceções"
           }
         }
       }
