@@ -14,16 +14,21 @@ struct PortfolioCSVImportSheet: View {
 
   init(
     portfolioListId: String?,
+    lockedProvider: String? = nil,
     onImportCompleted: @escaping @MainActor () async -> Void
   ) {
-    _viewModel = StateObject(wrappedValue: CsvImportFlowViewModel(portfolioListId: portfolioListId))
+    _viewModel = StateObject(
+      wrappedValue: CsvImportFlowViewModel(portfolioListId: portfolioListId, lockedProvider: lockedProvider)
+    )
     self.onImportCompleted = onImportCompleted
   }
 
   var body: some View {
     NavigationStack {
       List {
-        csvProviderSection
+        if !viewModel.isProviderLocked {
+          csvProviderSection
+        }
 
         Section {
           CSVImportFormatHint()

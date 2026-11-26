@@ -11,8 +11,11 @@ struct BrokerImportSheet: View {
   @Environment(\.dismiss) private var dismiss
   @State private var viewModel: BrokerImportViewModel
   @State private var presentedMethod: ImportMethod?
+  @State private var didImport = false
+  @State private var opensQOnDisappear = false
 
-  let onImportCompleted: @MainActor () async -> Void
+  /// Called when an import succeeds, with the portfolio it went into.
+  let onImportCompleted: @MainActor (String?) async -> Void
 
   /// - Parameters:
   ///   - portfolioListId: the portfolio the user came from; nil picks the default.
@@ -20,7 +23,7 @@ struct BrokerImportSheet: View {
   init(
     portfolioListId: String?,
     allowsAskQ: Bool = true,
-    onImportCompleted: @escaping @MainActor () async -> Void
+    onImportCompleted: @escaping @MainActor (String?) async -> Void
   ) {
     _viewModel = State(
       wrappedValue: BrokerImportViewModel(initialPortfolioListId: portfolioListId, allowsAskQ: allowsAskQ)
@@ -47,21 +50,44 @@ struct BrokerImportSheet: View {
         }
       }
       .task { await viewModel.load() }
-      .sheet(item: $presentedMethod) { method in
-        switch method {
-        case .csv:
-          PortfolioCSVImportSheet(
-            portfolioListId: viewModel.selectedPortfolioListId,
-            onImportCompleted: onImportCompleted
-          )
-        default:
-          PortfolioScreenshotImportSheet(
-            portfolioListId: viewModel.selectedPortfolioListId,
-            onImportCompleted: onImportCompleted
-          )
-        }
+      .sheet(item: $presentedMethod, onDismiss: closeAfterImport) { method in
+        childSheet(for: method)
       }
     }
+    // Ask Q presents the assistant from the tab shell, so wait until this
+    // sheet is really gone.
+    .onDisappear {
+      guard opensQOnDisappear else { return }
+      opensQOnDisappear = false
+      NotificationCenter.default.post(name: .openAssistant, object: nil)
+    }
+  }
+
+  @ViewBuilder
+  private func childSheet(for method: ImportMethod) -> some View {
+    let listId = viewModel.selectedPortfolioListId
+    let completed: @MainActor () async -> Void = {
+      didImport = true
+      await onImportCompleted(listId)
+    }
+    switch method {
+    case .csv:
+      PortfolioCSVImportSheet(
+        portfolioListId: listId,
+        lockedProvider: BrokerImportCatalog.csvProvider,
+        onImportCompleted: completed
+      )
+    case .screenshot:
+      PortfolioScreenshotImportSheet(portfolioListId: listId, onImportCompleted: completed)
+    case .askQ:
+      EmptyView()
+    }
+  }
+
+  /// The user has seen the result and closed it: nothing is left to do here.
+  private func closeAfterImport() {
+    guard didImport else { return }
+    dismiss()
   }
 
   private var brokerSection: some View {
@@ -105,11 +131,11 @@ struct BrokerImportSheet: View {
       if viewModel.methods.contains(.csv) {
         CSVImportFormatHint()
       }
-      Text(verbatim: viewModel.screenshotGuide)
+      Text(viewModel.screenshotGuide)
         .font(.footnote)
         .foregroundStyle(.secondary)
       if viewModel.methods.contains(.askQ) {
-        Text(verbatim: BrokerImportCatalog.askQGuide)
+        Text(BrokerImportCatalog.askQGuide)
           .font(.footnote)
           .foregroundStyle(.secondary)
       }
@@ -123,12 +149,12 @@ struct BrokerImportSheet: View {
           choose(method)
         } label: {
           Label {
-            Text(verbatim: method.label).foregroundStyle(.primary)
+            Text(method.label).foregroundStyle(.primary)
           } icon: {
             Image(systemName: method.systemImage)
           }
         }
-        .accessibilityIdentifier("brokerImport.method.\(method)")
+        .accessibilityIdentifier("brokerImport.method.\(method.rawValue)")
       }
     }
   }
@@ -142,18 +168,10 @@ struct BrokerImportSheet: View {
     }
   }
 
-  /// Q is mounted once, on `HomeScreen`, which opens it for this notification
-  /// from the tabs and from inside Settings alike (it closes Settings first).
-  /// The sheet closes first so the two presentations do not race.
+  /// The full assistant, as the web's "Ask Q" opens. The sheet closes first;
+  /// `onDisappear` then posts the route.
   private func askQ() {
+    opensQOnDisappear = true
     dismiss()
-    Task { @MainActor in
-      try? await Task.sleep(for: .milliseconds(450))
-      NotificationCenter.default.post(name: .openAssistantFromPushNotification, object: nil)
-    }
   }
-}
-
-extension ImportMethod: Identifiable {
-  var id: String { label }
 }

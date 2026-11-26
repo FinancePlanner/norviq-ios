@@ -84,6 +84,42 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     }
   }
 
+  func testLockedProvider_IsWhatPreviewAndCommitSend() async throws {
+    let brokerService = BrokerServiceMock()
+    brokerService.previewResult = .success(
+      CsvImportPreviewResponse(
+        provider: "generic",
+        items: [.init(line: 2, symbol: "AAPL", shares: 1, buyPrice: 1, buyDate: "2026-01-10", notes: nil)],
+        errors: []
+      )
+    )
+    brokerService.commitResult = .success(
+      CsvImportCommitResponse(provider: "generic", inserted: [], updated: [], errors: [], importedLotsCount: 1)
+    )
+    let viewModel = CsvImportFlowViewModel(
+      brokerService: brokerService,
+      portfolioListId: "list-1",
+      lockedProvider: "generic"
+    )
+    XCTAssertTrue(viewModel.isProviderLocked)
+    // Even if something moves the selection, the locked provider wins.
+    viewModel.selectedProvider = "ibkr"
+
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).csv")
+    try "symbol,shares,buy_price,buy_date\nAAPL,1,1,2026-01-10\n".write(to: url, atomically: true, encoding: .utf8)
+    defer { try? FileManager.default.removeItem(at: url) }
+    await viewModel.loadCSV(from: url)
+    _ = await viewModel.commitImport()
+
+    XCTAssertEqual(brokerService.lastPreviewProvider, "generic")
+    XCTAssertEqual(brokerService.lastCommitProvider, "generic")
+  }
+
+  func testUnlockedProvider_StaysPickable() {
+    let viewModel = CsvImportFlowViewModel(brokerService: BrokerServiceMock())
+    XCTAssertFalse(viewModel.isProviderLocked)
+  }
+
   func testDefaultProviderOptions_AreAvailableBeforeBackendLoad() async {
     await Task.yield()
     let viewModel = CsvImportFlowViewModel(brokerService: BrokerServiceMock())

@@ -27,7 +27,6 @@ final class OnboardingImportViewModel: ObservableObject {
   enum Step: Hashable {
     case mainMenu
     case chooseStockMethod
-    case csv
     case manual
     case crypto
     case expenseBudgetSetup

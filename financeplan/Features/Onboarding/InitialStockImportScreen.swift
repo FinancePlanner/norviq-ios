@@ -9,18 +9,18 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
   var title: String {
     switch self {
     case .broker:
-      return "Import from broker"
+      return String(localized: "Import from broker")
     case .manual:
-      return "Enter Manually"
+      return String(localized: "Enter Manually")
     }
   }
 
   var subtitle: String {
     switch self {
     case .broker:
-      return "Screenshots, Ask Q or a CSV file from IBKR, DEGIRO, Trading 212, Revolut and more."
+      return String(localized: "Screenshots or a CSV file from IBKR, DEGIRO, Trading 212, Revolut and more.")
     case .manual:
-      return "Type in your holdings one position at a time."
+      return String(localized: "Type in your holdings one position at a time.")
     }
   }
 
@@ -116,7 +116,7 @@ struct InitialStockImportScreen: View {
     // user has no portfolio context: the sheet picks the default one, and
     // onboarding has no portfolio on screen to reload.
     .sheet(isPresented: $isBrokerImportPresented, onDismiss: finishBrokerImportIfDone) {
-      BrokerImportSheet(portfolioListId: nil, allowsAskQ: false) {
+      BrokerImportSheet(portfolioListId: nil, allowsAskQ: false) { _ in
         didImportFromBroker = true
       }
     }

@@ -53,6 +53,47 @@ final class PortfolioViewModelTests: XCTestCase {
     XCTAssertEqual(service.fetchPortfolioCalls, 1)
   }
 
+  func testImportIntoAnotherPortfolioSwitchesToIt() async {
+    let service = MockStockService()
+    service.fetchPortfolioListsResult = .success([
+      PortfolioListDTOResponse(id: "a", name: "A", isDefault: true, createdAt: nil, updatedAt: nil),
+      PortfolioListDTOResponse(id: "b", name: "B", isDefault: false, createdAt: nil, updatedAt: nil)
+    ])
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
+    await viewModel.load()
+    XCTAssertEqual(viewModel.selectedPortfolioListId, "a")
+
+    await viewModel.reloadAfterImport(into: "b")
+
+    XCTAssertEqual(viewModel.selectedPortfolioListId, "b")
+    XCTAssertEqual(service.fetchPortfolioCalls, 2)
+  }
+
+  func testImportIntoTheShownPortfolioJustReloads() async {
+    let service = MockStockService()
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
+    await viewModel.load()
+    let selected = viewModel.selectedPortfolioListId
+
+    await viewModel.reloadAfterImport(into: selected)
+
+    XCTAssertEqual(viewModel.selectedPortfolioListId, selected)
+    XCTAssertEqual(service.fetchPortfolioCalls, 2)
+  }
+
+  func testImportWhileShowingAllListsKeepsAllLists() async {
+    let service = MockStockService()
+    let viewModel = PortfolioViewModel(service: service, marketDataService: MarketDataServiceStub())
+    await viewModel.load()
+    await viewModel.selectAllLists()
+    let calls = service.fetchPortfolioCalls
+
+    await viewModel.reloadAfterImport(into: "other")
+
+    XCTAssertTrue(viewModel.isShowingAllLists)
+    XCTAssertEqual(service.fetchPortfolioCalls, calls + 1)
+  }
+
   func testLoadWithForceRefetchesAfterInitialSuccess() async {
     let service = MockStockService()
     service.fetchPortfolioResult = .success([

@@ -18073,7 +18073,20 @@
       }
     },
     "Screenshots" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshots"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capturas de ecrã"
+          }
+        }
+      }
     },
     "Search Asset" : {
       "comment" : "A section in the Add Crypto Holding sheet where the user can search for an asset.",
@@ -24082,6 +24095,12 @@
             "state" : "translated",
             "value" : "Perguntar ao Q"
           }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask Q"
+          }
         }
       }
     },
@@ -24371,6 +24390,182 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ desligada."
+          }
+        }
+      }
+    },
+    "CSV file" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CSV file"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ficheiro CSV"
+          }
+        }
+      }
+    },
+    "How it works" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How it works"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Como funciona"
+          }
+        }
+      }
+    },
+    "Method" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Method"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Método"
+          }
+        }
+      }
+    },
+    "Import into" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import into"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importar para"
+          }
+        }
+      }
+    },
+    "Enter Manually" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter Manually"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduzir manualmente"
+          }
+        }
+      }
+    },
+    "Type in your holdings one position at a time." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type in your holdings one position at a time."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escreva as suas posições uma de cada vez."
+          }
+        }
+      }
+    },
+    "Screenshots or a CSV file from IBKR, DEGIRO, Trading 212, Revolut and more." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshots or a CSV file from IBKR, DEGIRO, Trading 212, Revolut and more."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capturas de ecrã ou um ficheiro CSV da IBKR, DEGIRO, Trading 212, Revolut e mais."
+          }
+        }
+      }
+    },
+    "Attach your screenshots to Q and ask it to update your holdings. You review every row before anything is saved." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attach your screenshots to Q and ask it to update your holdings. You review every row before anything is saved."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anexe as suas capturas de ecrã ao Q e peça-lhe que atualize as suas posições. Revê cada linha antes de qualquer coisa ser guardada."
+          }
+        }
+      }
+    },
+    "Open your positions list in the %@ app or website and take screenshots that show every holding. You can import up to 3 at a time." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open your positions list in the %@ app or website and take screenshots that show every holding. You can import up to 3 at a time."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abra a lista de posições na app ou no site de %@ e tire capturas de ecrã que mostrem todas as posições. Pode importar até 3 de cada vez."
+          }
+        }
+      }
+    },
+    "Open your positions list in your broker's app or website and take screenshots that show every holding. You can import up to 3 at a time." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open your positions list in your broker's app or website and take screenshots that show every holding. You can import up to 3 at a time."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abra a lista de posições na app ou no site da sua corretora e tire capturas de ecrã que mostrem todas as posições. Pode importar até 3 de cada vez."
+          }
+        }
+      }
+    },
+    "Replaces your existing %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replaces your existing %@"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Substitui o seu %@ existente"
           }
         }
       }

@@ -2,16 +2,20 @@ import Foundation
 
 /// How a broker's holdings can be brought in. Mirrors the web
 /// `ImportMethod` in `norviq-web-v2/src/lib/features/portfolio/import/brokers.ts`.
-nonisolated enum ImportMethod: Equatable, Sendable {
+nonisolated enum ImportMethod: String, Equatable, Identifiable, Sendable {
   case screenshot
-  case askQ
+  case askQ = "ask-q"
   case csv
 
+  /// Stable, language-independent id (the web's method ids).
+  var id: String { rawValue }
+
+  /// Localized label; English is identical to the web's.
   var label: String {
     switch self {
-    case .screenshot: "Screenshots"
-    case .askQ: "Ask Q"
-    case .csv: "CSV file"
+    case .screenshot: String(localized: "Screenshots")
+    case .askQ: String(localized: "Ask Q")
+    case .csv: String(localized: "CSV file")
     }
   }
 
@@ -41,19 +45,31 @@ nonisolated enum BrokerImportCatalog {
     BrokerGuide(id: "other", name: "Other broker (CSV)", methods: [.csv, .screenshot, .askQ]),
   ]
 
-  static let askQGuide =
-    "Attach your screenshots to Q and ask it to update your holdings. You review every row before anything is saved."
+  static var askQGuide: String {
+    String(
+      localized:
+        "Attach your screenshots to Q and ask it to update your holdings. You review every row before anything is saved."
+    )
+  }
 
   /// The provider every CSV import from the picker uses, so a CSV is never
   /// labelled `ibkr` (disconnecting IBKR deletes those holdings).
   static let csvProvider = "generic"
 
   static func screenshotGuide(for broker: BrokerGuide) -> String {
-    let who = broker.id == "other" ? "your broker's" : "the \(broker.name)"
-    return "Open your positions list in \(who) app or website and take screenshots that show every holding. You can import up to 3 at a time."
+    if broker.id == "other" {
+      return String(
+        localized:
+          "Open your positions list in your broker's app or website and take screenshots that show every holding. You can import up to 3 at a time."
+      )
+    }
+    return String(
+      localized:
+        "Open your positions list in the \(broker.name) app or website and take screenshots that show every holding. You can import up to 3 at a time."
+    )
   }
 
   static func csvReplaceNote(symbol: String) -> String {
-    "Replaces your existing \(symbol)"
+    String(localized: "Replaces your existing \(symbol)")
   }
 }

@@ -26,11 +26,23 @@ final class CsvImportFlowViewModel: ObservableObject {
 
   init(
     brokerService: any BrokerServicing = Container.shared.brokerService(),
-    portfolioListId: String? = nil
+    portfolioListId: String? = nil,
+    lockedProvider: String? = nil
   ) {
     self.brokerService = brokerService
     self.portfolioListId = portfolioListId
+    self.lockedProvider = lockedProvider
+    if let lockedProvider { selectedProvider = lockedProvider }
   }
+
+  /// Set when the caller fixes the provider (the broker picker always uses
+  /// `generic`), so the user cannot relabel the import.
+  private let lockedProvider: String?
+
+  var isProviderLocked: Bool { lockedProvider != nil }
+
+  /// What preview and commit send.
+  private var effectiveProvider: String { lockedProvider ?? selectedProvider }
 
   var availableProviders: [String] {
     providerOptions
@@ -143,7 +155,7 @@ final class CsvImportFlowViewModel: ObservableObject {
 
     do {
       let response = try await brokerService.previewCsvImport(
-        provider: selectedProvider,
+        provider: effectiveProvider,
         portfolioListId: portfolioListId,
         csvData: csvData
       )
@@ -176,7 +188,7 @@ final class CsvImportFlowViewModel: ObservableObject {
 
     do {
       let response = try await brokerService.commitCsvImport(
-        provider: selectedProvider,
+        provider: effectiveProvider,
         portfolioListId: portfolioListId,
         csvData: csvData
       )

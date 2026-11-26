@@ -357,8 +357,8 @@ struct PortfolioScreen: View {
       addPositionSheetContent
     }
     .sheet(isPresented: $isBrokerImportPresented) {
-      BrokerImportSheet(portfolioListId: viewModel.selectedPortfolioListId) {
-        await reloadPortfolio(force: true)
+      BrokerImportSheet(portfolioListId: viewModel.selectedPortfolioListId) { importedInto in
+        await viewModel.reloadAfterImport(into: importedInto)
       }
     }
     .sheet(item: $targetAlertStock) { stock in
@@ -763,7 +763,6 @@ struct PortfolioScreen: View {
   private func presentBrokerImportSheet() {
     isBrokerImportPresented = true
   }
-
 
   private func loadMoreIfAvailable() {
     Task { await viewModel.loadMoreIfAvailable() }

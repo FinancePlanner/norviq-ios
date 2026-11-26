@@ -120,4 +120,8 @@ extension Notification.Name {
   /// Posted by `ContentView` when a routed push or link should present the
   /// assistant. `userInfo["conversationId"]` is optional.
   static let openAssistantFromPushNotification = Notification.Name("openAssistantFromPushNotification")
+
+  /// Neutral name for the same route: any screen that wants the full assistant
+  /// posts this. `HomeScreen` presents it, closing Settings first if open.
+  static let openAssistant = openAssistantFromPushNotification
 }

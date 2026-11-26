@@ -592,6 +592,16 @@ final class PortfolioViewModel {
     await load(force: true)
   }
 
+  /// After an import into `listId`: follow the user to that list, unless they
+  /// are looking at all lists (which already includes it) or are on it.
+  func reloadAfterImport(into listId: String?) async {
+    if !isShowingAllLists, let listId, !listId.isEmpty, listId != selectedPortfolioListId {
+      await selectPortfolioList(listId)
+    } else {
+      await load(force: true)
+    }
+  }
+
   func selectAllLists() async {
     guard !isShowingAllLists else { return }
     isShowingAllLists = true
