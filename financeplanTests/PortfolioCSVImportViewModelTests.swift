@@ -420,6 +420,35 @@ final class PortfolioCSVImportViewModelTests: XCTestCase {
     }
   }
 
+  func testIBKRBadge_MapsEachStatus_AndActiveIsNotConnected() async {
+    let expectations: [(String?, CsvImportFlowViewModel.IBKRBadge?, Bool)] = [
+      (nil, nil, false),
+      ("connected", .connected, true),
+      ("error", .needsAttention, true),
+      ("disconnected", .notConnected, false),
+      ("csv", .notConnected, false),
+      ("active", .notConnected, false),
+    ]
+    for (status, badge, canDisconnect) in expectations {
+      let brokerService = BrokerServiceMock()
+      if let status {
+        brokerService.listConnectionsResult = .success([
+          BrokerConnectionResponse(id: "1", provider: "ibkr", status: status)
+        ])
+      }
+      let viewModel = CsvImportFlowViewModel(brokerService: brokerService)
+      await viewModel.loadProviders(force: true)
+      XCTAssertEqual(viewModel.ibkrBadge, badge, "status \(status ?? "none")")
+      XCTAssertEqual(viewModel.canDisconnectIBKR, canDisconnect, "status \(status ?? "none")")
+    }
+  }
+
+  func testHubCopy_NoLongerPromisesConnectingIBKR() throws {
+    let hub = try sourceText("financeplan/Features/UserProfile/IntegrationsHubView.swift")
+    XCTAssertFalse(hub.contains("Connect Interactive Brokers today"))
+    XCTAssertTrue(hub.contains("Import holdings from IBKR and other brokers."))
+  }
+
   func testDisconnectIBKR_StillWorks() async {
     let brokerService = BrokerServiceMock()
     brokerService.listConnectionsResult = .success([

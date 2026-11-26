@@ -88,8 +88,8 @@ struct IntegrationsView: View {
         Spacer()
         // No verdict until the first load answers: a status during the fetch
         // is a claim the app cannot back yet.
-        if viewModel.ibkrConnection != nil {
-          statusBadge
+        if let badge = viewModel.ibkrBadge {
+          statusBadge(badge)
         }
       }
       if let lastSynced = viewModel.ibkrConnection?.lastSyncedAt {
@@ -140,17 +140,29 @@ struct IntegrationsView: View {
     }
   }
 
-  private var statusBadge: some View {
-    let connected = viewModel.canDisconnectIBKR
-    // Two Text literals, not a ternary of strings: the ternary infers String
-    // and skips the String Catalog.
-    return (connected ? Text("Connected") : Text("Not connected"))
+  private func statusBadge(_ badge: CsvImportFlowViewModel.IBKRBadge) -> some View {
+    // Text literals per case, not a ternary of strings: a ternary infers
+    // String and skips the String Catalog.
+    let label: Text
+    let color: Color
+    switch badge {
+    case .connected:
+      label = Text("Connected")
+      color = AppTheme.Colors.success
+    case .needsAttention:
+      label = Text("Needs attention")
+      color = AppTheme.Colors.warning
+    case .notConnected:
+      label = Text("Not connected")
+      color = Color.secondary
+    }
+    // Status, not money: 12% chip the brand doc measured.
+    return label
       .font(.caption2.weight(.semibold))
       .padding(.horizontal, AppTheme.Spacing.sm)
       .padding(.vertical, AppTheme.Spacing.xs)
-      // Status, not money: `success`, on the 12% chip the brand doc measured.
-      .background(connected ? AppTheme.Colors.success.opacity(0.12) : Color.secondary.opacity(0.12))
-      .foregroundStyle(connected ? AppTheme.Colors.success : Color.secondary)
+      .background(color.opacity(0.12))
+      .foregroundStyle(color)
       .clipShape(Capsule())
   }
 

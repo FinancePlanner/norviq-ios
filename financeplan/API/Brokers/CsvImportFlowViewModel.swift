@@ -51,6 +51,21 @@ final class CsvImportFlowViewModel: ObservableObject {
   /// all: the Web Service feed is retired and imports go through screenshots.
   var ibkrNotice: IBKRImportNotice { .standard }
 
+  enum IBKRBadge: Equatable {
+    case connected, needsAttention, notConnected
+  }
+
+  /// Status chip for the IBKR card; nil until there is a connection row.
+  /// Independent of Disconnect gating: `error` is not "connected".
+  var ibkrBadge: IBKRBadge? {
+    guard let status = ibkrConnection?.status.lowercased() else { return nil }
+    switch status {
+    case "connected": return .connected
+    case "error": return .needsAttention
+    default: return .notConnected
+    }
+  }
+
   /// Disconnect only makes sense while there is something live to remove.
   var canDisconnectIBKR: Bool {
     guard let status = ibkrConnection?.status.lowercased() else { return false }
