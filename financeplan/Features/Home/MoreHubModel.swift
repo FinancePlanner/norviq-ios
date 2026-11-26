@@ -88,8 +88,7 @@ nonisolated enum MoreHubModel {
           HubRow(id: "insights", title: "Insights", systemImage: "sparkles", isPro: true, action: .push(.insights)),
           HubRow(id: "reports", title: "Reports", systemImage: "chart.bar.doc.horizontal", action: .push(.reports)),
           HubRow(
-            id: "chartBuilder", title: "Chart builder", systemImage: "chart.xyaxis.line", isPro: true,
-            action: .push(.chartBuilder))
+            id: "chartBuilder", title: "Chart builder", systemImage: "chart.xyaxis.line", action: .push(.chartBuilder))
         ]),
       HubSection(id: "community", title: "Community", rows: community),
       HubSection(
