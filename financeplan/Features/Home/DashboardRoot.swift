@@ -212,6 +212,8 @@ struct DashboardRoot: View {
               initial: MoreHubModel.account(username: profile.profile?.username, email: profile.profile?.email).initial,
               size: 28
             )
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
           }
           .accessibilityLabel(Text("Account"))
           .accessibilityHint(Text("Opens Settings"))

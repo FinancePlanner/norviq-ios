@@ -60,17 +60,26 @@ nonisolated struct HubAccount: Equatable, Sendable {
 /// More (spec §7.10): Intelligence, Community, Account. Gated rows are left
 /// out, never shown disabled.
 nonisolated enum MoreHubModel {
-  static func sections(social: SocialConfig, groupsBadge: Int, locale: Locale = .current) -> [HubSection] {
+  /// `groupsBadge` and `friendsBadge` are the counts the More tab badge adds
+  /// up, so each one shows on its own row.
+  static func sections(
+    social: SocialConfig, groupsBadge: Int, friendsBadge: Int, locale: Locale = .current
+  ) -> [HubSection] {
+    func newCount(_ count: Int) -> String? {
+      count > 0 ? String(localized: LocalizedStringResource("\(count) new", locale: locale)) : nil
+    }
     var community: [HubRow] = []
     if social.groupsEnabled {
       community.append(
         HubRow(
           id: "groups", title: "Groups", systemImage: "bubble.left.and.bubble.right",
-          value: groupsBadge > 0 ? String(localized: LocalizedStringResource("\(groupsBadge) new", locale: locale)) : nil,
-          action: .push(.groups)))
+          value: newCount(groupsBadge), action: .push(.groups)))
     }
     if social.enabled {
-      community.append(HubRow(id: "friends", title: "Friends", systemImage: "person.2", action: .push(.friends)))
+      community.append(
+        HubRow(
+          id: "friends", title: "Friends", systemImage: "person.2", value: newCount(friendsBadge),
+          action: .push(.friends)))
     }
     // Boards needs no switch, so Community is never empty.
     community.append(

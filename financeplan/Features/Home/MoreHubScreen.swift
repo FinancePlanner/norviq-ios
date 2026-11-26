@@ -28,7 +28,8 @@ struct MoreHubScreen: View {
         }
         HubSectionsView(
           sections: MoreHubModel.sections(
-            social: socialStore.config, groupsBadge: groupsStore.badgeCount, locale: locale),
+            social: socialStore.config, groupsBadge: groupsStore.badgeCount,
+            friendsBadge: socialStore.badgeCount, locale: locale),
           userIsPro: billingManager.isPro,
           onTap: handle
         )

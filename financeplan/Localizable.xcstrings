@@ -7368,7 +7368,7 @@
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Criptografia"
+            "value" : "Cripto"
           }
         }
       }
@@ -14567,7 +14567,14 @@
       }
     },
     "Open planning" : {
-
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir planeamento"
+          }
+        }
+      }
     },
     "Open portfolio simulator" : {
 
@@ -14577,6 +14584,16 @@
     },
     "Open scenario planning" : {
 
+    },
+    "Open scenarios" : {
+      "localizations" : {
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir cenários"
+          }
+        }
+      }
     },
     "Open settings" : {
       "comment" : "A button that opens the app's settings.",

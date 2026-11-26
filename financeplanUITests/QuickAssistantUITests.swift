@@ -99,31 +99,64 @@ final class QuickAssistantUITests: XCTestCase {
         let app = launch(billingTier: "free")
         _ = qEntry(app)
         let tabBar = app.tabBars.firstMatch
-        let button = app.buttons["q.entry"]
         for tab in ["Money", "Wealth", "Plan", "More", "Today"] {
             tabBar.buttons[tab].tap()
-            XCTAssertTrue(button.waitForExistence(timeout: 3), "Q missing on \(tab)")
-            let frame = settledFrame(of: button)
-            XCTAssertLessThanOrEqual(frame.maxY, tabBar.frame.minY, "Q overlaps the tab bar on \(tab)")
+            let placement = qPlacement(in: app)
+            guard let q = placement.q else {
+                XCTFail("Q missing on \(tab)")
+                continue
+            }
+            guard let bar = placement.tabBar else {
+                XCTFail("Tab bar missing on \(tab)")
+                continue
+            }
+            guard q.maxY.isFinite, bar.minY.isFinite else {
+                XCTFail("Frames never settled on \(tab): Q \(q), tab bar \(bar)")
+                continue
+            }
+            XCTAssertLessThanOrEqual(q.maxY, bar.minY, "Q overlaps the tab bar on \(tab)")
             if #unavailable(iOS 26) {
-                XCTAssertGreaterThan(frame.maxY, tabBar.frame.minY - 40, "Q drifted up from the tab bar on \(tab)")
-                XCTAssertGreaterThan(frame.maxX, app.frame.maxX - 40, "Q left the trailing edge on \(tab)")
+                XCTAssertGreaterThan(q.maxY, bar.minY - 40, "Q drifted up from the tab bar on \(tab)")
+                XCTAssertGreaterThan(q.maxX, app.frame.maxX - 40, "Q left the trailing edge on \(tab)")
             }
         }
     }
 
-    /// Right after a tab switch the accessory can report an infinite frame
-    /// for a moment while it is drawn in place, so a frame is read once it
-    /// is a real one.
+    /// Q's frame and the tab bar's, read from one snapshot of the whole app.
+    ///
+    /// Right after a tab switch on the iOS 26 simulator, the element query
+    /// `app.buttons["q.entry"]` can report the accessory's frame as
+    /// `(inf, inf, 0, 0)`, or miss it, while it is drawn in place. In 15 reads
+    /// side by side, the query said `inf` 7 times and a snapshot of the app tree
+    /// was finite every time, so frames come from the snapshot. It is retaken
+    /// until both frames are finite, or the timeout passes.
     @MainActor
-    private func settledFrame(of element: XCUIElement) -> CGRect {
-        let deadline = Date().addingTimeInterval(3)
-        var frame = element.frame
-        while !frame.maxY.isFinite, Date() < deadline {
-            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
-            frame = element.frame
+    private func qPlacement(
+        in app: XCUIApplication, timeout: TimeInterval = 10
+    ) -> (q: CGRect?, tabBar: CGRect?) {
+        let deadline = Date().addingTimeInterval(timeout)
+        var result: (q: CGRect?, tabBar: CGRect?) = (nil, nil)
+        repeat {
+            if let root = try? app.snapshot() {
+                result = (
+                    find(in: root) { $0.identifier == "q.entry" && $0.elementType == .button }?.frame,
+                    find(in: root) { $0.elementType == .tabBar }?.frame
+                )
+            }
+            if let q = result.q, let bar = result.tabBar, q.maxY.isFinite, bar.minY.isFinite { return result }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        } while Date() < deadline
+        return result
+    }
+
+    private func find(
+        in snapshot: XCUIElementSnapshot, where matches: (XCUIElementSnapshot) -> Bool
+    ) -> XCUIElementSnapshot? {
+        if matches(snapshot) { return snapshot }
+        for child in snapshot.children {
+            if let hit = find(in: child, where: matches) { return hit }
         }
-        return frame
+        return nil
     }
 
     /// The floating button below iOS 26. The accessory is part of the tab bar

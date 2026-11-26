@@ -73,7 +73,7 @@ final class HomeNavigationTests: XCTestCase {
     var social = SocialConfig(
       enabled: true, contactsDiscovery: false, xImport: false, leaderboards: false, messaging: false)
     social.groups = true
-    let hubRows = (MoreHubModel.sections(social: social, groupsBadge: 0) + PlanHubModel.sections())
+    let hubRows = (MoreHubModel.sections(social: social, groupsBadge: 0, friendsBadge: 0) + PlanHubModel.sections())
       .flatMap(\.rows)
     var reachable = Set(
       hubRows.compactMap { row -> AppDestination? in

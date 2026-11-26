@@ -98,10 +98,10 @@ struct PortfolioRoot: View {
           }
           .labelStyle(.iconOnly)
           NavigationLink(value: PortfolioRootRoute.scenarioPlanning) {
-            Label("Scenario planning", systemImage: "chart.xyaxis.line")
+            Label("Scenarios", systemImage: "chart.xyaxis.line")
           }
           .labelStyle(.iconOnly)
-          .accessibilityLabel("Open scenario planning")
+          .accessibilityLabel("Open scenarios")
         }
         // A menu rather than two more icons: the top bar already carries four,
         // and these two belong together as one idea - path, and destination.

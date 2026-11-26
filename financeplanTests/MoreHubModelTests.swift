@@ -26,8 +26,9 @@ final class MoreHubModelTests: XCTestCase {
     section.rows.map { text($0.title) }
   }
 
-  private func more(enabled: Bool = true, groups: Bool = true, badge: Int = 0) -> [HubSection] {
-    MoreHubModel.sections(social: config(enabled: enabled, groups: groups), groupsBadge: badge, locale: english)
+  private func more(enabled: Bool = true, groups: Bool = true, badge: Int = 0, friends: Int = 0) -> [HubSection] {
+    MoreHubModel.sections(
+      social: config(enabled: enabled, groups: groups), groupsBadge: badge, friendsBadge: friends, locale: english)
   }
 
   private func row(_ id: String, in sections: [HubSection]) -> HubRow? {
@@ -84,13 +85,30 @@ final class MoreHubModelTests: XCTestCase {
     let portuguese = Locale(identifier: "pt-PT")
     let social = config(enabled: true, groups: true)
     XCTAssertEqual(
-      row("groups", in: MoreHubModel.sections(social: social, groupsBadge: 1, locale: portuguese))?.value, "1 nova")
+      row("groups", in: MoreHubModel.sections(social: social, groupsBadge: 1, friendsBadge: 0, locale: portuguese))?.value, "1 nova")
     XCTAssertEqual(
-      row("groups", in: MoreHubModel.sections(social: social, groupsBadge: 3, locale: portuguese))?.value, "3 novas")
+      row("groups", in: MoreHubModel.sections(social: social, groupsBadge: 3, friendsBadge: 0, locale: portuguese))?.value, "3 novas")
+  }
+
+  /// The More tab badge adds friend requests to group invites, so Friends
+  /// shows its share the same way Groups does.
+  func testFriendRequestsAreTheFriendsRowValue() {
+    XCTAssertEqual(row("friends", in: more(friends: 3))?.value, "3 new")
+    XCTAssertEqual(row("friends", in: more(friends: 1))?.value, "1 new")
+    XCTAssertNil(row("friends", in: more(friends: 0))?.value)
+    XCTAssertNil(row("groups", in: more(friends: 3))?.value, "Friend requests leaked onto Groups")
+  }
+
+  func testFriendRequestsAreAPluralInPortuguese() {
+    let social = config(enabled: true, groups: true)
+    let sections = MoreHubModel.sections(
+      social: social, groupsBadge: 0, friendsBadge: 2, locale: Locale(identifier: "pt-PT"))
+    XCTAssertEqual(row("friends", in: sections)?.value, "2 novas")
   }
 
   func testOtherMoreRowsHaveNoValue() {
     XCTAssertEqual(more(badge: 2).flatMap(\.rows).compactMap(\.value), ["2 new"])
+    XCTAssertEqual(more(badge: 2, friends: 1).flatMap(\.rows).compactMap(\.value), ["2 new", "1 new"])
   }
 
   // MARK: - Plan

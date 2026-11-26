@@ -89,9 +89,10 @@ struct HomeScreen: View {
     .onDisappear { quickAssistant.setGuidedStepActive(false) }
     .environment(guided)
     .environment(\.norviqReopenGuidedStart, guided.map { coordinator in
-      // Settings pops itself; the tour starts on Today.
+      // The tour starts on Today's root, whichever stack Settings was on.
       {
         selectedTab = .today
+        todayPath = NavigationPath()
         Task { await coordinator.showMeAround() }
       }
     })
