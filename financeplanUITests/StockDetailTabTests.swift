@@ -21,10 +21,8 @@ final class StockDetailTabTests: XCTestCase {
         let app = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)")
         app.launch()
 
-        // 1. Navigate to Portfolio
-        let portfolioTab = app.tabBars.buttons["Portfolio"]
-        XCTAssertTrue(portfolioTab.waitForExistence(timeout: 25))
-        portfolioTab.tap()
+        // 1. Navigate to Wealth
+        app.tapTab(.wealth)
 
         // 2. Ensure we have a stock. If not, add one.
         let aaplRow = app.buttons["portfolio.stockRow.AAPL"]

@@ -23,7 +23,7 @@ final class FinanceplanUITests: XCTestCase {
       importStocksButton.waitForExistence(timeout: 20),
       "Expected onboarding import gate to appear for first login."
     )
-    XCTAssertFalse(app.tabBars.buttons["Home"].exists, "Home flow should not be reachable before import selection.")
+    XCTAssertFalse(app.tabButton(.today).exists, "Today should not be reachable before import selection.")
 
     importStocksButton.tap()
 
@@ -52,7 +52,7 @@ final class FinanceplanUITests: XCTestCase {
 
     completeMandatoryImport(in: app)
 
-    XCTAssertTrue(app.tabBars.buttons["Home"].waitForExistence(timeout: 15))
+    XCTAssertTrue(app.tabButton(.today).waitForExistence(timeout: 15))
     XCTAssertTrue(app.staticTexts["Portfolio Value"].waitForExistence(timeout: 15))
     XCTAssertFalse(app.staticTexts["Import Your Portfolio"].exists)
   }
@@ -64,13 +64,13 @@ final class FinanceplanUITests: XCTestCase {
     firstLaunchApp.launch()
 
     completeMandatoryImport(in: firstLaunchApp)
-    XCTAssertTrue(firstLaunchApp.tabBars.buttons["Home"].waitForExistence(timeout: 15))
+    XCTAssertTrue(firstLaunchApp.tabButton(.today).waitForExistence(timeout: 15))
     firstLaunchApp.terminate()
 
     let secondLaunchApp = makeAuthenticatedFirstLoginApp(userID: userID, resetSession: false)
     secondLaunchApp.launch()
 
-    XCTAssertTrue(secondLaunchApp.tabBars.buttons["Home"].waitForExistence(timeout: 15))
+    XCTAssertTrue(secondLaunchApp.tabButton(.today).waitForExistence(timeout: 15))
     XCTAssertTrue(secondLaunchApp.staticTexts["Portfolio Value"].waitForExistence(timeout: 15))
     XCTAssertFalse(
       secondLaunchApp.staticTexts["Import Your Portfolio"].exists,
@@ -83,9 +83,7 @@ final class FinanceplanUITests: XCTestCase {
     let app = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)")
     app.launch()
 
-    let portfolioTab = app.tabBars.buttons["Portfolio"]
-    XCTAssertTrue(portfolioTab.waitForExistence(timeout: 25))
-    portfolioTab.tap()
+    app.tapTab(.wealth)
 
     let actionsMenu = app.buttons["portfolio.actionsMenu"]
     XCTAssertTrue(actionsMenu.waitForExistence(timeout: 8))
@@ -105,10 +103,8 @@ final class FinanceplanUITests: XCTestCase {
     let app = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)")
     app.launch()
 
-    // 1. Navigate to Expenses tab
-    let expensesTab = app.tabBars.buttons["Expenses"]
-    XCTAssertTrue(expensesTab.waitForExistence(timeout: 25))
-    expensesTab.tap()
+    // 1. Navigate to the Money tab
+    app.tapTab(.money)
 
     // 2. Create a plan if missing (using the 'Create' button in the missing budget alert)
     let createPlanButton = app.buttons["Create"]
@@ -148,10 +144,8 @@ final class FinanceplanUITests: XCTestCase {
 
     app.buttons["Save"].tap()
 
-    // 5. Navigate to Reports tab
-    let reportsTab = app.tabBars.buttons["Reports"]
-    XCTAssertTrue(reportsTab.waitForExistence(timeout: 10))
-    reportsTab.tap()
+    // 5. Open More › Reports
+    app.tapReportsTab()
 
     // 6. Verify reports show data
     // The Reports screen has a Segmented Picker: Overview, Portfolio, Spending, Trends
@@ -169,9 +163,7 @@ final class FinanceplanUITests: XCTestCase {
     let app = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)")
     app.launch()
 
-    let portfolioTab = app.tabBars.buttons["Portfolio"]
-    XCTAssertTrue(portfolioTab.waitForExistence(timeout: 25))
-    portfolioTab.tap()
+    app.tapTab(.wealth)
 
     let allocationSegment = app.buttons["Allocation 🔒"]
     XCTAssertTrue(allocationSegment.waitForExistence(timeout: 8))
@@ -188,9 +180,7 @@ final class FinanceplanUITests: XCTestCase {
     let app = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)", billingTier: "pro")
     app.launch()
 
-    let portfolioTab = app.tabBars.buttons["Portfolio"]
-    XCTAssertTrue(portfolioTab.waitForExistence(timeout: 25))
-    portfolioTab.tap()
+    app.tapTab(.wealth)
 
     let allocationSegment = app.buttons["Allocation"]
     XCTAssertTrue(allocationSegment.waitForExistence(timeout: 8))
@@ -205,9 +195,7 @@ final class FinanceplanUITests: XCTestCase {
     let app = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)", billingTier: "trial")
     app.launch()
 
-    let portfolioTab = app.tabBars.buttons["Portfolio"]
-    XCTAssertTrue(portfolioTab.waitForExistence(timeout: 25))
-    portfolioTab.tap()
+    app.tapTab(.wealth)
 
     let allocationSegment = app.buttons["Allocation"]
     XCTAssertTrue(allocationSegment.waitForExistence(timeout: 8))
@@ -220,19 +208,19 @@ final class FinanceplanUITests: XCTestCase {
   func testSettingsReflectFreeTrialAndProBillingStates() throws {
     let freeApp = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)", billingTier: "free")
     freeApp.launch()
-    openSettings(in: freeApp)
+    freeApp.openSettings()
     XCTAssertTrue(freeApp.descendants(matching: .any)["settings.subscription.free"].waitForExistence(timeout: 8))
     freeApp.terminate()
 
     let trialApp = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)", billingTier: "trial")
     trialApp.launch()
-    openSettings(in: trialApp)
+    trialApp.openSettings()
     XCTAssertTrue(trialApp.descendants(matching: .any)["settings.subscription.trial"].waitForExistence(timeout: 8))
     trialApp.terminate()
 
     let proApp = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)", billingTier: "pro")
     proApp.launch()
-    openSettings(in: proApp)
+    proApp.openSettings()
     XCTAssertTrue(proApp.descendants(matching: .any)["settings.subscription.pro"].waitForExistence(timeout: 8))
   }
 
@@ -241,9 +229,7 @@ final class FinanceplanUITests: XCTestCase {
     let app = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)")
     app.launch()
 
-    let portfolioTab = app.tabBars.buttons["Portfolio"]
-    XCTAssertTrue(portfolioTab.waitForExistence(timeout: 25))
-    portfolioTab.tap()
+    app.tapTab(.wealth)
 
     let firstStockCell = app.cells.firstMatch
     guard firstStockCell.waitForExistence(timeout: 10) else { return } // Skip if no stocks
@@ -262,9 +248,7 @@ final class FinanceplanUITests: XCTestCase {
     let app = makeAuthenticatedImportedUserApp(userID: "ui-test-\(UUID().uuidString)", billingTier: "pro")
     app.launch()
 
-    let portfolioTab = app.tabBars.buttons["Portfolio"]
-    XCTAssertTrue(portfolioTab.waitForExistence(timeout: 25))
-    portfolioTab.tap()
+    app.tapTab(.wealth)
 
     let firstStockCell = app.cells.firstMatch
     guard firstStockCell.waitForExistence(timeout: 10) else { return } // Skip if no stocks
@@ -276,18 +260,6 @@ final class FinanceplanUITests: XCTestCase {
       alertButton.tap()
       XCTAssertTrue(app.navigationBars["Set Alert"].waitForExistence(timeout: 5))
     }
-  }
-
-  @MainActor
-  private func openSettings(in app: XCUIApplication) {
-    let homeTab = app.tabBars.buttons["Home"]
-    if homeTab.waitForExistence(timeout: 25) {
-      homeTab.tap()
-    }
-
-    let settingsButton = app.buttons["Open settings"]
-    XCTAssertTrue(settingsButton.waitForExistence(timeout: 10))
-    settingsButton.tap()
   }
 
   @MainActor
@@ -320,6 +292,7 @@ final class FinanceplanUITests: XCTestCase {
   @MainActor
   private func makeAuthenticatedFirstLoginApp(userID: String, resetSession: Bool = true, billingTier: String? = nil) -> XCUIApplication {
     let app = XCUIApplication()
+    app.useLocalAPI()
     var launchArguments = [
       "-ui_test_skip_splash",
       "-ui_test_auth_token",
@@ -340,6 +313,7 @@ final class FinanceplanUITests: XCTestCase {
   @MainActor
   private func makeAuthenticatedImportedUserApp(userID: String, resetSession: Bool = true, billingTier: String? = nil) -> XCUIApplication {
     let app = XCUIApplication()
+    app.useLocalAPI()
     var launchArguments = [
       "-ui_test_skip_splash",
       "-ui_test_auth_token",

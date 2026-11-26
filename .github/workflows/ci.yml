@@ -305,6 +305,7 @@ jobs:
             -clonedSourcePackagesDirPath "$SPM_DIR" \
             -only-testing:financeplanUITests/StockDetailTabTests \
             -only-testing:financeplanUITests/QuickAssistantUITests \
+            -only-testing:financeplanUITests/NavigationUITests \
             -parallel-testing-enabled NO \
             -quiet
 

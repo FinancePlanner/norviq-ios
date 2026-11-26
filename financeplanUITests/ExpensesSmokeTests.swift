@@ -15,7 +15,7 @@ final class ExpensesSmokeTests: XCTestCase {
   }
 
   private func ensureMonthlyBudgetSet(in app: XCUIApplication) {
-    app.tapExpensesTab()
+    app.tapTab(.money)
 
     let editButton = app.buttons["expenses.editSalaryButton"]
     guard editButton.waitForExistence(timeout: 10) else {
